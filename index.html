@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>预言家日報・防窥工坊</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+
+  <meta name="theme-color" content="#8a2d2d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="防窥工坊" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #EFE2C4;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .frame-wrap {
+      position: fixed;
+      inset: env(safe-area-inset-top) 0 0 0;
+      width: 100%;
+      height: calc(100% - env(safe-area-inset-top));
+      background: #EFE2C4;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+      background: #EFE2C4;
+    }
+    .fallback {
+      position: fixed;
+      left: 16px;
+      right: 16px;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      z-index: 10;
+      display: none;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(239, 226, 196, 0.92);
+      box-shadow: 0 8px 24px rgba(0,0,0,.15);
+      color: #3A2A17;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .fallback a {
+      color: #7B2D26;
+      font-weight: 700;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame-wrap">
+    <iframe
+      src="https://ai-ocr-protector.streamlit.app/?embed=true"
+      title="预言家日報・防窥工坊"
+      allow="clipboard-read; clipboard-write"
+    ></iframe>
+  </div>
+
+  <div class="fallback" id="fallback">
+    如果畫面一直沒有載入，請點這裡直接開啟：
+    <a href="https://ai-ocr-protector.streamlit.app/" target="_blank" rel="noopener">防窥工坊</a>
+  </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+      });
+    }
+    setTimeout(() => {
+      document.getElementById('fallback').style.display = 'block';
+    }, 7000);
+  </script>
+</body>
+</html>
