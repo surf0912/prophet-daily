@@ -1,6 +1,6 @@
 {
-  "name": "預言家日報・防窺工坊",
-  "short_name": "防窺工坊",
+  "name": "預言家日報",
+  "short_name": "預言家日報",
   "description": "AI / OCR Protection Image Processor",
   "start_url": "./index.html",
   "scope": "./",
