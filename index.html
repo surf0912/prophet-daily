@@ -25,6 +25,7 @@
       background: #EFE2C4;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
+
     .frame-wrap {
       position: fixed;
       inset: env(safe-area-inset-top) 0 0 0;
@@ -32,6 +33,7 @@
       height: calc(100% - env(safe-area-inset-top));
       background: #EFE2C4;
     }
+
     iframe {
       width: 100%;
       height: 100%;
@@ -39,6 +41,7 @@
       display: block;
       background: #EFE2C4;
     }
+
     .fallback {
       position: fixed;
       left: 16px;
@@ -46,21 +49,47 @@
       bottom: calc(16px + env(safe-area-inset-bottom));
       z-index: 10;
       display: none;
-      padding: 12px 14px;
-      border-radius: 14px;
-      background: rgba(239, 226, 196, 0.92);
+      padding: 14px 44px 14px 16px;
+      border-radius: 18px;
+      background: rgba(239, 226, 196, 0.94);
       box-shadow: 0 8px 24px rgba(0,0,0,.15);
       color: #3A2A17;
       font-size: 14px;
       line-height: 1.45;
+      touch-action: pan-y;
+      transition: transform 0.25s ease, opacity 0.25s ease;
     }
+
+    .fallback.show {
+      display: block;
+    }
+
+    .fallback.dismissed {
+      transform: translateY(140%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
     .fallback a {
       color: #7B2D26;
       font-weight: 700;
       text-decoration: none;
     }
+
+    .fallback-close {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      border: 0;
+      background: transparent;
+      color: #7B2D26;
+      font-size: 24px;
+      line-height: 1;
+      cursor: pointer;
+    }
   </style>
 </head>
+
 <body>
   <div class="frame-wrap">
     <iframe
@@ -71,6 +100,7 @@
   </div>
 
   <div class="fallback" id="fallback">
+    <button class="fallback-close" id="fallbackClose" aria-label="關閉提示">×</button>
     如果畫面一直沒有載入，請點這裡直接開啟：
     <a href="https://ai-ocr-protector.streamlit.app/" target="_blank" rel="noopener">防窥工坊</a>
   </div>
@@ -81,9 +111,55 @@
         navigator.serviceWorker.register('./service-worker.js').catch(() => {});
       });
     }
-    setTimeout(() => {
-      document.getElementById('fallback').style.display = 'block';
-    }, 7000);
+
+    const iframe = document.querySelector("iframe");
+    const fallback = document.getElementById("fallback");
+    const fallbackClose = document.getElementById("fallbackClose");
+
+    let iframeLoaded = false;
+    let fallbackDismissed = localStorage.getItem("fallbackDismissed") === "true";
+
+    iframe.addEventListener("load", () => {
+      iframeLoaded = true;
+    });
+
+    function showFallback() {
+      if (!iframeLoaded && !fallbackDismissed) {
+        fallback.classList.add("show");
+      }
+    }
+
+    function dismissFallback() {
+      fallbackDismissed = true;
+      localStorage.setItem("fallbackDismissed", "true");
+      fallback.classList.add("dismissed");
+      setTimeout(() => {
+        fallback.classList.remove("show");
+      }, 250);
+    }
+
+    fallbackClose.addEventListener("click", dismissFallback);
+
+    let touchStartY = null;
+
+    fallback.addEventListener("touchstart", (event) => {
+      touchStartY = event.touches[0].clientY;
+    });
+
+    fallback.addEventListener("touchend", (event) => {
+      if (touchStartY === null) return;
+
+      const touchEndY = event.changedTouches[0].clientY;
+      const deltaY = touchEndY - touchStartY;
+
+      if (deltaY > 40) {
+        dismissFallback();
+      }
+
+      touchStartY = null;
+    });
+
+    setTimeout(showFallback, 7000);
   </script>
 </body>
 </html>
