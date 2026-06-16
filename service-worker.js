@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ocr-protector-shell-v2';
+const CACHE_NAME = 'ocr-protector-shell-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -6,7 +6,9 @@ const ASSETS = [
   './favicon.png',
   './apple-touch-icon.png',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './maskable-192.png',
+  './maskable-512.png'
 ];
 
 self.addEventListener('install', (event) => {
