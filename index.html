@@ -53,8 +53,8 @@
     .font-toggle-btn:hover { background: rgba(201,168,76,.25); }
 
     /* ── Layout ── */
-    #app { display: flex; flex-direction: column; height: 100%; }
-    #page-area { flex: 1; overflow-y: auto; background: var(--parchment); color: var(--ink); }
+    #app { display: flex; flex-direction: column; height: 100dvh; }
+    #page-area { flex: 1; overflow-y: auto; background: var(--parchment); color: var(--ink); padding-top: env(safe-area-inset-top, 0px); }
 
     /* ── Nav bar ── */
     nav {
@@ -106,7 +106,7 @@
       .field input { padding: 14px 16px; font-size: 17px; }
       .btn-primary { padding: 16px; font-size: 17px; }
     }
-    .auth-logo { text-align: center; margin-bottom: 28px; }
+    .auth-logo { text-align: center; margin-bottom: 28px; padding-top: 32px; }
     .auth-logo h1 {
       color: var(--gold); letter-spacing: .06em;
       font-size: clamp(32px, 6vw, 60px); font-weight: 400;
@@ -139,13 +139,22 @@
 
     /* ── Home page ── */
     .greeting-hero {
-      background: linear-gradient(160deg, var(--scarlet-dk) 0%, var(--ink) 60%);
-      padding: 48px 24px 36px; text-align: center; min-height: 240px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: var(--ink) center top / cover no-repeat;
+      width: 100%; aspect-ratio: 3/4; max-height: 56vh;
+      position: relative; overflow: hidden; flex-shrink: 0;
     }
-    .greeting-hero .char-emoji { font-size: 72px; line-height: 1; filter: drop-shadow(0 2px 8px var(--shadow)); }
-    .greeting-hero h2 { color: var(--gold); font-size: 20px; margin-top: 12px; }
-    .greeting-hero p { color: var(--parchment2); font-size: 14px; margin-top: 8px; max-width: 300px; line-height: 1.6; }
+    .greeting-hero::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40%;
+      background: linear-gradient(to bottom, transparent, rgba(26,10,0,0.55));
+    }
+    .greeting-hero .char-emoji { display: none; }
+    .greeting-hero h2, .greeting-hero p { display: none; }
+    .greeting-text {
+      background: var(--ink-light); text-align: center;
+      padding: 16px 20px 14px;
+    }
+    .greeting-text h2 { color: var(--gold); font-size: 17px; }
+    .greeting-text p { color: var(--parchment2); font-size: 13px; margin-top: 6px; line-height: 1.6; }
     .date-banner {
       background: var(--ink-light); color: var(--gold-lt);
       text-align: center; padding: 8px; font-size: 11px; letter-spacing: .08em;
@@ -182,7 +191,7 @@
     .novel-card .meta { padding: 8px 10px; background: var(--parchment2); }
     .novel-card .meta h4 { font-size: 13px; color: var(--ink); line-height: 1.3; }
     .novel-card .meta p { font-size: 11px; color: var(--ink-light); margin-top: 2px; }
-    .empty-shelf { text-align: center; padding: 60px 24px; color: var(--ink-light); }
+    .empty-shelf { text-align: center; padding: 60px 24px; color: var(--ink-light); width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 
     /* ── Reader ── */
     #reader-view {
@@ -396,12 +405,15 @@
   <div id="page-area">
     <!-- HOME -->
     <div id="page-home" class="page active">
-      <div class="greeting-hero">
+      <div class="greeting-hero" id="greeting-hero">
         <div class="char-emoji" id="char-emoji">🧙‍♂️</div>
-        <h2 id="greeting-line">歡迎回來，巫師</h2>
-        <p id="greeting-quote">「當懷疑的時候，去圖書館。」</p>
+        <h2 id="greeting-line" style="display:none"></h2>
+        <p id="greeting-quote" style="display:none"></p>
       </div>
-      <div class="date-banner" id="date-banner">載入中…</div>
+      <div class="greeting-text">
+        <h2 id="greeting-line-text">歡迎回來，巫師</h2>
+        <p id="greeting-quote-text">「當懷疑的時候，去圖書館。」</p>
+      </div>
       <div class="home-section">
         <h3>📚 繼續閱讀</h3>
         <div id="home-novels"></div>
@@ -606,7 +618,7 @@
 
 <script>
 // ── Config (update after deploy) ────────────────────────────
-const API = 'https://YOUR_RENDER_APP.onrender.com';
+const API = 'https://ai-ocr-protector.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
@@ -774,7 +786,7 @@ function showPage(id, btn) {
 // quotes[0]=早上  quotes[1]=中午  quotes[2]=下午  quotes[3]=晚上
 const CHARS = [
   {
-    name: 'Sean', emoji: '🦅',
+    name: 'Sean', emoji: '🦅', img: './chars/sean.jpg',
     quotes: [
       '早上好，今天也很漂亮。別懷疑，我說的是事實。',
       '中午好。終於下課了？我可以把你借走一會兒嗎？',
@@ -783,7 +795,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Silas', emoji: '🌹',
+    name: 'Silas', emoji: '🌹', img: './chars/silas.png',
     quotes: [
       '早上好。你的座位在這裡。',
       '中午好。先吃飯，你上午已經喝了兩杯咖啡了。',
@@ -792,7 +804,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Eli', emoji: '🍪',
+    name: 'Eli', emoji: '🍪', img: './chars/eli.png',
     quotes: [
       '啊，早上好。你吃早飯了嗎？我這裡還有一塊餅乾。',
       '啊，中午好。剛剛有一隻蒲絨絨一直跟著我……我想它可能比較喜歡你。',
@@ -801,7 +813,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Adrian', emoji: '☕',
+    name: 'Adrian', emoji: '☕', img: './chars/adrian.jpg',
     quotes: [
       '早上好。比我想象中晚了三分鐘——我差點以為你改變路線了。',
       '中午好。你上午躲我躲得不錯。',
@@ -818,8 +830,11 @@ function renderGreeting() {
   const period = h < 5 ? '深夜好' : h < 12 ? '早安' : h < 18 ? '午安' : '晚安';
   const char = CHARS[Math.floor(Math.random() * CHARS.length)];
   document.getElementById('char-emoji').textContent = char.emoji;
-  document.getElementById('greeting-line').textContent = `${char.name}：${period}，${currentUser.username || '你'} ✨`;
-  document.getElementById('greeting-quote').textContent = char.quotes[timeIdx];
+  document.getElementById('greeting-line-text').textContent = `${char.name}：${period}，${currentUser.username || '你'} ✨`;
+  document.getElementById('greeting-quote-text').textContent = char.quotes[timeIdx];
+  if (char.img) {
+    document.getElementById('greeting-hero').style.backgroundImage = `url('${char.img}')`;
+  }
   const now = new Date();
   document.getElementById('date-banner').textContent =
     `📰 ${now.getFullYear()} 年 ${now.getMonth()+1} 月 ${now.getDate()} 日 · 巫師界頭條`;
