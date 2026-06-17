@@ -256,7 +256,9 @@
     .btn-cancel { background: transparent; border: 1px solid var(--gold-lt) !important; color: var(--ink-light); }
     .btn-post { background: var(--scarlet); color: var(--parchment); }
 
-    /* ── Protect page ── */
+    /* ── Protect page (embeds the standalone 防窺工坊 Streamlit app) ── */
+    #page-protect { padding: 0; }
+    #protect-frame { display: block; width: 100%; height: calc(100dvh - var(--nav-h) - var(--safe-bottom)); border: 0; background: #EFE2C4; }
     .protect-header { padding: 20px 18px 8px; border-bottom: 2px solid var(--gold-lt); }
     .protect-header h2 { font-size: 18px; }
     .protect-body { padding: 20px 18px; }
@@ -448,30 +450,12 @@
       </div>
     </div>
 
-    <!-- PROTECT 防窺工坊 -->
+    <!-- PROTECT 防窺工坊 — embeds the real Streamlit app (identical layout/options/background) -->
     <div id="page-protect" class="page">
-      <div class="protect-header"><h2>🔮 防窺工坊</h2></div>
-      <div class="protect-body">
-        <div class="protect-drop" id="protect-drop"
-          onclick="document.getElementById('protect-input').click()"
-          ondragover="event.preventDefault();this.classList.add('drag-over')"
-          ondragleave="this.classList.remove('drag-over')"
-          ondrop="handleProtectDrop(event)">
-          <div class="drop-icon">🖼️</div>
-          <p>點擊或拖曳圖片到這裡<br><small>支援 JPG / PNG</small></p>
-        </div>
-        <input type="file" id="protect-input" accept="image/*" style="display:none" onchange="handleProtectFile(event)" />
-        <div class="preset-row">
-          <button class="preset-btn active" data-preset="standard" onclick="selectPreset(this)">標準保護</button>
-          <button class="preset-btn" data-preset="maximum" onclick="selectPreset(this)">最大保護</button>
-          <button class="preset-btn" data-preset="extreme" onclick="selectPreset(this)">極限保護</button>
-        </div>
-        <div class="progress-bar" id="protect-progress"><div class="fill" id="protect-fill"></div></div>
-        <div class="protect-preview" id="protect-preview">
-          <img id="protect-result-img" src="" alt="protected" />
-          <a id="protect-dl" class="dl-btn" download="protected.png">⬇️ 下載保護圖片</a>
-        </div>
-      </div>
+      <iframe id="protect-frame"
+        src="https://ai-ocr-protector.streamlit.app/?embed=true"
+        title="防窺工坊"
+        allow="clipboard-read; clipboard-write"></iframe>
     </div>
 
     <!-- SETTINGS 設定 -->
