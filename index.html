@@ -12,6 +12,18 @@
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
   <link rel="icon" href="./favicon.png" />
   <style>
+    /* ── Magic fonts ── */
+    @font-face {
+      font-family: 'YuseiMagic';
+      src: url('./uifont.woff2') format('woff2');
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'HuninnUI';
+      src: url('./uifont-fallback.woff2') format('woff2');
+      font-display: swap;
+    }
+
     /* ── Design tokens ── */
     :root {
       --parchment:  #f4e8c1;
@@ -27,8 +39,18 @@
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; font-family: 'Georgia', 'Times New Roman', serif; }
+    html, body { height: 100%; overflow: hidden; }
     body { background: var(--ink); color: var(--parchment); }
+
+    /* ── Font toggle (auth overlay) ── */
+    .font-toggle-btn {
+      position: absolute; top: 14px; left: 16px;
+      background: rgba(201,168,76,.12); border: 1px solid rgba(201,168,76,.4);
+      border-radius: 20px; padding: 6px 14px;
+      color: var(--gold-lt); font-size: 13px; cursor: pointer;
+      transition: background .2s; letter-spacing: .04em;
+    }
+    .font-toggle-btn:hover { background: rgba(201,168,76,.25); }
 
     /* ── Layout ── */
     #app { display: flex; flex-direction: column; height: 100%; }
@@ -62,19 +84,35 @@
     /* ── Auth overlay ── */
     #auth-overlay {
       position: fixed; inset: 0; z-index: 100;
-      background: var(--ink);
+      background: #2F2114;
+      background-image:
+        linear-gradient(rgba(47,33,20,0.72), rgba(47,33,20,0.72)),
+        url('./parchment.jpg');
+      background-size: cover; background-position: center;
       display: flex; align-items: center; justify-content: center;
       flex-direction: column; gap: 0;
     }
     .auth-box {
-      width: 100%; max-width: 380px; padding: 36px 28px;
-      background: rgba(244,232,193,0.06);
+      width: calc(100% - 32px); max-width: 400px; padding: 36px 28px;
+      background: rgba(47,33,20,0.82);
       border: 1px solid var(--gold);
-      border-radius: 4px;
+      border-radius: 6px;
+      position: relative;
     }
-    .auth-logo { text-align: center; margin-bottom: 24px; }
-    .auth-logo h1 { color: var(--gold); font-size: 24px; letter-spacing: .1em; }
-    .auth-logo p  { color: var(--gold-lt); font-size: 12px; margin-top: 4px; }
+    @media (min-width: 640px) {
+      .auth-box { max-width: 580px; padding: 56px 64px; }
+      .auth-logo { margin-bottom: 40px; }
+      .field { margin-bottom: 24px; }
+      .field input { padding: 14px 16px; font-size: 17px; }
+      .btn-primary { padding: 16px; font-size: 17px; }
+    }
+    .auth-logo { text-align: center; margin-bottom: 28px; }
+    .auth-logo h1 {
+      color: var(--gold); letter-spacing: .06em;
+      font-size: clamp(32px, 6vw, 60px); font-weight: 400;
+      line-height: 1.15;
+    }
+    .auth-logo .subtitle { color: var(--gold-lt); font-size: 13px; margin-top: 8px; letter-spacing: .14em; }
     .auth-tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid var(--gold); }
     .auth-tab {
       flex: 1; padding: 8px; text-align: center; cursor: pointer;
@@ -82,8 +120,8 @@
       border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .2s;
     }
     .auth-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
-    .field { margin-bottom: 14px; }
-    .field label { display: block; font-size: 11px; color: var(--gold); margin-bottom: 4px; letter-spacing: .06em; }
+    .field { margin-bottom: 20px; }
+    .field label { display: block; font-size: 12px; color: var(--gold); margin-bottom: 8px; letter-spacing: .06em; }
     .field input {
       width: 100%; padding: 10px 12px; background: rgba(255,255,255,.07);
       border: 1px solid rgba(201,168,76,.4); border-radius: 3px;
@@ -313,25 +351,42 @@
 <!-- Auth Overlay -->
 <div id="auth-overlay">
   <div class="auth-box">
+    <button class="font-toggle-btn" id="font-toggle-btn" onclick="toggleFont()">✦ 魔法字體</button>
     <div class="auth-logo">
-      <h1>🗞️ 預言家日報</h1>
-      <p>The Prophet's Daily · 私密閱讀平台</p>
+      <h1 id="auth-title">預言家日報</h1>
+      <p class="subtitle">The Prophet's Daily</p>
     </div>
-    <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchAuthTab('signin')">登入</button>
-      <button class="auth-tab" onclick="switchAuthTab('signup')">註冊</button>
-    </div>
+
+    <!-- Normal login -->
     <div id="signin-form">
-      <div class="field"><label>電子郵件</label><input type="email" id="si-email" placeholder="your@email.com" /></div>
-      <div class="field"><label>密碼</label><input type="password" id="si-pass" placeholder="••••••••" /></div>
+      <div class="field"><label>用戶名稱</label><input type="text" id="si-username" placeholder="你的巫師名" autocomplete="username" /></div>
+      <div class="field"><label>密碼</label><input type="password" id="si-pass" placeholder="••••••••" autocomplete="current-password" /></div>
       <button class="btn-primary" onclick="doSignIn()">進入魔法世界</button>
     </div>
-    <div id="signup-form" style="display:none">
-      <div class="field"><label>用戶名稱</label><input type="text" id="su-name" placeholder="巫師暱稱" /></div>
-      <div class="field"><label>電子郵件</label><input type="email" id="su-email" placeholder="your@email.com" /></div>
-      <div class="field"><label>密碼</label><input type="password" id="su-pass" placeholder="至少 6 位" /></div>
-      <button class="btn-primary" onclick="doSignUp()">申請魔法通行證</button>
+
+    <!-- Invite registration (shown only when ?invite=TOKEN in URL) -->
+    <div id="invite-form" style="display:none">
+      <div style="text-align:center;margin-bottom:16px;font-size:13px;color:var(--gold-lt)">
+        🎫 你持有一張邀請通行證
+        <div id="invite-role-badge" style="margin-top:4px;font-size:11px;color:var(--gold)"></div>
+      </div>
+      <div class="field">
+        <label>設定你的巫師名</label>
+        <input type="text" id="inv-name" placeholder="英文+數字，2-20字" autocomplete="username" />
+        <small style="color:var(--gold-lt);font-size:10px">只能包含英文、數字、底線</small>
+      </div>
+      <div class="field"><label>密碼</label><input type="password" id="inv-pass" placeholder="至少 6 位" autocomplete="new-password" /></div>
+      <button class="btn-primary" onclick="doInviteRegister()">領取通行證</button>
+      <button onclick="showLoginForm()" style="display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--gold-lt);font-size:12px;cursor:pointer">已有帳號？直接登入</button>
     </div>
+
+    <!-- Invalid / used invite -->
+    <div id="invite-invalid" style="display:none;text-align:center;padding:20px 0">
+      <div style="font-size:40px">🚫</div>
+      <p style="color:var(--gold);margin-top:12px;font-size:15px" id="invite-invalid-msg">此邀請連結已失效</p>
+      <button onclick="showLoginForm()" style="margin-top:16px;background:none;border:1px solid var(--gold-lt);color:var(--gold-lt);padding:8px 20px;border-radius:3px;cursor:pointer;font-size:13px">返回登入</button>
+    </div>
+
     <p class="auth-msg" id="auth-msg"></p>
   </div>
 </div>
@@ -447,6 +502,7 @@
         <button class="admin-tab active" onclick="switchAdminTab('upload')">上傳</button>
         <button class="admin-tab" onclick="switchAdminTab('novels')">作品管理</button>
         <button class="admin-tab" onclick="switchAdminTab('users')">用戶管理</button>
+        <button class="admin-tab" onclick="switchAdminTab('invites')">邀請連結</button>
       </div>
       <div id="admin-upload" class="admin-pane active">
         <div class="form-group">
@@ -485,6 +541,23 @@
       </div>
       <div id="admin-users" class="admin-pane">
         <div class="user-list" id="user-list"></div>
+      </div>
+      <div id="admin-invites" class="admin-pane">
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <button class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px" onclick="generateInvite('reader')">＋ 讀者邀請</button>
+          <button class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px;background:var(--ink-light)" onclick="generateInvite('writer')">＋ 作家邀請</button>
+          <button id="invite-admin-btn" class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px;background:#2d4a1e;display:none" onclick="generateInvite('admin')">＋ 管理員邀請</button>
+        </div>
+        <!-- generated link box -->
+        <div id="invite-result" style="display:none;background:var(--parchment2);border:1px solid var(--gold-lt);border-radius:4px;padding:12px;margin-bottom:16px">
+          <div style="font-size:11px;color:var(--scarlet);margin-bottom:6px">✨ 邀請連結已生成（7天有效，用一次即失效）</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input id="invite-link-box" type="text" readonly style="flex:1;padding:8px;font-size:12px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment);color:var(--ink)" />
+            <button onclick="copyInviteLink()" style="padding:8px 12px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;white-space:nowrap">複製</button>
+          </div>
+        </div>
+        <!-- existing invites list -->
+        <div id="invite-list"></div>
       </div>
     </div>
   </div>
@@ -535,6 +608,49 @@
 // ── Config (update after deploy) ────────────────────────────
 const API = 'https://YOUR_RENDER_APP.onrender.com';
 
+// ── Font toggle ───────────────────────────────────────────────
+let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
+
+const MAGIC_FONT_CSS = `
+html, body, *, *::before, *::after,
+input, button, textarea, select, option, label,
+h1, h2, h3, h4, h5, h6, p, span, div, a, li, td, th {
+  font-family: 'YuseiMagic', 'HuninnUI', serif !important;
+}
+input::placeholder, textarea::placeholder {
+  font-family: 'YuseiMagic', 'HuninnUI', serif !important;
+}`;
+
+const SYSTEM_FONT_CSS = `
+html, body, *, *::before, *::after,
+input, button, textarea, select, option, label,
+h1, h2, h3, h4, h5, h6, p, span, div, a, li, td, th {
+  font-family: system-ui, -apple-system, "PingFang TC", "Microsoft YaHei", sans-serif !important;
+}
+input::placeholder, textarea::placeholder {
+  font-family: system-ui, -apple-system, "PingFang TC", "Microsoft YaHei", sans-serif !important;
+}`;
+
+function applyFont() {
+  let el = document.getElementById('dynamic-font-style');
+  if (!el) {
+    el = document.createElement('style');
+    el.id = 'dynamic-font-style';
+    document.head.appendChild(el);
+  }
+  el.textContent = magicFont ? MAGIC_FONT_CSS : SYSTEM_FONT_CSS;
+  const btn = document.getElementById('font-toggle-btn');
+  if (btn) btn.textContent = magicFont ? '✦ 魔法字體' : '✦ 系統字體';
+}
+
+function toggleFont() {
+  magicFont = !magicFont;
+  localStorage.setItem('pd_magic_font', magicFont ? 'on' : 'off');
+  applyFont();
+}
+
+applyFont();
+
 // ── State ────────────────────────────────────────────────────
 let token = localStorage.getItem('pd_token') || null;
 let currentUser = null;
@@ -575,11 +691,10 @@ function fmtDate(iso) {
 function initials(name) { return name ? name[0].toUpperCase() : '?'; }
 
 // ── Auth ─────────────────────────────────────────────────────
-function switchAuthTab(tab) {
-  document.querySelectorAll('.auth-tab').forEach(b => b.classList.remove('active'));
-  document.querySelector(`.auth-tab:nth-child(${tab === 'signin' ? 1 : 2})`).classList.add('active');
-  document.getElementById('signin-form').style.display = tab === 'signin' ? '' : 'none';
-  document.getElementById('signup-form').style.display = tab === 'signup' ? '' : 'none';
+function showLoginForm() {
+  document.getElementById('signin-form').style.display = '';
+  document.getElementById('invite-form').style.display = 'none';
+  document.getElementById('invite-invalid').style.display = 'none';
   document.getElementById('auth-msg').textContent = '';
 }
 
@@ -587,28 +702,42 @@ async function doSignIn() {
   const msg = document.getElementById('auth-msg');
   msg.textContent = '驗證中…';
   try {
+    const username = document.getElementById('si-username').value.trim();
+    if (!username) { msg.textContent = '請輸入用戶名稱'; return; }
     const res = await api('/auth/signin', {
       method: 'POST',
-      body: JSON.stringify({ email: document.getElementById('si-email').value.trim(), password: document.getElementById('si-pass').value }),
+      body: JSON.stringify({ username, password: document.getElementById('si-pass').value }),
     });
     if (!res) return;
     token = res.access_token;
     localStorage.setItem('pd_token', token);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('invite');
+    history.replaceState({}, '', url);
     await initApp();
   } catch (e) { msg.textContent = '⚠️ ' + e.message; }
 }
 
-async function doSignUp() {
+async function doInviteRegister() {
   const msg = document.getElementById('auth-msg');
-  const name = document.getElementById('su-name').value.trim();
-  if (!name) { msg.textContent = '請輸入用戶名稱'; return; }
-  msg.textContent = '申請中…';
+  const username = document.getElementById('inv-name').value.trim();
+  const pass = document.getElementById('inv-pass').value;
+  const invToken = new URLSearchParams(window.location.search).get('invite');
+  if (!username) { msg.textContent = '請輸入巫師名'; return; }
+  if (!/^[a-zA-Z0-9_]{2,20}$/.test(username)) { msg.textContent = '⚠️ 只能用英文、數字、底線，2-20字'; return; }
+  if (!invToken) { msg.textContent = '找不到邀請令牌'; return; }
+  msg.textContent = '建立帳號中…';
   try {
-    await api('/auth/signup', {
+    await api('/invites/register', {
       method: 'POST',
-      body: JSON.stringify({ email: document.getElementById('su-email').value.trim(), password: document.getElementById('su-pass').value, username: name }),
+      body: JSON.stringify({ token: invToken, username, password: pass }),
     });
-    msg.textContent = '✉️ 請前往郵箱確認 Email 後登入';
+    const url = new URL(window.location.href);
+    url.searchParams.delete('invite');
+    history.replaceState({}, '', url);
+    document.getElementById('si-username').value = username;
+    showLoginForm();
+    msg.textContent = '✅ 帳號建立成功，請登入';
   } catch (e) { msg.textContent = '⚠️ ' + e.message; }
 }
 
@@ -617,6 +746,7 @@ function doLogout() {
   localStorage.removeItem('pd_token');
   document.getElementById('auth-overlay').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
+  showLoginForm();
 }
 
 async function initApp() {
@@ -624,7 +754,7 @@ async function initApp() {
   if (!currentUser) return;
   document.getElementById('auth-overlay').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-  if (currentUser.role === 'admin') document.getElementById('admin-nav-btn').style.display = '';
+  if (['admin', 'super_admin'].includes(currentUser.role)) document.getElementById('admin-nav-btn').style.display = '';
   renderSettings();
   renderGreeting();
   loadNovels();
@@ -641,20 +771,55 @@ function showPage(id, btn) {
 }
 
 // ── Home ─────────────────────────────────────────────────────
+// quotes[0]=早上  quotes[1]=中午  quotes[2]=下午  quotes[3]=晚上
 const CHARS = [
-  { emoji: '⚡', quotes: ['「當懷疑的時候，去圖書館。」', '「勇敢不是不恐懼，而是儘管恐懼仍前行。」'] },
-  { emoji: '🪄', quotes: ['「這在書裡有寫！」', '「讀書是世界上最強大的魔法。」'] },
-  { emoji: '🦊', quotes: ['「棋局告訴我，有時必須犧牲重要的東西。」', '「朋友就是另一個你自己。」'] },
-  { emoji: '🌱', quotes: ['「勇氣在於你知道自己會輸，卻仍然開始。」', '「每個人都有自己的魔法。」'] },
+  {
+    name: 'Sean', emoji: '🦅',
+    quotes: [
+      '早上好，今天也很漂亮。別懷疑，我說的是事實。',
+      '中午好。終於下課了？我可以把你借走一會兒嗎？',
+      '下午好。還撐得住嗎？不行的話，我帶你逃走十分鐘。',
+      '晚上好。現在可以只看我了嗎？',
+    ],
+  },
+  {
+    name: 'Silas', emoji: '🌹',
+    quotes: [
+      '早上好。你的座位在這裡。',
+      '中午好。先吃飯，你上午已經喝了兩杯咖啡了。',
+      '下午好。你再看下去，今天晚上會頭疼。',
+      '晚上好。門沒有鎖，但我想你會進來。',
+    ],
+  },
+  {
+    name: 'Eli', emoji: '🍪',
+    quotes: [
+      '啊，早上好。你吃早飯了嗎？我這裡還有一塊餅乾。',
+      '啊，中午好。剛剛有一隻蒲絨絨一直跟著我……我想它可能比較喜歡你。',
+      '下午好。溫室現在有太陽，你要不要來看一下？',
+      '晚上好……你冷不冷？',
+    ],
+  },
+  {
+    name: 'Adrian', emoji: '☕',
+    quotes: [
+      '早上好。比我想象中晚了三分鐘——我差點以為你改變路線了。',
+      '中午好。你上午躲我躲得不錯。',
+      '下午好。我猜你現在已經開始覺得無聊了。',
+      '晚上好。現在沒人會打擾我們了。',
+    ],
+  },
 ];
 
 function renderGreeting() {
   const h = new Date().getHours();
+  // 時段 index：0=早上(5-11) 1=中午(12-13) 2=下午(14-17) 3=晚上/深夜(18-4)
+  const timeIdx = h >= 5 && h < 12 ? 0 : h >= 12 && h < 14 ? 1 : h >= 14 && h < 18 ? 2 : 3;
   const period = h < 5 ? '深夜好' : h < 12 ? '早安' : h < 18 ? '午安' : '晚安';
   const char = CHARS[Math.floor(Math.random() * CHARS.length)];
   document.getElementById('char-emoji').textContent = char.emoji;
-  document.getElementById('greeting-line').textContent = `${period}，${currentUser.username || '巫師'} ✨`;
-  document.getElementById('greeting-quote').textContent = char.quotes[Math.floor(Math.random() * char.quotes.length)];
+  document.getElementById('greeting-line').textContent = `${char.name}：${period}，${currentUser.username || '你'} ✨`;
+  document.getElementById('greeting-quote').textContent = char.quotes[timeIdx];
   const now = new Date();
   document.getElementById('date-banner').textContent =
     `📰 ${now.getFullYear()} 年 ${now.getMonth()+1} 月 ${now.getDate()} 日 · 巫師界頭條`;
@@ -866,12 +1031,6 @@ async function processProtect(file) {
 }
 
 // ── Settings ─────────────────────────────────────────────────
-function renderSettings() {
-  document.getElementById('settings-avatar').textContent = currentUser.username ? currentUser.username[0].toUpperCase() : '🧙';
-  document.getElementById('settings-username').textContent = currentUser.username || '巫師';
-  document.getElementById('settings-email').textContent = '';
-  document.getElementById('settings-role').textContent = currentUser.role === 'admin' ? '🏰 管理員' : '📚 讀者';
-}
 
 function applyFontSize(size) {
   document.getElementById('reader-content').style.fontSize = size + 'px';
@@ -895,6 +1054,12 @@ function switchAdminTab(tab) {
   if (tab === 'novels') loadAdminNovelList();
   if (tab === 'users') loadAdminUsers();
   if (tab === 'upload') loadAdminNovelsForUpload();
+  if (tab === 'invites') {
+    // show admin-invite button only for super_admin
+    document.getElementById('invite-admin-btn').style.display =
+      currentUser.role === 'super_admin' ? '' : 'none';
+    loadInviteList();
+  }
 }
 
 async function loadAdminNovelsForUpload() {
@@ -1015,11 +1180,85 @@ async function togglePerm(userId, novelId, grant) {
 
 function closePerm() { document.getElementById('perm-modal').classList.remove('open'); }
 
+// ── Admin: role badge helper ──────────────────────────────────
+const ROLE_LABEL = { super_admin: '👑 最高管理員', admin: '🏰 管理員', writer: '✍️ 作家', reader: '📚 讀者' };
+
+function renderSettings() {
+  document.getElementById('settings-avatar').textContent = currentUser.username ? currentUser.username[0].toUpperCase() : '🧙';
+  document.getElementById('settings-username').textContent = currentUser.username || '巫師';
+  document.getElementById('settings-email').textContent = '';
+  document.getElementById('settings-role').textContent = ROLE_LABEL[currentUser.role] || currentUser.role;
+}
+
+// ── Admin: invites ────────────────────────────────────────────
+async function generateInvite(role) {
+  try {
+    const res = await api('/invites/generate', { method: 'POST', body: JSON.stringify({ role }) });
+    const link = `${window.location.origin}${window.location.pathname}?invite=${res.token}`;
+    document.getElementById('invite-link-box').value = link;
+    document.getElementById('invite-result').style.display = '';
+    loadInviteList();
+  } catch (e) { toast('⚠️ ' + e.message); }
+}
+
+function copyInviteLink() {
+  const box = document.getElementById('invite-link-box');
+  navigator.clipboard.writeText(box.value).then(() => toast('✅ 已複製到剪貼簿'));
+}
+
+async function loadInviteList() {
+  const el = document.getElementById('invite-list');
+  el.innerHTML = '<div class="spinner"></div>';
+  try {
+    const list = await api('/invites/list') || [];
+    if (!list.length) { el.innerHTML = '<p style="color:#888;font-size:13px">尚無邀請連結</p>'; return; }
+    el.innerHTML = list.map(inv => {
+      const used = !!inv.used_at;
+      const usedBy = inv.profiles?.username || '';
+      const expires = new Date(inv.expires_at).toLocaleDateString('zh-TW');
+      return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08);font-size:13px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="background:${used ? '#ccc' : 'var(--scarlet)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${ROLE_LABEL[inv.role] || inv.role}</span>
+          <span style="color:${used ? '#aaa' : 'var(--ink-light)'}">到期：${expires}</span>
+          ${used ? `<span style="color:#aaa">✓ 已使用（${usedBy}）</span>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <code style="font-size:10px;color:#888;word-break:break-all;flex:1">${inv.token}</code>
+          ${!used ? `<button onclick="revokeInvite('${inv.id}')" style="font-size:11px;padding:3px 8px;background:none;border:1px solid #ccc;border-radius:3px;cursor:pointer;white-space:nowrap">撤銷</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch { el.innerHTML = '<p style="color:#888">載入失敗</p>'; }
+}
+
+async function revokeInvite(id) {
+  try { await api(`/invites/${id}`, { method: 'DELETE' }); toast('已撤銷'); loadInviteList(); }
+  catch (e) { toast(e.message); }
+}
+
 // ── Boot ─────────────────────────────────────────────────────
 (async () => {
   const fs = localStorage.getItem('pd_font');
   if (fs) { document.getElementById('font-size-select').value = fs; }
   if (localStorage.getItem('pd_dark') === '1') { document.getElementById('dark-toggle').checked = true; toggleDark(true); }
+
+  // Check for invite token in URL
+  const inviteToken = new URLSearchParams(window.location.search).get('invite');
+  if (inviteToken) {
+    try {
+      const res = await api(`/invites/validate/${inviteToken}`);
+      const roleLabels = { reader: '📚 讀者', writer: '✍️ 作家+讀者', admin: '🏰 管理員' };
+      document.getElementById('invite-role-badge').textContent = `身份：${roleLabels[res.role] || res.role}`;
+      document.getElementById('signin-form').style.display = 'none';
+      document.getElementById('invite-form').style.display = '';
+    } catch (e) {
+      document.getElementById('signin-form').style.display = 'none';
+      document.getElementById('invite-invalid-msg').textContent = e.message || '此邀請連結已失效';
+      document.getElementById('invite-invalid').style.display = '';
+    }
+    return; // don't auto-login, show invite UI
+  }
+
   if (token) await initApp();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').catch(() => {});
 })();

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ocr-protector-shell-v3';
+const CACHE_NAME = 'prophet-daily-v2';
 const ASSETS = [
   './',
   './index.html',
