@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prophet-daily-v11';
+const CACHE_NAME = 'prophet-daily-v12';
 const ASSETS = [
   './',
   './index.html',
@@ -26,8 +26,25 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  if (url.origin === location.origin) {
-    event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)));
+  const req = event.request;
+  const url = new URL(req.url);
+  if (url.origin !== location.origin) return;
+
+  // HTML / navigation: network-first so UI updates show up without bumping the SW.
+  const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
+  if (isHTML) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(req, copy));
+          return res;
+        })
+        .catch(() => caches.match(req).then((c) => c || caches.match('./index.html')))
+    );
+    return;
   }
+
+  // Other same-origin assets: cache-first (fast + offline).
+  event.respondWith(caches.match(req).then((cached) => cached || fetch(req)));
 });
