@@ -510,19 +510,31 @@
           <select id="upload-novel-select"><option value="">— 選擇作品 —</option></select>
         </div>
         <div class="form-group">
-          <label>章節號（批量上傳時自動遞增）</label>
+          <label>章節號</label>
           <input type="number" id="upload-chapter-num" min="1" placeholder="1" value="1" />
         </div>
         <div class="form-group">
           <label>章節標題（選填）</label>
           <input type="text" id="upload-chapter-title" placeholder="第一章：霍格華茲特快列車" />
         </div>
-        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('chapter-img-input').click()">
-          <p>📸 點擊選擇小說截圖</p>
-          <small>可多選，系統將自動 OCR 解析文字</small>
+        <div style="display:flex;gap:0;margin-bottom:14px;border:1px solid var(--gold-lt);border-radius:4px;overflow:hidden">
+          <button id="upload-mode-text-btn" onclick="setUploadMode('text')" style="flex:1;padding:8px;font-size:13px;border:none;cursor:pointer;background:var(--scarlet);color:var(--parchment)">✍️ 貼文字</button>
+          <button id="upload-mode-img-btn" onclick="setUploadMode('img')" style="flex:1;padding:8px;font-size:13px;border:none;cursor:pointer;background:var(--parchment2);color:var(--ink-light)">📸 圖片 OCR</button>
         </div>
-        <input type="file" id="chapter-img-input" accept="image/*" multiple style="display:none" onchange="handleChapterUpload(event)" />
-        <div class="upload-queue" id="upload-queue"></div>
+        <div id="upload-text-section">
+          <div class="form-group">
+            <textarea id="upload-chapter-content" rows="12" placeholder="在此貼上章節內文…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
+          </div>
+          <button class="btn-primary" onclick="submitChapterText()" style="margin-bottom:8px">📨 儲存章節</button>
+        </div>
+        <div id="upload-img-section" style="display:none">
+          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('chapter-img-input').click()">
+            <p>📸 點擊選擇小說截圖</p>
+            <small>可多選，系統將自動 OCR 解析文字</small>
+          </div>
+          <input type="file" id="chapter-img-input" accept="image/*" multiple style="display:none" onchange="handleChapterUpload(event)" />
+          <div class="upload-queue" id="upload-queue"></div>
+        </div>
       </div>
       <div id="admin-novels" class="admin-pane">
         <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
@@ -1069,6 +1081,34 @@ function switchAdminTab(tab) {
       currentUser.role === 'super_admin' ? '' : 'none';
     loadInviteList();
   }
+}
+
+function setUploadMode(mode) {
+  const isText = mode === 'text';
+  document.getElementById('upload-text-section').style.display = isText ? '' : 'none';
+  document.getElementById('upload-img-section').style.display = isText ? 'none' : '';
+  document.getElementById('upload-mode-text-btn').style.background = isText ? 'var(--scarlet)' : 'var(--parchment2)';
+  document.getElementById('upload-mode-text-btn').style.color = isText ? 'var(--parchment)' : 'var(--ink-light)';
+  document.getElementById('upload-mode-img-btn').style.background = isText ? 'var(--parchment2)' : 'var(--scarlet)';
+  document.getElementById('upload-mode-img-btn').style.color = isText ? 'var(--ink-light)' : 'var(--parchment)';
+}
+
+async function submitChapterText() {
+  const novelId = document.getElementById('upload-novel-select').value;
+  const chapterNum = parseInt(document.getElementById('upload-chapter-num').value) || 1;
+  const title = document.getElementById('upload-chapter-title').value.trim() || null;
+  const content = document.getElementById('upload-chapter-content').value.trim();
+  if (!novelId) { toast('請先選擇作品'); return; }
+  if (!content) { toast('請輸入章節內文'); return; }
+  try {
+    await api(`/chapters/novel/${novelId}/text`, {
+      method: 'POST',
+      body: JSON.stringify({ chapter_num: chapterNum, title, content }),
+    });
+    toast('✅ 章節已儲存');
+    document.getElementById('upload-chapter-content').value = '';
+    document.getElementById('upload-chapter-num').value = chapterNum + 1;
+  } catch (e) { toast(e.message); }
 }
 
 async function loadAdminNovelsForUpload() {
