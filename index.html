@@ -55,6 +55,9 @@
     /* ── Layout ── */
     #app { display: flex; flex-direction: column; height: 100vh; }
     #page-area { flex: 1; overflow-y: auto; background: var(--parchment); color: var(--ink); padding-top: env(safe-area-inset-top, 0px); }
+    /* Home page is fixed-height: lock scrolling entirely (no scroll, no scrollbar) */
+    #page-area:has(#page-home.active) { overflow: hidden; overscroll-behavior: none; touch-action: none; }
+    #page-area::-webkit-scrollbar { width: 0; height: 0; }
 
     /* ── Nav bar ── */
     nav {
