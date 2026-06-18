@@ -87,11 +87,12 @@
     /* ── Auth overlay ── */
     #auth-overlay {
       position: fixed; inset: 0; z-index: 100;
-      background: #2F2114;
+      background-color: #2F2114;
       background-image:
         linear-gradient(rgba(47,33,20,0.72), rgba(47,33,20,0.72)),
         url('./parchment.jpg');
-      background-size: cover; background-position: center;
+      background-size: 100% 100%, cover;
+      background-position: center, center;
       display: flex; align-items: center; justify-content: center;
       flex-direction: column; gap: 0;
     }
