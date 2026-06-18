@@ -140,7 +140,7 @@
     /* ── Home page ── */
     .greeting-hero {
       background: linear-gradient(160deg, #4a1d1d 0%, #2a1408 100%) center / cover no-repeat;
-      width: 100%; aspect-ratio: 3/4; max-height: 56vh;
+      width: 100%; aspect-ratio: 3/4; max-height: 72vh;
       position: relative; overflow: hidden; flex-shrink: 0;
     }
     .greeting-hero::after {
@@ -420,10 +420,9 @@
         <h2 id="greeting-line-text">歡迎回來，巫師</h2>
         <p id="greeting-quote-text">「當懷疑的時候，去圖書館。」</p>
       </div>
-      <div class="home-section">
-        <h3>📚 繼續閱讀</h3>
-        <div id="home-novels"></div>
-      </div>
+      <a id="continue-bar" href="#" onclick="resumeReading();return false;" style="display:none;text-decoration:none;background:rgba(244,232,193,0.92);border-top:1px solid var(--gold-lt);padding:9px 18px;font-size:12px;color:var(--scarlet);display:flex;align-items:center;gap:8px">
+        <span>📖</span><span id="continue-bar-text" style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span><span style="color:var(--ink-light);font-size:11px;flex-shrink:0">繼續 →</span>
+      </a>
     </div>
 
     <!-- SCROLL 卷軸 -->
@@ -850,7 +849,7 @@ function renderGreeting() {
 async function loadNovels() {
   try { novels = await api('/novels/') || []; } catch { novels = []; }
   renderShelf();
-  renderHomeNovels();
+  renderContinueBar();
 }
 
 function renderShelf() {
@@ -909,6 +908,38 @@ async function loadChapter(idx) {
       full.content.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join('');
   } catch { document.getElementById('reader-content').textContent = '載入失敗'; }
   document.getElementById('reader-view').scrollTo(0, 0);
+  // save progress
+  const novel = novels.find(n => n.id === currentNovelId);
+  if (novel) {
+    localStorage.setItem('pd_last_read', JSON.stringify({
+      novelId: currentNovelId, novelTitle: novel.title,
+      chapterIdx: idx, chapterId: ch.id,
+      chapterTitle: ch.title || `第 ${ch.chapter_num} 章`,
+    }));
+    renderContinueBar();
+  }
+}
+
+function renderContinueBar() {
+  const raw = localStorage.getItem('pd_last_read');
+  const bar = document.getElementById('continue-bar');
+  if (!raw) { bar.style.display = 'none'; return; }
+  const p = JSON.parse(raw);
+  document.getElementById('continue-bar-text').textContent = `${p.novelTitle}・${p.chapterTitle}`;
+  bar.style.display = 'flex';
+}
+
+async function resumeReading() {
+  const raw = localStorage.getItem('pd_last_read');
+  if (!raw) return;
+  const p = JSON.parse(raw);
+  currentNovelId = p.novelId;
+  try { currentChapters = await api(`/chapters/novel/${p.novelId}`) || []; }
+  catch { toast('無法載入章節'); return; }
+  renderToc();
+  const idx = currentChapters.findIndex(c => c.id === p.chapterId);
+  loadChapter(idx >= 0 ? idx : p.chapterIdx);
+  document.getElementById('reader-view').classList.add('open');
 }
 
 function navigateChapter(dir) {
