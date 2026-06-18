@@ -40,7 +40,7 @@
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; overflow: hidden; }
-    body { background: var(--ink); color: var(--parchment); }
+    body { background: var(--ink); color: var(--parchment); font-size: var(--app-font, 15px); }
 
     /* ── Font toggle (auth overlay) ── */
     .font-toggle-btn {
@@ -216,8 +216,14 @@
       padding: 12px 16px; display: flex; align-items: center; gap: 12px;
       border-bottom: 1px solid var(--gold); z-index: 5;
     }
-    .reader-header button { background: none; border: none; color: var(--gold); font-size: 22px; cursor: pointer; }
+    .reader-header > button { background: none; border: none; color: var(--gold); font-size: 22px; cursor: pointer; }
     .reader-header h3 { flex: 1; font-size: 15px; }
+    .reader-font-ctrl { display: flex; align-items: center; gap: 8px; }
+    .reader-font-ctrl button {
+      background: rgba(201,168,76,.15); border: 1px solid var(--gold);
+      color: var(--gold); font-size: 13px; padding: 4px 9px; border-radius: 4px; cursor: pointer;
+    }
+    .reader-font-ctrl span { color: var(--gold-lt); font-size: 12px; min-width: 18px; text-align: center; }
     .reader-content { padding: 24px 20px 100px; font-size: var(--reader-font, 17px); line-height: 2; color: var(--ink); user-select: none; }
     .reader-content p { font-size: inherit; }
     .watermark-overlay {
@@ -482,12 +488,12 @@
         <div class="settings-section">
           <h3>閱讀偏好</h3>
           <div class="settings-row">
-            <label>字體大小</label>
-            <select id="font-size-select" onchange="applyFontSize(this.value)">
-              <option value="15">小</option>
-              <option value="17" selected>中</option>
-              <option value="19">大</option>
-              <option value="21">特大</option>
+            <label>介面字體大小</label>
+            <select id="font-size-select" onchange="applyAppFontSize(this.value)">
+              <option value="13">小</option>
+              <option value="15" selected>中</option>
+              <option value="17">大</option>
+              <option value="19">特大</option>
             </select>
           </div>
           <div class="settings-row">
@@ -596,6 +602,11 @@
   <div class="reader-header">
     <button onclick="closeReader()">✕</button>
     <h3 id="reader-title">—</h3>
+    <div class="reader-font-ctrl">
+      <button onclick="stepReaderFont(-1)" aria-label="縮小字體">A−</button>
+      <span id="reader-font-label">17</span>
+      <button onclick="stepReaderFont(1)" aria-label="放大字體">A+</button>
+    </div>
   </div>
   <div class="chapter-list-panel">
     <details>
@@ -1099,9 +1110,24 @@ async function processProtect(file) {
 
 // ── Settings ─────────────────────────────────────────────────
 
-function applyFontSize(size) {
+// App-wide UI font size (settings page)
+function applyAppFontSize(size) {
+  document.documentElement.style.setProperty('--app-font', size + 'px');
+  localStorage.setItem('pd_app_font', size);
+}
+
+// Reader-only chapter font size (reader controls)
+function applyReaderFontSize(size) {
+  size = Math.max(13, Math.min(28, size));
   document.documentElement.style.setProperty('--reader-font', size + 'px');
-  localStorage.setItem('pd_font', size);
+  localStorage.setItem('pd_reader_font', size);
+  const lbl = document.getElementById('reader-font-label');
+  if (lbl) lbl.textContent = size;
+}
+
+function stepReaderFont(delta) {
+  const cur = parseInt(localStorage.getItem('pd_reader_font')) || 17;
+  applyReaderFontSize(cur + delta);
 }
 
 function toggleDark(on) {
@@ -1333,8 +1359,10 @@ async function revokeInvite(id) {
 
 // ── Boot ─────────────────────────────────────────────────────
 (async () => {
-  const fs = localStorage.getItem('pd_font');
-  if (fs) { document.getElementById('font-size-select').value = fs; applyFontSize(fs); }
+  const appFs = localStorage.getItem('pd_app_font');
+  if (appFs) { document.getElementById('font-size-select').value = appFs; applyAppFontSize(appFs); }
+  const readerFs = localStorage.getItem('pd_reader_font');
+  if (readerFs) applyReaderFontSize(parseInt(readerFs)); else applyReaderFontSize(17);
   if (localStorage.getItem('pd_dark') === '1') { document.getElementById('dark-toggle').checked = true; toggleDark(true); }
 
   // Check for invite token in URL
