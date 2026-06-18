@@ -5,7 +5,7 @@ from PIL import Image
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 from typing import Optional
-from deps import get_supabase, get_supabase_admin, get_current_user, require_admin, require_writer
+from deps import get_supabase, get_supabase_admin, get_current_user, require_admin, require_writer, is_admin
 from supabase import Client
 
 router = APIRouter()
@@ -124,8 +124,12 @@ def _touch_novel(novel_id: str, sb_admin: Client):
     sb_admin.table("novels").update({"updated_at": "now()"}).eq("id", novel_id).execute()
 
 def _check_novel_access(novel_id: str, user: dict, sb: Client):
-    if user["role"] == "admin":
+    # Approved works → any logged-in user. Pending → admins and the creator only.
+    nv = sb.table("novels").select("status, created_by").eq("id", novel_id).single().execute()
+    if not nv.data:
+        raise HTTPException(404, "Novel not found")
+    if nv.data.get("status") == "approved":
         return
-    perm = sb.table("permissions").select("id").eq("user_id", user["id"]).eq("novel_id", novel_id).execute()
-    if not perm.data:
-        raise HTTPException(403, "No access to this novel")
+    if is_admin(user) or nv.data.get("created_by") == user["id"]:
+        return
+    raise HTTPException(403, "This work is awaiting approval")
