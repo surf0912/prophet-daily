@@ -54,7 +54,7 @@
 
     /* ── Layout ── */
     #app { display: flex; flex-direction: column; height: 100dvh; }
-    #page-area { flex: 1; overflow-y: auto; background: var(--parchment); color: var(--ink); padding-top: env(safe-area-inset-top, 0px); }
+    #page-area { flex: 1; overflow-y: auto; overflow-x: hidden; background: var(--parchment); color: var(--ink); padding-top: env(safe-area-inset-top, 0px); }
     /* Home page is fixed-height: lock scrolling entirely (no scroll, no scrollbar) */
     #page-area:has(#page-home.active) { overflow: hidden; overscroll-behavior: none; touch-action: none; }
     #page-area::-webkit-scrollbar { width: 0; height: 0; }
@@ -202,6 +202,7 @@
     .novel-card .meta { padding: 8px 10px; background: var(--parchment2); }
     .novel-card .meta h4 { font-size: 13px; color: var(--ink); line-height: 1.3; }
     .novel-card .meta p { font-size: 11px; color: var(--ink-light); margin-top: 2px; }
+    .novel-card .meta p.upd { color: var(--scarlet); font-size: 10px; margin-top: 4px; }
     .empty-shelf { text-align: center; padding: 60px 24px; color: var(--ink-light); width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 
     /* ── Reader ── */
@@ -872,6 +873,13 @@ function renderGreeting() {
 }
 
 // ── Novels ───────────────────────────────────────────────────
+function fmtUpdated(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d)) return '';
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+
 async function loadNovels() {
   try { novels = await api('/novels/') || []; } catch { novels = []; }
   renderShelf();
@@ -887,7 +895,7 @@ function renderShelf() {
   grid.innerHTML = novels.map(n => `
     <div class="novel-card" onclick="openNovel('${n.id}')">
       ${n.cover_url ? `<img src="${n.cover_url}" alt="" class="cover-big" />` : `<div class="cover-big">📖</div>`}
-      <div class="meta"><h4>${n.title}</h4><p>${n.author || '佚名'}</p></div>
+      <div class="meta"><h4>${n.title}</h4><p>${n.author || '佚名'}</p>${n.updated_at ? `<p class="upd">📅 更新 ${fmtUpdated(n.updated_at)}</p>` : ''}</div>
     </div>`).join('');
 }
 
@@ -1241,6 +1249,7 @@ async function loadAdminNovelList() {
       <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
         <div style="font-size:14px;font-weight:bold">${n.title}</div>
         <div style="font-size:12px;color:var(--ink-light)">${n.author || '佚名'}</div>
+        ${n.updated_at ? `<div style="font-size:11px;color:var(--ink-light);margin-top:2px">📅 最新更新 ${fmtUpdated(n.updated_at)}</div>` : ''}
         <div style="margin-top:6px">
           <button onclick="deleteNovel('${n.id}')" style="font-size:11px;padding:3px 10px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:3px;cursor:pointer">刪除</button>
         </div>
