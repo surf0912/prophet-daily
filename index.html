@@ -815,7 +815,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Adrian', emoji: '☕', img: './chars/adrian.jpg',
+    name: 'Adrian', emoji: '☕', img: './chars/adrian.jpg', bgPos: 'center 30%',
     quotes: [
       '早上好。你今天沒繞遠路，看來心情不錯。',
       '中午好。當心，西側長廊今天別去。',
@@ -840,7 +840,7 @@ function renderGreeting() {
   document.getElementById('greeting-quote-text').textContent = char.quotes[timeIdx];
   if (char.img) {
     const probe = new Image();         // only swap in the photo once it actually loads
-    probe.onload = () => { hero.style.backgroundImage = `url('${char.img}')`; emoji.style.display = 'none'; };
+    probe.onload = () => { hero.style.backgroundImage = `url('${char.img}')`; hero.style.backgroundPosition = char.bgPos || 'center'; emoji.style.display = 'none'; };
     probe.src = char.img;
   }
   const now = new Date();
