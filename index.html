@@ -213,13 +213,16 @@
     /* ── Reader ── */
     #reader-view {
       display: none; position: fixed; inset: 0; z-index: 50;
-      background: var(--parchment); overflow-y: auto;
-      flex-direction: column;
+      background:
+        linear-gradient(rgba(244,232,193,0.80), rgba(244,232,193,0.80)),
+        url('./parchment.jpg');
+      background-size: cover; background-position: center; background-attachment: fixed;
+      overflow-y: auto; flex-direction: column;
     }
     #reader-view.open { display: flex; }
     .reader-header {
       position: sticky; top: 0; background: var(--ink); color: var(--gold);
-      padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+      padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px; display: flex; align-items: center; gap: 12px;
       border-bottom: 1px solid var(--gold); z-index: 5;
     }
     .reader-header > button { background: none; border: none; color: var(--gold); font-size: 22px; cursor: pointer; }
@@ -232,6 +235,22 @@
     .reader-font-ctrl span { color: var(--gold-lt); font-size: 12px; min-width: 18px; text-align: center; }
     .reader-content { padding: 24px 20px 100px; font-size: var(--reader-font, 17px); line-height: 2; color: var(--ink); user-select: none; }
     .reader-content p { font-size: inherit; }
+    /* ── Forum post layout (post body separated from comments) ── */
+    .fp-intro {
+      background: rgba(138,45,45,.06); border-left: 3px solid var(--scarlet);
+      border-radius: 0 6px 6px 0; padding: 14px 16px; margin-bottom: 8px; line-height: 1.7;
+    }
+    .fp-intro p { margin-bottom: 8px; }
+    .fp-intro p:last-child { margin-bottom: 0; }
+    .fp-divider { text-align: center; color: var(--ink-light); font-size: .8em; letter-spacing: .3em; margin: 18px 0 22px; opacity: .6; }
+    .fp-comment { margin-bottom: 16px; }
+    .fp-comment .fp-name {
+      display: inline-block; font-weight: bold; color: var(--scarlet);
+      font-size: .9em; background: rgba(201,168,76,.18); padding: 2px 10px;
+      border-radius: 12px; margin-bottom: 6px; line-height: 1.5;
+    }
+    .fp-comment .fp-body { line-height: 1.75; padding-left: 2px; }
+    .fp-comment .fp-body p { margin-bottom: 2px; }
     .watermark-overlay {
       position: fixed; inset: 0; pointer-events: none; z-index: 4;
       background-image: repeating-linear-gradient(
@@ -641,7 +660,7 @@
       <button onclick="stepReaderFont(1)" aria-label="放大字體">A+</button>
     </div>
   </div>
-  <div class="chapter-list-panel">
+  <div class="chapter-list-panel" id="reader-toc-panel">
     <details>
       <summary>章節目錄</summary>
       <ol id="reader-toc"></ol>
@@ -649,7 +668,7 @@
   </div>
   <div class="watermark-overlay"></div>
   <div class="reader-content" id="reader-content"></div>
-  <div class="chapter-nav">
+  <div class="chapter-nav" id="reader-chapter-nav">
     <button id="prev-ch-btn" onclick="navigateChapter(-1)" disabled>← 上一章</button>
     <span id="reader-ch-label" style="font-size:12px;color:var(--ink-light);align-self:center">—</span>
     <button id="next-ch-btn" onclick="navigateChapter(1)">下一章 →</button>
@@ -944,15 +963,47 @@ function renderHomeNovels() {
 }
 
 // ── Reader ───────────────────────────────────────────────────
+let currentNovelKind = 'novel';
+
 async function openNovel(novelId) {
   currentNovelId = novelId;
+  let novel = [...forumPosts, ...novels].find(n => n.id === novelId);
+  if (!novel) { try { novel = await api(`/novels/${novelId}`); } catch {} }
+  currentNovelKind = (novel && novel.kind) || 'novel';
   try { currentChapters = await api(`/chapters/novel/${novelId}`) || []; }
-  catch { toast('無法載入章節'); return; }
-  if (!currentChapters.length) { toast('此作品尚無章節'); return; }
+  catch { toast('無法載入內容'); return; }
+  if (!currentChapters.length) { toast('此作品尚無內容'); return; }
   currentChapterIdx = 0;
+  // Forum posts are single-piece reads: hide chapter chrome.
+  const isForum = currentNovelKind === 'forum';
+  document.getElementById('reader-chapter-nav').style.display = isForum ? 'none' : '';
+  document.getElementById('reader-toc-panel').style.display = isForum ? 'none' : '';
   renderToc();
   loadChapter(0);
   document.getElementById('reader-view').classList.add('open');
+}
+
+// Parse a forum-體 post into the original post (intro) + the running comments.
+function renderForumContent(content) {
+  const lines = content.split('\n');
+  const RE = /^第\s*\d+\s*笔\s*[｜|]\s*(.+)$/;
+  const intro = [];
+  const comments = [];
+  let cur = null;
+  for (const raw of lines) {
+    const m = raw.trim().match(RE);
+    if (m) { cur = { name: m[1].trim(), body: [] }; comments.push(cur); }
+    else if (cur) { cur.body.push(raw); }
+    else { intro.push(raw); }
+  }
+  const introHtml = intro.filter(l => l.trim()).map(l => `<p>${escapeHtml(l)}</p>`).join('');
+  const commentsHtml = comments.map(c => `
+    <div class="fp-comment">
+      <div class="fp-name">${escapeHtml(c.name)}</div>
+      <div class="fp-body">${c.body.filter(l => l.trim()).map(l => `<p>${escapeHtml(l)}</p>`).join('')}</div>
+    </div>`).join('');
+  return (introHtml ? `<div class="fp-intro">${introHtml}</div>` : '') +
+    (comments.length ? `<div class="fp-divider">✦ ✦ ✦</div>${commentsHtml}` : '');
 }
 
 function renderToc() {
@@ -972,8 +1023,9 @@ async function loadChapter(idx) {
   renderToc();
   try {
     const full = await api(`/chapters/${ch.id}`);
-    document.getElementById('reader-content').innerHTML =
-      full.content.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join('');
+    document.getElementById('reader-content').innerHTML = currentNovelKind === 'forum'
+      ? renderForumContent(full.content)
+      : full.content.split('\n').filter(l => l.trim()).map(l => `<p>${escapeHtml(l)}</p>`).join('');
   } catch { document.getElementById('reader-content').textContent = '載入失敗'; }
   document.getElementById('reader-view').scrollTo(0, 0);
   // save progress
