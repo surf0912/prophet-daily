@@ -40,7 +40,7 @@
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; overflow: hidden; }
-    body { background: var(--ink); color: var(--parchment); font-size: var(--app-font, 15px); }
+    body { background: var(--ink); color: var(--parchment); }
 
     /* ── Font toggle (auth overlay) ── */
     .font-toggle-btn {
@@ -83,6 +83,8 @@
     /* ── Pages ── */
     .page { display: none; min-height: 100%; padding: 0 0 80px; }
     .page.active { display: block; }
+    /* App-wide UI scale (settings page). Home is locked, so it never scales. */
+    .page:not(#page-home) { zoom: var(--app-zoom, 1); }
     #page-home { display: none; flex-direction: column; padding: 0; min-height: unset; height: 100%; overflow: hidden; }
     #page-home.active { display: flex; }
     #page-home .greeting-hero { flex: 1; max-height: unset; aspect-ratio: unset; }
@@ -491,10 +493,10 @@
           <div class="settings-row">
             <label>介面字體大小</label>
             <select id="font-size-select" onchange="applyAppFontSize(this.value)">
-              <option value="13">小</option>
-              <option value="15" selected>中</option>
-              <option value="17">大</option>
-              <option value="19">特大</option>
+              <option value="0.9">小</option>
+              <option value="1" selected>中</option>
+              <option value="1.12">大</option>
+              <option value="1.25">特大</option>
             </select>
           </div>
           <div class="settings-row">
@@ -1118,10 +1120,10 @@ async function processProtect(file) {
 
 // ── Settings ─────────────────────────────────────────────────
 
-// App-wide UI font size (settings page)
-function applyAppFontSize(size) {
-  document.documentElement.style.setProperty('--app-font', size + 'px');
-  localStorage.setItem('pd_app_font', size);
+// App-wide UI scale (settings page) — zooms content pages uniformly
+function applyAppFontSize(scale) {
+  document.documentElement.style.setProperty('--app-zoom', scale);
+  localStorage.setItem('pd_app_zoom', scale);
 }
 
 // Reader-only chapter font size (reader controls)
@@ -1368,8 +1370,8 @@ async function revokeInvite(id) {
 
 // ── Boot ─────────────────────────────────────────────────────
 (async () => {
-  const appFs = localStorage.getItem('pd_app_font');
-  if (appFs) { document.getElementById('font-size-select').value = appFs; applyAppFontSize(appFs); }
+  const appZoom = localStorage.getItem('pd_app_zoom');
+  if (appZoom) { document.getElementById('font-size-select').value = appZoom; applyAppFontSize(appZoom); }
   const readerFs = localStorage.getItem('pd_reader_font');
   if (readerFs) applyReaderFontSize(parseInt(readerFs)); else applyReaderFontSize(17);
   if (localStorage.getItem('pd_dark') === '1') { document.getElementById('dark-toggle').checked = true; toggleDark(true); }
