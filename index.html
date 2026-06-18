@@ -37,8 +37,9 @@
       --shadow:     rgba(26,10,0,0.35);
       --nav-h:      46px;
       --safe-bottom: env(safe-area-inset-bottom, 0px);
-      /* trim the home-indicator dead space below the nav, keep a small clearance */
-      --nav-safe: max(6px, calc(env(safe-area-inset-bottom, 0px) - 14px));
+      /* Fixed small clearance so the nav is the SAME height in Safari and installed PWA
+         (PWA's safe-area-inset-bottom would otherwise inflate it). */
+      --nav-safe: 8px;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; overflow: hidden; }
@@ -836,7 +837,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Adrian', emoji: '☕', img: './chars/adrian.jpg', bgPos: 'center 8%',
+    name: 'Adrian', emoji: '☕', img: './chars/adrian.jpg', bgPos: 'center top',
     quotes: [
       '早上好。你今天沒繞遠路，看來心情不錯。',
       '中午好。當心，西側長廊今天別去。',
