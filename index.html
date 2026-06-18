@@ -158,10 +158,10 @@
     .greeting-hero h2, .greeting-hero p { display: none; }
     .greeting-text {
       background: var(--ink-light); text-align: center;
-      padding: 12px 20px 10px; flex-shrink: 0;
+      padding: 10px 20px; flex-shrink: 0;
     }
-    .greeting-text h2 { color: var(--gold); font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .greeting-text p { color: var(--parchment2); font-size: 12px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .greeting-text h2 { display: none; }
+    .greeting-text p { color: var(--parchment2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .date-banner {
       background: var(--ink-light); color: var(--gold-lt);
       text-align: center; padding: 8px; font-size: 11px; letter-spacing: .08em;
@@ -836,8 +836,8 @@ function renderGreeting() {
   emoji.textContent = char.emoji;
   emoji.style.display = '';            // show emoji over the gradient (fallback)
   hero.style.backgroundImage = '';     // clear previous photo so the gradient shows
-  document.getElementById('greeting-line-text').textContent = `${period}，${currentUser.username || '你'} ✨`;
-  document.getElementById('greeting-quote-text').textContent = char.quotes[timeIdx];
+  document.getElementById('greeting-line-text').textContent = '';
+  document.getElementById('greeting-quote-text').textContent = `${period}，${currentUser.username || '你'} ✦ ${char.quotes[timeIdx]}`;
   if (char.img) {
     const probe = new Image();         // only swap in the photo once it actually loads
     probe.onload = () => { hero.style.backgroundImage = `url('${char.img}')`; emoji.style.display = 'none'; };
