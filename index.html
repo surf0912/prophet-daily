@@ -17,6 +17,8 @@
       font-family: 'YuseiMagic';
       src: url('./uifont.woff2') format('woff2');
       font-display: swap;
+      /* Latin/digits only — so every CJK char falls through to 粉圓 (HuninnUI) consistently */
+      unicode-range: U+0000-00FF, U+2000-206F, U+2190-21FF, U+2700-27BF;
     }
     @font-face {
       font-family: 'HuninnUI';
@@ -42,7 +44,7 @@
       --nav-safe: 8px;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; }
+    html, body { height: 100%; overflow: hidden; overscroll-behavior: none; width: 100%; max-width: 100%; position: fixed; inset: 0; }
     body { background: var(--ink); color: var(--parchment); }
 
     /* ── Font toggle (auth overlay) ── */
@@ -56,7 +58,7 @@
     .font-toggle-btn:hover { background: rgba(201,168,76,.25); }
 
     /* ── Layout ── */
-    #app { display: flex; flex-direction: column; height: 100dvh; }
+    #app { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; width: 100%; max-width: 100%; }
     #page-area { flex: 1; overflow-y: auto; overflow-x: hidden; background: var(--parchment); color: var(--ink); padding-top: env(safe-area-inset-top, 0px); }
     /* Home page is fixed-height: lock scrolling entirely (no scroll, no scrollbar) */
     #page-area:has(#page-home.active) { overflow: hidden; overscroll-behavior: none; touch-action: none; }
