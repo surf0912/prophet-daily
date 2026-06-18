@@ -35,8 +35,10 @@
       --gold:       #c9a84c;
       --gold-lt:    #e8d5a3;
       --shadow:     rgba(26,10,0,0.35);
-      --nav-h:      50px;
+      --nav-h:      46px;
       --safe-bottom: env(safe-area-inset-bottom, 0px);
+      /* trim the home-indicator dead space below the nav, keep a small clearance */
+      --nav-safe: max(6px, calc(env(safe-area-inset-bottom, 0px) - 14px));
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; overflow: hidden; }
@@ -64,8 +66,8 @@
       display: flex; align-items: stretch;
       background: var(--ink);
       border-top: 2px solid var(--gold);
-      height: calc(var(--nav-h) + var(--safe-bottom));
-      padding-bottom: var(--safe-bottom);
+      height: calc(var(--nav-h) + var(--nav-safe));
+      padding-bottom: var(--nav-safe);
       position: relative; z-index: 10;
     }
     .nav-btn {
