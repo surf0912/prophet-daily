@@ -218,7 +218,8 @@
     }
     .reader-header button { background: none; border: none; color: var(--gold); font-size: 22px; cursor: pointer; }
     .reader-header h3 { flex: 1; font-size: 15px; }
-    .reader-content { padding: 24px 20px 100px; font-size: 17px; line-height: 2; color: var(--ink); user-select: none; }
+    .reader-content { padding: 24px 20px 100px; font-size: var(--reader-font, 17px); line-height: 2; color: var(--ink); user-select: none; }
+    .reader-content p { font-size: inherit; }
     .watermark-overlay {
       position: fixed; inset: 0; pointer-events: none; z-index: 4;
       background-image: repeating-linear-gradient(
@@ -1099,7 +1100,7 @@ async function processProtect(file) {
 // ── Settings ─────────────────────────────────────────────────
 
 function applyFontSize(size) {
-  document.getElementById('reader-content').style.fontSize = size + 'px';
+  document.documentElement.style.setProperty('--reader-font', size + 'px');
   localStorage.setItem('pd_font', size);
 }
 
@@ -1333,7 +1334,7 @@ async function revokeInvite(id) {
 // ── Boot ─────────────────────────────────────────────────────
 (async () => {
   const fs = localStorage.getItem('pd_font');
-  if (fs) { document.getElementById('font-size-select').value = fs; }
+  if (fs) { document.getElementById('font-size-select').value = fs; applyFontSize(fs); }
   if (localStorage.getItem('pd_dark') === '1') { document.getElementById('dark-toggle').checked = true; toggleDark(true); }
 
   // Check for invite token in URL
