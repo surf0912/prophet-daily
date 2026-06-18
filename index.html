@@ -80,6 +80,9 @@
     /* ── Pages ── */
     .page { display: none; min-height: 100%; padding: 0 0 80px; }
     .page.active { display: block; }
+    #page-home { display: none; flex-direction: column; padding: 0; min-height: unset; height: 100%; overflow: hidden; }
+    #page-home.active { display: flex; }
+    #page-home .greeting-hero { flex: 1; max-height: unset; aspect-ratio: unset; }
 
     /* ── Auth overlay ── */
     #auth-overlay {
@@ -155,10 +158,10 @@
     .greeting-hero h2, .greeting-hero p { display: none; }
     .greeting-text {
       background: var(--ink-light); text-align: center;
-      padding: 16px 20px 14px;
+      padding: 12px 20px 10px; flex-shrink: 0;
     }
-    .greeting-text h2 { color: var(--gold); font-size: 17px; }
-    .greeting-text p { color: var(--parchment2); font-size: 13px; margin-top: 6px; line-height: 1.6; }
+    .greeting-text h2 { color: var(--gold); font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .greeting-text p { color: var(--parchment2); font-size: 12px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .date-banner {
       background: var(--ink-light); color: var(--gold-lt);
       text-align: center; padding: 8px; font-size: 11px; letter-spacing: .08em;
@@ -833,7 +836,7 @@ function renderGreeting() {
   emoji.textContent = char.emoji;
   emoji.style.display = '';            // show emoji over the gradient (fallback)
   hero.style.backgroundImage = '';     // clear previous photo so the gradient shows
-  document.getElementById('greeting-line-text').textContent = `${char.name}：${period}，${currentUser.username || '你'} ✨`;
+  document.getElementById('greeting-line-text').textContent = `${period}，${currentUser.username || '你'} ✨`;
   document.getElementById('greeting-quote-text').textContent = char.quotes[timeIdx];
   if (char.img) {
     const probe = new Image();         // only swap in the photo once it actually loads
