@@ -14,7 +14,7 @@ router = APIRouter()
 def list_chapters(
     novel_id: str,
     user: dict = Depends(get_current_user),
-    sb: Client = Depends(get_supabase),
+    sb: Client = Depends(get_supabase_admin),
 ):
     _check_novel_access(novel_id, user, sb)
     res = (
@@ -30,7 +30,7 @@ def list_chapters(
 def get_chapter(
     chapter_id: str,
     user: dict = Depends(get_current_user),
-    sb: Client = Depends(get_supabase),
+    sb: Client = Depends(get_supabase_admin),
 ):
     res = sb.table("chapters").select("*").eq("id", chapter_id).single().execute()
     if not res.data:
@@ -115,7 +115,7 @@ def update_chapter_text(
     return res.data[0]
 
 @router.delete("/{chapter_id}", dependencies=[Depends(require_admin)])
-def delete_chapter(chapter_id: str, sb: Client = Depends(get_supabase)):
+def delete_chapter(chapter_id: str, sb: Client = Depends(get_supabase_admin)):
     sb.table("chapters").delete().eq("id", chapter_id).execute()
     return {"message": "Deleted"}
 
