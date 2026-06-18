@@ -1,0 +1,26 @@
+name: Keep Render backend warm
+
+# Pings the FastAPI backend's /health endpoint so Render's free instance
+# doesn't spin down (which causes a 1-3 min cold start on first request).
+on:
+  schedule:
+    # Every 10 minutes. GitHub may delay scheduled runs by a few minutes under load.
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}  # allow manual trigger from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 \
+            https://ai-ocr-protector.onrender.com/health)
+          echo "health responded with HTTP $code"
+          # Don't fail the job on a single bad response (cold start can exceed timeout);
+          # the next scheduled run will try again.
+          if [ "$code" = "200" ]; then
+            echo "backend is warm ✓"
+          else
+            echo "::warning::backend returned $code (likely cold-starting)"
+          fi
