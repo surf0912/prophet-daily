@@ -837,7 +837,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Adrian', emoji: '☕', img: './chars/adrian.jpg', bgPos: 'center top',
+    name: 'Adrian', emoji: '☕', img: './chars/adrian.jpg', bgPos: 'center top', bgSize: 'contain',
     quotes: [
       '早上好。你今天沒繞遠路，看來心情不錯。',
       '中午好。當心，西側長廊今天別去。',
@@ -866,7 +866,8 @@ function renderGreeting() {
     probe.onload = () => {             // photo layered OVER the gradient (gradient stays as fallback)
       hero.style.backgroundImage = `url('${char.img}'), ${GRAD}`;
       hero.style.backgroundPosition = `${char.bgPos || 'center'}, center`;
-      hero.style.backgroundSize = 'cover, cover';
+      hero.style.backgroundRepeat = 'no-repeat, no-repeat';
+      hero.style.backgroundSize = `${char.bgSize || 'cover'}, cover`;
       emoji.style.display = 'none';
     };
     probe.onerror = () => {};          // keep emoji + gradient if the photo fails
