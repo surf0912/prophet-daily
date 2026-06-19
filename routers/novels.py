@@ -92,6 +92,18 @@ def approve_novel(novel_id: str, sb: Client = Depends(get_supabase_admin)):
         raise HTTPException(404, "Novel not found")
     return res.data[0]
 
+class TransferBody(BaseModel):
+    user_id: str
+
+@router.patch("/{novel_id}/transfer", dependencies=[Depends(require_admin)])
+def transfer_novel(novel_id: str, body: TransferBody, sb: Client = Depends(get_supabase_admin)):
+    target = sb.table("profiles").select("id").eq("id", body.user_id).single().execute()
+    if not target.data:
+        raise HTTPException(404, "Target user not found")
+    sb.table("novels").update({"created_by": body.user_id}).eq("id", novel_id).execute()
+    sb.table("chapters").update({"created_by": body.user_id}).eq("novel_id", novel_id).execute()
+    return {"message": "transferred"}
+
 @router.patch("/{novel_id}", dependencies=[Depends(require_admin)])
 def update_novel(novel_id: str, body: NovelUpdate, sb: Client = Depends(get_supabase_admin)):
     updates = {k: v for k, v in body.dict().items() if v is not None}
