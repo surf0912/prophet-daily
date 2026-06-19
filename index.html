@@ -284,7 +284,7 @@
       color: var(--gold); font-size: 13px; padding: 4px 9px; border-radius: 4px; cursor: pointer;
     }
     .reader-font-ctrl span { color: var(--gold-lt); font-size: 12px; min-width: 18px; text-align: center; }
-    .reader-content { padding: 24px 20px 100px; font-size: var(--reader-font, 17px); line-height: 2; color: var(--ink); user-select: none; }
+    .reader-content { padding: 24px 20px 100px; font-size: var(--reader-font, 15px); line-height: 2; color: var(--ink); user-select: none; }
     .reader-content p { font-size: inherit; }
     /* ── Forum post layout (post body separated from comments) ── */
     .fp-intro {
@@ -607,10 +607,10 @@
           <div class="settings-row">
             <label>介面字體大小</label>
             <select id="font-size-select" onchange="applyAppFontSize(this.value)">
-              <option value="0.9">小</option>
-              <option value="1" selected>中</option>
-              <option value="1.12">大</option>
-              <option value="1.25">特大</option>
+              <option value="1">小</option>
+              <option value="1.12" selected>中</option>
+              <option value="1.25">大</option>
+              <option value="1.4">特大</option>
             </select>
           </div>
           <div class="settings-row">
@@ -764,7 +764,7 @@
     <h3 id="reader-title">—</h3>
     <div class="reader-font-ctrl">
       <button onclick="stepReaderFont(-1)" aria-label="縮小字體">A−</button>
-      <span id="reader-font-label">17</span>
+      <span id="reader-font-label">15</span>
       <button onclick="stepReaderFont(1)" aria-label="放大字體">A+</button>
     </div>
   </div>
@@ -1512,7 +1512,7 @@ function applyReaderFontSize(size) {
 }
 
 function stepReaderFont(delta) {
-  const cur = parseInt(localStorage.getItem('pd_reader_font')) || 17;
+  const cur = parseInt(localStorage.getItem('pd_reader_font')) || 15;
   applyReaderFontSize(cur + delta);
 }
 
@@ -1955,10 +1955,10 @@ async function revokeInvite(id) {
 
 // ── Boot ─────────────────────────────────────────────────────
 (async () => {
-  const appZoom = localStorage.getItem('pd_app_zoom');
-  if (appZoom) { document.getElementById('font-size-select').value = appZoom; applyAppFontSize(appZoom); }
+  const appZoom = localStorage.getItem('pd_app_zoom') || '1.12';
+  document.getElementById('font-size-select').value = appZoom; applyAppFontSize(appZoom);
   const readerFs = localStorage.getItem('pd_reader_font');
-  if (readerFs) applyReaderFontSize(parseInt(readerFs)); else applyReaderFontSize(17);
+  if (readerFs) applyReaderFontSize(parseInt(readerFs)); else applyReaderFontSize(15);
   if (localStorage.getItem('pd_dark') === '1') { document.getElementById('dark-toggle').checked = true; toggleDark(true); }
 
   // Check for invite token in URL
