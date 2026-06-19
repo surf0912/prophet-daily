@@ -70,9 +70,9 @@
       display: flex; align-items: stretch;
       background: var(--ink-light);
       border-top: 2px solid var(--gold);
-      /* Height = compact icon row + the device's own home-indicator inset (auto-adapts:
-         ~34px on Face-ID phones, 0 on older phones). No per-device tweaking. */
-      padding-bottom: env(safe-area-inset-bottom, 0px);
+      /* Pull the icons down: trim most of the home-indicator band, keep a small clearance.
+         One formula, all devices — Face-ID phones get trimmed; older phones stay at the 6px floor. */
+      padding-bottom: max(6px, calc(env(safe-area-inset-bottom, 0px) - 24px));
       position: relative; z-index: 10; flex-shrink: 0;
     }
     .nav-btn {
