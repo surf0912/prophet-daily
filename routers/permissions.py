@@ -75,11 +75,11 @@ def request_mqj(user: dict = Depends(get_current_user), sb: Client = Depends(get
     return {"mqj_access": "approved" if user.get("mqj_access") == "approved" else "pending"}
 
 class MqjBody(BaseModel):
-    access: str  # 'none' | 'pending' | 'approved'
+    access: str  # 'none' | 'pending' | 'approved' | 'rejected'
 
 @router.patch("/users/{user_id}/mqj", dependencies=[Depends(require_admin)])
 def set_mqj(user_id: str, body: MqjBody, sb: Client = Depends(get_supabase_admin)):
-    if body.access not in ("none", "pending", "approved"):
+    if body.access not in ("none", "pending", "approved", "rejected"):
         raise HTTPException(400, "Invalid access value")
     res = sb.table("profiles").update({"mqj_access": body.access}).eq("id", user_id).execute()
     if not res.data:
