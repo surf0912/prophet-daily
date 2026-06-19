@@ -11,6 +11,10 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
   <link rel="icon" href="./favicon.png" />
+  <!-- 粉圓 Huninn — full set via Google Fonts (auto-sharded, covers 繁/簡 without us subsetting) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" />
   <style>
     /* ── Magic fonts ── */
     @font-face {
@@ -627,6 +631,13 @@
               <span class="slider"></span>
             </label>
           </div>
+          <div class="settings-row">
+            <label>✦ 魔法字體</label>
+            <label class="toggle">
+              <input type="checkbox" id="magic-font-toggle" onchange="toggleFont()" />
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
         <button class="btn-logout" onclick="doLogout()">🚪 登出魔法世界</button>
       </div>
@@ -815,10 +826,10 @@ const MAGIC_FONT_CSS = `
 html, body, *, *::before, *::after,
 input, button, textarea, select, option, label,
 h1, h2, h3, h4, h5, h6, p, span, div, a, li, td, th {
-  font-family: 'YuseiMagic', 'HuninnUI', 'PingFang SC', 'PingFang TC', 'Heiti SC', sans-serif !important;
+  font-family: 'YuseiMagic', 'Huninn', 'HuninnUI', 'PingFang SC', 'PingFang TC', 'Heiti SC', sans-serif !important;
 }
 input::placeholder, textarea::placeholder {
-  font-family: 'YuseiMagic', 'HuninnUI', 'PingFang SC', 'PingFang TC', 'Heiti SC', sans-serif !important;
+  font-family: 'YuseiMagic', 'Huninn', 'HuninnUI', 'PingFang SC', 'PingFang TC', 'Heiti SC', sans-serif !important;
 }`;
 
 const SYSTEM_FONT_CSS = `
@@ -841,6 +852,8 @@ function applyFont() {
   el.textContent = magicFont ? MAGIC_FONT_CSS : SYSTEM_FONT_CSS;
   const btn = document.getElementById('font-toggle-btn');
   if (btn) btn.textContent = magicFont ? '✦ 魔法字體' : '✦ 系統字體';
+  const cb = document.getElementById('magic-font-toggle');
+  if (cb) cb.checked = magicFont;
 }
 
 function toggleFont() {
