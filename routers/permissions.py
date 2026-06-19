@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from deps import get_supabase_admin, get_current_user, require_admin
+from deps import get_supabase_admin, get_current_user, require_admin, require_super_admin
 from supabase import Client
 
 router = APIRouter()
@@ -8,6 +8,11 @@ router = APIRouter()
 class GrantRequest(BaseModel):
     user_id: str
     novel_id: str
+
+class RoleRequest(BaseModel):
+    role: str  # reader | writer | admin | super_admin
+
+VALID_ROLES = {"reader", "writer", "admin", "super_admin"}
 
 @router.get("/my")
 def my_permissions(user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
@@ -47,3 +52,12 @@ def revoke(body: GrantRequest, user: dict = Depends(require_admin), sb: Client =
 def list_users(sb: Client = Depends(get_supabase_admin)):
     res = sb.table("profiles").select("id, username, role, created_at").order("created_at", desc=True).execute()
     return res.data
+
+@router.patch("/users/{user_id}/role", dependencies=[Depends(require_super_admin)])
+def change_role(user_id: str, body: RoleRequest, sb: Client = Depends(get_supabase_admin)):
+    if body.role not in VALID_ROLES:
+        raise HTTPException(400, "Invalid role")
+    res = sb.table("profiles").update({"role": body.role}).eq("id", user_id).execute()
+    if not res.data:
+        raise HTTPException(404, "User not found")
+    return res.data[0]

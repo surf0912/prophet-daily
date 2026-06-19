@@ -1418,14 +1418,32 @@ async function loadAdminUsers() {
   el.innerHTML = '<div class="spinner"></div>';
   try {
     const users = await api('/permissions/users') || [];
-    el.innerHTML = users.map(u => `
+    const ROLES = [['reader','📚 讀者'],['writer','✍️ 作家'],['admin','🏰 管理員'],['super_admin','👑 超級管理員']];
+    const isSuper = currentUser.role === 'super_admin';
+    el.innerHTML = users.map(u => {
+      const isSelf = u.id === currentUser.id;
+      const picker = (isSuper && !isSelf)
+        ? `<select onchange="changeUserRole('${u.id}','${u.username}',this.value)" style="font-size:12px;padding:4px 6px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink)">
+             ${ROLES.map(([v,l]) => `<option value="${v}" ${u.role===v?'selected':''}>${l}</option>`).join('')}
+           </select>`
+        : `<div class="u-role">${u.role}${isSelf ? '（你）' : ''}</div>`;
+      return `
       <div class="user-row">
         <div style="width:32px;height:32px;border-radius:50%;background:var(--scarlet);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:14px;flex-shrink:0">${initials(u.username)}</div>
         <div class="u-name">${u.username}</div>
-        <div class="u-role">${u.role}</div>
-        <button class="perm-btn" onclick="openPerm('${u.id}','${u.username}')">授權</button>
-      </div>`).join('') || '<p style="color:#888;padding:20px">尚無用戶</p>';
+        ${picker}
+      </div>`;
+    }).join('') || '<p style="color:#888;padding:20px">尚無用戶</p>';
   } catch { el.innerHTML = '<p>載入失敗</p>'; }
+}
+
+async function changeUserRole(userId, username, role) {
+  if (!confirm(`確定把「${username}」的角色改成 ${role}？`)) { loadAdminUsers(); return; }
+  try {
+    await api(`/permissions/users/${userId}/role`, { method: 'PATCH', body: JSON.stringify({ role }) });
+    toast(`✅ ${username} 已設為 ${role}`);
+    loadAdminUsers();
+  } catch (e) { toast(e.message); loadAdminUsers(); }
 }
 
 async function openPerm(userId, username) {
