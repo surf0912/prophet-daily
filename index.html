@@ -521,6 +521,9 @@
     <!-- SCROLL 卷軸 -->
     <div id="page-scroll" class="page">
       <div class="shelf-header"><h2>📜 卷軸書架</h2></div>
+      <div class="forum-search">
+        <input type="search" id="shelf-search-input" placeholder="🔍 搜尋篇名或作者…" oninput="renderShelf()" />
+      </div>
       <div class="filter-bar">
         <div class="filter-label">✦ 故事類型</div>
         <div class="cat-pills" id="shelf-cat-pills"></div>
@@ -928,6 +931,7 @@ function showPage(id, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
   if (btn) btn.classList.add('active');
+  if (id === 'scroll') renderShelf();
   if (id === 'forum') loadForumPosts();
   if (id === 'admin') { loadAdminNovelsForUpload(); }
 }
@@ -1068,9 +1072,11 @@ function renderShelf() {
     grid.innerHTML = '<div class="empty-shelf">📭 目前沒有作品<br><small>等管理員上傳作品</small></div>';
     return;
   }
-  const list = applyClassFilter(novels, shelfCat, shelfChars);
+  let list = applyClassFilter(novels, shelfCat, shelfChars);
+  const q = (document.getElementById('shelf-search-input')?.value || '').trim().toLowerCase();
+  if (q) list = list.filter(n => (n.title || '').toLowerCase().includes(q) || (n.author || '').toLowerCase().includes(q));
   if (!list.length) {
-    grid.innerHTML = '<div class="empty-shelf">🔍 沒有符合篩選的作品</div>';
+    grid.innerHTML = '<div class="empty-shelf">🔍 沒有符合的作品</div>';
     return;
   }
   grid.innerHTML = list.map(n => `
