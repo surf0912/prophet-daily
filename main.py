@@ -25,6 +25,7 @@ app.include_router(invites.router,     prefix="/invites",     tags=["invites"])
 def root():
     return {"message": "預言家日報 API is running"}
 
-@app.get("/health")
+# GET + HEAD so uptime monitors (e.g. UptimeRobot, which probes with HEAD) get 200.
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health():
     return {"status": "ok"}
