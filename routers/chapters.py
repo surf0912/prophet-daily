@@ -125,11 +125,11 @@ def _touch_novel(novel_id: str, sb_admin: Client):
 
 def _check_novel_access(novel_id: str, user: dict, sb: Client):
     # Approved works → any logged-in user. Pending → admins and the creator only.
-    nv = sb.table("novels").select("status, created_by").eq("id", novel_id).single().execute()
+    nv = sb.table("novels").select("status, owners").eq("id", novel_id).single().execute()
     if not nv.data:
         raise HTTPException(404, "Novel not found")
     if nv.data.get("status") == "approved":
         return
-    if is_admin(user) or nv.data.get("created_by") == user["id"]:
+    if is_admin(user) or user["id"] in (nv.data.get("owners") or []):
         return
     raise HTTPException(403, "This work is awaiting approval")

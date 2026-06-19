@@ -750,13 +750,16 @@
   </div>
 </div>
 
-<!-- Transfer ownership modal -->
+<!-- Manage owners (co-authors) modal -->
 <div class="perm-modal" id="transfer-modal">
   <div class="perm-modal-inner">
-    <h3>🔁 轉移所有權 — <span id="transfer-novel-title" style="font-size:14px"></span></h3>
-    <p style="font-size:12px;color:var(--ink-light);margin:6px 0 10px">選擇新的擁有者：</p>
+    <h3>👥 管理作者 — <span id="transfer-novel-title" style="font-size:14px"></span></h3>
+    <p style="font-size:12px;color:var(--ink-light);margin:6px 0 10px">勾選擁有此作品的帳號（可多人共同擁有）：</p>
     <div id="transfer-user-list"></div>
-    <button class="btn-close-modal" onclick="document.getElementById('transfer-modal').classList.remove('open')">取消</button>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" onclick="saveOwners()">儲存</button>
+      <button class="btn-close-modal" style="margin:0" onclick="document.getElementById('transfer-modal').classList.remove('open')">取消</button>
+    </div>
   </div>
 </div>
 
@@ -1525,35 +1528,40 @@ async function loadAdminNovelList() {
         <div style="font-size:12px;color:var(--ink-light)">${n.author || '佚名'}</div>
         ${n.updated_at ? `<div style="font-size:11px;color:var(--ink-light);margin-top:2px">📅 最新更新 ${fmtUpdated(n.updated_at)}</div>` : ''}
         <div style="margin-top:6px;display:flex;gap:8px">
-          <button onclick="openTransfer('${n.id}', this.dataset.t)" data-t="${escapeHtml(n.title)}" style="font-size:11px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">🔁 轉移</button>
+          <button onclick='openOwners(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.owners || [])})' style="font-size:11px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">👥 作者</button>
           <button onclick="deleteNovel('${n.id}')" style="font-size:11px;padding:3px 10px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:3px;cursor:pointer">刪除</button>
         </div>
       </div>`).join('') || '<p style="color:#888">尚無作品</p>';
   } catch { el.innerHTML = '<p>載入失敗</p>'; }
 }
 
-async function openTransfer(novelId, title) {
+let ownersNovelId = null;
+
+async function openOwners(novelId, title, owners) {
+  ownersNovelId = novelId;
   document.getElementById('transfer-novel-title').textContent = title || '';
   document.getElementById('transfer-modal').classList.add('open');
   const el = document.getElementById('transfer-user-list');
   el.innerHTML = '<div class="spinner"></div>';
+  const owned = new Set(owners || []);
   try {
     const users = await api('/permissions/users') || [];
     el.innerHTML = users.map(u => `
-      <div class="user-row">
+      <label class="user-row" style="cursor:pointer">
         <div style="width:32px;height:32px;border-radius:50%;background:var(--scarlet);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:14px;flex-shrink:0">${initials(u.username)}</div>
         <div class="u-name">${u.username}</div>
         <div class="u-role">${u.role}</div>
-        <button class="perm-btn" onclick="doTransfer('${novelId}','${u.id}','${u.username}')">轉給他</button>
-      </div>`).join('') || '<p style="color:#888;padding:20px">尚無用戶</p>';
+        <input type="checkbox" class="owner-cb" value="${u.id}" ${owned.has(u.id) ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--scarlet)" />
+      </label>`).join('') || '<p style="color:#888;padding:20px">尚無用戶</p>';
   } catch { el.innerHTML = '<p>載入失敗</p>'; }
 }
 
-async function doTransfer(novelId, userId, username) {
-  if (!confirm(`確定把這篇的所有權轉移給「${username}」？`)) return;
+async function saveOwners() {
+  const owner_ids = [...document.querySelectorAll('#transfer-user-list .owner-cb:checked')].map(c => c.value);
+  if (!owner_ids.length) { toast('至少要保留一位作者'); return; }
   try {
-    await api(`/novels/${novelId}/transfer`, { method: 'PATCH', body: JSON.stringify({ user_id: userId }) });
-    toast(`✅ 已轉移給 ${username}`);
+    await api(`/novels/${ownersNovelId}/owners`, { method: 'PATCH', body: JSON.stringify({ owner_ids }) });
+    toast(`✅ 作者已更新（${owner_ids.length} 人）`);
     document.getElementById('transfer-modal').classList.remove('open');
     loadAdminNovelList();
   } catch (e) { toast(e.message); }

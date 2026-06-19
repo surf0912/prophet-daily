@@ -72,7 +72,7 @@ def create_novel(body: NovelCreate, user: dict = Depends(require_writer), sb: Cl
     status = "approved" if is_admin(user) else "pending"
     data = body.dict()
     published_at = data.pop("published_at", None)
-    record = {**data, "created_by": user["id"], "status": status}
+    record = {**data, "created_by": user["id"], "status": status, "owners": [user["id"]]}
     if published_at:
         record["created_at"] = published_at
         record["updated_at"] = published_at
@@ -91,6 +91,7 @@ def create_forum_post(body: ForumPostCreate, user: dict = Depends(require_writer
         "category": body.category,
         "characters": body.characters,
         "created_by": user["id"],
+        "owners": [user["id"]],
     }
     if body.published_at:
         record["created_at"] = body.published_at
@@ -112,17 +113,15 @@ def approve_novel(novel_id: str, sb: Client = Depends(get_supabase_admin)):
         raise HTTPException(404, "Novel not found")
     return res.data[0]
 
-class TransferBody(BaseModel):
-    user_id: str
+class OwnersBody(BaseModel):
+    owner_ids: List[str]   # accounts that co-own (can manage) this work
 
-@router.patch("/{novel_id}/transfer", dependencies=[Depends(require_admin)])
-def transfer_novel(novel_id: str, body: TransferBody, sb: Client = Depends(get_supabase_admin)):
-    target = sb.table("profiles").select("id").eq("id", body.user_id).single().execute()
-    if not target.data:
-        raise HTTPException(404, "Target user not found")
-    sb.table("novels").update({"created_by": body.user_id}).eq("id", novel_id).execute()
-    sb.table("chapters").update({"created_by": body.user_id}).eq("novel_id", novel_id).execute()
-    return {"message": "transferred"}
+@router.patch("/{novel_id}/owners", dependencies=[Depends(require_admin)])
+def set_owners(novel_id: str, body: OwnersBody, sb: Client = Depends(get_supabase_admin)):
+    res = sb.table("novels").update({"owners": body.owner_ids}).eq("id", novel_id).execute()
+    if not res.data:
+        raise HTTPException(404, "Novel not found")
+    return res.data[0]
 
 @router.patch("/{novel_id}", dependencies=[Depends(require_admin)])
 def update_novel(novel_id: str, body: NovelUpdate, sb: Client = Depends(get_supabase_admin)):
@@ -143,6 +142,6 @@ def _check_novel_access(novel: dict, user: dict):
     # Pending works are visible only to admins and the creator (for preview/review).
     if novel.get("status") == "approved":
         return
-    if is_admin(user) or novel.get("created_by") == user["id"]:
+    if is_admin(user) or user["id"] in (novel.get("owners") or []):
         return
     raise HTTPException(403, "This work is awaiting approval")
