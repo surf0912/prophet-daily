@@ -67,6 +67,26 @@ def list_pending(sb: Client = Depends(get_supabase_admin)):
     )
     return res.data
 
+# Posts/works the caller has liked at least one comment in (for the "我讚過的" view).
+# Declared before /{novel_id} so the static path wins.
+@router.get("/my-liked")
+def my_liked(user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
+    rows = sb.table("comment_likes").select("novel_id").eq("user_id", user["id"]).execute().data or []
+    if not rows:
+        return []
+    counts: dict = {}
+    for r in rows:
+        counts[r["novel_id"]] = counts.get(r["novel_id"], 0) + 1
+    novels = sb.table("novels").select("*").in_("id", list(counts.keys())).execute().data or []
+    out = []
+    for n in novels:
+        if n.get("status") != "approved" and not is_admin(user):
+            continue  # don't surface works that are no longer public
+        n["liked_count"] = counts.get(n["id"], 0)
+        out.append(n)
+    out.sort(key=lambda n: n["liked_count"], reverse=True)
+    return out
+
 @router.get("/{novel_id}")
 def get_novel(novel_id: str, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
     res = sb.table("novels").select("*").eq("id", novel_id).single().execute()

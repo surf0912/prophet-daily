@@ -364,6 +364,9 @@
 
     /* ── Forum page ── */
     .forum-header { position: sticky; top: 0; z-index: 6; padding: calc(20px + var(--safe-top)) 18px 8px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
+    .forum-tabs { display: flex; gap: 8px; padding: 10px 18px 0; }
+    .forum-tab { padding: 5px 14px; border-radius: 16px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); font-size: 13px; cursor: pointer; }
+    .forum-tab.active { background: var(--scarlet); color: var(--on-dark); border-color: var(--scarlet); }
     .forum-header h2 { font-size: 18px; }
     .forum-search { padding: 12px 18px; }
     .forum-search input {
@@ -521,7 +524,7 @@
     <!-- Normal login -->
     <div id="signin-form">
       <div class="field"><label>巫師入學全名</label><input type="text" id="si-username" placeholder="你的入學全名（英文）" autocomplete="username" /></div>
-      <div class="field"><label>通關密語</label><input type="password" id="si-pass" placeholder="••••••••" autocomplete="current-password" /></div>
+      <div class="field"><label>通關密語</label><input type="password" id="si-pass" placeholder="輸入你的通關密語" autocomplete="current-password" /></div>
       <button class="btn-primary" onclick="doSignIn()">進入魔法世界</button>
     </div>
 
@@ -599,6 +602,10 @@
     <!-- FORUM 論壇 -->
     <div id="page-forum" class="page">
       <div class="forum-header"><h2>🦉 匿名羊皮紙</h2></div>
+      <div class="forum-tabs">
+        <button id="forum-tab-all" class="forum-tab active" onclick="setForumView('all')">📜 全部</button>
+        <button id="forum-tab-liked" class="forum-tab" onclick="setForumView('liked')">❤️ 我讚過的</button>
+      </div>
       <div class="forum-search">
         <input type="search" id="forum-search-input" placeholder="🔍 搜尋貼文標題…" oninput="renderForumList()" />
       </div>
@@ -896,7 +903,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v56';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v57';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1506,7 +1513,17 @@ async function toggleLike(idx) {
   } catch (e) { toast(e.message); }
 }
 
+let forumChars = CHAR_LIST.map(c => c.code);   // default: all lit = show everything (角色篩選用 OR)
+let forumView = 'all';   // 'all' | 'liked'
+let forumLiked = [];
+
 async function loadForumPosts() {
+  // entering the forum always resets to the 全部 view
+  forumView = 'all';
+  const at = document.getElementById('forum-tab-all'), lt = document.getElementById('forum-tab-liked');
+  if (at) at.classList.add('active');
+  if (lt) lt.classList.remove('active');
+  const fb = document.querySelector('#page-forum .filter-bar'); if (fb) fb.style.display = '';
   const el = document.getElementById('forum-list');
   el.innerHTML = '<div class="spinner"></div>';
   try {
@@ -1518,29 +1535,50 @@ async function loadForumPosts() {
   }
 }
 
-let forumChars = CHAR_LIST.map(c => c.code);   // default: all lit = show everything (角色篩選用 OR)
-
 function onForumFilter(type, val) {
   forumChars = forumChars.includes(val) ? forumChars.filter(c => c !== val) : [...forumChars, val];
   renderForumList();
 }
 
+async function setForumView(v) {
+  forumView = v;
+  document.getElementById('forum-tab-all').classList.toggle('active', v === 'all');
+  document.getElementById('forum-tab-liked').classList.toggle('active', v === 'liked');
+  document.querySelector('#page-forum .filter-bar').style.display = v === 'liked' ? 'none' : '';
+  if (v === 'liked') {
+    const el = document.getElementById('forum-list');
+    el.innerHTML = '<div class="spinner"></div>';
+    try { forumLiked = await api('/novels/my-liked') || []; } catch { forumLiked = []; }
+  }
+  renderForumList();
+}
+
 function renderForumList() {
   const el = document.getElementById('forum-list');
-  // character chips only (no category for forum posts)
-  const chipEl = document.getElementById('forum-char-chips');
-  chipEl.innerHTML = CHAR_LIST.map(ch =>
-    `<div class="char-chip ${forumChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}">
-       <img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span>
-     </div>`).join('');
-  chipEl.querySelectorAll('.char-chip').forEach(el => el.onclick = () => onForumFilter('char', el.dataset.ch));
+  const liked = forumView === 'liked';
+  // character chips only in the 全部 view
+  if (!liked) {
+    const chipEl = document.getElementById('forum-char-chips');
+    chipEl.innerHTML = CHAR_LIST.map(ch =>
+      `<div class="char-chip ${forumChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}">
+         <img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span>
+       </div>`).join('');
+    chipEl.querySelectorAll('.char-chip').forEach(el => el.onclick = () => onForumFilter('char', el.dataset.ch));
+  }
   const q = (document.getElementById('forum-search-input').value || '').trim().toLowerCase();
-  // newest first (oldest sinks to the bottom)
-  let posts = [...forumPosts].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  posts = applyClassFilter(posts, '', forumChars);
+  let posts;
+  if (liked) {
+    posts = [...forumLiked];   // already sorted by liked_count from the server
+  } else {
+    posts = [...forumPosts].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    posts = applyClassFilter(posts, '', forumChars);
+  }
   if (q) posts = posts.filter(p => (p.title || '').toLowerCase().includes(q));
   if (!posts.length) {
-    el.innerHTML = `<p style="padding:40px 8px;color:#888;text-align:center">${q ? '找不到符合的貼文' : '目前還沒有論壇貼文'}</p>`;
+    const msg = liked
+      ? (q ? '找不到符合的貼文' : '你還沒讚過任何羊皮紙 🤍<br><small>去論壇幫喜歡的留言點個讚吧</small>')
+      : (q ? '找不到符合的貼文' : '目前還沒有論壇貼文');
+    el.innerHTML = `<p style="padding:40px 8px;color:#888;text-align:center">${msg}</p>`;
     return;
   }
   el.innerHTML = posts.map(p => `
@@ -1549,6 +1587,7 @@ function renderForumList() {
       <div class="meta">
         <span>🕯️ ${p.author || '匿名'}</span>
         <span>📅 ${fmtUpdated(p.created_at)}</span>
+        ${p.liked_count ? `<span style="color:var(--accent)">❤️ 你讚了 ${p.liked_count} 則</span>` : ''}
         ${p.status === 'pending' ? '<span class="pending-tag">⏳ 待審核</span>' : ''}
       </div>
       ${(p.characters || []).length ? `<div class="row-tags" style="margin-top:7px">${(p.characters || []).map(c => `<span class="t-chr">${charNames([c])}</span>`).join('')}</div>` : ''}
