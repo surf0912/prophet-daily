@@ -916,7 +916,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v68';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v69';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1433,31 +1433,35 @@ function renderForumContent(content) {
   // Normalise line separators — pasted text often uses U+2028/U+2029 (or \r), which break
   // line-based parsing (the regexes' `.`/`$` don't cross them) and hide the floor markers.
   const lines = (content || '').replace(/[\u2028\u2029\r]/g, '\n').split('\n');
-  // A line starts a new floor (樓層) if it begins with either marker:
-  //   第N笔｜暱稱            (older format; name follows the ｜)
-  //   1L / 01L / 2L … 暱稱｜內容   (floor-number format; optional 暱稱｜ then inline content)
+  // A new floor (樓層) starts on any of these; text before the first one is the 主文/引言:
+  //   第N笔｜暱稱                         (oldest format)
+  //   1L / 01L / 2L … [暱稱｜內容]          (floor-number format)
+  //   --- / *** separator → next non-blank line (often **暱稱｜標題**) heads the floor
   const BIJI = /^第\s*\d+\s*笔\s*[｜|]\s*(.+)$/;
   const FLOOR = /^0?\d{1,3}\s*[Ll](?![A-Za-z])\s*(.*)$/;
+  const SEP = /^[-—–_*]{3,}$/;
+  const BOLD = /^\*\*(.+?)\*\*$/;
+  const stripMd = s => (s || '').replace(/\*\*/g, '').trim();
+  // split "暱稱｜內容" → {name, first}
+  const splitHead = s => { const i = s.search(/[｜|]/); return i >= 0 ? { name: s.slice(0, i).trim(), first: s.slice(i + 1).trim() } : { name: s.trim(), first: '' }; };
   const intro = [];
   const comments = [];
-  let cur = null;
+  let cur = null, sep = false;
   for (const raw of lines) {
     const t = raw.trim();
+    if (SEP.test(t)) { sep = true; continue; }
     const mb = t.match(BIJI);
-    if (mb) { cur = { name: mb[1].trim(), body: [] }; comments.push(cur); continue; }
+    if (mb) { cur = { name: stripMd(mb[1]), body: [] }; comments.push(cur); sep = false; continue; }
     const mf = t.match(FLOOR);
-    if (mf) {
-      // After the NL marker: "暱稱｜內容" → split on ｜; otherwise the whole segment IS the
-      // 暱稱 (the body follows on the next lines — pasted posts separate them with U+2028).
-      const rest = mf[1].trim();
-      let name = rest, first = '';
-      const bi = rest.search(/[｜|]/);
-      if (bi >= 0) { name = rest.slice(0, bi).trim(); first = rest.slice(bi + 1).trim(); }
-      cur = { name, body: first ? [first] : [] };
-      comments.push(cur);
-      continue;
+    if (mf) { const h = splitHead(mf[1].trim()); cur = { name: stripMd(h.name), body: h.first ? [stripMd(h.first)] : [] }; comments.push(cur); sep = false; continue; }
+    if (sep) {
+      if (t === '') continue;          // skip blank lines between separator and the floor header
+      const bold = t.match(BOLD);
+      const h = splitHead(bold ? bold[1].trim() : t);
+      cur = { name: stripMd(h.name), body: h.first ? [stripMd(h.first)] : [] };
+      comments.push(cur); sep = false; continue;
     }
-    if (cur) cur.body.push(raw); else intro.push(raw);
+    if (cur) cur.body.push(stripMd(raw)); else intro.push(stripMd(raw));
   }
   const introHtml = intro.filter(l => l.trim()).map(l => `<p>${escapeHtml(l)}</p>`).join('');
   const commentsHtml = comments.map((c, i) => {
@@ -2083,8 +2087,8 @@ let editWork = { id: null, chapterId: null, chapterNum: 1, chapterTitle: null, k
 // Split forum content into 主文 (intro, before the first floor marker) + 留言區 (the floors).
 function splitForumContent(content) {
   const lines = (content || '').replace(/[\u2028\u2029\r]/g, '\n').split('\n');
-  const BIJI = /^第\s*\d+\s*笔\s*[｜|]/, FLOOR = /^0?\d{1,3}\s*[Ll](?![A-Za-z])/;
-  const i = lines.findIndex(l => { const t = l.trim(); return BIJI.test(t) || FLOOR.test(t); });
+  const BIJI = /^第\s*\d+\s*笔\s*[｜|]/, FLOOR = /^0?\d{1,3}\s*[Ll](?![A-Za-z])/, SEP = /^[-—–_*]{3,}$/;
+  const i = lines.findIndex(l => { const t = l.trim(); return BIJI.test(t) || FLOOR.test(t) || SEP.test(t); });
   if (i < 0) return { intro: lines.join('\n').trim(), comments: '' };
   return { intro: lines.slice(0, i).join('\n').trim(), comments: lines.slice(i).join('\n').trim() };
 }
