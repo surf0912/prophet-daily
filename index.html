@@ -301,6 +301,10 @@
       font-size: .9em; background: rgba(201,168,76,.18); padding: 2px 10px;
       border-radius: 12px; margin-bottom: 6px; line-height: 1.5;
     }
+    .fp-comment .fp-name .fp-floor {
+      font-family: ui-monospace, monospace; color: var(--gold); background: var(--scarlet);
+      padding: 1px 6px; border-radius: 8px; margin-right: 8px; font-size: .92em; letter-spacing: .03em;
+    }
     .fp-comment .fp-body { line-height: 1.75; padding-left: 2px; }
     .fp-comment .fp-body p { margin-bottom: 2px; }
     /* Fixed "post sealed" box appended to the end of every forum post */
@@ -1206,9 +1210,9 @@ function renderForumContent(content) {
     else { intro.push(raw); }
   }
   const introHtml = intro.filter(l => l.trim()).map(l => `<p>${escapeHtml(l)}</p>`).join('');
-  const commentsHtml = comments.map(c => `
+  const commentsHtml = comments.map((c, i) => `
     <div class="fp-comment">
-      <div class="fp-name">${escapeHtml(c.name)}</div>
+      <div class="fp-name"><span class="fp-floor">${String(i + 1).padStart(2, '0')}L</span>${escapeHtml(c.name)}</div>
       <div class="fp-body">${c.body.filter(l => l.trim()).map(l => `<p>${escapeHtml(l)}</p>`).join('')}</div>
     </div>`).join('');
   const endBox = `
