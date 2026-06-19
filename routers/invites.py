@@ -34,9 +34,12 @@ def generate_invite(
     if body.role not in allowed:
         raise HTTPException(403, f"You cannot grant role '{body.role}'")
 
+    from datetime import datetime, timezone, timedelta
+    expires_at = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
     res = sb.table("invite_tokens").insert({
         "role": body.role,
         "created_by": user["id"],
+        "expires_at": expires_at,
     }).execute()
     token = res.data[0]["token"]
     return {"token": token, "role": body.role}
