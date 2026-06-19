@@ -1016,8 +1016,10 @@ function fmtUpdated(ts) {
   return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
 }
 
+let novelsError = false;
 async function loadNovels() {
-  try { novels = await api('/novels/?kind=novel') || []; } catch { novels = []; }
+  try { novels = await api('/novels/?kind=novel') || []; novelsError = false; }
+  catch { novels = []; novelsError = true; }
   renderShelf();
   renderContinueBar();
 }
@@ -1068,6 +1070,10 @@ function renderShelf() {
     document.getElementById('shelf-cat-pills'), document.getElementById('shelf-char-chips'),
     shelfCat, shelfChars, onShelfFilter);
   const grid = document.getElementById('novel-grid');
+  if (novelsError && !novels.length) {
+    grid.innerHTML = '<div class="empty-shelf" style="color:var(--scarlet);cursor:pointer" onclick="loadNovels()">⚠️ 載入失敗，點此重試</div>';
+    return;
+  }
   if (!novels.length) {
     grid.innerHTML = '<div class="empty-shelf">📭 目前沒有作品<br><small>等管理員上傳作品</small></div>';
     return;
@@ -1222,8 +1228,11 @@ async function loadForumPosts() {
   el.innerHTML = '<div class="spinner"></div>';
   try {
     forumPosts = await api('/novels/?kind=forum') || [];
-  } catch { forumPosts = []; }
-  renderForumList();
+    renderForumList();
+  } catch {
+    // Don't fake an empty list on a fetch error (e.g. server cold-start) — offer a retry.
+    el.innerHTML = '<p style="padding:40px 8px;color:var(--scarlet);text-align:center;cursor:pointer" onclick="loadForumPosts()">⚠️ 載入失敗，點此重試</p>';
+  }
 }
 
 let forumChars = [];   // 論壇體只用角色篩選，不用故事類型
