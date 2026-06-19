@@ -794,7 +794,7 @@
   <nav>
     <button class="nav-btn active" onclick="showPage('home',this)"><span class="icon">🏠</span>首頁</button>
     <button class="nav-btn" onclick="showPage('scroll',this)"><span class="icon">📜</span>卷軸</button>
-    <button class="nav-btn" onclick="showPage('forum',this)"><span class="icon">🦉</span>論壇</button>
+    <button class="nav-btn" onclick="showPage('forum',this)"><span class="icon">🦉</span>羊皮紙</button>
     <button class="nav-btn" onclick="showPage('protect',this)"><span class="icon">🔮</span>防窺</button>
     <button class="nav-btn" onclick="showPage('settings',this)"><span class="icon">⚙️</span>設定</button>
     <button class="nav-btn" id="admin-nav-btn" style="display:none" onclick="showPage('admin',this)"><span class="icon">🏰</span>後台</button>
@@ -912,7 +912,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v63';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v64';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
