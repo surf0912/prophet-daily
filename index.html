@@ -206,6 +206,11 @@
     .novel-row .row-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
     .novel-row .t-cat { font-size: 10px; padding: 2px 9px; border-radius: 10px; background: rgba(138,45,45,.12); color: var(--scarlet); }
     .novel-row .t-chr { font-size: 10px; padding: 2px 9px; border-radius: 10px; background: rgba(201,168,76,.2); color: var(--ink-light); }
+    /* series grouping */
+    .series-block { border-bottom: 1px solid rgba(26,10,0,.1); }
+    .series-head { padding: 12px 18px 2px; font-size: 13px; font-weight: bold; color: #2d4a1e; }
+    .novel-row.series-member { padding-left: 30px; border-bottom: 1px dashed rgba(26,10,0,.08); }
+    .series-block .novel-row.series-member:last-child { border-bottom: none; }
     /* ── Category + character filter bar (卷軸 + 論壇) ── */
     .filter-bar { padding: 12px 18px 4px; background: var(--parchment2); border-bottom: 1px solid var(--gold-lt); }
     .filter-label { font-size: 10px; color: var(--scarlet); letter-spacing: .1em; margin-bottom: 6px; }
@@ -782,6 +787,20 @@
   </div>
 </div>
 
+<!-- Series binding modal -->
+<div class="perm-modal" id="series-modal">
+  <div class="perm-modal-inner">
+    <h3>🔗 綁定系列 — <span id="series-novel-title" style="font-size:14px"></span></h3>
+    <p style="font-size:12px;color:var(--ink-light);margin:6px 0 10px">填一樣的「系列名」即可把上下部綁在一起；留空則為單篇。</p>
+    <div class="form-group"><label>系列名（留空 = 單篇）</label><input type="text" id="series-name-input" list="series-name-list" placeholder="例：火焰杯后" /><datalist id="series-name-list"></datalist></div>
+    <div class="form-group"><label>第幾部（順序，1=上、2=下…）</label><input type="number" id="series-order-input" min="0" value="0" /></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" onclick="saveSeries()">儲存</button>
+      <button class="btn-close-modal" style="margin:0" onclick="document.getElementById('series-modal').classList.remove('open')">取消</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1107,15 +1126,37 @@ function renderShelf() {
     grid.innerHTML = '<div class="empty-shelf">🔍 沒有符合的作品</div>';
     return;
   }
-  grid.innerHTML = list.map(n => `
-    <div class="novel-row" onclick="openNovel('${n.id}')">
-      <h4>${escapeHtml(n.title)}</h4>
+  // Group series members together; standalone works render as plain rows.
+  const seen = new Set();
+  const blocks = [];
+  for (const n of list) {
+    if (seen.has(n.id)) continue;
+    if (n.series) {
+      const members = list.filter(m => m.series === n.series).sort((a, b) => (a.series_order || 0) - (b.series_order || 0));
+      members.forEach(m => seen.add(m.id));
+      blocks.push(`
+        <div class="series-block">
+          <div class="series-head">📚 ${escapeHtml(n.series)}</div>
+          ${members.map(m => shelfRow(m, true)).join('')}
+        </div>`);
+    } else {
+      seen.add(n.id);
+      blocks.push(shelfRow(n, false));
+    }
+  }
+  grid.innerHTML = blocks.join('');
+}
+
+function shelfRow(n, inSeries) {
+  return `
+    <div class="novel-row${inSeries ? ' series-member' : ''}" onclick="openNovel('${n.id}')">
+      <h4>${inSeries && n.series_order ? `<span style="color:var(--ink-light);font-weight:normal">#${n.series_order}　</span>` : ''}${escapeHtml(n.title)}</h4>
       <div class="row-meta">${n.author || '佚名'}${n.updated_at ? ` · 📅 ${fmtUpdated(n.updated_at)}` : ''}</div>
       <div class="row-tags">
         ${n.category ? `<span class="t-cat">${n.category}</span>` : ''}
         ${(n.characters || []).map(c => `<span class="t-chr">${charNames([c])}</span>`).join('')}
       </div>
-    </div>`).join('');
+    </div>`;
 }
 
 function renderHomeNovels() {
@@ -1597,6 +1638,7 @@ async function loadAdminNovelList() {
   el.innerHTML = '<div class="spinner"></div>';
   try {
     const ns = await api('/novels/') || [];
+    window._adminNovels = ns;
     el.innerHTML = ns.map(n => `
       <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
         <div style="margin-bottom:3px">${n.kind === 'forum'
@@ -1604,12 +1646,14 @@ async function loadAdminNovelList() {
           : '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--scarlet)">📖 小說</span>'}</div>
         <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)}</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
+          ${n.series ? `<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:#2d4a1e">🔗 ${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : ''}
           ${n.category ? `<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.12);color:var(--scarlet)">${n.category}</span>` : ''}
           ${(n.characters || []).map(c => `<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.18);color:var(--ink-light)">${charNames([c])}</span>`).join('')}
         </div>
         <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${n.author || '佚名'}</div>
         ${n.updated_at ? `<div style="font-size:11px;color:var(--ink-light);margin-top:2px">📅 最新更新 ${fmtUpdated(n.updated_at)}</div>` : ''}
-        <div style="margin-top:6px;display:flex;gap:8px">
+        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick='openSeries(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.series || "")}, ${n.series_order || 0})' style="font-size:11px;padding:3px 10px;background:none;border:1px solid #2d4a1e;color:#2d4a1e;border-radius:3px;cursor:pointer">🔗 系列</button>
           <button onclick='openOwners(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.owners || [])})' style="font-size:11px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">👥 作者</button>
           <button onclick="deleteNovel('${n.id}')" style="font-size:11px;padding:3px 10px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:3px;cursor:pointer">刪除</button>
         </div>
@@ -1646,6 +1690,30 @@ async function saveOwners() {
     toast(`✅ 作者已更新（${owner_ids.length} 人）`);
     document.getElementById('transfer-modal').classList.remove('open');
     loadAdminNovelList();
+  } catch (e) { toast(e.message); }
+}
+
+let seriesNovelId = null;
+
+function openSeries(novelId, title, series, order) {
+  seriesNovelId = novelId;
+  document.getElementById('series-novel-title').textContent = title || '';
+  document.getElementById('series-name-input').value = series || '';
+  document.getElementById('series-order-input').value = order || 0;
+  // suggest existing series names
+  const names = [...new Set((window._adminNovels || []).map(n => n.series).filter(Boolean))];
+  document.getElementById('series-name-list').innerHTML = names.map(s => `<option value="${escapeHtml(s)}">`).join('');
+  document.getElementById('series-modal').classList.add('open');
+}
+
+async function saveSeries() {
+  const series = document.getElementById('series-name-input').value.trim();
+  const series_order = parseInt(document.getElementById('series-order-input').value) || 0;
+  try {
+    await api(`/novels/${seriesNovelId}/series`, { method: 'PATCH', body: JSON.stringify({ series: series || null, series_order }) });
+    toast(series ? `✅ 已綁定系列「${series}」` : '✅ 已設為單篇');
+    document.getElementById('series-modal').classList.remove('open');
+    loadAdminNovelList(); loadNovels();
   } catch (e) { toast(e.message); }
 }
 

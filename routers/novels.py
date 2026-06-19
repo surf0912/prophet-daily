@@ -123,6 +123,21 @@ def set_owners(novel_id: str, body: OwnersBody, sb: Client = Depends(get_supabas
         raise HTTPException(404, "Novel not found")
     return res.data[0]
 
+class SeriesBody(BaseModel):
+    series: Optional[str] = None       # series name; null/empty = standalone
+    series_order: int = 0              # position within the series (1=上, 2=下, ...)
+
+@router.patch("/{novel_id}/series", dependencies=[Depends(require_admin)])
+def set_series(novel_id: str, body: SeriesBody, sb: Client = Depends(get_supabase_admin)):
+    name = (body.series or "").strip() or None
+    res = sb.table("novels").update({
+        "series": name,
+        "series_order": body.series_order if name else 0,
+    }).eq("id", novel_id).execute()
+    if not res.data:
+        raise HTTPException(404, "Novel not found")
+    return res.data[0]
+
 @router.patch("/{novel_id}", dependencies=[Depends(require_admin)])
 def update_novel(novel_id: str, body: NovelUpdate, sb: Client = Depends(get_supabase_admin)):
     updates = {k: v for k, v in body.dict().items() if v is not None}
