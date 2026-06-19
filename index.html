@@ -70,7 +70,9 @@
       display: flex; align-items: stretch;
       background: var(--ink-light);
       border-top: 2px solid var(--gold);
-      height: calc(var(--nav-h) + var(--nav-safe));
+      /* Height = compact icon row + the device's own home-indicator inset (auto-adapts:
+         ~34px on Face-ID phones, 0 on older phones). No per-device tweaking. */
+      padding-bottom: env(safe-area-inset-bottom, 0px);
       position: relative; z-index: 10; flex-shrink: 0;
     }
     .nav-btn {
@@ -78,7 +80,7 @@
       align-items: center; justify-content: center; gap: 3px;
       background: none; border: none; cursor: pointer;
       color: var(--gold-lt); font-size: 9px; letter-spacing: 0.04em;
-      transition: color .2s, background .2s; padding: 6px 2px var(--nav-safe);
+      transition: color .2s, background .2s; padding: 7px 2px 6px;
       -webkit-tap-highlight-color: transparent;
     }
     .nav-btn .icon { font-size: 22px; line-height: 1; }
