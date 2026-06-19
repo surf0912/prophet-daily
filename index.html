@@ -932,7 +932,7 @@ function showPage(id, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
   if (btn) btn.classList.add('active');
-  if (id === 'scroll') renderShelf();
+  if (id === 'scroll') loadNovels();
   if (id === 'forum') loadForumPosts();
   if (id === 'admin') { switchAdminTab(currentUser.role === 'writer' ? 'upload' : 'novels'); }
 }
