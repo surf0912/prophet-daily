@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prophet-daily-v32';
+const CACHE_NAME = 'prophet-daily-v33';
 const ASSETS = [
   './manifest.json',
   './favicon.png',
@@ -32,7 +32,8 @@ self.addEventListener('fetch', (event) => {
   const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
   if (isHTML) {
     event.respondWith(
-      fetch(req)
+      // no-store: bypass the browser HTTP cache so UI updates always show on reload.
+      fetch(req, { cache: 'no-store' })
         .then((res) => {
           const copy = res.clone();
           caches.open(CACHE_NAME).then((c) => c.put(req, copy));
