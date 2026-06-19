@@ -912,7 +912,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v65';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v66';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1426,9 +1426,12 @@ function renderForumContent(content) {
     if (mb) { cur = { name: mb[1].trim(), body: [] }; comments.push(cur); continue; }
     const mf = t.match(FLOOR);
     if (mf) {
-      let name = '', first = mf[1].trim();
-      const bi = first.search(/[｜|]/);
-      if (bi >= 0) { name = first.slice(0, bi).trim(); first = first.slice(bi + 1).trim(); }
+      // After the NL marker: "暱稱｜內容" → split on ｜; otherwise the whole segment IS the
+      // 暱稱 (the body follows on the next lines — pasted posts separate them with U+2028).
+      const rest = mf[1].trim();
+      let name = rest, first = '';
+      const bi = rest.search(/[｜|]/);
+      if (bi >= 0) { name = rest.slice(0, bi).trim(); first = rest.slice(bi + 1).trim(); }
       cur = { name, body: first ? [first] : [] };
       comments.push(cur);
       continue;
