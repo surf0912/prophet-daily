@@ -591,11 +591,11 @@
     <div id="page-admin" class="page">
       <div class="admin-header"><h2>🏰 管理後台</h2></div>
       <div class="admin-tabs">
-        <button class="admin-tab active" onclick="switchAdminTab('upload')">上傳</button>
-        <button class="admin-tab admin-only" onclick="switchAdminTab('review')">審核</button>
-        <button class="admin-tab admin-only" onclick="switchAdminTab('novels')">作品管理</button>
-        <button class="admin-tab admin-only" onclick="switchAdminTab('users')">用戶管理</button>
-        <button class="admin-tab admin-only" onclick="switchAdminTab('invites')">邀請連結</button>
+        <button class="admin-tab admin-only active" data-tab="novels" onclick="switchAdminTab('novels')">作品管理</button>
+        <button class="admin-tab" data-tab="upload" onclick="switchAdminTab('upload')">上傳</button>
+        <button class="admin-tab admin-only" data-tab="review" onclick="switchAdminTab('review')">審核</button>
+        <button class="admin-tab admin-only" data-tab="users" onclick="switchAdminTab('users')">用戶管理</button>
+        <button class="admin-tab admin-only" data-tab="invites" onclick="switchAdminTab('invites')">邀請連結</button>
       </div>
       <div id="admin-upload" class="admin-pane active">
         <!-- 小說章節 vs 論壇貼文 -->
@@ -934,7 +934,7 @@ function showPage(id, btn) {
   if (btn) btn.classList.add('active');
   if (id === 'scroll') renderShelf();
   if (id === 'forum') loadForumPosts();
-  if (id === 'admin') { loadAdminNovelsForUpload(); }
+  if (id === 'admin') { switchAdminTab(currentUser.role === 'writer' ? 'upload' : 'novels'); }
 }
 
 // ── Home ─────────────────────────────────────────────────────
@@ -1344,8 +1344,7 @@ function toggleDark(on) {
 
 // ── Admin ────────────────────────────────────────────────────
 function switchAdminTab(tab) {
-  document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
-  event.currentTarget.classList.add('active');
+  document.querySelectorAll('.admin-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.admin-pane').forEach(p => p.classList.remove('active'));
   document.getElementById('admin-' + tab).classList.add('active');
   if (tab === 'novels') loadAdminNovelList();
