@@ -692,7 +692,6 @@
           <div class="form-group"><label>發佈日期（選填，可填過去日期）</label><input type="date" id="new-novel-date" /></div>
           <div class="form-group"><label>故事類型</label><select id="new-novel-category"></select></div>
           <div class="form-group"><label>角色（可多選）</label><div id="new-novel-chars" class="char-picker"></div></div>
-          <div class="form-group"><label>簡介（選填）</label><textarea id="new-novel-desc" rows="2" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea></div>
           <div class="form-group"><label>內文</label><textarea id="new-novel-content" rows="12" placeholder="在此貼上小說內文…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea></div>
           <button class="btn-primary" onclick="submitNewNovel()" style="margin-bottom:8px">📨 建立小說</button>
           <p id="new-novel-hint" style="font-size:12px;color:var(--ink-light);text-align:center"></p>
@@ -1736,14 +1735,13 @@ async function submitNewNovel() {
     const novel = await api('/novels/', { method: 'POST', body: JSON.stringify({
       title,
       author: document.getElementById('new-novel-author').value.trim() || null,
-      description: document.getElementById('new-novel-desc').value.trim() || null,
       published_at: dateToIso(document.getElementById('new-novel-date').value),
       category,
       characters: readChars('new-novel-chars'),
     }) });
     await api(`/chapters/novel/${novel.id}/text`, { method: 'POST', body: JSON.stringify({ chapter_num: 1, title: null, content }) });
     toast(novel.status === 'pending' ? '✅ 已送出，待管理員審核' : '✅ 小說已建立');
-    ['new-novel-title', 'new-novel-author', 'new-novel-date', 'new-novel-desc', 'new-novel-content'].forEach(id => document.getElementById(id).value = '');
+    ['new-novel-title', 'new-novel-author', 'new-novel-date', 'new-novel-content'].forEach(id => document.getElementById(id).value = '');
     resetClassPicker('new-novel-category', 'new-novel-chars');
     loadNovels();
   } catch (e) { toast(e.message); }
