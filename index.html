@@ -194,8 +194,17 @@
     .novel-card-sm .info p { font-size: 11px; color: var(--ink-light); margin-top: 2px; }
 
     /* ── Scroll (卷軸) page ── */
-    .shelf-header { padding: 20px 18px 8px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
+    .shelf-header { position: sticky; top: 0; z-index: 6; padding: 20px 18px 8px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
     .shelf-header h2 { font-size: 18px; color: var(--ink); }
+    /* novel list as rows (title / author / category / characters) */
+    .novel-list { padding: 0; }
+    .novel-row { padding: 14px 18px; border-bottom: 1px solid rgba(26,10,0,.1); cursor: pointer; }
+    .novel-row:active { background: rgba(201,168,76,.08); }
+    .novel-row h4 { font-size: 15px; color: var(--ink); line-height: 1.35; }
+    .novel-row .row-meta { font-size: 11px; color: var(--ink-light); margin-top: 4px; }
+    .novel-row .row-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+    .novel-row .t-cat { font-size: 10px; padding: 2px 9px; border-radius: 10px; background: rgba(138,45,45,.12); color: var(--scarlet); }
+    .novel-row .t-chr { font-size: 10px; padding: 2px 9px; border-radius: 10px; background: rgba(201,168,76,.2); color: var(--ink-light); }
     /* ── Category + character filter bar (卷軸 + 論壇) ── */
     .filter-bar { padding: 12px 18px 4px; background: var(--parchment2); border-bottom: 1px solid var(--gold-lt); }
     .filter-label { font-size: 10px; color: var(--scarlet); letter-spacing: .1em; margin-bottom: 6px; }
@@ -530,7 +539,7 @@
         <div class="filter-label">✦ 角色</div>
         <div class="char-chips" id="shelf-char-chips"></div>
       </div>
-      <div id="novel-grid" class="novel-grid"></div>
+      <div id="novel-grid" class="novel-list"></div>
     </div>
 
     <!-- FORUM 論壇 -->
@@ -1092,9 +1101,13 @@ function renderShelf() {
     return;
   }
   grid.innerHTML = list.map(n => `
-    <div class="novel-card" onclick="openNovel('${n.id}')">
-      ${n.cover_url ? `<img src="${n.cover_url}" alt="" class="cover-big" />` : `<div class="cover-big">📖</div>`}
-      <div class="meta"><h4>${n.title}</h4><p>${n.author || '佚名'}</p>${n.updated_at ? `<p class="upd">📅 更新 ${fmtUpdated(n.updated_at)}</p>` : ''}</div>
+    <div class="novel-row" onclick="openNovel('${n.id}')">
+      <h4>${escapeHtml(n.title)}</h4>
+      <div class="row-meta">${n.author || '佚名'}${n.updated_at ? ` · 📅 ${fmtUpdated(n.updated_at)}` : ''}</div>
+      <div class="row-tags">
+        ${n.category ? `<span class="t-cat">${n.category}</span>` : ''}
+        ${(n.characters || []).map(c => `<span class="t-chr">${charNames([c])}</span>`).join('')}
+      </div>
     </div>`).join('');
 }
 
