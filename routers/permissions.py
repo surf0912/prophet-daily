@@ -48,10 +48,14 @@ def revoke(body: GrantRequest, user: dict = Depends(require_admin), sb: Client =
     sb.table("permissions").delete().eq("user_id", body.user_id).eq("novel_id", body.novel_id).execute()
     return {"message": "Revoked"}
 
-@router.get("/users", dependencies=[Depends(require_admin)])
-def list_users(sb: Client = Depends(get_supabase_admin)):
+ROLE_RANK = {"reader": 0, "writer": 1, "admin": 2, "super_admin": 3}
+
+@router.get("/users")
+def list_users(user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     res = sb.table("profiles").select("id, username, role, mqj_access, created_at").order("created_at", desc=True).execute()
-    return res.data
+    # An admin only sees members at the same rank or lower; only super_admin sees super_admin accounts.
+    my_rank = ROLE_RANK.get(user.get("role"), 0)
+    return [u for u in res.data if ROLE_RANK.get(u.get("role"), 0) <= my_rank]
 
 @router.patch("/users/{user_id}/role", dependencies=[Depends(require_super_admin)])
 def change_role(user_id: str, body: RoleRequest, sb: Client = Depends(get_supabase_admin)):

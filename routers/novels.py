@@ -35,6 +35,7 @@ class ForumPostCreate(BaseModel):
 @router.get("/")
 def list_novels(
     kind: Optional[str] = None,
+    mine: bool = False,
     user: dict = Depends(get_current_user),
     sb: Client = Depends(get_supabase_admin),
 ):
@@ -43,6 +44,10 @@ def list_novels(
     q = sb.table("novels").select("*")
     if kind:
         q = q.eq("kind", kind)
+    # mine=true → only the caller's own works (any status), for 作品管理.
+    if mine:
+        q = q.contains("owners", [user["id"]])
+        return q.order("created_at", desc=True).execute().data
     if not is_admin(user):
         q = q.eq("status", "approved")
     res = q.order("created_at", desc=True).execute()

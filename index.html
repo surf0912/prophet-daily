@@ -90,7 +90,8 @@
     .page { display: none; min-height: 100%; padding: 0 0 80px; }
     .page.active { display: block; }
     /* App-wide UI scale (settings page). Home is locked, so it never scales. */
-    .page:not(#page-home) { zoom: var(--app-zoom, 1); }
+    /* Counter the zoom's width inflation so a scaled page never overflows sideways (no left/right drag). */
+    .page:not(#page-home) { zoom: var(--app-zoom, 1); width: calc(100% / var(--app-zoom, 1)); overflow-x: hidden; }
     /* No horizontal swipe on any of our own pages (the 防窺 iframe keeps its own gestures). */
     .page:not(#page-protect), .page:not(#page-protect) * { touch-action: pan-y; }
     #page-home { display: none; flex-direction: column; padding: 0; min-height: unset; height: 100%; overflow: hidden; }
@@ -203,9 +204,9 @@
     .novel-row:active { background: rgba(201,168,76,.08); }
     .novel-row h4 { font-size: 15px; color: var(--ink); line-height: 1.35; }
     .novel-row .row-meta { font-size: 12px; color: var(--ink-light); margin-top: 4px; }
-    .novel-row .row-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
-    .novel-row .t-cat { font-size: 12px; padding: 2px 9px; border-radius: 10px; background: rgba(138,45,45,.12); color: var(--scarlet); }
-    .novel-row .t-chr { font-size: 12px; padding: 2px 9px; border-radius: 10px; background: rgba(201,168,76,.2); color: var(--ink-light); }
+    .row-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+    .t-cat { display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 10px; background: rgba(138,45,45,.12); color: var(--scarlet); }
+    .t-chr { display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 10px; background: rgba(201,168,76,.2); color: var(--ink-light); }
     /* series grouping */
     .series-block { border-bottom: 1px solid rgba(26,10,0,.1); }
     .series-head { padding: 12px 18px 2px; font-size: 13px; font-weight: bold; color: #2d4a1e; }
@@ -348,7 +349,7 @@
     .chapter-list-panel ol li.current { color: var(--scarlet); font-weight: bold; }
 
     /* ── Forum page ── */
-    .forum-header { padding: 20px 18px 8px; border-bottom: 2px solid var(--gold-lt); }
+    .forum-header { position: sticky; top: 0; z-index: 6; padding: 20px 18px 8px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
     .forum-header h2 { font-size: 18px; }
     .forum-search { padding: 12px 18px; }
     .forum-search input {
@@ -437,8 +438,8 @@
     /* ── Admin page ── */
     .admin-header { padding: 20px 18px 8px; border-bottom: 2px solid var(--gold-lt); }
     .admin-header h2 { font-size: 18px; }
-    .admin-tabs { display: flex; border-bottom: 1px solid var(--gold-lt); background: var(--parchment2); }
-    .admin-tab { flex: 1; padding: 10px; text-align: center; font-size: 12px; cursor: pointer; border: none; background: none; color: var(--ink-light); border-bottom: 2px solid transparent; }
+    .admin-tabs { display: flex; border-bottom: 1px solid var(--gold-lt); background: var(--parchment2); padding: 0 5px; }
+    .admin-tab { flex: 1; padding: 10px 3px; text-align: center; font-size: 12px; white-space: nowrap; cursor: pointer; border: none; background: none; color: var(--ink-light); border-bottom: 2px solid transparent; }
     .admin-tab.active { color: var(--scarlet); border-bottom-color: var(--scarlet); }
     .admin-pane { display: none; padding: 18px; }
     .admin-pane.active { display: block; }
@@ -629,59 +630,37 @@
     <div id="page-admin" class="page">
       <div class="admin-header"><h2>🏰 管理後台</h2></div>
       <div class="admin-tabs">
-        <button class="admin-tab admin-only active" data-tab="novels" onclick="switchAdminTab('novels')">作品管理</button>
+        <button class="admin-tab active" data-tab="novels" onclick="adminNovelScope=null;switchAdminTab('novels')">作品管理</button>
         <button class="admin-tab" data-tab="upload" onclick="switchAdminTab('upload')">上傳</button>
         <button class="admin-tab admin-only" data-tab="review" onclick="switchAdminTab('review')">審核</button>
         <button class="admin-tab admin-only" data-tab="users" onclick="switchAdminTab('users')">用戶管理</button>
         <button class="admin-tab admin-only" data-tab="invites" onclick="switchAdminTab('invites')">邀請連結</button>
       </div>
       <div id="admin-upload" class="admin-pane active">
-        <!-- 小說章節 vs 論壇貼文 -->
+        <!-- 新增小說 vs 論壇貼文 -->
         <div style="display:flex;gap:0;margin-bottom:16px;border:1px solid var(--gold);border-radius:4px;overflow:hidden">
-          <button id="kind-novel-btn" onclick="setUploadKind('novel')" style="flex:1;padding:10px;font-size:13px;border:none;cursor:pointer;background:var(--scarlet);color:var(--parchment)">📖 小說章節</button>
+          <button id="kind-novel-btn" onclick="setUploadKind('novel')" style="flex:1;padding:10px;font-size:13px;border:none;cursor:pointer;background:var(--scarlet);color:var(--parchment)">📖 新增小說</button>
           <button id="kind-forum-btn" onclick="setUploadKind('forum')" style="flex:1;padding:10px;font-size:13px;border:none;cursor:pointer;background:var(--parchment2);color:var(--ink-light)">🦉 論壇貼文</button>
         </div>
 
-        <!-- 小說章節 -->
+        <!-- 新增小說（單篇：作品資料＋內文一次填完） -->
         <div id="upload-kind-novel">
-          <div class="form-group">
-            <label>所屬作品</label>
-            <select id="upload-novel-select"><option value="">— 選擇作品 —</option></select>
-            <p style="font-size:12px;color:var(--ink-light);margin-top:4px">作品的類型/角色在「作品管理 → ＋新增作品」設定；這裡只負責加章節內容。</p>
-          </div>
-          <div class="form-group">
-            <label>章節號</label>
-            <input type="number" id="upload-chapter-num" min="1" placeholder="1" value="1" />
-          </div>
-          <div class="form-group">
-            <label>章節標題（選填）</label>
-            <input type="text" id="upload-chapter-title" placeholder="第一章：霍格華茲特快列車" />
-          </div>
-          <div style="display:flex;gap:0;margin-bottom:14px;border:1px solid var(--gold-lt);border-radius:4px;overflow:hidden">
-            <button id="upload-mode-text-btn" onclick="setUploadMode('text')" style="flex:1;padding:8px;font-size:13px;border:none;cursor:pointer;background:var(--scarlet);color:var(--parchment)">✍️ 貼文字</button>
-            <button id="upload-mode-img-btn" onclick="setUploadMode('img')" style="flex:1;padding:8px;font-size:13px;border:none;cursor:pointer;background:var(--parchment2);color:var(--ink-light)">📸 圖片 OCR</button>
-          </div>
-          <div id="upload-text-section">
-            <div class="form-group">
-              <textarea id="upload-chapter-content" rows="12" placeholder="在此貼上章節內文…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
-            </div>
-            <button class="btn-primary" onclick="submitChapterText()" style="margin-bottom:8px">📨 儲存章節</button>
-          </div>
-          <div id="upload-img-section" style="display:none">
-            <div class="upload-zone" id="upload-zone" onclick="document.getElementById('chapter-img-input').click()">
-              <p>📸 點擊選擇小說截圖</p>
-              <small>可多選，系統將自動 OCR 解析文字</small>
-            </div>
-            <input type="file" id="chapter-img-input" accept="image/*" multiple style="display:none" onchange="handleChapterUpload(event)" />
-            <div class="upload-queue" id="upload-queue"></div>
-          </div>
+          <div class="form-group"><label>作品名稱</label><input type="text" id="new-novel-title" placeholder="例：火焰杯後" /></div>
+          <div class="form-group"><label>作者署名（選填）</label><input type="text" id="new-novel-author" placeholder="留空則佚名" /></div>
+          <div class="form-group"><label>發佈日期（選填，可填過去日期）</label><input type="date" id="new-novel-date" /></div>
+          <div class="form-group"><label>故事類型</label><select id="new-novel-category"></select></div>
+          <div class="form-group"><label>角色（可多選）</label><div id="new-novel-chars" class="char-picker"></div></div>
+          <div class="form-group"><label>簡介（選填）</label><textarea id="new-novel-desc" rows="2" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea></div>
+          <div class="form-group"><label>內文</label><textarea id="new-novel-content" rows="12" placeholder="在此貼上小說內文…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea></div>
+          <button class="btn-primary" onclick="submitNewNovel()" style="margin-bottom:8px">📨 建立小說</button>
+          <p id="new-novel-hint" style="font-size:12px;color:var(--ink-light);text-align:center"></p>
         </div>
 
         <!-- 論壇貼文 -->
         <div id="upload-kind-forum" style="display:none">
           <div class="form-group">
             <label>貼文標題</label>
-            <input type="text" id="forum-post-title" placeholder="例：四條狗四個栓法" />
+            <input type="text" id="forum-post-title" placeholder="例：深夜圖書館目擊報告" />
           </div>
           <div class="form-group">
             <label>作者署名（選填）</label>
@@ -707,21 +686,7 @@
         <div id="admin-review-list"></div>
       </div>
       <div id="admin-novels" class="admin-pane">
-        <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-          <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="showCreateNovelForm()">＋ 新增作品</button>
-        </div>
-        <div id="admin-novel-form" style="display:none;background:var(--parchment2);padding:14px;border-radius:4px;margin-bottom:14px">
-          <div class="form-group"><label>作品名稱</label><input type="text" id="new-novel-title" /></div>
-          <div class="form-group"><label>作者</label><input type="text" id="new-novel-author" /></div>
-          <div class="form-group"><label>發佈日期（選填，可填過去日期）</label><input type="date" id="new-novel-date" /></div>
-          <div class="form-group"><label>故事類型</label><select id="new-novel-category"></select></div>
-          <div class="form-group"><label>角色（可多選）</label><div id="new-novel-chars" class="char-picker"></div></div>
-          <div class="form-group"><label>簡介</label><textarea id="new-novel-desc"></textarea></div>
-          <div style="display:flex;gap:8px">
-            <button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" onclick="createNovel()">建立</button>
-            <button onclick="document.getElementById('admin-novel-form').style.display='none'" style="padding:8px 16px;font-size:13px;cursor:pointer;border:1px solid var(--gold-lt);background:none;border-radius:3px">取消</button>
-          </div>
-        </div>
+        <p id="admin-novel-scope-note" style="font-size:12px;color:var(--ink-light);margin-bottom:10px"></p>
         <div id="admin-novel-list"></div>
       </div>
       <div id="admin-users" class="admin-pane">
@@ -971,8 +936,12 @@ async function initApp() {
   if (!currentUser) return;
   document.getElementById('auth-overlay').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-  if (['writer', 'admin', 'super_admin'].includes(currentUser.role)) document.getElementById('admin-nav-btn').style.display = '';
-  if (currentUser.role === 'writer') document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+  // Reset role-based UI on every login (accounts can switch in-place without a page reload).
+  const staff = ['writer', 'admin', 'super_admin'].includes(currentUser.role);
+  const adminish = ['admin', 'super_admin'].includes(currentUser.role);
+  document.getElementById('admin-nav-btn').style.display = staff ? '' : 'none';  // readers: no 後台
+  document.querySelectorAll('.admin-only').forEach(el => el.style.display = adminish ? '' : 'none');  // writers: only 作品管理 + 上傳
+  adminNovelScope = null;
   renderSettings();
   renderGreeting();
   loadNovels();
@@ -987,7 +956,7 @@ function showPage(id, btn) {
   if (id === 'home') renderContinueBar();
   if (id === 'scroll') loadNovels();
   if (id === 'forum') loadForumPosts();
-  if (id === 'admin') { switchAdminTab(currentUser.role === 'writer' ? 'upload' : 'novels'); }
+  if (id === 'admin') { adminNovelScope = null; switchAdminTab('novels'); }
 }
 
 // ── Home ─────────────────────────────────────────────────────
@@ -1087,20 +1056,24 @@ const CHAR_LIST = [
   { code: 'adrian', name: 'Adrian', img: './chars/adrian.jpg' },
 ];
 let shelfCat = '';        // '' = 全部
-let shelfChars = [];      // selected character codes (contains-all filter)
+let shelfChars = CHAR_LIST.map(c => c.code);   // default: all lit = show everything
+let adminNovelScope = null;   // null = manage my own works; {id,name} = managing another user's works (#3)
 
 // Map character codes -> display names (e.g. ['sean'] -> 'Sean')
 function charNames(codes) {
   return (codes || []).map(c => (CHAR_LIST.find(x => x.code === c) || {}).name || c).join('、');
 }
 
-// Keep only works matching the selected category and containing ALL selected characters.
+// Filter by category, plus characters with OR semantics.
+// All chips lit (default) or none lit = no character filtering (show everything);
+// deselect chips to narrow down to works featuring ANY still-lit character.
 function applyClassFilter(list, cat, chars) {
+  const allLit = chars.length === 0 || chars.length === CHAR_LIST.length;
   return list.filter(n => {
     if (cat && n.category !== cat) return false;
-    if (chars.length) {
+    if (!allLit) {
       const have = n.characters || [];
-      if (!chars.every(c => have.includes(c))) return false;
+      if (!chars.some(c => have.includes(c))) return false;
     }
     return true;
   });
@@ -1417,7 +1390,7 @@ async function loadForumPosts() {
   }
 }
 
-let forumChars = [];   // 論壇體只用角色篩選，不用故事類型
+let forumChars = CHAR_LIST.map(c => c.code);   // default: all lit = show everything (角色篩選用 OR)
 
 function onForumFilter(type, val) {
   forumChars = forumChars.includes(val) ? forumChars.filter(c => c !== val) : [...forumChars, val];
@@ -1531,7 +1504,7 @@ function switchAdminTab(tab) {
   document.getElementById('admin-' + tab).classList.add('active');
   if (tab === 'novels') loadAdminNovelList();
   if (tab === 'users') loadAdminUsers();
-  if (tab === 'upload') loadAdminNovelsForUpload();
+  if (tab === 'upload') setUploadKind('novel');
   if (tab === 'review') loadReviewList();
   if (tab === 'invites') {
     // show admin-invite button only for super_admin
@@ -1574,6 +1547,7 @@ function resetClassPicker(catSelId, charDivId) {
 
 function setUploadKind(kind) {
   initClassPicker('forum-post-category', 'forum-post-chars');
+  initClassPicker('new-novel-category', 'new-novel-chars');
   const isNovel = kind === 'novel';
   document.getElementById('upload-kind-novel').style.display = isNovel ? '' : 'none';
   document.getElementById('upload-kind-forum').style.display = isNovel ? 'none' : '';
@@ -1581,8 +1555,9 @@ function setUploadKind(kind) {
   document.getElementById('kind-novel-btn').style.color = isNovel ? 'var(--parchment)' : 'var(--ink-light)';
   document.getElementById('kind-forum-btn').style.background = isNovel ? 'var(--parchment2)' : 'var(--scarlet)';
   document.getElementById('kind-forum-btn').style.color = isNovel ? 'var(--ink-light)' : 'var(--parchment)';
-  const hint = document.getElementById('forum-post-hint');
-  if (hint) hint.textContent = (currentUser.role === 'writer') ? '⏳ 你的貼文會先送審，管理員通過後才公開' : '';
+  const writerNote = (currentUser.role === 'writer') ? '⏳ 你的內容會先送審，管理員通過後才公開' : '';
+  const fh = document.getElementById('forum-post-hint'); if (fh) fh.textContent = writerNote;
+  const nh = document.getElementById('new-novel-hint'); if (nh) nh.textContent = writerNote;
 }
 
 // Turn a <input type="date"> value (YYYY-MM-DD) into an ISO timestamp at noon UTC
@@ -1686,16 +1661,14 @@ async function handleChapterUpload(e) {
   e.target.value = '';
 }
 
-function showCreateNovelForm() {
-  initClassPicker('new-novel-category', 'new-novel-chars');
-  document.getElementById('admin-novel-form').style.display = '';
-}
-
-async function createNovel() {
+// Create a single-piece novel: work metadata + body text in one shot (body becomes chapter 1).
+async function submitNewNovel() {
   const title = document.getElementById('new-novel-title').value.trim();
+  const content = document.getElementById('new-novel-content').value.trim();
   if (!title) { toast('請輸入作品名稱'); return; }
+  if (!content) { toast('請輸入內文'); return; }
   try {
-    await api('/novels/', { method: 'POST', body: JSON.stringify({
+    const novel = await api('/novels/', { method: 'POST', body: JSON.stringify({
       title,
       author: document.getElementById('new-novel-author').value.trim() || null,
       description: document.getElementById('new-novel-desc').value.trim() || null,
@@ -1703,28 +1676,47 @@ async function createNovel() {
       category: document.getElementById('new-novel-category').value || null,
       characters: readChars('new-novel-chars'),
     }) });
-    toast('✅ 作品已建立');
-    document.getElementById('admin-novel-form').style.display = 'none';
-    document.getElementById('new-novel-title').value = '';
-    document.getElementById('new-novel-author').value = '';
-    document.getElementById('new-novel-date').value = '';
-    document.getElementById('new-novel-desc').value = '';
+    await api(`/chapters/novel/${novel.id}/text`, { method: 'POST', body: JSON.stringify({ chapter_num: 1, title: null, content }) });
+    toast(novel.status === 'pending' ? '✅ 已送出，待管理員審核' : '✅ 小說已建立');
+    ['new-novel-title', 'new-novel-author', 'new-novel-date', 'new-novel-desc', 'new-novel-content'].forEach(id => document.getElementById(id).value = '');
     resetClassPicker('new-novel-category', 'new-novel-chars');
-    loadAdminNovelList(); loadNovels();
+    loadNovels();
   } catch (e) { toast(e.message); }
 }
 
 async function loadAdminNovelList() {
   const el = document.getElementById('admin-novel-list');
+  const note = document.getElementById('admin-novel-scope-note');
   el.innerHTML = '<div class="spinner"></div>';
+  const isAdmin = ['admin', 'super_admin'].includes(currentUser.role);
   try {
-    const ns = await api('/novels/') || [];
+    let ns;
+    if (adminNovelScope) {
+      // Admin managing another member's works (entered via 用戶管理).
+      const all = await api('/novels/') || [];
+      ns = all.filter(n => (n.owners || []).includes(adminNovelScope.id));
+      note.innerHTML = `📂 正在管理 <b>${escapeHtml(adminNovelScope.name)}</b> 的作品　<a onclick="adminNovelScope=null;switchAdminTab('novels')" style="color:var(--scarlet);cursor:pointer">← 返回我的作品</a>`;
+    } else {
+      ns = await api('/novels/?mine=true') || [];
+      note.textContent = isAdmin
+        ? '只顯示你自己的作品。要管理其他成員的作品，請到「用戶管理」點該成員的「📚 作品」。'
+        : '這裡是你自己的作品（含待審核）。';
+    }
     window._adminNovels = ns;
-    el.innerHTML = ns.map(n => `
+    el.innerHTML = ns.map(n => {
+      const statusTag = n.status === 'pending'
+        ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--scarlet)">⏳ 待審核</span>' : '';
+      const adminBtns = isAdmin ? `
+        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick='openSeries(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.series || "")}, ${n.series_order || 0})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid #2d4a1e;color:#2d4a1e;border-radius:3px;cursor:pointer">🔗 系列</button>
+          <button onclick='openOwners(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.owners || [])})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">👥 作者</button>
+          <button onclick="deleteNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:3px;cursor:pointer">刪除</button>
+        </div>` : '';
+      return `
       <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
-        <div style="margin-bottom:3px">${n.kind === 'forum'
+        <div style="margin-bottom:3px;display:flex;gap:5px;flex-wrap:wrap">${n.kind === 'forum'
           ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">🦉 論壇體</span>'
-          : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--scarlet)">📖 小說</span>'}</div>
+          : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--scarlet)">📖 小說</span>'}${statusTag}</div>
         <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)}</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
           ${n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:#2d4a1e">🔗 ${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : ''}
@@ -1733,12 +1725,9 @@ async function loadAdminNovelList() {
         </div>
         <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${n.author || '佚名'}</div>
         ${n.updated_at ? `<div style="font-size:12px;color:var(--ink-light);margin-top:2px">📅 最新更新 ${fmtUpdated(n.updated_at)}</div>` : ''}
-        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
-          <button onclick='openSeries(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.series || "")}, ${n.series_order || 0})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid #2d4a1e;color:#2d4a1e;border-radius:3px;cursor:pointer">🔗 系列</button>
-          <button onclick='openOwners(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.owners || [])})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">👥 作者</button>
-          <button onclick="deleteNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:3px;cursor:pointer">刪除</button>
-        </div>
-      </div>`).join('') || '<p style="color:#888">尚無作品</p>';
+        ${adminBtns}
+      </div>`;
+    }).join('') || '<p style="color:#888">尚無作品</p>';
   } catch { el.innerHTML = '<p>載入失敗</p>'; }
 }
 
@@ -1825,15 +1814,19 @@ async function loadAdminUsers() {
       let mqj = '';
       if (u.role === 'reader') {
         if (u.mqj_access === 'approved') {
-          mqj = `<div style="font-size:12px;color:#2d4a1e;margin-top:4px">🍷 迷情劑：已開放</div>`;
+          mqj = `<div style="font-size:12px;color:#2d4a1e;margin-top:4px">🍷 迷情劑閱讀權：已開放</div>`;
         } else {
           const pending = u.mqj_access === 'pending';
           mqj = `<div style="display:flex;align-items:center;gap:8px;margin-top:5px">
-            <span style="font-size:12px;color:var(--ink-light)">🍷 迷情劑：${pending ? '⏳ 申請中' : '未開放'}</span>
+            <span style="font-size:12px;color:var(--ink-light)">🍷 迷情劑閱讀權：${pending ? '⏳ 申請中' : '未開放'}</span>
             <button onclick="setMqj('${u.id}','${u.username}')" style="font-size:12px;padding:3px 10px;border:1px solid ${pending ? 'var(--scarlet)' : 'var(--gold-lt)'};background:${pending ? 'var(--scarlet)' : 'none'};color:${pending ? '#fff' : 'var(--ink-light)'};border-radius:3px;cursor:pointer">開放</button>
           </div>`;
         }
       }
+      // Manage this member's works (admin enters scoped 作品管理).
+      const worksBtn = !isSelf
+        ? `<button onclick="viewUserNovels('${u.id}','${escapeHtml(u.username)}')" style="font-size:12px;padding:3px 10px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:3px;cursor:pointer;margin-top:5px">📚 作品</button>`
+        : '';
       return `
       <div style="padding:8px 0;border-bottom:1px solid rgba(26,10,0,.07)">
         <div class="user-row" style="border:none;padding:0">
@@ -1841,10 +1834,16 @@ async function loadAdminUsers() {
           <div class="u-name">${u.username}</div>
           ${picker}
         </div>
-        ${mqj ? `<div style="padding-left:42px">${mqj}</div>` : ''}
+        ${(worksBtn || mqj) ? `<div style="padding-left:42px">${worksBtn}${mqj}</div>` : ''}
       </div>`;
     }).join('') || '<p style="color:#888;padding:20px">尚無用戶</p>';
   } catch { el.innerHTML = '<p>載入失敗</p>'; }
+}
+
+// Admin enters a member's works to manage them (series-link, owners, delete).
+function viewUserNovels(id, name) {
+  adminNovelScope = { id, name };
+  switchAdminTab('novels');
 }
 
 async function changeUserRole(userId, username, role) {
