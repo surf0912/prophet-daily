@@ -255,6 +255,14 @@
     }
     .fp-comment .fp-body { line-height: 1.75; padding-left: 2px; }
     .fp-comment .fp-body p { margin-bottom: 2px; }
+    /* Fixed "post sealed" box appended to the end of every forum post */
+    .fp-end {
+      margin: 30px 2px 8px; padding: 18px 16px; text-align: center;
+      border: 1px dashed var(--scarlet); border-radius: 8px;
+      background: rgba(138,45,45,.05);
+    }
+    .fp-end .fp-end-title { color: var(--scarlet); font-weight: bold; font-size: .95em; margin-bottom: 10px; letter-spacing: .06em; }
+    .fp-end p { font-size: .8em; line-height: 1.8; color: var(--ink-light); margin: 0; }
     .watermark-overlay {
       position: fixed; inset: 0; pointer-events: none; z-index: 4;
       background-image: repeating-linear-gradient(
@@ -1006,8 +1014,15 @@ function renderForumContent(content) {
       <div class="fp-name">${escapeHtml(c.name)}</div>
       <div class="fp-body">${c.body.filter(l => l.trim()).map(l => `<p>${escapeHtml(l)}</p>`).join('')}</div>
     </div>`).join('');
+  const endBox = `
+    <div class="fp-end">
+      <div class="fp-end-title">🕯️ 本羊皮紙已自動封存</div>
+      <p>如需繼續傳閱，請滴一滴墨水。</p>
+      <p>如被級長發現，請說這是魔法史筆記。</p>
+    </div>`;
   return (introHtml ? `<div class="fp-intro">${introHtml}</div>` : '') +
-    (comments.length ? `<div class="fp-divider">✦ ✦ ✦</div>${commentsHtml}` : '');
+    (comments.length ? `<div class="fp-divider">✦ ✦ ✦</div>${commentsHtml}` : '') +
+    endBox;
 }
 
 function renderToc() {
