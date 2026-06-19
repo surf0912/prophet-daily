@@ -440,6 +440,9 @@
     .toggle input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; inset: 0; background: #ccc; border-radius: 24px; cursor: pointer; transition: background .3s; }
     .slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: transform .3s; }
+    #waking-overlay { position: fixed; inset: 0; z-index: 300; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.55); }
+    #waking-overlay.show { display: flex; }
+    #waking-overlay .box { background: var(--chrome-dk); color: var(--gold); border: 1px solid var(--gold); border-radius: 12px; padding: 24px 30px; text-align: center; font-size: 15px; max-width: 80%; }
     .toggle input:checked + .slider { background: var(--scarlet); }
     .toggle.green input:checked + .slider { background: #2d7a2d; }
     .toggle input:checked + .slider::before { transform: translateX(20px); }
@@ -866,6 +869,14 @@
   </div>
 </div>
 
+<div id="waking-overlay">
+  <div class="box">
+    <div class="spinner" style="margin:0 auto 12px"></div>
+    🪄 喚醒魔法中…
+    <div style="font-size:12px;color:var(--gold-lt);margin-top:6px;opacity:.85">首次連線需要幾秒，請稍候</div>
+  </div>
+</div>
+
 <div class="perm-modal" id="soon-modal">
   <div class="perm-modal-inner" style="text-align:center;padding:28px 20px">
     <div style="font-size:44px;margin-bottom:10px">📸</div>
@@ -882,7 +893,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v54';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v55';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -939,17 +950,32 @@ let currentForumChapterId = null;
 let protectPreset = 'standard';
 
 // ── API helper ───────────────────────────────────────────────
+// Render free tier sleeps when idle; the first request can take 30-50s to wake.
+// Show a friendly overlay if any request runs longer than ~3.5s.
+let _wakeCount = 0;
+function _wakeToggle(on) {
+  const el = document.getElementById('waking-overlay');
+  if (el) el.classList.toggle('show', on);
+}
 async function api(path, opts = {}) {
   const headers = { ...(opts.headers || {}) };
   if (!(opts.body instanceof FormData)) headers['Content-Type'] = 'application/json';
   if (token) headers['Authorization'] = 'Bearer ' + token;
-  const res = await fetch(API + path, { ...opts, headers });
-  if (res.status === 401) { doLogout(); return null; }
-  if (!res.ok) {
-    const e = await res.json().catch(() => ({}));
-    throw new Error(e.detail || 'Request failed');
+  _wakeCount++;
+  const wt = setTimeout(() => _wakeToggle(true), 3500);
+  try {
+    const res = await fetch(API + path, { ...opts, headers });
+    if (res.status === 401) { doLogout(); return null; }
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      throw new Error(e.detail || 'Request failed');
+    }
+    return await res.json();
+  } finally {
+    clearTimeout(wt);
+    _wakeCount = Math.max(0, _wakeCount - 1);
+    if (_wakeCount === 0) _wakeToggle(false);
   }
-  return res.json();
 }
 
 function toast(msg) {
@@ -1619,16 +1645,6 @@ function switchAdminTab(tab) {
   }
 }
 
-function setUploadMode(mode) {
-  const isText = mode === 'text';
-  document.getElementById('upload-text-section').style.display = isText ? '' : 'none';
-  document.getElementById('upload-img-section').style.display = isText ? 'none' : '';
-  document.getElementById('upload-mode-text-btn').style.background = isText ? 'var(--scarlet)' : 'var(--parchment2)';
-  document.getElementById('upload-mode-text-btn').style.color = isText ? 'var(--on-dark)' : 'var(--ink-light)';
-  document.getElementById('upload-mode-img-btn').style.background = isText ? 'var(--parchment2)' : 'var(--scarlet)';
-  document.getElementById('upload-mode-img-btn').style.color = isText ? 'var(--ink-light)' : 'var(--on-dark)';
-}
-
 // Populate a category <select> and a character multi-select in an admin form.
 function initClassPicker(catSelId, charDivId) {
   const sel = document.getElementById(catSelId);
@@ -1741,60 +1757,6 @@ async function reviewMqj(userId, approve) {
 async function approveNovel(id) {
   try { await api(`/novels/${id}/approve`, { method: 'PATCH' }); toast('✅ 已通過審核'); loadReviewList(); }
   catch (e) { toast(e.message); }
-}
-
-async function submitChapterText() {
-  const novelId = document.getElementById('upload-novel-select').value;
-  const chapterNum = parseInt(document.getElementById('upload-chapter-num').value) || 1;
-  const title = document.getElementById('upload-chapter-title').value.trim() || null;
-  const content = document.getElementById('upload-chapter-content').value.trim();
-  if (!novelId) { toast('請先選擇作品'); return; }
-  if (!content) { toast('請輸入章節內文'); return; }
-  try {
-    await api(`/chapters/novel/${novelId}/text`, {
-      method: 'POST',
-      body: JSON.stringify({ chapter_num: chapterNum, title, content }),
-    });
-    toast('✅ 章節已儲存');
-    document.getElementById('upload-chapter-content').value = '';
-    document.getElementById('upload-chapter-num').value = chapterNum + 1;
-  } catch (e) { toast(e.message); }
-}
-
-async function loadAdminNovelsForUpload() {
-  const sel = document.getElementById('upload-novel-select');
-  try {
-    const ns = await api('/novels/?kind=novel') || [];
-    sel.innerHTML = '<option value="">— 選擇作品 —</option>' + ns.map(n => `<option value="${n.id}">${n.title}</option>`).join('');
-  } catch {}
-}
-
-async function handleChapterUpload(e) {
-  const files = Array.from(e.target.files);
-  const novelId = document.getElementById('upload-novel-select').value;
-  const baseNum = parseInt(document.getElementById('upload-chapter-num').value) || 1;
-  const title = document.getElementById('upload-chapter-title').value.trim();
-  if (!novelId) { toast('請先選擇作品'); return; }
-  const queue = document.getElementById('upload-queue');
-  for (let i = 0; i < files.length; i++) {
-    const f = files[i];
-    const uid = 'uq' + Date.now() + i;
-    queue.insertAdjacentHTML('beforeend', `<div class="upload-item" id="${uid}"><span class="status">⏳</span><span>${f.name}</span></div>`);
-    const fd = new FormData();
-    fd.append('image', f);
-    fd.append('chapter_num', baseNum + i);
-    if (title) fd.append('title', title);
-    try {
-      const res = await fetch(`${API}/chapters/novel/${novelId}/upload`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
-      if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
-      document.getElementById(uid).querySelector('.status').textContent = '✅';
-    } catch (err) {
-      const item = document.getElementById(uid);
-      item.querySelector('.status').textContent = '❌';
-      item.insertAdjacentHTML('beforeend', `<small style="color:red"> ${err.message}</small>`);
-    }
-  }
-  e.target.value = '';
 }
 
 // Create a single-piece novel: work metadata + body text in one shot (body becomes chapter 1).
