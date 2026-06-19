@@ -17,8 +17,9 @@
       font-family: 'YuseiMagic';
       src: url('./uifont.woff2') format('woff2');
       font-display: swap;
-      /* Latin/digits only — so every CJK char falls through to 粉圓 (HuninnUI) consistently */
-      unicode-range: U+0000-00FF, U+2000-206F, U+2190-21FF, U+2700-27BF;
+      /* Latin/digits + UI arrows/dingbats only. CJK and general punctuation (incl. “” ‘’ — …)
+         fall through to 粉圓 (HuninnUI) so they render consistently and completely. */
+      unicode-range: U+0000-00FF, U+2190-21FF, U+2700-27BF;
     }
     @font-face {
       font-family: 'HuninnUI';
@@ -482,7 +483,7 @@
 
     <!-- FORUM 論壇 -->
     <div id="page-forum" class="page">
-      <div class="forum-header"><h2>🦉 巫師論壇</h2></div>
+      <div class="forum-header"><h2>🦉 匿名羊皮紙</h2></div>
       <div class="forum-search">
         <input type="search" id="forum-search-input" placeholder="🔍 搜尋貼文標題…" oninput="renderForumList()" />
       </div>
