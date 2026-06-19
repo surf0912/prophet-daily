@@ -92,6 +92,8 @@
     .page.active { display: block; }
     /* App-wide UI scale (settings page). Home is locked, so it never scales. */
     .page:not(#page-home) { zoom: var(--app-zoom, 1); }
+    /* No horizontal swipe on any of our own pages (the 防窺 iframe keeps its own gestures). */
+    .page:not(#page-protect), .page:not(#page-protect) * { touch-action: pan-y; }
     #page-home { display: none; flex-direction: column; padding: 0; min-height: unset; height: 100%; overflow: hidden; }
     #page-home.active { display: flex; }
     #page-home .greeting-hero { flex: 1; max-height: unset; aspect-ratio: unset; }
