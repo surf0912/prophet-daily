@@ -880,7 +880,11 @@
     <h3>📝 編輯作品</h3>
     <div class="form-group"><label>標題</label><input type="text" id="editwork-title" /></div>
     <div class="form-group"><label>作者署名</label><input type="text" id="editwork-author" placeholder="留空則佚名" /></div>
-    <div class="form-group"><label>內文</label><textarea id="editwork-content" rows="12"></textarea></div>
+    <div class="form-group"><label id="editwork-content-label">內文</label><textarea id="editwork-content" rows="10"></textarea></div>
+    <div class="form-group" id="editwork-comments-group" style="display:none">
+      <label>留言區</label>
+      <textarea id="editwork-comments" rows="10" placeholder="每樓用 1L／2L… 開頭，例：1L 暱稱｜內容"></textarea>
+    </div>
     <div style="display:flex;gap:8px;margin-top:6px">
       <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveEditWork()">儲存</button>
       <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('editwork-modal').classList.remove('open')">取消</button>
@@ -912,7 +916,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v66';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v67';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2057,13 +2061,26 @@ async function saveEditClass() {
   } catch (e) { toast(e.message); }
 }
 
-let editWork = { id: null, chapterId: null, chapterNum: 1, chapterTitle: null };
+let editWork = { id: null, chapterId: null, chapterNum: 1, chapterTitle: null, kind: 'novel' };
+
+// Split forum content into 主文 (intro, before the first floor marker) + 留言區 (the floors).
+function splitForumContent(content) {
+  const lines = (content || '').replace(/[\u2028\u2029\r]/g, '\n').split('\n');
+  const BIJI = /^第\s*\d+\s*笔\s*[｜|]/, FLOOR = /^0?\d{1,3}\s*[Ll](?![A-Za-z])/;
+  const i = lines.findIndex(l => { const t = l.trim(); return BIJI.test(t) || FLOOR.test(t); });
+  if (i < 0) return { intro: lines.join('\n').trim(), comments: '' };
+  return { intro: lines.slice(0, i).join('\n').trim(), comments: lines.slice(i).join('\n').trim() };
+}
 
 async function openEditWork(id) {
   const n = (window._adminNovels || []).find(x => x.id === id) || {};
-  editWork = { id, chapterId: null, chapterNum: 1, chapterTitle: null };
+  editWork = { id, chapterId: null, chapterNum: 1, chapterTitle: null, kind: n.kind || 'novel' };
+  const isForum = n.kind === 'forum';
   document.getElementById('editwork-title').value = n.title || '';
   document.getElementById('editwork-author').value = n.author || '';
+  document.getElementById('editwork-content-label').textContent = isForum ? '主文（開場白）' : '內文';
+  document.getElementById('editwork-comments-group').style.display = isForum ? '' : 'none';
+  document.getElementById('editwork-comments').value = '';
   const ct = document.getElementById('editwork-content');
   ct.value = '載入中…'; ct.disabled = true;
   document.getElementById('editwork-modal').classList.add('open');
@@ -2073,7 +2090,11 @@ async function openEditWork(id) {
     if (ch) {
       const full = await api(`/chapters/${ch.id}`);
       editWork.chapterId = ch.id; editWork.chapterNum = ch.chapter_num || 1; editWork.chapterTitle = ch.title || null;
-      ct.value = (full && full.content) || '';
+      const raw = (full && full.content) || '';
+      if (isForum) {
+        const { intro, comments } = splitForumContent(raw);
+        ct.value = intro; document.getElementById('editwork-comments').value = comments;
+      } else { ct.value = raw; }
     } else { ct.value = ''; }
   } catch (e) { ct.value = ''; toast('內文載入失敗'); }
   ct.disabled = false;
@@ -2082,7 +2103,14 @@ async function openEditWork(id) {
 async function saveEditWork() {
   const title = document.getElementById('editwork-title').value.trim();
   const author = document.getElementById('editwork-author').value.trim();
-  const content = document.getElementById('editwork-content').value;
+  let content;
+  if (editWork.kind === 'forum') {
+    const main = document.getElementById('editwork-content').value.trim();
+    const replies = document.getElementById('editwork-comments').value.trim();
+    content = replies ? (main + '\n' + replies) : main;
+  } else {
+    content = document.getElementById('editwork-content').value;
+  }
   if (!title) { toast('請輸入標題'); return; }
   try {
     await api(`/novels/${editWork.id}`, { method: 'PATCH', body: JSON.stringify({ title, author }) });
