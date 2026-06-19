@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from deps import get_supabase_admin, get_current_user, require_admin, require_writer, is_admin
 from supabase import Client
 
@@ -12,6 +12,8 @@ class NovelCreate(BaseModel):
     description: Optional[str] = None
     cover_url: Optional[str] = None
     kind: str = "novel"            # 'novel' | 'forum'
+    category: Optional[str] = None       # 迷情劑 | 吐真劑 | 儲思盆
+    characters: List[str] = []           # subset of sean/silas/eli/adrian
     published_at: Optional[str] = None   # custom date (ISO) for back-dating past works
 
 class NovelUpdate(BaseModel):
@@ -19,11 +21,15 @@ class NovelUpdate(BaseModel):
     author: Optional[str] = None
     description: Optional[str] = None
     cover_url: Optional[str] = None
+    category: Optional[str] = None
+    characters: Optional[List[str]] = None
 
 class ForumPostCreate(BaseModel):
     title: str
     content: str
     author: Optional[str] = None
+    category: Optional[str] = None
+    characters: List[str] = []
     published_at: Optional[str] = None   # custom date (ISO) for back-dating past posts
 
 @router.get("/")
@@ -82,6 +88,8 @@ def create_forum_post(body: ForumPostCreate, user: dict = Depends(require_writer
         "author": body.author,
         "kind": "forum",
         "status": status,
+        "category": body.category,
+        "characters": body.characters,
         "created_by": user["id"],
     }
     if body.published_at:
