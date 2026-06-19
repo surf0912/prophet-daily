@@ -61,7 +61,7 @@
     .font-toggle-btn:hover { background: rgba(201,168,76,.25); }
 
     /* ── Layout ── */
-    #app { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; width: 100%; max-width: 100%; }
+    #app { display: flex; flex-direction: column; height: 100%; overflow: hidden; width: 100%; max-width: 100%; }
     #page-area { flex: 1; overflow-y: auto; overflow-x: hidden; background: var(--parchment); color: var(--ink); padding-top: env(safe-area-inset-top, 0px); padding-bottom: calc(var(--nav-h) + var(--nav-safe)); }
     /* Home page is fixed-height: lock scrolling entirely (no scroll, no scrollbar) */
     #page-area:has(#page-home.active) { overflow: hidden; overscroll-behavior: none; touch-action: none; }
