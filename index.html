@@ -1142,10 +1142,10 @@ async function openNovel(novelId) {
   catch { toast('無法載入內容'); return; }
   if (!currentChapters.length) { toast('此作品尚無內容'); return; }
   currentChapterIdx = 0;
-  // Forum posts are single-piece reads: hide chapter chrome.
-  const isForum = currentNovelKind === 'forum';
-  document.getElementById('reader-chapter-nav').style.display = isForum ? 'none' : '';
-  document.getElementById('reader-toc-panel').style.display = isForum ? 'none' : '';
+  // Single-piece reads (forum posts, or novels with only one chapter): hide chapter chrome.
+  const single = currentNovelKind === 'forum' || currentChapters.length <= 1;
+  document.getElementById('reader-chapter-nav').style.display = single ? 'none' : '';
+  document.getElementById('reader-toc-panel').style.display = single ? 'none' : '';
   renderToc();
   loadChapter(0);
   document.getElementById('reader-view').classList.add('open');
@@ -1190,7 +1190,8 @@ function renderToc() {
 async function loadChapter(idx) {
   currentChapterIdx = idx;
   const ch = currentChapters[idx];
-  document.getElementById('reader-title').textContent = currentNovelKind === 'forum'
+  // Single-piece (forum or 1-chapter novel) → just the work title; multi-chapter → the chapter title.
+  document.getElementById('reader-title').textContent = (currentNovelKind === 'forum' || currentChapters.length <= 1)
     ? (currentNovelTitle || ch.title || '貼文')
     : (ch.title || `第 ${ch.chapter_num} 章`);
   document.getElementById('reader-ch-label').textContent = `${idx + 1} / ${currentChapters.length}`;
@@ -1212,7 +1213,7 @@ async function loadChapter(idx) {
   if (novel) {
     localStorage.setItem('pd_last_read', JSON.stringify({
       novelId: currentNovelId, novelTitle: novel.title, kind: currentNovelKind,
-      chapterIdx: idx, chapterId: ch.id,
+      chapterIdx: idx, chapterId: ch.id, chapterCount: currentChapters.length,
       chapterTitle: ch.title || `第 ${ch.chapter_num} 章`,
       scrollTop: Math.round(rv.scrollTop),
     }));
@@ -1245,7 +1246,10 @@ function renderContinueBar() {
   const bar = document.getElementById('continue-bar');
   if (!raw) { bar.style.display = 'none'; return; }
   const p = JSON.parse(raw);
-  const label = [p.novelTitle, p.chapterTitle].filter(Boolean).join('・') || '繼續上次的閱讀';
+  // Single-piece work → just the title; multi-chapter → title・chapter.
+  const label = (p.chapterCount > 1)
+    ? ([p.novelTitle, p.chapterTitle].filter(Boolean).join('・') || '繼續上次的閱讀')
+    : (p.novelTitle || p.chapterTitle || '繼續上次的閱讀');
   document.getElementById('continue-bar-text').textContent = label;
   bar.style.display = 'flex';
 }
@@ -1257,11 +1261,11 @@ async function resumeReading() {
   currentNovelId = p.novelId;
   currentNovelKind = p.kind || 'novel';
   currentNovelTitle = p.novelTitle || '';
-  const isForum = currentNovelKind === 'forum';
-  document.getElementById('reader-chapter-nav').style.display = isForum ? 'none' : '';
-  document.getElementById('reader-toc-panel').style.display = isForum ? 'none' : '';
   try { currentChapters = await api(`/chapters/novel/${p.novelId}`) || []; }
   catch { toast('無法載入章節'); return; }
+  const single = currentNovelKind === 'forum' || currentChapters.length <= 1;
+  document.getElementById('reader-chapter-nav').style.display = single ? 'none' : '';
+  document.getElementById('reader-toc-panel').style.display = single ? 'none' : '';
   renderToc();
   const idx = currentChapters.findIndex(c => c.id === p.chapterId);
   pendingScroll = p.scrollTop || 0;   // jump back to where you stopped
