@@ -1715,14 +1715,26 @@ async function loadAdminNovelList() {
   try {
     let ns;
     if (adminNovelScope) {
-      // Admin managing another member's works (entered via 用戶管理).
+      // Admin viewing a member's detail (entered by tapping their name in 用戶管理).
       const all = await api('/novels/') || [];
       ns = all.filter(n => (n.owners || []).includes(adminNovelScope.id));
-      note.innerHTML = `📂 正在管理 <b>${escapeHtml(adminNovelScope.name)}</b> 的作品　<a onclick="adminNovelScope=null;switchAdminTab('novels')" style="color:var(--scarlet);cursor:pointer">← 返回我的作品</a>`;
+      const sc = adminNovelScope;
+      let head = `📂 <b>${escapeHtml(sc.name)}</b> 的作品　<a onclick="adminNovelScope=null;switchAdminTab('users')" style="color:var(--scarlet);cursor:pointer">← 返回成員名單</a>`;
+      if (sc.role === 'reader') {
+        const approved = sc.mqj === 'approved', pending = sc.mqj === 'pending';
+        head += `<div style="display:flex;align-items:center;gap:10px;margin-top:8px;padding:8px 0;border-top:1px solid rgba(26,10,0,.08)">
+          <span style="font-size:13px;color:var(--ink-light)">🍷 迷情劑閱讀權${pending ? '（⏳ 申請中）' : ''}</span>
+          <label class="toggle" style="flex-shrink:0">
+            <input type="checkbox" ${approved ? 'checked' : ''} onchange="setMqjAccess('${sc.id}','${escapeHtml(sc.name)}',this.checked)" />
+            <span class="slider"></span>
+          </label>
+        </div>`;
+      }
+      note.innerHTML = head;
     } else {
       ns = await api('/novels/?mine=true') || [];
       note.textContent = isAdmin
-        ? '只顯示你自己的作品。要管理其他成員的作品，請到「用戶管理」點該成員的「📚 作品」。'
+        ? '只顯示你自己的作品。要管理其他成員，請到「用戶管理」點成員名字進去。'
         : '這裡是你自己的作品（含待審核）。';
     }
     window._adminNovels = ns;
@@ -1872,38 +1884,23 @@ async function loadAdminUsers() {
              ${ROLES.map(([v,l]) => `<option value="${v}" ${u.role===v?'selected':''}>${l}</option>`).join('')}
            </select>`
         : `<div class="u-role">${u.role}${isSelf ? '（你）' : ''}</div>`;
-      let mqj = '';
-      if (u.role === 'reader') {
-        const approved = u.mqj_access === 'approved';
-        const pending = u.mqj_access === 'pending';
-        mqj = `<div style="display:flex;align-items:center;gap:10px;margin-top:6px">
-          <span style="font-size:12px;color:var(--ink-light)">🍷 迷情劑閱讀權${pending ? '（⏳ 申請中）' : ''}</span>
-          <label class="toggle" style="flex-shrink:0">
-            <input type="checkbox" ${approved ? 'checked' : ''} onchange="setMqjAccess('${u.id}','${u.username}',this.checked)" />
-            <span class="slider"></span>
-          </label>
-        </div>`;
-      }
-      // Manage this member's works (admin enters scoped 作品管理). Readers can't upload, so they have none.
-      const worksBtn = (!isSelf && u.role !== 'reader')
-        ? `<button onclick="viewUserNovels('${u.id}','${escapeHtml(u.username)}')" style="font-size:12px;padding:3px 10px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:3px;cursor:pointer;margin-top:5px">📚 作品</button>`
-        : '';
+      // Tap the name to drill into this member's detail (their works + 迷情劑 toggle for readers).
+      const open = `viewUserNovels('${u.id}','${escapeHtml(u.username)}','${u.role}','${u.mqj_access || ''}')`;
       return `
       <div style="padding:8px 0;border-bottom:1px solid rgba(26,10,0,.07)">
         <div class="user-row" style="border:none;padding:0">
-          <div style="width:32px;height:32px;border-radius:50%;background:var(--scarlet);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:14px;flex-shrink:0">${initials(u.username)}</div>
-          <div class="u-name">${u.username}</div>
+          <div onclick="${open}" style="width:32px;height:32px;border-radius:50%;background:var(--scarlet);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:14px;flex-shrink:0;cursor:pointer">${initials(u.username)}</div>
+          <div class="u-name" onclick="${open}" style="cursor:pointer">${u.username}<span style="color:var(--gold);font-weight:bold;margin-left:6px">›</span></div>
           ${picker}
         </div>
-        ${(worksBtn || mqj) ? `<div style="padding-left:42px">${worksBtn}${mqj}</div>` : ''}
       </div>`;
     }).join('') || '<p style="color:#888;padding:20px">尚無用戶</p>';
   } catch { el.innerHTML = '<p>載入失敗</p>'; }
 }
 
-// Admin enters a member's works to manage them (series-link, owners, delete).
-function viewUserNovels(id, name) {
-  adminNovelScope = { id, name };
+// Admin taps a member's name → their detail (scoped 作品管理 + 迷情劑 toggle for readers).
+function viewUserNovels(id, name, role, mqj) {
+  adminNovelScope = { id, name, role, mqj };
   switchAdminTab('novels');
 }
 
@@ -1918,11 +1915,13 @@ async function changeUserRole(userId, username, role) {
 
 async function setMqjAccess(userId, username, on) {
   const access = on ? 'approved' : 'none';
+  // The toggle now lives inside the member-detail view (scoped 作品管理).
+  const refresh = () => { if (adminNovelScope) { adminNovelScope.mqj = access; loadAdminNovelList(); } else loadAdminUsers(); };
   try {
     await api(`/permissions/users/${userId}/mqj`, { method: 'PATCH', body: JSON.stringify({ access }) });
     toast(on ? `✅ 已開放 ${username} 的迷情劑閱讀權` : `已關閉 ${username} 的迷情劑閱讀權`);
-    loadAdminUsers();
-  } catch (e) { toast(e.message); loadAdminUsers(); }
+    refresh();
+  } catch (e) { toast(e.message); refresh(); }
 }
 
 async function openPerm(userId, username) {
