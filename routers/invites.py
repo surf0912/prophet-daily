@@ -18,8 +18,9 @@ class InviteCreate(BaseModel):
 
 class RegisterWithInvite(BaseModel):
     token: str
-    username: str
-    password: str
+    username: str          # 巫師入學全名 (login id, English only)
+    password: str          # 通關密語
+    nickname: Optional[str] = None   # 巫師姓名 (display name, may be Chinese)
 
 @router.post("/generate")
 def generate_invite(
@@ -78,18 +79,21 @@ def register_with_invite(body: RegisterWithInvite, sb_admin: Client = Depends(ge
         raise HTTPException(400, "用戶名只能包含英文、數字、底線，長度 2-20 字元")
 
     email = username_to_email(body.username)
+    nickname = (body.nickname or body.username).strip()[:20] or body.username
 
     # Create auth user with correct role in metadata
     auth_res = sb_admin.auth.admin.create_user({
         "email": email,
         "password": body.password,
         "email_confirm": True,
-        "user_metadata": {"username": body.username, "role": inv["role"]},
+        "user_metadata": {"username": body.username, "role": inv["role"], "nickname": nickname},
     })
     if not auth_res.user:
         raise HTTPException(400, "註冊失敗，請稍後再試")
 
     new_user_id = auth_res.user.id
+    # The profile row is created by a trigger from metadata; ensure nickname is set.
+    sb_admin.table("profiles").update({"nickname": nickname}).eq("id", new_user_id).execute()
 
     # Mark token as used
     sb_admin.table("invite_tokens").update({

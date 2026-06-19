@@ -36,3 +36,18 @@ def signin(body: SignInRequest, sb: Client = Depends(get_supabase)):
 @router.get("/me")
 def me(user: dict = Depends(get_current_user)):
     return user
+
+class NicknameBody(BaseModel):
+    nickname: str
+
+@router.patch("/me/nickname")
+def update_nickname(body: NicknameBody, user: dict = Depends(get_current_user), sb_admin: Client = Depends(get_supabase_admin)):
+    nick = (body.nickname or "").strip()
+    if not nick:
+        raise HTTPException(400, "巫師姓名不能空白")
+    if len(nick) > 20:
+        raise HTTPException(400, "巫師姓名最多 20 字")
+    res = sb_admin.table("profiles").update({"nickname": nick}).eq("id", user["id"]).execute()
+    if not res.data:
+        raise HTTPException(404, "User not found")
+    return res.data[0]

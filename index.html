@@ -510,8 +510,8 @@
 
     <!-- Normal login -->
     <div id="signin-form">
-      <div class="field"><label>用戶名稱</label><input type="text" id="si-username" placeholder="你的巫師名" autocomplete="username" /></div>
-      <div class="field"><label>密碼</label><input type="password" id="si-pass" placeholder="••••••••" autocomplete="current-password" /></div>
+      <div class="field"><label>巫師入學全名</label><input type="text" id="si-username" placeholder="你的入學全名（英文）" autocomplete="username" /></div>
+      <div class="field"><label>通關密語</label><input type="password" id="si-pass" placeholder="••••••••" autocomplete="current-password" /></div>
       <button class="btn-primary" onclick="doSignIn()">進入魔法世界</button>
     </div>
 
@@ -522,11 +522,16 @@
         <div id="invite-role-badge" style="margin-top:4px;font-size:13px;color:var(--gold)"></div>
       </div>
       <div class="field">
-        <label>設定你的巫師名</label>
+        <label>巫師入學全名</label>
         <input type="text" id="inv-name" placeholder="英文+數字，2-20字" autocomplete="username" />
-        <small style="color:var(--gold-lt);font-size:13px">只能包含英文、數字、底線</small>
+        <small style="color:var(--gold-lt);font-size:13px">登入用，只能英文、數字、底線（之後不可自行更改）</small>
       </div>
-      <div class="field"><label>密碼</label><input type="password" id="inv-pass" placeholder="至少 6 位" autocomplete="new-password" /></div>
+      <div class="field">
+        <label>巫師姓名（暱稱）</label>
+        <input type="text" id="inv-nickname" placeholder="顯示用，可用中文" maxlength="20" />
+        <small style="color:var(--gold-lt);font-size:13px">大家看到的名字，之後可自行更改</small>
+      </div>
+      <div class="field"><label>通關密語</label><input type="password" id="inv-pass" placeholder="至少 6 位" autocomplete="new-password" /></div>
       <button class="btn-primary" onclick="doInviteRegister()">領取通行證</button>
       <button onclick="showLoginForm()" style="display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--gold-lt);font-size:12px;cursor:pointer">已有帳號？直接登入</button>
     </div>
@@ -611,6 +616,27 @@
           <h3 id="settings-username">載入中</h3>
           <p id="settings-email">—</p>
           <p id="settings-role" style="font-size:12px;color:var(--scarlet);margin-top:4px"></p>
+        </div>
+        <div class="settings-section">
+          <h3>個人資料</h3>
+          <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+            <label>巫師入學全名</label>
+            <div style="font-size:14px;color:var(--ink-light)" id="profile-fullname">—</div>
+            <small style="color:var(--ink-light);opacity:.7">登入用，如需變更請找管理員</small>
+          </div>
+          <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:6px">
+            <label>巫師姓名（暱稱）</label>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="profile-nickname" maxlength="20" style="flex:1;padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
+              <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="saveNickname()">儲存</button>
+            </div>
+            <small style="color:var(--ink-light);opacity:.7">大家看到的名字，可自行更改（可用中文）</small>
+          </div>
+          <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+            <label>通關密語</label>
+            <div style="font-size:14px;color:var(--ink-light)">••••••••</div>
+            <small style="color:var(--ink-light);opacity:.7">如需變更請找管理員</small>
+          </div>
         </div>
         <div class="settings-section">
           <h3>閱讀偏好</h3>
@@ -915,7 +941,7 @@ async function doSignIn() {
   msg.textContent = '驗證中…';
   try {
     const username = document.getElementById('si-username').value.trim();
-    if (!username) { msg.textContent = '請輸入用戶名稱'; return; }
+    if (!username) { msg.textContent = '請輸入巫師入學全名'; return; }
     const res = await api('/auth/signin', {
       method: 'POST',
       body: JSON.stringify({ username, password: document.getElementById('si-pass').value }),
@@ -933,16 +959,18 @@ async function doSignIn() {
 async function doInviteRegister() {
   const msg = document.getElementById('auth-msg');
   const username = document.getElementById('inv-name').value.trim();
+  const nickname = document.getElementById('inv-nickname').value.trim();
   const pass = document.getElementById('inv-pass').value;
   const invToken = new URLSearchParams(window.location.search).get('invite');
-  if (!username) { msg.textContent = '請輸入巫師名'; return; }
-  if (!/^[a-zA-Z0-9_]{2,20}$/.test(username)) { msg.textContent = '⚠️ 只能用英文、數字、底線，2-20字'; return; }
+  if (!username) { msg.textContent = '請輸入巫師入學全名'; return; }
+  if (!/^[a-zA-Z0-9_]{2,20}$/.test(username)) { msg.textContent = '⚠️ 入學全名只能用英文、數字、底線，2-20字'; return; }
+  if (!nickname) { msg.textContent = '請輸入巫師姓名（暱稱）'; return; }
   if (!invToken) { msg.textContent = '找不到邀請令牌'; return; }
   msg.textContent = '建立帳號中…';
   try {
     await api('/invites/register', {
       method: 'POST',
-      body: JSON.stringify({ token: invToken, username, password: pass }),
+      body: JSON.stringify({ token: invToken, username, password: pass, nickname }),
     });
     const url = new URL(window.location.href);
     url.searchParams.delete('invite');
@@ -1042,7 +1070,7 @@ function renderGreeting() {
   emoji.textContent = char.emoji;
   emoji.style.display = '';            // show emoji over the gradient (fallback)
   hero.style.backgroundImage = GRAD;   // gradient base — never let parchment show through
-  document.getElementById('greeting-line-text').textContent = `${period}，${currentUser.username || '你'} ✨`;
+  document.getElementById('greeting-line-text').textContent = `${period}，${currentUser.nickname || currentUser.username || '你'} ✨`;
   document.getElementById('greeting-quote-text').textContent = char.quotes[timeIdx];
   if (char.img) {
     const probe = new Image();         // only swap in the photo once it actually loads
@@ -1889,9 +1917,11 @@ async function loadAdminUsers() {
   el.innerHTML = '<div class="spinner"></div>';
   try {
     const users = await api('/permissions/users') || [];
+    window._adminUsers = users;   // looked up by viewUserNovels (avoids embedding names in onclick)
     const ROLES = [['reader','📚 讀者'],['writer','✍️ 作家'],['admin','🏰 管理員'],['super_admin','👑 超級管理員']];
     const isSuper = currentUser.role === 'super_admin';
     el.innerHTML = users.map(u => {
+      const display = u.nickname || u.username;
       const isSelf = u.id === currentUser.id;
       const picker = (isSuper && !isSelf)
         ? `<select onchange="changeUserRole('${u.id}','${u.username}',this.value)" style="font-size:12px;padding:4px 6px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink)">
@@ -1899,12 +1929,12 @@ async function loadAdminUsers() {
            </select>`
         : `<div class="u-role">${u.role}${isSelf ? '（你）' : ''}</div>`;
       // Tap the name to drill into this member's detail (their works + 迷情劑 toggle for readers).
-      const open = `viewUserNovels('${u.id}','${escapeHtml(u.username)}','${u.role}','${u.mqj_access || ''}')`;
+      const open = `viewUserNovels('${u.id}')`;
       return `
       <div style="padding:8px 0;border-bottom:1px solid rgba(26,10,0,.07)">
         <div class="user-row" style="border:none;padding:0">
-          <div onclick="${open}" style="width:32px;height:32px;border-radius:50%;background:var(--scarlet);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:14px;flex-shrink:0;cursor:pointer">${initials(u.username)}</div>
-          <div class="u-name" onclick="${open}" style="cursor:pointer">${u.username}<span style="color:var(--gold);font-weight:bold;margin-left:6px">›</span></div>
+          <div onclick="${open}" style="width:32px;height:32px;border-radius:50%;background:var(--scarlet);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:14px;flex-shrink:0;cursor:pointer">${initials(display)}</div>
+          <div class="u-name" onclick="${open}" style="cursor:pointer;line-height:1.3">${escapeHtml(display)}<span style="color:var(--gold);font-weight:bold;margin-left:6px">›</span><div style="font-size:12px;color:var(--ink-light);font-weight:normal">@${escapeHtml(u.username)}</div></div>
           ${picker}
         </div>
       </div>`;
@@ -1913,8 +1943,9 @@ async function loadAdminUsers() {
 }
 
 // Admin taps a member's name → their detail (scoped 作品管理 + 迷情劑 toggle for readers).
-function viewUserNovels(id, name, role, mqj) {
-  adminNovelScope = { id, name, role, mqj };
+function viewUserNovels(id) {
+  const u = (window._adminUsers || []).find(x => x.id === id) || {};
+  adminNovelScope = { id, name: u.nickname || u.username || '', role: u.role, mqj: u.mqj_access };
   switchAdminTab('novels');
 }
 
@@ -1974,10 +2005,25 @@ function closePerm() { document.getElementById('perm-modal').classList.remove('o
 const ROLE_LABEL = { super_admin: '👑 最高管理員', admin: '🏰 管理員', writer: '✍️ 作家', reader: '📚 讀者' };
 
 function renderSettings() {
-  document.getElementById('settings-avatar').textContent = currentUser.username ? currentUser.username[0].toUpperCase() : '🧙';
-  document.getElementById('settings-username').textContent = currentUser.username || '巫師';
+  const nick = currentUser.nickname || currentUser.username || '巫師';
+  document.getElementById('settings-avatar').textContent = nick[0].toUpperCase();
+  document.getElementById('settings-username').textContent = nick;
   document.getElementById('settings-email').textContent = '';
   document.getElementById('settings-role').textContent = ROLE_LABEL[currentUser.role] || currentUser.role;
+  document.getElementById('profile-fullname').textContent = currentUser.username || '—';
+  document.getElementById('profile-nickname').value = currentUser.nickname || currentUser.username || '';
+}
+
+async function saveNickname() {
+  const nickname = document.getElementById('profile-nickname').value.trim();
+  if (!nickname) { toast('請輸入巫師姓名'); return; }
+  try {
+    const updated = await api('/auth/me/nickname', { method: 'PATCH', body: JSON.stringify({ nickname }) });
+    currentUser.nickname = updated.nickname || nickname;
+    toast('✅ 巫師姓名已更新');
+    renderSettings();
+    renderGreeting();
+  } catch (e) { toast('⚠️ ' + e.message); }
 }
 
 // ── Admin: invites ────────────────────────────────────────────
@@ -2008,7 +2054,7 @@ async function loadInviteList() {
       const expires = new Date(inv.expires_at).toLocaleDateString('zh-TW');
       return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08);font-size:13px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <span style="background:${used ? '#ccc' : 'var(--scarlet)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:12px">${ROLE_LABEL[inv.role] || inv.role}</span>
+          <span style="background:${used ? '#ccc' : 'var(--scarlet)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;flex-shrink:0;white-space:nowrap">${ROLE_LABEL[inv.role] || inv.role}</span>
           <span style="color:${used ? '#aaa' : 'var(--ink-light)'}">到期：${expires}</span>
           ${used ? `<span style="color:#aaa">✓ 已使用（${usedBy}）</span>` : ''}
         </div>
