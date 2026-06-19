@@ -51,6 +51,7 @@
       --on-dark:    #f4e8c1;   /* 放在深色/紅色底上的淺色文字 */
       --shadow:     rgba(26,10,0,0.35);
       --nav-h:      50px;
+      --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
       --nav-safe: env(safe-area-inset-bottom, 0px);
     }
@@ -72,7 +73,9 @@
 
     /* ── Layout ── */
     #app { display: flex; flex-direction: column; height: 100%; overflow: hidden; width: 100%; max-width: 100%; }
-    #page-area { flex: 1; overflow-y: auto; overflow-x: hidden; overscroll-behavior-x: none; background: var(--parchment); color: var(--ink); padding-top: env(safe-area-inset-top, 0px); }
+    #page-area { flex: 1; overflow-y: auto; overflow-x: hidden; overscroll-behavior-x: none; background: var(--parchment); color: var(--ink); padding-top: var(--safe-top); }
+    /* 卷軸/論壇有 sticky 標題列，改由標題列自己吃掉安全區（覆蓋瀏海），容器就不再留上方留白，避免捲動內容露在標題上方 */
+    #page-area:has(#page-scroll.active), #page-area:has(#page-forum.active) { padding-top: 0; }
     /* Home page is fixed-height: lock scrolling entirely (no scroll, no scrollbar) */
     #page-area:has(#page-home.active) { overflow: hidden; overscroll-behavior: none; touch-action: none; }
     #page-area::-webkit-scrollbar { width: 0; height: 0; }
@@ -207,7 +210,7 @@
     .novel-card-sm .info p { font-size: 13px; color: var(--ink-light); margin-top: 2px; }
 
     /* ── Scroll (卷軸) page ── */
-    .shelf-header { position: sticky; top: 0; z-index: 6; padding: 20px 18px 8px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
+    .shelf-header { position: sticky; top: 0; z-index: 6; padding: calc(20px + var(--safe-top)) 18px 8px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
     .shelf-header h2 { font-size: 18px; color: var(--ink); }
     /* novel list as rows (title / author / category / characters) */
     .novel-list { padding: 0; }
@@ -360,7 +363,7 @@
     .chapter-list-panel ol li.current { color: var(--accent); font-weight: bold; }
 
     /* ── Forum page ── */
-    .forum-header { position: sticky; top: 0; z-index: 6; padding: 20px 18px 8px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
+    .forum-header { position: sticky; top: 0; z-index: 6; padding: calc(20px + var(--safe-top)) 18px 8px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
     .forum-header h2 { font-size: 18px; }
     .forum-search { padding: 12px 18px; }
     .forum-search input {
@@ -893,7 +896,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v55';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v56';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
