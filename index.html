@@ -218,9 +218,11 @@
         linear-gradient(rgba(244,232,193,0.80), rgba(244,232,193,0.80)),
         url('./parchment.jpg');
       background-size: cover; background-position: center; background-attachment: fixed;
-      overflow-y: auto; flex-direction: column;
+      overflow-y: auto; overflow-x: hidden; overscroll-behavior: none; flex-direction: column;
     }
     #reader-view.open { display: flex; }
+    #reader-view, .reader-content { max-width: 100%; }
+    .reader-content { overflow-wrap: anywhere; word-break: break-word; }
     .reader-header {
       position: sticky; top: 0; background: var(--ink); color: var(--gold);
       padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px; display: flex; align-items: center; gap: 12px;
