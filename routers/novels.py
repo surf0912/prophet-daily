@@ -156,6 +156,31 @@ def delete_novel(novel_id: str, sb: Client = Depends(get_supabase_admin)):
     sb.table("novels").delete().eq("id", novel_id).execute()
     return {"message": "Deleted"}
 
+# ── Comment likes (forum 蓋樓) ───────────────────────────────
+@router.get("/{novel_id}/likes")
+def get_comment_likes(novel_id: str, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
+    rows = sb.table("comment_likes").select("comment_index, user_id").eq("novel_id", novel_id).execute().data or []
+    counts, mine = {}, []
+    for r in rows:
+        idx = r["comment_index"]
+        counts[idx] = counts.get(idx, 0) + 1
+        if r["user_id"] == user["id"]:
+            mine.append(idx)
+    return {"counts": counts, "mine": mine}
+
+@router.post("/{novel_id}/comments/{idx}/like")
+def toggle_comment_like(novel_id: str, idx: int, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
+    existing = (sb.table("comment_likes").select("id")
+                .eq("novel_id", novel_id).eq("comment_index", idx).eq("user_id", user["id"]).execute().data)
+    if existing:
+        sb.table("comment_likes").delete().eq("id", existing[0]["id"]).execute()
+        liked = False
+    else:
+        sb.table("comment_likes").insert({"novel_id": novel_id, "comment_index": idx, "user_id": user["id"]}).execute()
+        liked = True
+    cnt = sb.table("comment_likes").select("id", count="exact").eq("novel_id", novel_id).eq("comment_index", idx).execute()
+    return {"liked": liked, "count": cnt.count or 0}
+
 def _check_novel_access(novel: dict, user: dict):
     # Approved works are visible to every logged-in user.
     # Pending works are visible only to admins and the creator (for preview/review).
