@@ -96,3 +96,18 @@ def update_nickname(body: NicknameBody, user: dict = Depends(get_current_user), 
     if not res.data:
         raise HTTPException(404, "User not found")
     return res.data[0]
+
+class AvatarBody(BaseModel):
+    avatar: str  # small client-resized data URL (data:image/...;base64,...), or '' to clear
+
+@router.patch("/me/avatar")
+def update_avatar(body: AvatarBody, user: dict = Depends(get_current_user), sb_admin: Client = Depends(get_supabase_admin)):
+    av = (body.avatar or "").strip()
+    if av and not av.startswith("data:image/"):
+        raise HTTPException(400, "頭像格式不正確")
+    if len(av) > 200_000:  # ~200KB ceiling; the client resizes to ~15KB
+        raise HTTPException(400, "頭像檔案太大，請換小一點的圖")
+    res = sb_admin.table("profiles").update({"avatar_url": av or None}).eq("id", user["id"]).execute()
+    if not res.data:
+        raise HTTPException(404, "User not found")
+    return res.data[0]
