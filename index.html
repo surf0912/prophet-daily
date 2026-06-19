@@ -29,6 +29,7 @@
 
     /* ── Design tokens ── */
     :root {
+      color-scheme: light;   /* native <select>/date pickers follow the theme (dark in 夜間模式) */
       --parchment:  #f4e8c1;
       --parchment2: #efe2c4;
       --ink:        #1a0a00;
@@ -1514,6 +1515,7 @@ function toggleDark(on) {
   r.setProperty('--ink-light',  on ? '#e8d5a3' : '#3d1f0d');
   r.setProperty('--series',     on ? '#9fcf7a' : '#2d4a1e');
   r.setProperty('--reader-overlay', on ? 'rgba(20,12,4,0.90)' : 'rgba(244,232,193,0.80)');
+  r.colorScheme = on ? 'dark' : 'light';   // native pickers (select/date) render dark in 夜間模式
   document.documentElement.classList.toggle('dark', on);
   localStorage.setItem('pd_dark', on ? '1' : '0');
 }
