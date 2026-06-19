@@ -763,8 +763,8 @@
     <p style="font-size:12px;color:var(--ink-light);margin:6px 0 10px">勾選擁有此作品的帳號（可多人共同擁有）：</p>
     <div id="transfer-user-list"></div>
     <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" onclick="saveOwners()">儲存</button>
-      <button class="btn-close-modal" style="margin:0" onclick="document.getElementById('transfer-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveOwners()">儲存</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('transfer-modal').classList.remove('open')">取消</button>
     </div>
   </div>
 </div>
@@ -777,8 +777,8 @@
     <div class="form-group"><label>系列名（留空 = 單篇）</label><input type="text" id="series-name-input" list="series-name-list" placeholder="例：火焰杯后" /><datalist id="series-name-list"></datalist></div>
     <div class="form-group"><label>第幾部（順序，1=上、2=下…）</label><input type="number" id="series-order-input" min="0" value="0" /></div>
     <div style="display:flex;gap:8px;margin-top:6px">
-      <button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" onclick="saveSeries()">儲存</button>
-      <button class="btn-close-modal" style="margin:0" onclick="document.getElementById('series-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveSeries()">儲存</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('series-modal').classList.remove('open')">取消</button>
     </div>
   </div>
 </div>
@@ -789,8 +789,8 @@
     <div class="form-group" id="editclass-cat-group"><label>故事類型</label><select id="editclass-category"></select></div>
     <div class="form-group"><label>角色（可多選）</label><div id="editclass-chars" class="char-picker"></div></div>
     <div style="display:flex;gap:8px;margin-top:6px">
-      <button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" onclick="saveEditClass()">儲存</button>
-      <button class="btn-close-modal" style="margin:0" onclick="document.getElementById('editclass-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveEditClass()">儲存</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('editclass-modal').classList.remove('open')">取消</button>
     </div>
   </div>
 </div>
