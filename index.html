@@ -40,7 +40,9 @@
       --shadow:     rgba(26,10,0,0.35);
       --nav-h:      50px;
       --safe-bottom: env(safe-area-inset-bottom, 0px);
-      --nav-safe: env(safe-area-inset-bottom, 0px);
+      /* Pull the icons closer to the bottom: trim the home-indicator gap (keep ~8px clearance).
+         The brown body fills the area behind the bar, so the bottom stays seamless. */
+      --nav-safe: max(8px, calc(env(safe-area-inset-bottom, 0px) - 18px));
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; overflow: hidden; overscroll-behavior: none; width: 100%; max-width: 100%; position: fixed; inset: 0; }
