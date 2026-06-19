@@ -905,7 +905,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v60';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v61';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1237,7 +1237,7 @@ const CHAR_LIST = [
   { code: 'adrian', name: 'Adrian', img: './chars/adrian.jpg' },
 ];
 let shelfCat = '';        // '' = 全部
-let shelfChars = CHAR_LIST.map(c => c.code);   // default: all lit = show everything
+let shelfChars = [];   // default: none lit = show everything; tap a character to filter to them (OR)
 let adminNovelScope = null;   // null = manage my own works; {id,name} = managing another user's works (#3)
 
 // Map character codes -> display names (e.g. ['sean'] -> 'Sean')
@@ -1562,7 +1562,7 @@ async function toggleLike(idx) {
   } catch (e) { toast(e.message); }
 }
 
-let forumChars = CHAR_LIST.map(c => c.code);   // default: all lit = show everything (角色篩選用 OR)
+let forumChars = [];   // default: none lit = show everything; tap a character to filter to them (OR)
 let forumView = 'all';   // 'all' | 'liked'
 let forumLiked = [];
 
