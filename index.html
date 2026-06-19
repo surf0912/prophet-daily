@@ -1539,7 +1539,10 @@ async function loadAdminNovelList() {
     const ns = await api('/novels/') || [];
     el.innerHTML = ns.map(n => `
       <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
-        <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)} ${n.kind === 'forum' ? '<span style="font-size:10px;color:var(--ink-light)">🦉</span>' : ''}</div>
+        <div style="margin-bottom:3px">${n.kind === 'forum'
+          ? '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">🦉 論壇體</span>'
+          : '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--scarlet)">📖 小說</span>'}</div>
+        <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)}</div>
         <div style="font-size:12px;color:var(--ink-light)">${n.author || '佚名'}</div>
         ${n.updated_at ? `<div style="font-size:11px;color:var(--ink-light);margin-top:2px">📅 最新更新 ${fmtUpdated(n.updated_at)}</div>` : ''}
         <div style="margin-top:6px;display:flex;gap:8px">
