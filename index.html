@@ -674,6 +674,7 @@
           </div>
         </div>
         <button class="btn-logout" onclick="doLogout()">🚪 登出魔法世界</button>
+        <p id="app-version" style="text-align:center;font-size:11px;color:var(--ink-light);opacity:.55;margin-top:14px"></p>
       </div>
     </div>
 
@@ -881,6 +882,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
+const APP_VERSION = 'v54';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2119,6 +2121,7 @@ function renderSettings() {
   document.getElementById('settings-username').textContent = nick;
   document.getElementById('settings-email').textContent = '';
   document.getElementById('settings-role').textContent = ROLE_LABEL[currentUser.role] || currentUser.role;
+  document.getElementById('app-version').textContent = '版本 ' + APP_VERSION;
   document.getElementById('profile-fullname').textContent = currentUser.username || '—';
   document.getElementById('nick-display').textContent = nick;
   document.getElementById('profile-nickname').value = currentUser.nickname || currentUser.username || '';
