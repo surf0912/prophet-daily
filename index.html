@@ -70,9 +70,8 @@
       display: flex; align-items: stretch;
       background: var(--ink-light);
       border-top: 2px solid var(--gold);
-      /* Pull the icons down: trim most of the home-indicator band, keep a small clearance.
-         One formula, all devices — Face-ID phones get trimmed; older phones stay at the 6px floor. */
-      padding-bottom: max(6px, calc(env(safe-area-inset-bottom, 0px) - 24px));
+      /* Bottom safe area matches the TOP safe area so top/bottom clearances are symmetric. */
+      padding-bottom: env(safe-area-inset-top, 0px);
       position: relative; z-index: 10; flex-shrink: 0;
     }
     .nav-btn {
