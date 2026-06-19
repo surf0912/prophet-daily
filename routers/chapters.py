@@ -81,6 +81,14 @@ class ChapterTextBody(BaseModel):
     title: Optional[str] = None
     content: str
 
+def _require_owner_or_admin(novel_id: str, user: dict, sb: Client):
+    nv = sb.table("novels").select("owners").eq("id", novel_id).single().execute()
+    if not nv.data:
+        raise HTTPException(404, "Novel not found")
+    if is_admin(user) or user["id"] in (nv.data.get("owners") or []):
+        return
+    raise HTTPException(403, "只能管理自己的作品")
+
 @router.post("/novel/{novel_id}/text")
 def create_chapter_text(
     novel_id: str,
@@ -88,6 +96,7 @@ def create_chapter_text(
     user: dict = Depends(require_writer),
     sb_admin: Client = Depends(get_supabase_admin),
 ):
+    _require_owner_or_admin(novel_id, user, sb_admin)
     res = sb_admin.table("chapters").insert({
         "novel_id": novel_id,
         "chapter_num": body.chapter_num,
@@ -105,6 +114,10 @@ def update_chapter_text(
     user: dict = Depends(require_writer),
     sb_admin: Client = Depends(get_supabase_admin),
 ):
+    ch = sb_admin.table("chapters").select("novel_id").eq("id", chapter_id).single().execute()
+    if not ch.data:
+        raise HTTPException(404, "Chapter not found")
+    _require_owner_or_admin(ch.data["novel_id"], user, sb_admin)
     res = sb_admin.table("chapters").update({
         "chapter_num": body.chapter_num,
         "title": body.title,
