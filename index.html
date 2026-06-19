@@ -903,7 +903,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v57';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v58';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1104,7 +1104,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Silas', emoji: '🦅', img: './chars/silas.jpg', bgPos: 'center top',
+    name: 'Silas', emoji: '🦅', img: './chars/silas.jpg', bgPos: 'center top', bgPosDesktop: 'center 20%',
     quotes: [
       '早上好。你的座位在這裡。',
       '中午好。先吃飯，你上午已經喝了兩杯咖啡了。',
@@ -1122,7 +1122,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Adrian', emoji: '🐍', img: './chars/adrian.jpg', bgPos: 'center top',
+    name: 'Adrian', emoji: '🐍', img: './chars/adrian.jpg', bgPos: 'center top', bgPosDesktop: 'center 20%',
     quotes: [
       '早上好。你今天沒繞遠路，看來心情不錯。',
       '中午好。當心，西側長廊今天別去。',
@@ -1146,11 +1146,14 @@ function renderGreeting() {
   hero.style.backgroundImage = GRAD;   // gradient base — never let parchment show through
   document.getElementById('greeting-line-text').textContent = `${period}，${currentUser.nickname || currentUser.username || '你'} ✨`;
   document.getElementById('greeting-quote-text').textContent = char.quotes[timeIdx];
+  // On wide screens the hero box is short+wide, so portraits need a lower anchor to show the face.
+  const isWide = window.matchMedia('(min-width: 600px)').matches;
+  const heroPos = (isWide && char.bgPosDesktop) || char.bgPos || 'center';
   if (char.img) {
     const probe = new Image();         // only swap in the photo once it actually loads
     probe.onload = () => {             // photo layered OVER the gradient (gradient stays as fallback)
       hero.style.backgroundImage = `url('${char.img}'), ${GRAD}`;
-      hero.style.backgroundPosition = `${char.bgPos || 'center'}, center`;
+      hero.style.backgroundPosition = `${heroPos}, center`;
       hero.style.backgroundRepeat = 'no-repeat, no-repeat';
       hero.style.backgroundSize = `${char.bgSize || 'cover'}, cover`;
       emoji.style.display = 'none';
