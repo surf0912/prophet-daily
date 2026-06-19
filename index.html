@@ -531,7 +531,7 @@
       </div>
       <div class="field">
         <label>巫師姓名（暱稱）</label>
-        <input type="text" id="inv-nickname" placeholder="顯示用，可用中文" maxlength="20" />
+        <input type="text" id="inv-nickname" placeholder="顯示用，可用中文" maxlength="7" />
         <small style="color:var(--gold-lt);font-size:13px">大家看到的名字，之後可自行更改</small>
       </div>
       <div class="field"><label>通關密語</label><input type="password" id="inv-pass" placeholder="至少 6 位" autocomplete="new-password" /></div>
@@ -841,6 +841,19 @@
     <div style="display:flex;gap:8px;margin-top:6px">
       <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveEditClass()">儲存</button>
       <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('editclass-modal').classList.remove('open')">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="perm-modal" id="editwork-modal">
+  <div class="perm-modal-inner">
+    <h3>📝 編輯作品</h3>
+    <div class="form-group"><label>標題</label><input type="text" id="editwork-title" /></div>
+    <div class="form-group"><label>作者署名</label><input type="text" id="editwork-author" placeholder="留空則佚名" /></div>
+    <div class="form-group"><label>內文</label><textarea id="editwork-content" rows="12"></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveEditWork()">儲存</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('editwork-modal').classList.remove('open')">取消</button>
     </div>
   </div>
 </div>
@@ -1628,6 +1641,9 @@ function setUploadKind(kind) {
   document.getElementById('kind-novel-btn').style.color = isNovel ? 'var(--on-dark)' : 'var(--ink-light)';
   document.getElementById('kind-forum-btn').style.background = isNovel ? 'var(--parchment2)' : 'var(--scarlet)';
   document.getElementById('kind-forum-btn').style.color = isNovel ? 'var(--ink-light)' : 'var(--on-dark)';
+  // Default the novel author署名 to the uploader's nickname (still editable).
+  const na = document.getElementById('new-novel-author');
+  if (isNovel && na && !na.value) na.value = currentUser.nickname || currentUser.username || '';
   const writerNote = (currentUser.role === 'writer') ? '⏳ 你的內容會先送審，管理員通過後才公開' : '';
   const fh = document.getElementById('forum-post-hint'); if (fh) fh.textContent = writerNote;
   const nh = document.getElementById('new-novel-hint'); if (nh) nh.textContent = writerNote;
@@ -1821,13 +1837,13 @@ async function loadAdminNovelList() {
     el.innerHTML = ns.map(n => {
       const statusTag = n.status === 'pending'
         ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--scarlet)">⏳ 待審核</span>' : '';
+      // 編輯 is for everyone here (the list only shows works the viewer owns, or an admin's scoped view).
+      const editBtn = `<button onclick="openEditWork('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">📝 編輯</button>`;
       const adminBtns = isAdmin ? `
-        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
           <button onclick='openEditClass(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.kind)}, ${JSON.stringify(n.category || "")}, ${JSON.stringify(n.characters || [])})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:3px;cursor:pointer">✏️ 分類</button>
           <button onclick='openSeries(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.series || "")}, ${n.series_order || 0})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--series);color:var(--series);border-radius:3px;cursor:pointer">🔗 系列</button>
           <button onclick='openOwners(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.owners || [])})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">👥 作者</button>
-          <button onclick="deleteNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:3px;cursor:pointer">刪除</button>
-        </div>` : '';
+          <button onclick="deleteNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:3px;cursor:pointer">刪除</button>` : '';
       return `
       <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
         <div style="margin-bottom:3px;display:flex;gap:5px;flex-wrap:wrap">${n.kind === 'forum'
@@ -1841,7 +1857,7 @@ async function loadAdminNovelList() {
         </div>
         <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${n.author || '佚名'}</div>
         ${n.updated_at ? `<div style="font-size:12px;color:var(--ink-light);margin-top:2px">📅 最新更新 ${fmtUpdated(n.updated_at)}</div>` : ''}
-        ${adminBtns}
+        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${editBtn}${adminBtns}</div>
       </div>`;
     }).join('') || '<p style="color:#888">尚無作品</p>';
   } catch { el.innerHTML = '<p>載入失敗</p>'; }
@@ -1938,6 +1954,44 @@ async function saveEditClass() {
     document.getElementById('editclass-modal').classList.remove('open');
     loadAdminNovelList(); loadNovels();
   } catch (e) { toast(e.message); }
+}
+
+let editWork = { id: null, chapterId: null, chapterNum: 1, chapterTitle: null };
+
+async function openEditWork(id) {
+  const n = (window._adminNovels || []).find(x => x.id === id) || {};
+  editWork = { id, chapterId: null, chapterNum: 1, chapterTitle: null };
+  document.getElementById('editwork-title').value = n.title || '';
+  document.getElementById('editwork-author').value = n.author || '';
+  const ct = document.getElementById('editwork-content');
+  ct.value = '載入中…'; ct.disabled = true;
+  document.getElementById('editwork-modal').classList.add('open');
+  try {
+    const chs = await api(`/chapters/novel/${id}`) || [];
+    const ch = chs[0];
+    if (ch) {
+      const full = await api(`/chapters/${ch.id}`);
+      editWork.chapterId = ch.id; editWork.chapterNum = ch.chapter_num || 1; editWork.chapterTitle = ch.title || null;
+      ct.value = (full && full.content) || '';
+    } else { ct.value = ''; }
+  } catch (e) { ct.value = ''; toast('內文載入失敗'); }
+  ct.disabled = false;
+}
+
+async function saveEditWork() {
+  const title = document.getElementById('editwork-title').value.trim();
+  const author = document.getElementById('editwork-author').value.trim();
+  const content = document.getElementById('editwork-content').value;
+  if (!title) { toast('請輸入標題'); return; }
+  try {
+    await api(`/novels/${editWork.id}`, { method: 'PATCH', body: JSON.stringify({ title, author }) });
+    if (editWork.chapterId) {
+      await api(`/chapters/${editWork.chapterId}/text`, { method: 'PUT', body: JSON.stringify({ chapter_num: editWork.chapterNum, title: editWork.chapterTitle, content }) });
+    }
+    toast('✅ 作品已更新');
+    document.getElementById('editwork-modal').classList.remove('open');
+    loadAdminNovelList(); loadNovels();
+  } catch (e) { toast('⚠️ ' + e.message); }
 }
 
 async function deleteNovel(id, isReject) {

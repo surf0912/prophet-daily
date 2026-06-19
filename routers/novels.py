@@ -147,8 +147,13 @@ def set_series(novel_id: str, body: SeriesBody, sb: Client = Depends(get_supabas
         raise HTTPException(404, "Novel not found")
     return res.data[0]
 
-@router.patch("/{novel_id}", dependencies=[Depends(require_admin)])
-def update_novel(novel_id: str, body: NovelUpdate, sb: Client = Depends(get_supabase_admin)):
+@router.patch("/{novel_id}")
+def update_novel(novel_id: str, body: NovelUpdate, user: dict = Depends(require_writer), sb: Client = Depends(get_supabase_admin)):
+    nv = sb.table("novels").select("owners").eq("id", novel_id).single().execute()
+    if not nv.data:
+        raise HTTPException(404, "Novel not found")
+    if not is_admin(user) and user["id"] not in (nv.data.get("owners") or []):
+        raise HTTPException(403, "只能編輯自己的作品")
     updates = {k: v for k, v in body.dict().items() if v is not None}
     if not updates:
         raise HTTPException(400, "No fields to update")
