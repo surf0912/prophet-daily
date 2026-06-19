@@ -916,7 +916,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v67';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v68';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1131,9 +1131,26 @@ async function initApp() {
   document.getElementById('admin-nav-btn').style.display = staff ? '' : 'none';  // readers: no 後台
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = adminish ? '' : 'none');  // writers: only 作品管理 + 上傳
   adminNovelScope = null;
+  loadOwnerNames();   // super_admin only: map owner uuid → 巫師全名 for the owner hint
   renderSettings();
   renderGreeting();
   loadNovels();
+}
+
+// super_admin sees the real owner (巫師全名) after the free-text author, so a changed
+// 作者署名 doesn't hide who the work belongs to. Others never see this.
+let _ownerNames = {};
+async function loadOwnerNames() {
+  _ownerNames = {};
+  if (currentUser?.role !== 'super_admin') return;
+  try {
+    (await api('/permissions/users') || []).forEach(u => { _ownerNames[u.id] = u.username; });
+  } catch {}
+}
+function ownerTag(work) {
+  if (currentUser?.role !== 'super_admin') return '';
+  const names = (work.owners || []).map(id => _ownerNames[id]).filter(Boolean);
+  return names.length ? ` <span style="color:var(--gold);opacity:.85">🪪${escapeHtml(names.join('、'))}</span>` : '';
 }
 
 // ── Navigation ───────────────────────────────────────────────
@@ -1353,7 +1370,7 @@ function shelfRow(n, inSeries) {
   return `
     <div class="novel-row${inSeries ? ' series-member' : ''}" onclick="openNovel('${n.id}')">
       <h4>${inSeries && n.series_order ? `<span style="color:var(--ink-light);font-weight:normal">#${n.series_order}　</span>` : ''}${escapeHtml(n.title)}</h4>
-      <div class="row-meta">${n.author || '佚名'}${n.updated_at ? ` · 📅 ${fmtUpdated(n.updated_at)}` : ''}</div>
+      <div class="row-meta">${n.author || '佚名'}${ownerTag(n)}${n.updated_at ? ` · 📅 ${fmtUpdated(n.updated_at)}` : ''}</div>
       <div class="row-tags">
         ${n.category ? `<span class="t-cat">${n.category}</span>` : ''}
         ${(n.characters || []).map(c => `<span class="t-chr">${charNames([c])}</span>`).join('')}
@@ -1663,7 +1680,7 @@ function renderForumList() {
     <div class="forum-post-row" onclick="openNovel('${p.id}')">
       <h4>${escapeHtml(p.title)}</h4>
       <div class="meta">
-        <span>🕯️ ${p.author || '匿名'}</span>
+        <span>🕯️ ${p.author || '匿名'}${ownerTag(p)}</span>
         <span>📅 ${fmtUpdated(p.created_at)}</span>
         ${p.liked_count ? `<span style="color:var(--accent)">❤️ 你讚了 ${p.liked_count} 則</span>` : ''}
         ${p.status === 'pending' ? '<span class="pending-tag">⏳ 待審核</span>' : ''}
@@ -1960,7 +1977,7 @@ async function loadAdminNovelList() {
           ${n.category ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.12);color:var(--accent)">${n.category}</span>` : ''}
           ${(n.characters || []).map(c => `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.18);color:var(--ink-light)">${charNames([c])}</span>`).join('')}
         </div>
-        <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${n.author || '佚名'}</div>
+        <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${n.author || '佚名'}${ownerTag(n)}</div>
         ${n.updated_at ? `<div style="font-size:12px;color:var(--ink-light);margin-top:2px">📅 最新更新 ${fmtUpdated(n.updated_at)}</div>` : ''}
         <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${editBtn}${adminBtns}</div>
       </div>`;
