@@ -70,8 +70,8 @@
       display: flex; align-items: stretch;
       background: var(--ink-light);
       border-top: 2px solid var(--gold);
-      /* Bottom safe area matches the TOP safe area so top/bottom clearances are symmetric. */
-      padding-bottom: env(safe-area-inset-top, 0px);
+      /* Compact: trim the home-indicator band to a small clearance on every device. */
+      padding-bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) - 22px));
       position: relative; z-index: 10; flex-shrink: 0;
     }
     .nav-btn {
@@ -947,6 +947,7 @@ function showPage(id, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
   if (btn) btn.classList.add('active');
+  if (id === 'home') renderContinueBar();
   if (id === 'scroll') loadNovels();
   if (id === 'forum') loadForumPosts();
   if (id === 'admin') { switchAdminTab(currentUser.role === 'writer' ? 'upload' : 'novels'); }
