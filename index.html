@@ -783,6 +783,18 @@
   </div>
 </div>
 
+<div class="perm-modal" id="editclass-modal">
+  <div class="perm-modal-inner">
+    <h3>✏️ 編輯分類 — <span id="editclass-novel-title" style="font-size:14px"></span></h3>
+    <div class="form-group" id="editclass-cat-group"><label>故事類型</label><select id="editclass-category"></select></div>
+    <div class="form-group"><label>角色（可多選）</label><div id="editclass-chars" class="char-picker"></div></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" onclick="saveEditClass()">儲存</button>
+      <button class="btn-close-modal" style="margin:0" onclick="document.getElementById('editclass-modal').classList.remove('open')">取消</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1664,7 +1676,9 @@ async function handleChapterUpload(e) {
 async function submitNewNovel() {
   const title = document.getElementById('new-novel-title').value.trim();
   const content = document.getElementById('new-novel-content').value.trim();
+  const category = document.getElementById('new-novel-category').value;
   if (!title) { toast('請輸入作品名稱'); return; }
+  if (!category) { toast('請選擇故事類型'); return; }
   if (!content) { toast('請輸入內文'); return; }
   try {
     const novel = await api('/novels/', { method: 'POST', body: JSON.stringify({
@@ -1672,7 +1686,7 @@ async function submitNewNovel() {
       author: document.getElementById('new-novel-author').value.trim() || null,
       description: document.getElementById('new-novel-desc').value.trim() || null,
       published_at: dateToIso(document.getElementById('new-novel-date').value),
-      category: document.getElementById('new-novel-category').value || null,
+      category,
       characters: readChars('new-novel-chars'),
     }) });
     await api(`/chapters/novel/${novel.id}/text`, { method: 'POST', body: JSON.stringify({ chapter_num: 1, title: null, content }) });
@@ -1707,6 +1721,7 @@ async function loadAdminNovelList() {
         ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--scarlet)">⏳ 待審核</span>' : '';
       const adminBtns = isAdmin ? `
         <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick='openEditClass(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.kind)}, ${JSON.stringify(n.category || "")}, ${JSON.stringify(n.characters || [])})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:3px;cursor:pointer">✏️ 分類</button>
           <button onclick='openSeries(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.series || "")}, ${n.series_order || 0})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid #2d4a1e;color:#2d4a1e;border-radius:3px;cursor:pointer">🔗 系列</button>
           <button onclick='openOwners(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.owners || [])})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">👥 作者</button>
           <button onclick="deleteNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:3px;cursor:pointer">刪除</button>
@@ -1782,6 +1797,43 @@ async function saveSeries() {
     await api(`/novels/${seriesNovelId}/series`, { method: 'PATCH', body: JSON.stringify({ series: series || null, series_order }) });
     toast(series ? `✅ 已綁定系列「${series}」` : '✅ 已設為單篇');
     document.getElementById('series-modal').classList.remove('open');
+    loadAdminNovelList(); loadNovels();
+  } catch (e) { toast(e.message); }
+}
+
+let editClassNovelId = null;
+
+function openEditClass(id, title, kind, category, characters) {
+  editClassNovelId = id;
+  document.getElementById('editclass-novel-title').textContent = title || '';
+  const sel = document.getElementById('editclass-category');
+  if (!sel.dataset.init) {
+    sel.innerHTML = '<option value="">— 選擇類型 —</option>' + CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+    sel.dataset.init = '1';
+  }
+  const div = document.getElementById('editclass-chars');
+  if (!div.dataset.init) {
+    div.innerHTML = CHAR_LIST.map(ch => `<span class="opt" data-ch="${ch.code}" onclick="this.classList.toggle('on')">${ch.name}</span>`).join('');
+    div.dataset.init = '1';
+  }
+  // forum posts have no 故事類型
+  document.getElementById('editclass-cat-group').style.display = kind === 'forum' ? 'none' : '';
+  sel.value = category || '';
+  const have = new Set(characters || []);
+  div.querySelectorAll('.opt').forEach(el => el.classList.toggle('on', have.has(el.dataset.ch)));
+  document.getElementById('editclass-modal').classList.add('open');
+}
+
+async function saveEditClass() {
+  const category = document.getElementById('editclass-category').value;
+  const characters = [...document.querySelectorAll('#editclass-chars .opt.on')].map(el => el.dataset.ch);
+  // category null is ignored by the backend (PATCH skips null), so only novels send it.
+  const body = { characters };
+  if (category) body.category = category;
+  try {
+    await api(`/novels/${editClassNovelId}`, { method: 'PATCH', body: JSON.stringify(body) });
+    toast('✅ 分類已更新');
+    document.getElementById('editclass-modal').classList.remove('open');
     loadAdminNovelList(); loadNovels();
   } catch (e) { toast(e.message); }
 }
