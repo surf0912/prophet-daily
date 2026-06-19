@@ -430,6 +430,8 @@
     .settings-body { padding: 20px 18px; }
     .settings-section { margin-bottom: 28px; }
     .settings-section h3 { font-size: 12px; color: var(--scarlet); letter-spacing: .1em; margin-bottom: 12px; }
+    .profile-details > summary { font-size: 12px; color: var(--scarlet); letter-spacing: .1em; cursor: pointer; padding: 4px 0; }
+    .profile-details > summary::-webkit-details-marker { color: var(--scarlet); }
     .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(26,10,0,.07); }
     .settings-row label { font-size: 14px; }
     .settings-row select { padding: 6px 10px; border: 1px solid var(--gold-lt); border-radius: 3px; font-size: 13px; background: var(--parchment2); }
@@ -619,25 +621,30 @@
           <p id="settings-role" style="font-size:12px;color:var(--scarlet);margin-top:4px"></p>
         </div>
         <div class="settings-section">
-          <h3>個人資料</h3>
-          <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:4px">
-            <label>巫師入學全名</label>
-            <div style="font-size:14px;color:var(--ink-light)" id="profile-fullname">—</div>
-            <small style="color:var(--ink-light);opacity:.7">登入用，如需變更請找管理員</small>
-          </div>
-          <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:6px">
-            <label>巫師姓名（暱稱）</label>
-            <div style="display:flex;gap:8px">
-              <input type="text" id="profile-nickname" maxlength="20" style="flex:1;padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
-              <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="saveNickname()">儲存</button>
+          <details class="profile-details">
+            <summary>個人資料</summary>
+            <p style="font-size:12px;color:var(--ink-light);opacity:.8;margin:10px 0 14px">巫師入學全名與通關密語如需更改，請找管理員。</p>
+            <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+              <label>巫師入學全名</label>
+              <div style="font-size:14px;color:var(--ink-light)" id="profile-fullname">—</div>
             </div>
-            <small style="color:var(--ink-light);opacity:.7">大家看到的名字，可自行更改（可用中文）</small>
-          </div>
-          <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:4px">
-            <label>通關密語</label>
-            <div style="font-size:14px;color:var(--ink-light)">••••••••</div>
-            <small style="color:var(--ink-light);opacity:.7">如需變更請找管理員</small>
-          </div>
+            <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:6px">
+              <label>巫師暱稱</label>
+              <div id="nick-view" style="display:flex;align-items:center;gap:8px">
+                <span id="nick-display" style="font-size:14px;color:var(--ink)">—</span>
+                <button onclick="editNick()" aria-label="編輯暱稱" style="background:none;border:none;cursor:pointer;font-size:16px;padding:0 2px;line-height:1">✏️</button>
+              </div>
+              <div id="nick-edit" style="display:none;align-items:center;gap:8px">
+                <input type="text" id="profile-nickname" maxlength="7" style="width:130px;padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
+                <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="saveNickname()">儲存</button>
+              </div>
+              <small style="color:var(--ink-light);opacity:.7">大家看到的名字，最多 7 字，可用中文</small>
+            </div>
+            <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+              <label>通關密語</label>
+              <div style="font-size:14px;color:var(--ink-light)">••••••••</div>
+            </div>
+          </details>
         </div>
         <div class="settings-section">
           <h3>閱讀偏好</h3>
@@ -2042,16 +2049,28 @@ function renderSettings() {
   document.getElementById('settings-email').textContent = '';
   document.getElementById('settings-role').textContent = ROLE_LABEL[currentUser.role] || currentUser.role;
   document.getElementById('profile-fullname').textContent = currentUser.username || '—';
+  document.getElementById('nick-display').textContent = nick;
   document.getElementById('profile-nickname').value = currentUser.nickname || currentUser.username || '';
+  // reset to view (not edit) mode
+  document.getElementById('nick-view').style.display = 'flex';
+  document.getElementById('nick-edit').style.display = 'none';
+}
+
+function editNick() {
+  document.getElementById('nick-view').style.display = 'none';
+  document.getElementById('nick-edit').style.display = 'flex';
+  const inp = document.getElementById('profile-nickname');
+  inp.focus();
+  inp.select();
 }
 
 async function saveNickname() {
   const nickname = document.getElementById('profile-nickname').value.trim();
-  if (!nickname) { toast('請輸入巫師姓名'); return; }
+  if (!nickname) { toast('請輸入巫師暱稱'); return; }
   try {
     const updated = await api('/auth/me/nickname', { method: 'PATCH', body: JSON.stringify({ nickname }) });
     currentUser.nickname = updated.nickname || nickname;
-    toast('✅ 巫師姓名已更新');
+    toast('✅ 巫師暱稱已更新');
     renderSettings();
     renderGreeting();
   } catch (e) { toast('⚠️ ' + e.message); }
