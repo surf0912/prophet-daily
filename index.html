@@ -37,6 +37,12 @@
       --scarlet-dk: #5c1a1a;
       --gold:       #c9a84c;
       --gold-lt:    #e8d5a3;
+      --series:     #2d4a1e;                    /* 系列綠字（夜間轉亮綠） */
+      --reader-overlay: rgba(244,232,193,0.80); /* 閱讀器羊皮紙罩色（夜間轉深） */
+      /* 以下三個「永遠深色外框/深底淺字」，不隨夜間翻轉 */
+      --chrome:     #3d1f0d;   /* 深色外框背景（nav/標題列/問候區） */
+      --chrome-dk:  #1a0a00;   /* 更深的外框（閱讀器頂列/toast/取消鈕） */
+      --on-dark:    #f4e8c1;   /* 放在深色/紅色底上的淺色文字 */
       --shadow:     rgba(26,10,0,0.35);
       --nav-h:      50px;
       --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -44,7 +50,7 @@
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; overflow: hidden; overscroll-behavior: none; width: 100%; max-width: 100%; position: fixed; inset: 0; }
-    body { background: var(--ink-light); color: var(--parchment); touch-action: manipulation; }
+    body { background: var(--chrome); color: var(--on-dark); touch-action: manipulation; }
     /* Disable Safari/iOS double-tap-to-zoom everywhere (keeps scroll + pinch). */
     * { touch-action: manipulation; }
 
@@ -68,7 +74,7 @@
     /* ── Nav bar ── */
     nav {
       display: flex; align-items: stretch;
-      background: var(--ink-light);
+      background: var(--chrome);
       border-top: 2px solid var(--gold);
       /* Compact: trim the home-indicator band to a small clearance on every device. */
       padding-bottom: max(2px, calc(env(safe-area-inset-bottom, 0px) - 28px));
@@ -142,13 +148,13 @@
     .field input {
       width: 100%; padding: 10px 12px; background: rgba(255,255,255,.07);
       border: 1px solid rgba(201,168,76,.4); border-radius: 3px;
-      color: var(--parchment); font-size: 15px; outline: none;
+      color: var(--on-dark); font-size: 15px; outline: none;
     }
     .field input:focus { border-color: var(--gold); }
     .btn-primary {
       width: 100%; padding: 12px; background: var(--scarlet);
       border: 1px solid var(--scarlet-dk); border-radius: 3px;
-      color: var(--parchment); font-size: 15px; cursor: pointer;
+      color: var(--on-dark); font-size: 15px; cursor: pointer;
       letter-spacing: .05em; transition: opacity .2s;
     }
     .btn-primary:hover { opacity: .85; }
@@ -171,13 +177,13 @@
     }
     .greeting-hero h2, .greeting-hero p { display: none; }
     .greeting-text {
-      background: var(--ink-light); text-align: center;
+      background: var(--chrome); text-align: center;
       padding: 12px 20px 10px; flex-shrink: 0;
     }
     .greeting-text h2 { color: var(--gold); font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .greeting-text p { color: var(--parchment2); font-size: 13px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .greeting-text p { color: var(--on-dark); font-size: 13px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .date-banner {
-      background: var(--ink-light); color: var(--gold-lt);
+      background: var(--chrome); color: var(--gold-lt);
       text-align: center; padding: 8px; font-size: 13px; letter-spacing: .08em;
     }
     .home-section { padding: 20px 18px; }
@@ -208,7 +214,7 @@
     .t-chr { display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 10px; background: rgba(201,168,76,.2); color: var(--ink-light); }
     /* series grouping */
     .series-block { border-bottom: 1px solid rgba(26,10,0,.1); }
-    .series-head { padding: 12px 18px 2px; font-size: 13px; font-weight: bold; color: #2d4a1e; }
+    .series-head { padding: 12px 18px 2px; font-size: 13px; font-weight: bold; color: var(--series); }
     .novel-row.series-member { padding-left: 30px; border-bottom: 1px dashed rgba(26,10,0,.08); }
     .series-block .novel-row.series-member:last-child { border-bottom: none; }
     /* ── Category + character filter bar (卷軸 + 論壇) ── */
@@ -219,7 +225,7 @@
       padding: 5px 14px; border-radius: 16px; border: 1px solid var(--gold-lt);
       background: var(--parchment); color: var(--ink-light); font-size: 13px; cursor: pointer; transition: all .15s;
     }
-    .cat-pill.active { background: var(--scarlet); color: var(--parchment); border-color: var(--scarlet); }
+    .cat-pill.active { background: var(--scarlet); color: var(--on-dark); border-color: var(--scarlet); }
     .char-chips { display: flex; gap: 10px; flex-wrap: wrap; }
     .char-chip {
       display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer;
@@ -238,7 +244,7 @@
       padding: 6px 12px; border-radius: 14px; border: 1px solid var(--gold-lt);
       background: var(--parchment2); color: var(--ink-light); font-size: 13px; cursor: pointer; user-select: none;
     }
-    .char-picker .opt.on { background: var(--scarlet); color: var(--parchment); border-color: var(--scarlet); }
+    .char-picker .opt.on { background: var(--scarlet); color: var(--on-dark); border-color: var(--scarlet); }
     .novel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; padding: 18px; }
     .novel-card {
       cursor: pointer; border-radius: 4px; overflow: hidden;
@@ -261,7 +267,7 @@
     #reader-view {
       display: none; position: fixed; inset: 0; z-index: 50;
       background:
-        linear-gradient(rgba(244,232,193,0.80), rgba(244,232,193,0.80)),
+        linear-gradient(var(--reader-overlay), var(--reader-overlay)),
         url('./parchment.jpg');
       background-size: cover; background-position: center; background-attachment: fixed;
       overflow-y: auto; overflow-x: hidden; overscroll-behavior: none;
@@ -272,7 +278,7 @@
     .reader-content { touch-action: pan-y; }
     .reader-content { overflow-wrap: anywhere; word-break: break-word; }
     .reader-header {
-      position: sticky; top: 0; background: var(--ink); color: var(--gold);
+      position: sticky; top: 0; background: var(--chrome-dk); color: var(--gold);
       padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px; display: flex; align-items: center; gap: 12px;
       border-bottom: 1px solid var(--gold); z-index: 5;
     }
@@ -338,7 +344,7 @@
       );
     }
     .chapter-nav { display: flex; justify-content: space-between; padding: 16px 20px; border-top: 1px solid var(--gold-lt); background: var(--parchment2); }
-    .chapter-nav button { padding: 8px 16px; background: var(--scarlet); color: var(--parchment); border: none; border-radius: 3px; cursor: pointer; font-size: 13px; }
+    .chapter-nav button { padding: 8px 16px; background: var(--scarlet); color: var(--on-dark); border: none; border-radius: 3px; cursor: pointer; font-size: 13px; }
     .chapter-nav button:disabled { opacity: .4; cursor: default; }
     .chapter-list-panel { padding: 12px 18px; background: var(--parchment2); border-bottom: 1px solid var(--gold-lt); }
     .chapter-list-panel details summary { cursor: pointer; font-size: 13px; color: var(--scarlet); }
@@ -384,7 +390,7 @@
     .comment-box .box-actions { display: flex; justify-content: flex-end; margin-top: 8px; gap: 8px; }
     .comment-box .box-actions button { padding: 6px 16px; border-radius: 3px; font-size: 13px; cursor: pointer; border: none; }
     .btn-cancel { background: transparent; border: 1px solid var(--gold-lt) !important; color: var(--ink-light); }
-    .btn-post { background: var(--scarlet); color: var(--parchment); }
+    .btn-post { background: var(--scarlet); color: var(--on-dark); }
 
     /* ── Protect page (embeds the standalone 防窺工坊 Streamlit app) ── */
     #page-protect { padding: 0; }
@@ -465,7 +471,7 @@
     .perm-modal-inner h3 { font-size: 16px; margin-bottom: 14px; }
     .perm-novel-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(26,10,0,.08); }
     .perm-novel-row label { font-size: 14px; }
-    .btn-close-modal { display: block; width: 100%; margin-top: 16px; padding: 12px; background: var(--ink); color: var(--gold); border: none; border-radius: 3px; cursor: pointer; }
+    .btn-close-modal { display: block; width: 100%; margin-top: 16px; padding: 12px; background: var(--chrome-dk); color: var(--gold); border: none; border-radius: 3px; cursor: pointer; }
 
     /* ── Loading spinner ── */
     .spinner { display: flex; justify-content: center; padding: 40px; }
@@ -479,7 +485,7 @@
     #toast {
       position: fixed; bottom: calc(var(--nav-h) + var(--safe-bottom) + 12px); left: 50%;
       transform: translateX(-50%) translateY(20px); opacity: 0;
-      background: var(--ink); color: var(--gold); padding: 10px 20px;
+      background: var(--chrome-dk); color: var(--gold); padding: 10px 20px;
       border-radius: 20px; font-size: 13px; border: 1px solid var(--gold);
       transition: opacity .3s, transform .3s; z-index: 999; white-space: nowrap;
       pointer-events: none;
@@ -546,7 +552,7 @@
         <h2 id="greeting-line-text">歡迎回來，巫師</h2>
         <p id="greeting-quote-text">「當懷疑的時候，去圖書館。」</p>
       </div>
-      <a id="continue-bar" href="#" onclick="resumeReading();return false;" style="display:none;text-decoration:none;background:rgba(244,232,193,0.95);border-top:1px solid var(--gold-lt);padding:10px 18px;align-items:center;gap:10px">
+      <a id="continue-bar" href="#" onclick="resumeReading();return false;" style="display:none;text-decoration:none;background:var(--parchment2);border-top:1px solid var(--gold-lt);padding:10px 18px;align-items:center;gap:10px">
         <span style="font-size:18px;flex-shrink:0">📖</span>
         <span style="flex:1;min-width:0;line-height:1.3">
           <span style="font-size:13px;color:var(--ink-light)">繼續閱讀</span><br>
@@ -638,7 +644,7 @@
       <div id="admin-upload" class="admin-pane active">
         <!-- 新增小說 vs 論壇貼文 -->
         <div style="display:flex;gap:0;margin-bottom:16px;border:1px solid var(--gold);border-radius:4px;overflow:hidden">
-          <button id="kind-novel-btn" onclick="setUploadKind('novel')" style="flex:1;padding:10px;font-size:13px;border:none;cursor:pointer;background:var(--scarlet);color:var(--parchment)">📖 新增小說</button>
+          <button id="kind-novel-btn" onclick="setUploadKind('novel')" style="flex:1;padding:10px;font-size:13px;border:none;cursor:pointer;background:var(--scarlet);color:var(--on-dark)">📖 新增小說</button>
           <button id="kind-forum-btn" onclick="setUploadKind('forum')" style="flex:1;padding:10px;font-size:13px;border:none;cursor:pointer;background:var(--parchment2);color:var(--ink-light)">🦉 論壇貼文</button>
         </div>
 
@@ -694,7 +700,7 @@
       <div id="admin-invites" class="admin-pane">
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
           <button class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px" onclick="generateInvite('reader')">＋ 讀者邀請</button>
-          <button class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px;background:var(--ink-light)" onclick="generateInvite('writer')">＋ 作家邀請</button>
+          <button class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px;background:var(--chrome)" onclick="generateInvite('writer')">＋ 作家邀請</button>
           <button id="invite-admin-btn" class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px;background:#2d4a1e;display:none" onclick="generateInvite('admin')">＋ 管理員邀請</button>
         </div>
         <!-- generated link box -->
@@ -1501,10 +1507,14 @@ function stepReaderFont(delta) {
 }
 
 function toggleDark(on) {
-  document.documentElement.style.setProperty('--parchment',  on ? '#1e1508' : '#f4e8c1');
-  document.documentElement.style.setProperty('--parchment2', on ? '#16100a' : '#efe2c4');
-  document.documentElement.style.setProperty('--ink',        on ? '#f4e8c1' : '#1a0a00');
-  document.documentElement.style.setProperty('--ink-light',  on ? '#e8d5a3' : '#3d1f0d');
+  const r = document.documentElement.style;
+  r.setProperty('--parchment',  on ? '#1e1508' : '#f4e8c1');
+  r.setProperty('--parchment2', on ? '#16100a' : '#efe2c4');
+  r.setProperty('--ink',        on ? '#f4e8c1' : '#1a0a00');
+  r.setProperty('--ink-light',  on ? '#e8d5a3' : '#3d1f0d');
+  r.setProperty('--series',     on ? '#9fcf7a' : '#2d4a1e');
+  r.setProperty('--reader-overlay', on ? 'rgba(20,12,4,0.90)' : 'rgba(244,232,193,0.80)');
+  document.documentElement.classList.toggle('dark', on);
   localStorage.setItem('pd_dark', on ? '1' : '0');
 }
 
@@ -1530,9 +1540,9 @@ function setUploadMode(mode) {
   document.getElementById('upload-text-section').style.display = isText ? '' : 'none';
   document.getElementById('upload-img-section').style.display = isText ? 'none' : '';
   document.getElementById('upload-mode-text-btn').style.background = isText ? 'var(--scarlet)' : 'var(--parchment2)';
-  document.getElementById('upload-mode-text-btn').style.color = isText ? 'var(--parchment)' : 'var(--ink-light)';
+  document.getElementById('upload-mode-text-btn').style.color = isText ? 'var(--on-dark)' : 'var(--ink-light)';
   document.getElementById('upload-mode-img-btn').style.background = isText ? 'var(--parchment2)' : 'var(--scarlet)';
-  document.getElementById('upload-mode-img-btn').style.color = isText ? 'var(--ink-light)' : 'var(--parchment)';
+  document.getElementById('upload-mode-img-btn').style.color = isText ? 'var(--ink-light)' : 'var(--on-dark)';
 }
 
 // Populate a category <select> and a character multi-select in an admin form.
@@ -1563,9 +1573,9 @@ function setUploadKind(kind) {
   document.getElementById('upload-kind-novel').style.display = isNovel ? '' : 'none';
   document.getElementById('upload-kind-forum').style.display = isNovel ? 'none' : '';
   document.getElementById('kind-novel-btn').style.background = isNovel ? 'var(--scarlet)' : 'var(--parchment2)';
-  document.getElementById('kind-novel-btn').style.color = isNovel ? 'var(--parchment)' : 'var(--ink-light)';
+  document.getElementById('kind-novel-btn').style.color = isNovel ? 'var(--on-dark)' : 'var(--ink-light)';
   document.getElementById('kind-forum-btn').style.background = isNovel ? 'var(--parchment2)' : 'var(--scarlet)';
-  document.getElementById('kind-forum-btn').style.color = isNovel ? 'var(--ink-light)' : 'var(--parchment)';
+  document.getElementById('kind-forum-btn').style.color = isNovel ? 'var(--ink-light)' : 'var(--on-dark)';
   const writerNote = (currentUser.role === 'writer') ? '⏳ 你的內容會先送審，管理員通過後才公開' : '';
   const fh = document.getElementById('forum-post-hint'); if (fh) fh.textContent = writerNote;
   const nh = document.getElementById('new-novel-hint'); if (nh) nh.textContent = writerNote;
@@ -1722,7 +1732,7 @@ async function loadAdminNovelList() {
       const adminBtns = isAdmin ? `
         <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
           <button onclick='openEditClass(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.kind)}, ${JSON.stringify(n.category || "")}, ${JSON.stringify(n.characters || [])})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:3px;cursor:pointer">✏️ 分類</button>
-          <button onclick='openSeries(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.series || "")}, ${n.series_order || 0})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid #2d4a1e;color:#2d4a1e;border-radius:3px;cursor:pointer">🔗 系列</button>
+          <button onclick='openSeries(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.series || "")}, ${n.series_order || 0})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--series);color:var(--series);border-radius:3px;cursor:pointer">🔗 系列</button>
           <button onclick='openOwners(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.owners || [])})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">👥 作者</button>
           <button onclick="deleteNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:3px;cursor:pointer">刪除</button>
         </div>` : '';
@@ -1733,7 +1743,7 @@ async function loadAdminNovelList() {
           : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--scarlet)">📖 小說</span>'}${statusTag}</div>
         <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)}</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
-          ${n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:#2d4a1e">🔗 ${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : ''}
+          ${n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">🔗 ${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : ''}
           ${n.category ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.12);color:var(--scarlet)">${n.category}</span>` : ''}
           ${(n.characters || []).map(c => `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.18);color:var(--ink-light)">${charNames([c])}</span>`).join('')}
         </div>
