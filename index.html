@@ -701,7 +701,13 @@
           <div class="form-group"><label>發佈日期（選填，可填過去日期）</label><input type="date" id="new-novel-date" /></div>
           <div class="form-group"><label>故事類型</label><select id="new-novel-category"></select></div>
           <div class="form-group"><label>角色（可多選）</label><div id="new-novel-chars" class="char-picker"></div></div>
-          <div class="form-group"><label>內文</label><textarea id="new-novel-content" rows="12" placeholder="在此貼上小說內文…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea></div>
+          <div class="form-group">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+              <label style="margin:0">內文</label>
+              <button type="button" onclick="document.getElementById('soon-modal').classList.add('open')" style="font-size:12px;padding:4px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">📸 圖片辨識</button>
+            </div>
+            <textarea id="new-novel-content" rows="12" placeholder="在此貼上小說內文…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
+          </div>
           <button class="btn-primary" onclick="submitNewNovel()" style="margin-bottom:8px">📨 建立小說</button>
           <p id="new-novel-hint" style="font-size:12px;color:var(--ink-light);text-align:center"></p>
         </div>
@@ -856,6 +862,15 @@
       <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveEditWork()">儲存</button>
       <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('editwork-modal').classList.remove('open')">取消</button>
     </div>
+  </div>
+</div>
+
+<div class="perm-modal" id="soon-modal">
+  <div class="perm-modal-inner" style="text-align:center;padding:28px 20px">
+    <div style="font-size:44px;margin-bottom:10px">📸</div>
+    <h3 style="margin-bottom:6px">圖片辨識（OCR）</h3>
+    <p style="font-size:14px;color:var(--ink-light)">敬請期待 ✨</p>
+    <button class="btn-close-modal" onclick="document.getElementById('soon-modal').classList.remove('open')">知道了</button>
   </div>
 </div>
 
