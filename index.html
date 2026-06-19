@@ -748,7 +748,13 @@
             <div id="forum-post-chars" class="char-picker"></div>
           </div>
           <div class="form-group">
-            <textarea id="forum-post-content" rows="14" placeholder="在此貼上論壇體內文…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
+            <label>主文（開場白）</label>
+            <textarea id="forum-post-content" rows="8" placeholder="貼上開樓的主文…（顯示在最上面，不帶樓層號）" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
+          </div>
+          <div class="form-group">
+            <label>留言區（選填）</label>
+            <textarea id="forum-post-comments" rows="10" placeholder="貼上各樓回覆，每則用 1L／2L… 開頭，例：&#10;1L 暱稱｜留言內容&#10;2L 暱稱｜留言內容&#10;（系統會自動排成 01L、02L… 蓋樓）" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
+            <p style="font-size:12px;color:var(--ink-light);opacity:.8;margin-top:4px">每樓用 <b>1L / 2L / 01L…</b> 開頭切換;暱稱與內容之間用「｜」分隔(沒有也可以)。</p>
           </div>
           <button class="btn-primary" onclick="submitForumPost()" style="margin-bottom:8px">📨 發佈貼文</button>
           <p id="forum-post-hint" style="font-size:12px;color:var(--ink-light);text-align:center"></p>
@@ -906,7 +912,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v62';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v63';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1404,15 +1410,28 @@ const PEN_SVG = `<svg class="pen" viewBox="0 0 434.317 434.317" aria-hidden="tru
 
 function renderForumContent(content) {
   const lines = content.split('\n');
-  const RE = /^第\s*\d+\s*笔\s*[｜|]\s*(.+)$/;
+  // A line starts a new floor (樓層) if it begins with either marker:
+  //   第N笔｜暱稱            (older format; name follows the ｜)
+  //   1L / 01L / 2L … 暱稱｜內容   (floor-number format; optional 暱稱｜ then inline content)
+  const BIJI = /^第\s*\d+\s*笔\s*[｜|]\s*(.+)$/;
+  const FLOOR = /^0?\d{1,3}\s*[Ll](?![A-Za-z])\s*(.*)$/;
   const intro = [];
   const comments = [];
   let cur = null;
   for (const raw of lines) {
-    const m = raw.trim().match(RE);
-    if (m) { cur = { name: m[1].trim(), body: [] }; comments.push(cur); }
-    else if (cur) { cur.body.push(raw); }
-    else { intro.push(raw); }
+    const t = raw.trim();
+    const mb = t.match(BIJI);
+    if (mb) { cur = { name: mb[1].trim(), body: [] }; comments.push(cur); continue; }
+    const mf = t.match(FLOOR);
+    if (mf) {
+      let name = '', first = mf[1].trim();
+      const bi = first.search(/[｜|]/);
+      if (bi >= 0) { name = first.slice(0, bi).trim(); first = first.slice(bi + 1).trim(); }
+      cur = { name, body: first ? [first] : [] };
+      comments.push(cur);
+      continue;
+    }
+    if (cur) cur.body.push(raw); else intro.push(raw);
   }
   const introHtml = intro.filter(l => l.trim()).map(l => `<p>${escapeHtml(l)}</p>`).join('');
   const commentsHtml = comments.map((c, i) => {
@@ -1783,11 +1802,14 @@ function dateToIso(d) { return d ? `${d}T12:00:00Z` : null; }
 async function submitForumPost() {
   const title = document.getElementById('forum-post-title').value.trim();
   const author = document.getElementById('forum-post-author').value.trim() || null;
-  const content = document.getElementById('forum-post-content').value.trim();
+  const main = document.getElementById('forum-post-content').value.trim();
+  const replies = document.getElementById('forum-post-comments').value.trim();
+  // Store as one body: 主文 (intro) then the 留言區 floors; the reader parser splits them.
+  const content = replies ? (main + '\n' + replies) : main;
   const published_at = dateToIso(document.getElementById('forum-post-date').value);
   const characters = readChars('forum-post-chars');
   if (!title) { toast('請輸入貼文標題'); return; }
-  if (!content) { toast('請輸入貼文內文'); return; }
+  if (!main) { toast('請輸入主文'); return; }
   try {
     const res = await api('/novels/forum', { method: 'POST', body: JSON.stringify({ title, author, content, published_at, characters }) });
     toast(res.status === 'pending' ? '✅ 已送出，待管理員審核' : '✅ 貼文已發佈');
@@ -1795,6 +1817,7 @@ async function submitForumPost() {
     document.getElementById('forum-post-author').value = '';
     document.getElementById('forum-post-date').value = '';
     document.getElementById('forum-post-content').value = '';
+    document.getElementById('forum-post-comments').value = '';
     resetClassPicker(null, 'forum-post-chars');
   } catch (e) { toast(e.message); }
 }
