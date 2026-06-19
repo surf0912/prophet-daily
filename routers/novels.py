@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
-from deps import get_supabase_admin, get_current_user, require_admin, require_writer, is_admin
+from deps import get_supabase_admin, get_current_user, require_admin, require_writer, is_admin, can_see_mqj
 from supabase import Client
 
 router = APIRouter()
@@ -46,7 +46,11 @@ def list_novels(
     if not is_admin(user):
         q = q.eq("status", "approved")
     res = q.order("created_at", desc=True).execute()
-    return res.data
+    data = res.data
+    # Readers without 迷情劑 access don't see 迷情劑 works.
+    if not can_see_mqj(user):
+        data = [n for n in data if n.get("category") != "迷情劑"]
+    return data
 
 @router.get("/pending", dependencies=[Depends(require_admin)])
 def list_pending(sb: Client = Depends(get_supabase_admin)):
@@ -155,6 +159,8 @@ def delete_novel(novel_id: str, sb: Client = Depends(get_supabase_admin)):
 def _check_novel_access(novel: dict, user: dict):
     # Approved works are visible to every logged-in user.
     # Pending works are visible only to admins and the creator (for preview/review).
+    if novel.get("category") == "迷情劑" and not can_see_mqj(user):
+        raise HTTPException(403, "迷情劑分類需管理員開放才能閱讀")
     if novel.get("status") == "approved":
         return
     if is_admin(user) or user["id"] in (novel.get("owners") or []):

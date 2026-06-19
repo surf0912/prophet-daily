@@ -1110,6 +1110,15 @@ function onShelfFilter(type, val) {
   renderShelf();
 }
 
+async function requestMqj() {
+  try {
+    const res = await api('/permissions/me/request-mqj', { method: 'POST' });
+    currentUser.mqj_access = res.mqj_access;
+    toast(res.mqj_access === 'approved' ? '✅ 你已可閱讀迷情劑' : '✅ 已送出申請，等管理員開放');
+    renderShelf();
+  } catch (e) { toast(e.message); }
+}
+
 function renderShelf() {
   renderFilterBar(
     document.getElementById('shelf-cat-pills'), document.getElementById('shelf-char-chips'),
@@ -1117,6 +1126,13 @@ function renderShelf() {
   const grid = document.getElementById('novel-grid');
   if (novelsError && !novels.length) {
     grid.innerHTML = '<div class="empty-shelf" style="color:var(--scarlet);cursor:pointer" onclick="loadNovels()">⚠️ 載入失敗，點此重試</div>';
+    return;
+  }
+  // 迷情劑 gate for readers without access.
+  if (shelfCat === '迷情劑' && currentUser?.role === 'reader' && currentUser?.mqj_access !== 'approved') {
+    grid.innerHTML = currentUser.mqj_access === 'pending'
+      ? '<div class="empty-shelf">⏳ 你已申請開放「迷情劑」<br><small>等待管理員審核通過</small></div>'
+      : `<div class="empty-shelf">🔒 「迷情劑」分類需開放才能閱讀<br><small style="margin-bottom:14px">點下方按鈕向管理員申請</small><button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" onclick="requestMqj()">📨 要求管理員開放</button></div>`;
     return;
   }
   if (!novels.length) {
@@ -1745,11 +1761,26 @@ async function loadAdminUsers() {
              ${ROLES.map(([v,l]) => `<option value="${v}" ${u.role===v?'selected':''}>${l}</option>`).join('')}
            </select>`
         : `<div class="u-role">${u.role}${isSelf ? '（你）' : ''}</div>`;
+      let mqj = '';
+      if (u.role === 'reader') {
+        if (u.mqj_access === 'approved') {
+          mqj = `<div style="font-size:11px;color:#2d4a1e;margin-top:4px">🍷 迷情劑：已開放</div>`;
+        } else {
+          const pending = u.mqj_access === 'pending';
+          mqj = `<div style="display:flex;align-items:center;gap:8px;margin-top:5px">
+            <span style="font-size:11px;color:var(--ink-light)">🍷 迷情劑：${pending ? '⏳ 申請中' : '未開放'}</span>
+            <button onclick="setMqj('${u.id}','${u.username}')" style="font-size:11px;padding:3px 10px;border:1px solid ${pending ? 'var(--scarlet)' : 'var(--gold-lt)'};background:${pending ? 'var(--scarlet)' : 'none'};color:${pending ? '#fff' : 'var(--ink-light)'};border-radius:3px;cursor:pointer">開放</button>
+          </div>`;
+        }
+      }
       return `
-      <div class="user-row">
-        <div style="width:32px;height:32px;border-radius:50%;background:var(--scarlet);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:14px;flex-shrink:0">${initials(u.username)}</div>
-        <div class="u-name">${u.username}</div>
-        ${picker}
+      <div style="padding:8px 0;border-bottom:1px solid rgba(26,10,0,.07)">
+        <div class="user-row" style="border:none;padding:0">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--scarlet);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:14px;flex-shrink:0">${initials(u.username)}</div>
+          <div class="u-name">${u.username}</div>
+          ${picker}
+        </div>
+        ${mqj ? `<div style="padding-left:42px">${mqj}</div>` : ''}
       </div>`;
     }).join('') || '<p style="color:#888;padding:20px">尚無用戶</p>';
   } catch { el.innerHTML = '<p>載入失敗</p>'; }
@@ -1762,6 +1793,15 @@ async function changeUserRole(userId, username, role) {
     toast(`✅ ${username} 已設為 ${role}`);
     loadAdminUsers();
   } catch (e) { toast(e.message); loadAdminUsers(); }
+}
+
+async function setMqj(userId, username) {
+  if (!confirm(`確定開放「${username}」閱讀迷情劑分類？（一旦開放就不會自動關閉）`)) return;
+  try {
+    await api(`/permissions/users/${userId}/mqj`, { method: 'PATCH', body: JSON.stringify({ access: 'approved' }) });
+    toast(`✅ 已開放 ${username} 的迷情劑`);
+    loadAdminUsers();
+  } catch (e) { toast(e.message); }
 }
 
 async function openPerm(userId, username) {

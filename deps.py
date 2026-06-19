@@ -47,3 +47,7 @@ def is_admin(user: dict) -> bool:
 
 def is_writer_or_above(user: dict) -> bool:
     return ROLE_RANK.get(user.get("role"), 0) >= ROLE_RANK["writer"]
+
+def can_see_mqj(user: dict) -> bool:
+    # Non-reader roles always see 迷情劑; readers need an approved access toggle.
+    return user.get("role") != "reader" or user.get("mqj_access") == "approved"

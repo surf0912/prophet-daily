@@ -5,7 +5,7 @@ from PIL import Image
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 from typing import Optional
-from deps import get_supabase, get_supabase_admin, get_current_user, require_admin, require_writer, is_admin
+from deps import get_supabase, get_supabase_admin, get_current_user, require_admin, require_writer, is_admin, can_see_mqj
 from supabase import Client
 
 router = APIRouter()
@@ -138,9 +138,11 @@ def _touch_novel(novel_id: str, sb_admin: Client):
 
 def _check_novel_access(novel_id: str, user: dict, sb: Client):
     # Approved works → any logged-in user. Pending → admins and the creator only.
-    nv = sb.table("novels").select("status, owners").eq("id", novel_id).single().execute()
+    nv = sb.table("novels").select("status, owners, category").eq("id", novel_id).single().execute()
     if not nv.data:
         raise HTTPException(404, "Novel not found")
+    if nv.data.get("category") == "迷情劑" and not can_see_mqj(user):
+        raise HTTPException(403, "迷情劑分類需管理員開放才能閱讀")
     if nv.data.get("status") == "approved":
         return
     if is_admin(user) or user["id"] in (nv.data.get("owners") or []):

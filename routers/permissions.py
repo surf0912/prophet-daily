@@ -50,7 +50,7 @@ def revoke(body: GrantRequest, user: dict = Depends(require_admin), sb: Client =
 
 @router.get("/users", dependencies=[Depends(require_admin)])
 def list_users(sb: Client = Depends(get_supabase_admin)):
-    res = sb.table("profiles").select("id, username, role, created_at").order("created_at", desc=True).execute()
+    res = sb.table("profiles").select("id, username, role, mqj_access, created_at").order("created_at", desc=True).execute()
     return res.data
 
 @router.patch("/users/{user_id}/role", dependencies=[Depends(require_super_admin)])
@@ -58,6 +58,26 @@ def change_role(user_id: str, body: RoleRequest, sb: Client = Depends(get_supaba
     if body.role not in VALID_ROLES:
         raise HTTPException(400, "Invalid role")
     res = sb.table("profiles").update({"role": body.role}).eq("id", user_id).execute()
+    if not res.data:
+        raise HTTPException(404, "User not found")
+    return res.data[0]
+
+# ── 迷情劑 access gate ──────────────────────────────────────
+@router.post("/me/request-mqj")
+def request_mqj(user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
+    # A reader asks for 迷情劑 access; admin approves later. No-op if already approved.
+    if user.get("mqj_access") != "approved":
+        sb.table("profiles").update({"mqj_access": "pending"}).eq("id", user["id"]).execute()
+    return {"mqj_access": "approved" if user.get("mqj_access") == "approved" else "pending"}
+
+class MqjBody(BaseModel):
+    access: str  # 'none' | 'pending' | 'approved'
+
+@router.patch("/users/{user_id}/mqj", dependencies=[Depends(require_admin)])
+def set_mqj(user_id: str, body: MqjBody, sb: Client = Depends(get_supabase_admin)):
+    if body.access not in ("none", "pending", "approved"):
+        raise HTTPException(400, "Invalid access value")
+    res = sb.table("profiles").update({"mqj_access": body.access}).eq("id", user_id).execute()
     if not res.data:
         raise HTTPException(404, "User not found")
     return res.data[0]
