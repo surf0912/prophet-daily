@@ -912,7 +912,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v64';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v65';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1409,7 +1409,9 @@ const PEN_SVG = `<svg class="pen" viewBox="0 0 434.317 434.317" aria-hidden="tru
 </svg>`;
 
 function renderForumContent(content) {
-  const lines = content.split('\n');
+  // Normalise line separators — pasted text often uses U+2028/U+2029 (or \r), which break
+  // line-based parsing (the regexes' `.`/`$` don't cross them) and hide the floor markers.
+  const lines = (content || '').replace(/[\u2028\u2029\r]/g, '\n').split('\n');
   // A line starts a new floor (樓層) if it begins with either marker:
   //   第N笔｜暱稱            (older format; name follows the ｜)
   //   1L / 01L / 2L … 暱稱｜內容   (floor-number format; optional 暱稱｜ then inline content)
