@@ -1197,18 +1197,41 @@ async function loadChapter(idx) {
       ? renderForumContent(full.content)
       : full.content.split('\n').filter(l => l.trim()).map(l => `<p>${escapeHtml(l)}</p>`).join('');
   } catch { document.getElementById('reader-content').textContent = '載入失敗'; }
-  document.getElementById('reader-view').scrollTo(0, 0);
-  // save progress
-  const novel = novels.find(n => n.id === currentNovelId);
+  const rv = document.getElementById('reader-view');
+  rv.scrollTo(0, pendingScroll || 0);   // resume to saved spot; 0 for a fresh chapter
+  pendingScroll = 0;
+  // save progress (including current scroll position)
+  const novel = [...forumPosts, ...novels].find(n => n.id === currentNovelId);
   if (novel) {
     localStorage.setItem('pd_last_read', JSON.stringify({
-      novelId: currentNovelId, novelTitle: novel.title,
+      novelId: currentNovelId, novelTitle: novel.title, kind: currentNovelKind,
       chapterIdx: idx, chapterId: ch.id,
       chapterTitle: ch.title || `第 ${ch.chapter_num} 章`,
+      scrollTop: Math.round(rv.scrollTop),
     }));
     renderContinueBar();
   }
 }
+
+// Continuously remember how far down the current chapter the reader has scrolled.
+let pendingScroll = 0;
+(function setupReaderScrollSave() {
+  const rv = document.getElementById('reader-view');
+  let t;
+  rv.addEventListener('scroll', () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const raw = localStorage.getItem('pd_last_read');
+      if (!raw) return;
+      const p = JSON.parse(raw);
+      const cur = currentChapters[currentChapterIdx];
+      if (cur && p.chapterId === cur.id) {
+        p.scrollTop = Math.round(rv.scrollTop);
+        localStorage.setItem('pd_last_read', JSON.stringify(p));
+      }
+    }, 250);
+  });
+})();
 
 function renderContinueBar() {
   const raw = localStorage.getItem('pd_last_read');
@@ -1224,10 +1247,16 @@ async function resumeReading() {
   if (!raw) return;
   const p = JSON.parse(raw);
   currentNovelId = p.novelId;
+  currentNovelKind = p.kind || 'novel';
+  currentNovelTitle = p.novelTitle || '';
+  const isForum = currentNovelKind === 'forum';
+  document.getElementById('reader-chapter-nav').style.display = isForum ? 'none' : '';
+  document.getElementById('reader-toc-panel').style.display = isForum ? 'none' : '';
   try { currentChapters = await api(`/chapters/novel/${p.novelId}`) || []; }
   catch { toast('無法載入章節'); return; }
   renderToc();
   const idx = currentChapters.findIndex(c => c.id === p.chapterId);
+  pendingScroll = p.scrollTop || 0;   // jump back to where you stopped
   loadChapter(idx >= 0 ? idx : p.chapterIdx);
   document.getElementById('reader-view').classList.add('open');
 }
@@ -1287,6 +1316,7 @@ function renderForumList() {
         <span>📅 ${fmtUpdated(p.created_at)}</span>
         ${p.status === 'pending' ? '<span class="pending-tag">⏳ 待審核</span>' : ''}
       </div>
+      ${(p.characters || []).length ? `<div class="row-tags" style="margin-top:7px">${(p.characters || []).map(c => `<span class="t-chr">${charNames([c])}</span>`).join('')}</div>` : ''}
     </div>`).join('');
 }
 
