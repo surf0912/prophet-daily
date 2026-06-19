@@ -976,12 +976,14 @@ function renderHomeNovels() {
 
 // ── Reader ───────────────────────────────────────────────────
 let currentNovelKind = 'novel';
+let currentNovelTitle = '';
 
 async function openNovel(novelId) {
   currentNovelId = novelId;
   let novel = [...forumPosts, ...novels].find(n => n.id === novelId);
   if (!novel) { try { novel = await api(`/novels/${novelId}`); } catch {} }
   currentNovelKind = (novel && novel.kind) || 'novel';
+  currentNovelTitle = (novel && novel.title) || '';
   try { currentChapters = await api(`/chapters/novel/${novelId}`) || []; }
   catch { toast('無法載入內容'); return; }
   if (!currentChapters.length) { toast('此作品尚無內容'); return; }
@@ -1034,7 +1036,9 @@ function renderToc() {
 async function loadChapter(idx) {
   currentChapterIdx = idx;
   const ch = currentChapters[idx];
-  document.getElementById('reader-title').textContent = ch.title || `第 ${ch.chapter_num} 章`;
+  document.getElementById('reader-title').textContent = currentNovelKind === 'forum'
+    ? (currentNovelTitle || ch.title || '貼文')
+    : (ch.title || `第 ${ch.chapter_num} 章`);
   document.getElementById('reader-ch-label').textContent = `${idx + 1} / ${currentChapters.length}`;
   document.getElementById('reader-content').innerHTML = '<div class="spinner"></div>';
   document.getElementById('prev-ch-btn').disabled = idx === 0;
