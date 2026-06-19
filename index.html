@@ -60,7 +60,7 @@
 
     /* ── Layout ── */
     #app { display: flex; flex-direction: column; height: 100%; overflow: hidden; width: 100%; max-width: 100%; }
-    #page-area { flex: 1; overflow-y: auto; overflow-x: hidden; background: var(--parchment); color: var(--ink); padding-top: env(safe-area-inset-top, 0px); }
+    #page-area { flex: 1; overflow-y: auto; overflow-x: hidden; overscroll-behavior-x: none; background: var(--parchment); color: var(--ink); padding-top: env(safe-area-inset-top, 0px); }
     /* Home page is fixed-height: lock scrolling entirely (no scroll, no scrollbar) */
     #page-area:has(#page-home.active) { overflow: hidden; overscroll-behavior: none; touch-action: none; }
     #page-area::-webkit-scrollbar { width: 0; height: 0; }
@@ -90,8 +90,7 @@
     .page { display: none; min-height: 100%; padding: 0 0 80px; }
     .page.active { display: block; }
     /* App-wide UI scale (settings page). Home is locked, so it never scales. */
-    /* Counter the zoom's width inflation so a scaled page never overflows sideways (no left/right drag). */
-    .page:not(#page-home) { zoom: var(--app-zoom, 1); width: calc(100% / var(--app-zoom, 1)); overflow-x: hidden; }
+    .page:not(#page-home) { zoom: var(--app-zoom, 1); }
     /* No horizontal swipe on any of our own pages (the 防窺 iframe keeps its own gestures). */
     .page:not(#page-protect), .page:not(#page-protect) * { touch-action: pan-y; }
     #page-home { display: none; flex-direction: column; padding: 0; min-height: unset; height: 100%; overflow: hidden; }
