@@ -12,6 +12,7 @@ class NovelCreate(BaseModel):
     description: Optional[str] = None
     cover_url: Optional[str] = None
     kind: str = "novel"            # 'novel' | 'forum'
+    published_at: Optional[str] = None   # custom date (ISO) for back-dating past works
 
 class NovelUpdate(BaseModel):
     title: Optional[str] = None
@@ -23,6 +24,7 @@ class ForumPostCreate(BaseModel):
     title: str
     content: str
     author: Optional[str] = None
+    published_at: Optional[str] = None   # custom date (ISO) for back-dating past posts
 
 @router.get("/")
 def list_novels(
@@ -62,20 +64,30 @@ def get_novel(novel_id: str, user: dict = Depends(get_current_user), sb: Client 
 def create_novel(body: NovelCreate, user: dict = Depends(require_writer), sb: Client = Depends(get_supabase_admin)):
     # Admin/super_admin uploads are public immediately; writers' uploads await approval.
     status = "approved" if is_admin(user) else "pending"
-    res = sb.table("novels").insert({**body.dict(), "created_by": user["id"], "status": status}).execute()
+    data = body.dict()
+    published_at = data.pop("published_at", None)
+    record = {**data, "created_by": user["id"], "status": status}
+    if published_at:
+        record["created_at"] = published_at
+        record["updated_at"] = published_at
+    res = sb.table("novels").insert(record).execute()
     return res.data[0]
 
 @router.post("/forum", dependencies=[Depends(require_writer)])
 def create_forum_post(body: ForumPostCreate, user: dict = Depends(require_writer), sb: Client = Depends(get_supabase_admin)):
     # A forum post is a kind='forum' novel whose single chapter holds the body text.
     status = "approved" if is_admin(user) else "pending"
-    novel = sb.table("novels").insert({
+    record = {
         "title": body.title,
         "author": body.author,
         "kind": "forum",
         "status": status,
         "created_by": user["id"],
-    }).execute().data[0]
+    }
+    if body.published_at:
+        record["created_at"] = body.published_at
+        record["updated_at"] = body.published_at
+    novel = sb.table("novels").insert(record).execute().data[0]
     sb.table("chapters").insert({
         "novel_id": novel["id"],
         "chapter_num": 1,

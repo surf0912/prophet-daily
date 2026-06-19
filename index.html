@@ -610,6 +610,10 @@
             <input type="text" id="forum-post-author" placeholder="留空則匿名" />
           </div>
           <div class="form-group">
+            <label>發佈日期（選填，可填過去日期）</label>
+            <input type="date" id="forum-post-date" />
+          </div>
+          <div class="form-group">
             <textarea id="forum-post-content" rows="14" placeholder="在此貼上論壇體內文…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
           </div>
           <button class="btn-primary" onclick="submitForumPost()" style="margin-bottom:8px">📨 發佈貼文</button>
@@ -627,6 +631,7 @@
         <div id="admin-novel-form" style="display:none;background:var(--parchment2);padding:14px;border-radius:4px;margin-bottom:14px">
           <div class="form-group"><label>作品名稱</label><input type="text" id="new-novel-title" /></div>
           <div class="form-group"><label>作者</label><input type="text" id="new-novel-author" /></div>
+          <div class="form-group"><label>發佈日期（選填，可填過去日期）</label><input type="date" id="new-novel-date" /></div>
           <div class="form-group"><label>簡介</label><textarea id="new-novel-desc"></textarea></div>
           <div style="display:flex;gap:8px">
             <button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" onclick="createNovel()">建立</button>
@@ -1252,17 +1257,23 @@ function setUploadKind(kind) {
   if (hint) hint.textContent = (currentUser.role === 'writer') ? '⏳ 你的貼文會先送審，管理員通過後才公開' : '';
 }
 
+// Turn a <input type="date"> value (YYYY-MM-DD) into an ISO timestamp at noon UTC
+// (noon avoids the displayed date shifting a day due to timezone).
+function dateToIso(d) { return d ? `${d}T12:00:00Z` : null; }
+
 async function submitForumPost() {
   const title = document.getElementById('forum-post-title').value.trim();
   const author = document.getElementById('forum-post-author').value.trim() || null;
   const content = document.getElementById('forum-post-content').value.trim();
+  const published_at = dateToIso(document.getElementById('forum-post-date').value);
   if (!title) { toast('請輸入貼文標題'); return; }
   if (!content) { toast('請輸入貼文內文'); return; }
   try {
-    const res = await api('/novels/forum', { method: 'POST', body: JSON.stringify({ title, author, content }) });
+    const res = await api('/novels/forum', { method: 'POST', body: JSON.stringify({ title, author, content, published_at }) });
     toast(res.status === 'pending' ? '✅ 已送出，待管理員審核' : '✅ 貼文已發佈');
     document.getElementById('forum-post-title').value = '';
     document.getElementById('forum-post-author').value = '';
+    document.getElementById('forum-post-date').value = '';
     document.getElementById('forum-post-content').value = '';
   } catch (e) { toast(e.message); }
 }
@@ -1351,9 +1362,18 @@ async function createNovel() {
   const title = document.getElementById('new-novel-title').value.trim();
   if (!title) { toast('請輸入作品名稱'); return; }
   try {
-    await api('/novels/', { method: 'POST', body: JSON.stringify({ title, author: document.getElementById('new-novel-author').value.trim() || null, description: document.getElementById('new-novel-desc').value.trim() || null }) });
+    await api('/novels/', { method: 'POST', body: JSON.stringify({
+      title,
+      author: document.getElementById('new-novel-author').value.trim() || null,
+      description: document.getElementById('new-novel-desc').value.trim() || null,
+      published_at: dateToIso(document.getElementById('new-novel-date').value),
+    }) });
     toast('✅ 作品已建立');
     document.getElementById('admin-novel-form').style.display = 'none';
+    document.getElementById('new-novel-title').value = '';
+    document.getElementById('new-novel-author').value = '';
+    document.getElementById('new-novel-date').value = '';
+    document.getElementById('new-novel-desc').value = '';
     loadAdminNovelList(); loadNovels();
   } catch (e) { toast(e.message); }
 }
