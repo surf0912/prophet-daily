@@ -916,7 +916,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v71';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v72';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1433,8 +1433,9 @@ function renderForumContent(content) {
   // Normalise line separators — pasted text often uses U+2028/U+2029 (or \r), which break
   // line-based parsing (the regexes' `.`/`$` don't cross them) and hide the floor markers.
   let norm = (content || '').replace(/[\u2028\u2029\r]/g, '\n');
-  // The app appends its own 封存 box, so auto-strip any self-written 「自动折叠／自動折疊」 ending.
-  const fold = norm.search(/自[动動]折[叠疊]/);
+  // The app appends its own 封存 box, so auto-strip a self-written ending — but only on a
+  // specific marker (羊皮纸自动折叠提示 / 羊皮紙自動折疊提示) to avoid cutting normal content.
+  const fold = norm.search(/羊皮[纸紙]自[动動]折[叠疊]提示/);
   if (fold >= 0) norm = norm.slice(0, norm.lastIndexOf('\n', fold) + 1).replace(/\n+$/, '');
   const lines = norm.split('\n');
   // A new floor (樓層) starts on any of these; text before the first one is the 主文/引言:
