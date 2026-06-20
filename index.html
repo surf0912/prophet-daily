@@ -822,6 +822,7 @@
       </div>
       <div id="admin-novels" class="admin-pane">
         <p id="admin-novel-scope-note" style="font-size:12px;color:var(--ink-light);margin-bottom:10px"></p>
+        <div id="admin-novel-filters" style="display:none;margin-bottom:12px"></div>
         <div id="admin-novel-list"></div>
       </div>
       <div id="admin-users" class="admin-pane">
@@ -1086,7 +1087,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.30';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.31';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1731,6 +1732,10 @@ const CHAR_LIST = [
 ];
 let shelfCat = '';        // '' = 全部
 let shelfChars = [];   // default: none lit = show everything; tap a character to filter to them (OR)
+// 作品管理 (admin works) filter. Type pills include 羊皮紙 (=forum) on top of the 3 novel categories.
+const ADMIN_CATS = ['迷情劑', '吐真劑', '儲思盆', '羊皮紙'];
+let adminCat = '';        // '' | 迷情劑 | 吐真劑 | 儲思盆 | 羊皮紙
+let adminChars = [];
 let favIds = new Set();   // 意若思鏡 收藏夾: ids of whole works the user has favorited
 let shelfFav = false;     // 收藏夾 view toggle
 
@@ -2801,6 +2806,8 @@ async function loadAdminNovelList() {
   const el = document.getElementById('admin-novel-list');
   const note = document.getElementById('admin-novel-scope-note');
   el.innerHTML = '<div class="spinner"></div>';
+  adminCat = ''; adminChars = [];   // fresh load → start unfiltered
+  document.getElementById('admin-novel-filters').style.display = 'none';
   const isAdmin = ['admin', 'super_admin'].includes(currentUser.role);
   try {
     let ns;
@@ -2836,7 +2843,48 @@ async function loadAdminNovelList() {
         : '這裡是你自己的作品（含待審核）。';
     }
     window._adminNovels = ns;
-    el.innerHTML = ns.map(n => {
+    renderAdminNovels();
+  } catch { el.innerHTML = '<p>載入失敗</p>'; }
+}
+
+// Type (含羊皮紙) + 角色 filter for 作品管理. 羊皮紙 = forum kind; the 3 categories are novels.
+function applyAdminFilter(list) {
+  const allLit = adminChars.length === 0 || adminChars.length === CHAR_LIST.length;
+  return list.filter(n => {
+    if (adminCat === '羊皮紙') { if (n.kind !== 'forum') return false; }
+    else if (adminCat) { if (n.kind === 'forum' || n.category !== adminCat) return false; }
+    if (!allLit) { const have = n.characters || []; if (!adminChars.some(c => have.includes(c))) return false; }
+    return true;
+  });
+}
+function renderAdminFilterBar(ns) {
+  const wrap = document.getElementById('admin-novel-filters');
+  if (!wrap) return;
+  if (!ns.length) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  wrap.style.display = 'block';
+  wrap.innerHTML = `<div class="cat-pills" id="admin-cat-pills"></div><div class="char-chips" id="admin-char-chips" style="margin-top:8px"></div>`;
+  const catEl = document.getElementById('admin-cat-pills');
+  catEl.innerHTML = `<button class="cat-pill ${adminCat === '' ? 'active' : ''}" data-c="">全部</button>` +
+    ADMIN_CATS.map(c => `<button class="cat-pill ${adminCat === c ? 'active' : ''}" data-c="${c}">${c}</button>`).join('');
+  catEl.querySelectorAll('.cat-pill').forEach(b => b.onclick = () => { adminCat = b.dataset.c; renderAdminNovels(); });
+  const chipEl = document.getElementById('admin-char-chips');
+  chipEl.innerHTML = CHAR_LIST.map(ch =>
+    `<div class="char-chip ${adminChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}"><img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span></div>`).join('');
+  chipEl.querySelectorAll('.char-chip').forEach(el => el.onclick = () => {
+    adminChars = adminChars.includes(el.dataset.ch) ? adminChars.filter(c => c !== el.dataset.ch) : [...adminChars, el.dataset.ch];
+    renderAdminNovels();
+  });
+}
+
+// Render the 作品管理 list from cached works, applying the filter. Filter clicks re-render
+// (no re-fetch). renderAdminNovels reads window._adminNovels.
+function renderAdminNovels() {
+  const el = document.getElementById('admin-novel-list');
+  const ns = window._adminNovels || [];
+  const isAdmin = ['admin', 'super_admin'].includes(currentUser.role);
+  renderAdminFilterBar(ns);
+  const list = applyAdminFilter(ns);
+  el.innerHTML = list.map(n => {
       const statusTag = n.status === 'pending'
         ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">⏳ 待審核</span>' : '';
       // 編輯 is for everyone here (the list only shows works the viewer owns, or an admin's scoped view).
@@ -2865,8 +2913,7 @@ async function loadAdminNovelList() {
         ${n.created_at ? `<div style="font-size:12px;color:var(--ink-light);margin-top:2px">📅 發佈日期 ${fmtUpdated(n.created_at)}</div>` : ''}
         <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${editBtn}${manageBtns}${ownerAssignBtn}${delBtn}</div>
       </div>`;
-    }).join('') || '<p style="color:#888">尚無作品</p>';
-  } catch { el.innerHTML = '<p>載入失敗</p>'; }
+    }).join('') || `<p style="color:#888;padding:14px;text-align:center">${ns.length ? '此篩選沒有作品' : '尚無作品'}</p>`;
 }
 
 let ownersNovelId = null;
