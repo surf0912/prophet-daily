@@ -1064,7 +1064,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.07';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.08, v1.09…
+const APP_VERSION = 'v1.08';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.09, v1.10…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1756,10 +1756,10 @@ async function loadFeedback(kind) {
   let items = [];
   try { items = await api(`/feedback/?kind=${kind}`) || []; }
   catch (e) { listEl.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${e.message}</p>`; return; }
-  // daily quota — counted on the Taiwan (UTC+8) calendar day so it resets at local midnight.
-  const twDay = ts => new Date((ts ? new Date(ts) : new Date()).getTime() + 8 * 3600e3).toISOString().slice(0, 10);
-  const today = twDay();
-  const usedToday = items.filter(i => i.mine && twDay(i.created_at) === today).length;
+  // daily quota — counted on the viewer's OWN local calendar day (resets at their midnight).
+  const localDay = ts => { const d = ts ? new Date(ts) : new Date(); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
+  const today = localDay();
+  const usedToday = items.filter(i => i.mine && localDay(i.created_at) === today).length;
   const left = Math.max(0, FB_LIMIT[kind].perDay - usedToday);
   const qEl = document.getElementById(kind + '-quota');
   if (qEl) {
@@ -1805,7 +1805,7 @@ async function submitFeedback(kind) {
   if (!content) { toast('請先輸入內容'); return; }
   if (kind === 'bug') content += `\n\n— ${navigator.userAgent} · ${APP_VERSION}`;   // auto device+version
   try {
-    await api('/feedback/', { method: 'POST', body: JSON.stringify({ kind, content }) });
+    await api('/feedback/', { method: 'POST', body: JSON.stringify({ kind, content, tz_offset: new Date().getTimezoneOffset() }) });
     inp.value = ''; (kind === 'wish' ? updateWishCount : updateBugCount)();
     toast(kind === 'wish' ? '✨ 願望已送出' : '✅ 已送出回報,謝謝!');
     loadFeedback(kind);

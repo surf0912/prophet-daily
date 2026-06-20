@@ -10,17 +10,20 @@ router = APIRouter()
 # Per-kind limits: (max characters, max submissions per day per user)
 LIMITS = {"wish": (140, 3), "bug": (600, 10)}
 
-def _today_start_iso() -> str:
-    # Start of the current day in Taiwan (UTC+8), converted to UTC for the created_at compare,
-    # so the daily quota resets at local midnight (matches the coin display).
-    tw = timezone(timedelta(hours=8))
-    start_tw = datetime.now(tw).replace(hour=0, minute=0, second=0, microsecond=0)
-    return start_tw.astimezone(timezone.utc).isoformat()
+def _user_day_start_iso(offset_min: int) -> str:
+    # Start of the CALLER's local day, in UTC, so the daily quota resets at each user's own
+    # midnight. offset_min = JS Date.getTimezoneOffset() (UTC - local, e.g. UTC+8 → -480).
+    offset_min = max(-840, min(840, offset_min or 0))
+    now = datetime.now(timezone.utc)
+    local_now = now - timedelta(minutes=offset_min)
+    local_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    return (local_start + timedelta(minutes=offset_min)).isoformat()
 
 # ── Wishes / bug reports (shared `feedback` table) ───────────
 class FeedbackCreate(BaseModel):
     kind: str           # 'wish' | 'bug'
     content: str
+    tz_offset: int = 0  # JS Date.getTimezoneOffset() so the daily limit uses the user's local day
 
 @router.get("/")
 def list_feedback(kind: str, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
@@ -54,7 +57,7 @@ def create_feedback(body: FeedbackCreate, user: dict = Depends(get_current_user)
         raise HTTPException(400, f"最多 {max_len} 字")
     # Daily per-user rate limit.
     today = sb.table("feedback").select("id", count="exact") \
-        .eq("user_id", user["id"]).eq("kind", body.kind).gte("created_at", _today_start_iso()).execute()
+        .eq("user_id", user["id"]).eq("kind", body.kind).gte("created_at", _user_day_start_iso(body.tz_offset)).execute()
     if (today.count or 0) >= per_day:
         label = "許願" if body.kind == "wish" else "回報"
         raise HTTPException(429, f"今天的{label}次數已用完（每天最多 {per_day} 次），明天再來吧")
