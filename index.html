@@ -756,6 +756,10 @@
         <button class="admin-tab admin-only" data-tab="invites" onclick="switchAdminTab('invites')">邀請連結</button>
       </div>
       <div id="admin-upload" class="admin-pane active">
+        <div id="upload-draft-banner" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:var(--parchment2);border:1px solid var(--gold-lt);border-radius:6px;padding:8px 12px;margin-bottom:14px">
+          <span style="font-size:13px;color:var(--ink-light)">📝 已還原上次未送出的草稿</span>
+          <button onclick="discardUploadDraft()" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer;flex-shrink:0">清空</button>
+        </div>
         <!-- 新增小說 vs 論壇貼文 -->
         <div data-tour="upload-kind" style="display:flex;gap:0;margin-bottom:16px;border:1px solid var(--gold);border-radius:4px;overflow:hidden">
           <button id="kind-novel-btn" onclick="setUploadKind('novel')" style="flex:1;padding:10px;font-size:13px;border:none;cursor:pointer;background:var(--scarlet);color:var(--on-dark)">📖 新增小說</button>
@@ -1081,7 +1085,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.27';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.28';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2515,7 +2519,7 @@ function switchAdminTab(tab) {
   document.getElementById('admin-' + tab).classList.add('active');
   if (tab === 'novels') loadAdminNovelList();
   if (tab === 'users') loadAdminUsers();
-  if (tab === 'upload') setUploadKind('novel');
+  if (tab === 'upload') { setUploadKind('novel'); initUploadDraftWatch(); restoreUploadDraft(); }
   if (tab === 'review') loadReviewList();
   if (tab === 'invites') {
     // show admin-invite button only for super_admin
@@ -2575,6 +2579,69 @@ function setUploadKind(kind) {
 // (noon avoids the displayed date shifting a day due to timezone).
 function dateToIso(d) { return d ? `${d}T12:00:00Z` : null; }
 
+// ── Upload draft autosave ────────────────────────────────────
+// Keeps the in-progress 上傳 form in localStorage so a self-heal reload or token
+// logout never loses a half-written chapter. Saved on edit, restored on tab open,
+// cleared on successful submit.
+const DRAFT_KEY = 'pd_upload_draft';
+const _dval = id => { const e = document.getElementById(id); return e ? e.value : ''; };
+const _dset = (id, v) => { const e = document.getElementById(id); if (e) e.value = v || ''; };
+function _setChars(divId, arr) {
+  document.querySelectorAll(`#${divId} .opt`).forEach(el => el.classList.toggle('on', (arr || []).includes(el.dataset.ch)));
+}
+function currentUploadKind() {
+  return document.getElementById('upload-kind-forum').style.display === 'none' ? 'novel' : 'forum';
+}
+let _draftTimer;
+function initUploadDraftWatch() {
+  const pane = document.getElementById('admin-upload');
+  if (!pane || pane.dataset.draftWatch) return;
+  pane.dataset.draftWatch = '1';
+  const trig = () => { clearTimeout(_draftTimer); _draftTimer = setTimeout(saveUploadDraft, 400); };
+  pane.addEventListener('input', trig);
+  pane.addEventListener('change', trig);
+  pane.addEventListener('click', e => { if (e.target.classList?.contains('opt')) trig(); });  // character chips
+}
+function saveUploadDraft() {
+  const d = {
+    kind: currentUploadKind(), ts: Date.now(),
+    novel: { title: _dval('new-novel-title'), author: _dval('new-novel-author'), date: _dval('new-novel-date'),
+             content: _dval('new-novel-content'), category: _dval('new-novel-category'), chars: readChars('new-novel-chars') },
+    forum: { title: _dval('forum-post-title'), author: _dval('forum-post-author'), date: _dval('forum-post-date'),
+             content: _dval('forum-post-content'), comments: _dval('forum-post-comments'),
+             category: _dval('forum-post-category'), chars: readChars('forum-post-chars') },
+  };
+  const has = o => o.title || o.content || o.comments;
+  if (!has(d.novel) && !has(d.forum)) { localStorage.removeItem(DRAFT_KEY); return; }
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+}
+function restoreUploadDraft() {
+  let d; try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch { d = null; }
+  const banner = document.getElementById('upload-draft-banner');
+  const meaningful = d && ((d.novel && (d.novel.title || d.novel.content)) || (d.forum && (d.forum.title || d.forum.content || d.forum.comments)));
+  if (!meaningful) { if (banner) banner.style.display = 'none'; return; }
+  setUploadKind(d.kind || 'novel');   // renders pickers + sets kind/visibility first
+  if (d.novel) { _dset('new-novel-title', d.novel.title); _dset('new-novel-author', d.novel.author); _dset('new-novel-date', d.novel.date);
+                 _dset('new-novel-content', d.novel.content); _dset('new-novel-category', d.novel.category); _setChars('new-novel-chars', d.novel.chars); }
+  if (d.forum) { _dset('forum-post-title', d.forum.title); _dset('forum-post-author', d.forum.author); _dset('forum-post-date', d.forum.date);
+                 _dset('forum-post-content', d.forum.content); _dset('forum-post-comments', d.forum.comments);
+                 _dset('forum-post-category', d.forum.category); _setChars('forum-post-chars', d.forum.chars); }
+  if (banner) banner.style.display = 'flex';
+}
+function clearUploadDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+  const banner = document.getElementById('upload-draft-banner'); if (banner) banner.style.display = 'none';
+}
+function discardUploadDraft() {
+  clearUploadDraft();
+  ['new-novel-title', 'new-novel-author', 'new-novel-date', 'new-novel-content'].forEach(id => _dset(id, ''));
+  resetClassPicker('new-novel-category', 'new-novel-chars');
+  ['forum-post-title', 'forum-post-author', 'forum-post-date', 'forum-post-content', 'forum-post-comments'].forEach(id => _dset(id, ''));
+  resetClassPicker('forum-post-category', 'forum-post-chars');
+  setUploadKind('novel');
+  toast('已清空草稿');
+}
+
 async function submitForumPost() {
   const title = document.getElementById('forum-post-title').value.trim();
   const author = document.getElementById('forum-post-author').value.trim() || null;
@@ -2595,6 +2662,7 @@ async function submitForumPost() {
     document.getElementById('forum-post-content').value = '';
     document.getElementById('forum-post-comments').value = '';
     resetClassPicker(null, 'forum-post-chars');
+    clearUploadDraft();
   } catch (e) { toast(e.message); }
 }
 
@@ -2670,6 +2738,7 @@ async function submitNewNovel() {
     toast(novel.status === 'pending' ? '✅ 已送出，待管理員審核' : '✅ 小說已建立');
     ['new-novel-title', 'new-novel-author', 'new-novel-date', 'new-novel-content'].forEach(id => document.getElementById(id).value = '');
     resetClassPicker('new-novel-category', 'new-novel-chars');
+    clearUploadDraft();
     loadNovels();
   } catch (e) { toast(e.message); }
 }
