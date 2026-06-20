@@ -83,13 +83,34 @@ def set_banned(user_id: str, body: BanBody, user: dict = Depends(require_super_a
 def delete_user(user_id: str, user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
     if user_id == user["id"]:
         raise HTTPException(400, "不能刪除自己")
-    # Remove the auth user (cascades the profile if FK ON DELETE CASCADE), then make sure
-    # the profile row is gone either way. The member's authored works are left intact.
+    actor = user["id"]
+    # Clear/reassign every row that references this user so foreign keys don't block the
+    # delete. Authored works are kept (created_by reassigned to the acting super_admin).
+    for op in (
+        lambda: sb.table("comment_likes").delete().eq("user_id", user_id).execute(),
+        lambda: sb.table("comments").delete().eq("user_id", user_id).execute(),
+        lambda: sb.table("permissions").delete().eq("user_id", user_id).execute(),
+        lambda: sb.table("invite_tokens").update({"used_by": None}).eq("used_by", user_id).execute(),
+        lambda: sb.table("invite_tokens").update({"created_by": actor}).eq("created_by", user_id).execute(),
+        lambda: sb.table("novels").update({"created_by": actor}).eq("created_by", user_id).execute(),
+        lambda: sb.table("chapters").update({"created_by": actor}).eq("created_by", user_id).execute(),
+    ):
+        try:
+            op()
+        except Exception:
+            pass
+    # Now remove the profile + auth user; surface the real DB error if something still blocks.
+    err = None
+    try:
+        sb.table("profiles").delete().eq("id", user_id).execute()
+    except Exception as e:
+        err = f"profile: {e}"
     try:
         sb.auth.admin.delete_user(user_id)
-    except Exception:
-        pass
-    sb.table("profiles").delete().eq("id", user_id).execute()
+    except Exception as e:
+        err = (err + " | " if err else "") + f"auth: {e}"
+    if err:
+        raise HTTPException(500, f"刪除未完成：{err}")
     return {"message": "deleted"}
 
 # ── 迷情劑 access gate ──────────────────────────────────────
