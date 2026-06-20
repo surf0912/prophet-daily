@@ -220,6 +220,7 @@
     .novel-row .row-meta { font-size: 12px; color: var(--ink-light); margin-top: 4px; }
     .row-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
     .t-cat { display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 10px; background: rgba(138,45,45,.12); color: var(--accent); }
+    .t-cat.t-cat-green { background: rgba(45,74,30,.15); color: var(--series); }   /* 吐真劑 = 墨綠 (夜間轉亮綠) */
     .t-chr { display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 10px; background: rgba(201,168,76,.2); color: var(--ink-light); }
     /* series grouping */
     .series-block { border-bottom: 1px solid rgba(26,10,0,.1); }
@@ -916,7 +917,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v73';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v74';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1372,7 +1373,7 @@ function shelfRow(n, inSeries) {
       <h4>${inSeries && n.series_order ? `<span style="color:var(--ink-light);font-weight:normal">#${n.series_order}　</span>` : ''}${escapeHtml(n.title)}</h4>
       <div class="row-meta">${n.author || '佚名'}${ownerTag(n)}${n.updated_at ? ` · 📅 ${fmtUpdated(n.updated_at)}` : ''}</div>
       <div class="row-tags">
-        ${n.category ? `<span class="t-cat">${n.category}</span>` : ''}
+        ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${n.category}</span>` : ''}
         ${(n.characters || []).map(c => `<span class="t-chr">${charNames([c])}</span>`).join('')}
       </div>
     </div>`;
@@ -1995,7 +1996,7 @@ async function loadAdminNovelList() {
         <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)}</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
           ${n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">🔗 ${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : ''}
-          ${n.category ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.12);color:var(--accent)">${n.category}</span>` : ''}
+          ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${n.category}</span>` : ''}
           ${(n.characters || []).map(c => `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.18);color:var(--ink-light)">${charNames([c])}</span>`).join('')}
         </div>
         <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${n.author || '佚名'}${ownerTag(n)}</div>
