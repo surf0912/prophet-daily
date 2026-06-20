@@ -916,7 +916,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v69';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v70';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1432,7 +1432,11 @@ const PEN_SVG = `<svg class="pen" viewBox="0 0 434.317 434.317" aria-hidden="tru
 function renderForumContent(content) {
   // Normalise line separators — pasted text often uses U+2028/U+2029 (or \r), which break
   // line-based parsing (the regexes' `.`/`$` don't cross them) and hide the floor markers.
-  const lines = (content || '').replace(/[\u2028\u2029\r]/g, '\n').split('\n');
+  let norm = (content || '').replace(/[\u2028\u2029\r]/g, '\n');
+  // The app appends its own 封存 box, so auto-strip any self-written 「自动折叠／自動折疊」 ending.
+  const fold = norm.search(/自[动動]折[叠疊]/);
+  if (fold >= 0) norm = norm.slice(0, norm.lastIndexOf('\n', fold) + 1).replace(/\n+$/, '');
+  const lines = norm.split('\n');
   // A new floor (樓層) starts on any of these; text before the first one is the 主文/引言:
   //   第N笔｜暱稱                         (oldest format)
   //   1L / 01L / 2L … [暱稱｜內容]          (floor-number format)
