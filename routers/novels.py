@@ -23,6 +23,7 @@ class NovelUpdate(BaseModel):
     cover_url: Optional[str] = None
     category: Optional[str] = None
     characters: Optional[List[str]] = None
+    published_at: Optional[str] = None   # edit the 發佈日期 (maps to created_at)
 
 class ForumPostCreate(BaseModel):
     title: str
@@ -175,6 +176,9 @@ def update_novel(novel_id: str, body: NovelUpdate, user: dict = Depends(require_
     if not is_admin(user) and user["id"] not in (nv.data.get("owners") or []):
         raise HTTPException(403, "只能編輯自己的作品")
     updates = {k: v for k, v in body.dict().items() if v is not None}
+    published_at = updates.pop("published_at", None)
+    if published_at:
+        updates["created_at"] = published_at   # the 發佈日期 shown on the shelf
     if not updates:
         raise HTTPException(400, "No fields to update")
     updates["updated_at"] = "now()"
