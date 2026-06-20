@@ -989,7 +989,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v90';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v91';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2282,7 +2282,7 @@ async function loadAdminNovelList() {
         <div style="margin-bottom:3px;display:flex;gap:5px;flex-wrap:wrap">${n.kind === 'forum'
           ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">🦉 論壇體</span>'
           : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">📖 小說</span>'}${statusTag}${n.is_guide ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">📖 範例·可刪除</span>' : ''}</div>
-        <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)}</div>
+        <div onclick="openNovel('${n.id}')" style="font-size:14px;font-weight:bold;cursor:pointer">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">👁 預覽</span></div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
           ${n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">🔗 ${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : ''}
           ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${n.category}</span>` : ''}
