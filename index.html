@@ -467,6 +467,26 @@
     .perm-modal-inner { background: var(--parchment); color: var(--ink); width: 100%; padding: 20px; border-radius: 12px 12px 0 0; max-height: 70vh; overflow-y: auto; }
     .perm-modal-inner h3 { font-size: 16px; margin-bottom: 14px; }
     .btn-primary:disabled { opacity: .4; filter: grayscale(.4); cursor: not-allowed; }
+
+    /* ── Guided tour (新手導覽) ── */
+    #tour-overlay { position: fixed; inset: 0; z-index: 400; display: none; }
+    #tour-overlay.open { display: block; }
+    #tour-spot { position: fixed; border-radius: 10px; box-shadow: 0 0 0 9999px rgba(18,9,0,.74); transition: all .28s cubic-bezier(.4,0,.2,1); pointer-events: none; }
+    #tour-spot.nohole { display: none; }
+    #tour-bubble {
+      position: fixed; max-width: 320px; width: calc(100vw - 28px);
+      background: var(--parchment); color: var(--ink);
+      border: 1.5px solid var(--gold); border-radius: 12px;
+      padding: 16px 16px 12px; box-shadow: 0 10px 36px rgba(0,0,0,.45);
+      transition: left .28s, top .28s;
+    }
+    #tour-text { font-size: 14px; line-height: 1.65; }
+    #tour-text b { color: var(--accent); }
+    #tour-text .tour-h { display: block; font-size: 15px; font-weight: 700; margin-bottom: 5px; color: var(--ink); }
+    .tour-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; gap: 8px; }
+    #tour-step-num { font-size: 11px; color: var(--ink-light); opacity: .7; flex-shrink: 0; }
+    .tour-btns { display: flex; align-items: center; gap: 6px; }
+    .tour-skip { background: none; border: none; color: var(--ink-light); font-size: 12px; cursor: pointer; padding: 8px 6px; }
     .perm-novel-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(26,10,0,.08); }
     .perm-novel-row label { font-size: 14px; }
     .btn-close-modal { display: block; width: 100%; margin-top: 16px; padding: 12px; background: var(--chrome-dk); color: var(--gold); border: none; border-radius: 3px; cursor: pointer; }
@@ -667,6 +687,10 @@
               <span class="slider"></span>
             </label>
           </div>
+          <div class="settings-row">
+            <label>🔮 新手導覽</label>
+            <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="startTour()">重看導覽</button>
+          </div>
         </div>
         <button class="btn-logout" onclick="doLogout()">🚪 登出魔法世界</button>
         <p id="app-version" style="text-align:center;font-size:11px;color:var(--ink-light);opacity:.55;margin-top:14px"></p>
@@ -771,12 +795,12 @@
   </div>
 
   <nav>
-    <button class="nav-btn active" onclick="showPage('home',this)"><span class="icon">🏠</span>首頁</button>
-    <button class="nav-btn" onclick="showPage('scroll',this)"><span class="icon">🪞</span>意若思鏡</button>
-    <button class="nav-btn" onclick="showPage('forum',this)"><span class="icon">🦉</span>羊皮紙</button>
+    <button class="nav-btn active" data-tour="nav-home" onclick="showPage('home',this)"><span class="icon">🏠</span>首頁</button>
+    <button class="nav-btn" data-tour="nav-scroll" onclick="showPage('scroll',this)"><span class="icon">🪞</span>意若思鏡</button>
+    <button class="nav-btn" data-tour="nav-forum" onclick="showPage('forum',this)"><span class="icon">🦉</span>羊皮紙</button>
     <button class="nav-btn" onclick="showPage('protect',this)"><span class="icon">🔮</span>防窺</button>
-    <button class="nav-btn" onclick="showPage('settings',this)"><span class="icon">⚙️</span>設定</button>
-    <button class="nav-btn" id="admin-nav-btn" style="display:none" onclick="showPage('admin',this)"><span class="icon">🏰</span>後台</button>
+    <button class="nav-btn" data-tour="nav-settings" onclick="showPage('settings',this)"><span class="icon">⚙️</span>設定</button>
+    <button class="nav-btn" id="admin-nav-btn" data-tour="nav-admin" style="display:none" onclick="showPage('admin',this)"><span class="icon">🏰</span>後台</button>
   </nav>
 </div>
 
@@ -940,6 +964,22 @@
   </div>
 </div>
 
+<!-- Guided tour (新手導覽) -->
+<div id="tour-overlay">
+  <div id="tour-spot"></div>
+  <div id="tour-bubble">
+    <div id="tour-text"></div>
+    <div class="tour-foot">
+      <span id="tour-step-num"></span>
+      <div class="tour-btns">
+        <button class="tour-skip" onclick="endTour(true)">跳過</button>
+        <button id="tour-back" class="tour-skip" onclick="tourBack()" style="display:none">‹ 上一步</button>
+        <button id="tour-next" class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="tourNext()">下一步 ›</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -947,7 +987,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v80';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v81';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1235,6 +1275,7 @@ async function initApp() {
   renderSettings();
   renderGreeting();
   loadNovels();
+  maybeAutoTour();   // first-time 讀者/作家 onboarding
 }
 
 // super_admin sees the real owner (巫師全名) after the free-text author, so a changed
@@ -1263,6 +1304,108 @@ function showPage(id, btn) {
   if (id === 'scroll') loadNovels();
   if (id === 'forum') loadForumPosts();
   if (id === 'admin') { adminNovelScope = null; switchAdminTab('novels'); }
+}
+
+// ── Guided tour (新手導覽) ─────────────────────────────────────
+// Steps anchor to data-tour / stable ids; a missing target degrades to a
+// centered bubble (auto-skip look) instead of breaking. See infra notes.
+const TOUR_KEY = 'pd_tour_seen_v1';
+const TOUR_READER = [
+  { page: 'scroll', target: '[data-tour="nav-scroll"]',
+    html: "<span class='tour-h'>🪞 意若思鏡</span>歡迎來到《預言家日報》。這面鏡子映照出大家所有的作品——點這裡就能走進書架找文。" },
+  { page: 'scroll', target: '#shelf-search-input',
+    html: "<span class='tour-h'>🔍 召喚你想看的</span>輸入<b>篇名、作者或角色名</b>,想找的文章就會自己浮現,不必翻遍整座書庫。" },
+  { page: 'scroll', target: '#shelf-char-chips',
+    html: "<span class='tour-h'>🎭 只看某個人</span>點角色頭像籤,就只顯示有那位角色的故事;再點一次即可取消。" },
+  { page: 'scroll', target: '#shelf-cat-pills',
+    html: "<span class='tour-h'>📜 故事分類</span>用分類快速篩選。其中<b>迷情劑</b>需要先向管理員<b>申請開放</b>才看得到喔。" },
+  { page: 'forum', target: '[data-tour="nav-forum"]',
+    html: "<span class='tour-h'>🦉 匿名羊皮紙</span>這裡是匿名討論區,大家用羊皮紙交換心得、蓋樓中樓。" },
+  { page: 'forum', target: '#forum-tab-liked',
+    html: "<span class='tour-h'>🪶 收藏你的最愛</span>讀文時點留言上的<b>羽毛筆</b>就會收藏,之後都能在「<b>已收藏</b>」找回來重讀。" },
+  { page: 'settings', target: '[data-tour="nav-settings"]',
+    html: "<span class='tour-h'>⚙️ 個人設定</span>在這裡調字體、夜間模式、魔法字體,也能換頭像。想<b>重看這份導覽</b>隨時都能回到這裡。" },
+];
+const TOUR_WRITER_EXTRA = [
+  { page: 'admin', target: '[data-tour="nav-admin"]',
+    html: "<span class='tour-h'>🏰 創作後台</span>身為執筆人,你比讀者多了一個後台——你的創作基地就在這。" },
+  { page: 'admin', before: () => switchAdminTab('upload'), target: '.admin-tab[data-tab="upload"]',
+    html: "<span class='tour-h'>✍️ 發表作品</span>「上傳」可以發<b>小說</b>或<b>論壇貼文</b>(兩種格式各有自己的欄位)。" },
+  { page: 'admin', before: () => switchAdminTab('novels'), target: '.admin-tab[data-tab="novels"]',
+    html: "<span class='tour-h'>📚 作品管理</span>在這裡編輯、分系列、設分類。提醒:作品發表後需<b>等管理員審核</b>通過才會公開。" },
+];
+let _tour = { steps: [], i: 0, on: false };
+
+function maybeAutoTour() {
+  if (!currentUser || !['reader', 'writer'].includes(currentUser.role)) return;  // auto only for 讀者/作家
+  if (localStorage.getItem(TOUR_KEY)) return;
+  setTimeout(startTour, 700);  // let the first page settle
+}
+
+function startTour() {
+  const steps = TOUR_READER.slice();
+  if (currentUser && currentUser.role !== 'reader') steps.push(...TOUR_WRITER_EXTRA);
+  _tour = { steps, i: 0, on: true };
+  document.getElementById('tour-overlay').classList.add('open');
+  window.addEventListener('resize', _tourReposition);
+  showTourStep(0);
+}
+function tourNext() { showTourStep(_tour.i + 1); }
+function tourBack() { showTourStep(_tour.i - 1); }
+
+function showTourStep(i) {
+  const steps = _tour.steps;
+  if (i < 0) return;
+  if (i >= steps.length) { endTour(true); return; }
+  _tour.i = i;
+  const s = steps[i];
+  if (s.page) showPage(s.page, document.querySelector(`[data-tour="nav-${s.page}"]`));
+  if (s.before) { try { s.before(); } catch (e) {} }
+  document.getElementById('tour-text').innerHTML = s.html;
+  document.getElementById('tour-step-num').textContent = `${i + 1} / ${steps.length}`;
+  document.getElementById('tour-back').style.display = i > 0 ? '' : 'none';
+  document.getElementById('tour-next').textContent = (i === steps.length - 1) ? '完成 ✦' : '下一步 ›';
+  setTimeout(() => _placeTour(s), 90);
+}
+
+function _placeTour(s) {
+  const spot = document.getElementById('tour-spot');
+  const bub = document.getElementById('tour-bubble');
+  const el = s.target ? document.querySelector(s.target) : null;
+  if (!el) {  // missing target → centered bubble, no spotlight
+    spot.classList.add('nohole');
+    bub.style.transform = 'translate(-50%,-50%)';
+    bub.style.left = '50%'; bub.style.top = '50%';
+    return;
+  }
+  bub.style.transform = 'none';
+  el.scrollIntoView({ block: 'center', inline: 'nearest' });
+  requestAnimationFrame(() => {
+    const r = el.getBoundingClientRect();
+    const pad = 6;
+    spot.classList.remove('nohole');
+    spot.style.left = (r.left - pad) + 'px';
+    spot.style.top = (r.top - pad) + 'px';
+    spot.style.width = (r.width + pad * 2) + 'px';
+    spot.style.height = (r.height + pad * 2) + 'px';
+    const bw = bub.offsetWidth, bh = bub.offsetHeight;
+    let top = r.bottom + 12;
+    if (top + bh > innerHeight - 16) top = r.top - 12 - bh;  // no room below → flip above
+    if (top < 12) top = 12;
+    let left = r.left + r.width / 2 - bw / 2;
+    left = Math.max(12, Math.min(left, innerWidth - bw - 12));
+    bub.style.left = left + 'px';
+    bub.style.top = top + 'px';
+  });
+}
+function _tourReposition() { if (_tour.on) _placeTour(_tour.steps[_tour.i]); }
+
+function endTour(markSeen) {
+  _tour.on = false;
+  document.getElementById('tour-overlay').classList.remove('open');
+  window.removeEventListener('resize', _tourReposition);
+  if (markSeen) localStorage.setItem(TOUR_KEY, '1');
+  showPage('home', document.querySelector('[data-tour="nav-home"]'));
 }
 
 // ── Home ─────────────────────────────────────────────────────
