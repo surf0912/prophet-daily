@@ -539,7 +539,7 @@
     <!-- Invite registration (shown only when ?invite=TOKEN in URL) -->
     <div id="invite-form" style="display:none">
       <div style="text-align:center;margin-bottom:16px;font-size:13px;color:var(--gold-lt)">
-        🎫 你持有一張邀請通行證
+        <svg width="15" height="15" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-ticket"/></svg> 你持有一張邀請通行證
         <div id="invite-role-badge" style="margin-top:4px;font-size:13px;color:var(--gold)"></div>
       </div>
       <div class="field">
@@ -610,6 +610,11 @@
     <symbol id="ic-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4" /> <path d="M16 2v4" /> <rect width="18" height="18" x="3" y="4" rx="2" /> <path d="M3 10h18" /></symbol>
     <symbol id="ic-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 17 5-5-5-5" /> <path d="M21 12H9" /> <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /></symbol>
     <symbol id="ic-idcard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10h2" /> <path d="M16 14h2" /> <path d="M6.17 15a3 3 0 0 1 5.66 0" /> <circle cx="9" cy="11" r="2" /> <rect x="2" y="5" width="20" height="14" rx="2" /></symbol>
+."
+".    <symbol id="ic-wand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72" /> <path d="m14 7 3 3" /> <path d="M5 6v4" /> <path d="M19 14v4" /> <path d="M10 2v2" /> <path d="M7 8H3" /> <path d="M21 16h-4" /> <path d="M11 3H9" /></symbol>
+    <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z" /> <path d="m21.854 2.147-10.94 10.939" /></symbol>
+    <symbol id="ic-ticket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /> <path d="M13 5v2" /> <path d="M13 17v2" /> <path d="M13 11v2" /></symbol>
+    <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" /> <path d="M12 5v14" /></symbol>
 .
   </defs></svg>
   <div id="page-area">
@@ -824,7 +829,7 @@
             </div>
             <textarea id="new-novel-content" rows="12" placeholder="在此貼上小說內文…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
           </div>
-          <button class="btn-primary" data-tour="upload-submit" onclick="submitNewNovel()" style="margin-bottom:8px">📨 建立小說</button>
+          <button class="btn-primary" data-tour="upload-submit" onclick="submitNewNovel()" style="margin-bottom:8px"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-send"/></svg> 建立小說</button>
           <p id="new-novel-hint" style="font-size:12px;color:var(--ink-light);text-align:center"></p>
         </div>
 
@@ -855,7 +860,7 @@
             <textarea id="forum-post-comments" rows="10" placeholder="貼上各樓回覆，每則用 1L／2L… 開頭，例：&#10;1L 暱稱｜留言內容&#10;2L 暱稱｜留言內容&#10;（系統會自動排成 01L、02L… 蓋樓）" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
             <p style="font-size:12px;color:var(--ink-light);opacity:.8;margin-top:4px">每樓用 <b>1L / 2L / 01L…</b> 開頭切換;暱稱與內容之間用「｜」分隔(沒有也可以)。</p>
           </div>
-          <button class="btn-primary" onclick="submitForumPost()" style="margin-bottom:8px">📨 發佈貼文</button>
+          <button class="btn-primary" onclick="submitForumPost()" style="margin-bottom:8px"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-send"/></svg> 發佈貼文</button>
           <p id="forum-post-hint" style="font-size:12px;color:var(--ink-light);text-align:center"></p>
         </div>
       </div>
@@ -873,13 +878,13 @@
       </div>
       <div id="admin-invites" class="admin-pane">
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-          <button class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px" onclick="generateInvite('reader')">＋ 讀者邀請</button>
-          <button class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px;background:var(--chrome)" onclick="generateInvite('writer')">＋ 作家邀請</button>
-          <button id="invite-admin-btn" class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px;background:#2d4a1e;display:none" onclick="generateInvite('admin')">＋ 管理員邀請</button>
+          <button class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px" onclick="generateInvite('reader')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 讀者邀請</button>
+          <button class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px;background:var(--chrome)" onclick="generateInvite('writer')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 作家邀請</button>
+          <button id="invite-admin-btn" class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px;background:#2d4a1e;display:none" onclick="generateInvite('admin')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 管理員邀請</button>
         </div>
         <!-- generated link box -->
         <div id="invite-result" style="display:none;background:var(--parchment2);border:1px solid var(--gold-lt);border-radius:4px;padding:12px;margin-bottom:16px">
-          <div style="font-size:12px;color:var(--accent);margin-bottom:6px">✨ 邀請連結已生成（3天有效，用一次即失效）</div>
+          <div style="font-size:12px;color:var(--accent);margin-bottom:6px">邀請連結已生成（3天有效，用一次即失效）</div>
           <div style="display:flex;align-items:center;gap:8px">
             <input id="invite-link-box" type="text" readonly style="flex:1;padding:8px;font-size:12px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment);color:var(--ink)" />
             <button onclick="copyInviteLink()" style="padding:8px 12px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;white-space:nowrap">複製</button>
@@ -1016,7 +1021,7 @@
 <div id="waking-overlay">
   <div class="box">
     <div class="spinner" style="margin:0 auto 12px"></div>
-    🪄 喚醒魔法中…
+    <svg width="16" height="16" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-wand"/></svg> 喚醒魔法中…
     <div style="font-size:12px;color:var(--gold-lt);margin-top:6px;opacity:.85">首次連線需要幾秒，請稍候</div>
   </div>
 </div>
@@ -1130,7 +1135,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.43';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.44';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3398,7 +3403,7 @@ async function loadInviteList() {
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
           <span style="background:${used ? '#ccc' : 'var(--scarlet)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;flex-shrink:0;white-space:nowrap">${roleBadge(inv.role, 12)}</span>
           <span style="color:${used ? '#aaa' : 'var(--ink-light)'}">到期：${expires}</span>
-          ${used ? `<span style="color:#aaa">✓ 已使用（${usedBy}）</span>` : ''}
+          ${used ? `<span style="color:#aaa">${ic('ic-check',11)} 已使用（${usedBy}）</span>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:6px">
           <code style="font-size:12px;color:#888;word-break:break-all;flex:1">${inv.token}</code>
