@@ -1001,7 +1001,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v102';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v103';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1612,8 +1612,8 @@ function renderGreeting() {
     probe.src = src;
   }
   const now = new Date();
-  document.getElementById('date-banner').textContent =
-    `📰 ${now.getFullYear()} 年 ${now.getMonth()+1} 月 ${now.getDate()} 日 · 巫師界頭條`;
+  const db = document.getElementById('date-banner');   // element was removed; guard so renderGreeting can't throw
+  if (db) db.textContent = `📰 ${now.getFullYear()} 年 ${now.getMonth()+1} 月 ${now.getDate()} 日 · 巫師界頭條`;
 }
 
 // ── Novels ───────────────────────────────────────────────────
