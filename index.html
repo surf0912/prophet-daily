@@ -355,6 +355,11 @@
         rgba(138,45,45,0.04) 80px, rgba(138,45,45,0.04) 82px
       );
     }
+    /* 迷情劑: block casual copy/select/save (does NOT stop screenshots). */
+    .reader-content.noselect, .reader-content.noselect * {
+      -webkit-user-select: none; -moz-user-select: none; user-select: none; -webkit-touch-callout: none;
+    }
+    .reader-content.noselect img { pointer-events: none; -webkit-user-drag: none; user-drag: none; }
     .chapter-nav { display: flex; justify-content: space-between; padding: 16px 20px; border-top: 1px solid var(--gold-lt); background: var(--parchment2); }
     .chapter-nav button { padding: 8px 16px; background: var(--scarlet); color: var(--on-dark); border: none; border-radius: 3px; cursor: pointer; font-size: 13px; }
     .chapter-nav button:disabled { opacity: .4; cursor: default; }
@@ -989,7 +994,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v93';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v94';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1726,12 +1731,37 @@ function renderHomeNovels() {
 let currentNovelKind = 'novel';
 let currentNovelTitle = '';
 
+// 迷情劑 guard: tile a per-reader watermark (nickname + date) over the reader so any
+// leaked screenshot is traceable, and block casual copy/select/save. (Cannot stop
+// screenshots — no web API allows that; this is a deterrent + attribution.)
+function applyMqjGuard(on) {
+  const ov = document.querySelector('#reader-view .watermark-overlay');
+  const content = document.getElementById('reader-content');
+  if (!ov || !content) return;
+  if (on) {
+    const name = (currentUser && (currentUser.nickname || currentUser.username)) || '讀者';
+    const d = new Date();
+    const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='270' height='160'><text x='12' y='84' transform='rotate(-30 135 80)' fill='rgba(138,45,45,0.14)' font-size='15' font-weight='bold' font-family='sans-serif'>${escapeHtml(name + ' · ' + stamp)}</text></svg>`;
+    ov.style.backgroundImage = `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+    ov.style.backgroundRepeat = 'repeat';
+    content.classList.add('noselect');
+    content.oncontextmenu = (e) => e.preventDefault();
+  } else {
+    ov.style.backgroundImage = '';
+    ov.style.backgroundRepeat = '';
+    content.classList.remove('noselect');
+    content.oncontextmenu = null;
+  }
+}
+
 async function openNovel(novelId) {
   currentNovelId = novelId;
   let novel = [...forumPosts, ...novels].find(n => n.id === novelId);
   if (!novel) { try { novel = await api(`/novels/${novelId}`); } catch {} }
   currentNovelKind = (novel && novel.kind) || 'novel';
   currentNovelTitle = (novel && novel.title) || '';
+  applyMqjGuard(!!(novel && novel.category === '迷情劑'));   // personalized watermark + copy guard on 迷情劑
   try { currentChapters = await api(`/chapters/novel/${novelId}`) || []; }
   catch { toast('無法載入內容'); return; }
   if (!currentChapters.length) { toast('此作品尚無內容'); return; }
