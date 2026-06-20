@@ -1026,7 +1026,8 @@
       <button class="btn-primary" id="wish-submit" style="flex:1;padding:11px;font-size:14px" onclick="submitFeedback('wish')">許願 ✨</button>
       <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('wish-modal').classList.remove('open')">關閉</button>
     </div>
-    <div id="wish-list" style="margin-top:16px"></div>
+    <div id="wish-tabs" style="display:flex;gap:6px;margin-top:16px;margin-bottom:4px;flex-wrap:wrap"></div>
+    <div id="wish-list"></div>
   </div>
 </div>
 
@@ -1064,7 +1065,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.10';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.11, v1.12…
+const APP_VERSION = 'v1.11';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.12, v1.13…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1745,7 +1746,33 @@ const FB_STATUS = {
 };
 function isAdminUser() { return ['admin', 'super_admin'].includes(currentUser?.role); }
 
-function openWishPool() { document.getElementById('wish-modal').classList.add('open'); document.getElementById('wish-input').value=''; updateWishCount(); loadFeedback('wish'); }
+let wishFilter = 'all';   // 'open' | 'done' | 'all'
+let _wishItems = [];
+function openWishPool() {
+  document.getElementById('wish-modal').classList.add('open');
+  document.getElementById('wish-input').value=''; updateWishCount();
+  wishFilter = isAdminUser() ? 'open' : 'all';   // admins land on what still needs handling
+  loadFeedback('wish');
+}
+function setWishFilter(f) { wishFilter = f; renderWishFiltered(); }
+function renderWishFiltered() {
+  // tabs with live counts
+  const c = { open: 0, done: 0, all: _wishItems.length };
+  _wishItems.forEach(i => { if (i.status === 'done') c.done++; else if (i.status !== 'declined') c.open++; });
+  const tabs = [['open', `待處理 ${c.open}`], ['done', `✨ 已實現 ${c.done}`], ['all', `全部 ${c.all}`]];
+  document.getElementById('wish-tabs').innerHTML = tabs.map(([k, l]) =>
+    `<button onclick="setWishFilter('${k}')" style="font-size:12px;padding:5px 12px;border-radius:14px;cursor:pointer;border:1px solid var(--gold-lt);background:${wishFilter === k ? 'var(--scarlet)' : 'none'};color:${wishFilter === k ? 'var(--on-dark)' : 'var(--ink-light)'}">${l}</button>`).join('');
+  let items = _wishItems.slice();
+  if (wishFilter === 'open') items = items.filter(i => i.status !== 'done' && i.status !== 'declined');
+  else if (wishFilter === 'done') items = items.filter(i => i.status === 'done');
+  else { const rank = s => s === 'done' ? 1 : s === 'declined' ? 2 : 0; items.sort((a, b) => rank(a.status) - rank(b.status)); }
+  if (!items.length) {
+    const msg = wishFilter === 'open' ? '沒有待處理的願望 🎉' : wishFilter === 'done' ? '還沒有實現的願望,加油 ✨' : '還沒有人許願,當第一個吧 ✨';
+    document.getElementById('wish-list').innerHTML = `<p style="color:var(--ink-light);font-size:13px;text-align:center;padding:14px">${msg}</p>`;
+    return;
+  }
+  renderFeedbackList('wish', items);
+}
 function openBugReport() { document.getElementById('bug-modal').classList.add('open'); document.getElementById('bug-input').value=''; updateBugCount(); loadFeedback('bug'); }
 function updateWishCount() { document.getElementById('wish-count').textContent = `${document.getElementById('wish-input').value.length}/140`; }
 function updateBugCount() { document.getElementById('bug-count').textContent = `${document.getElementById('bug-input').value.length}/600`; }
@@ -1772,7 +1799,8 @@ async function loadFeedback(kind) {
   }
   const sub = document.getElementById(kind + '-submit');
   if (sub) sub.disabled = left <= 0;
-  renderFeedbackList(kind, items);
+  if (kind === 'wish') { _wishItems = items; renderWishFiltered(); }
+  else renderFeedbackList(kind, items);
 }
 
 function renderFeedbackList(kind, items) {
