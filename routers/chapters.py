@@ -1,11 +1,7 @@
-import io
-import uuid
-import pytesseract
-from PIL import Image
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-from deps import get_supabase, get_supabase_admin, get_current_user, require_admin, require_writer, is_admin, can_see_mqj
+from deps import get_supabase_admin, get_current_user, require_admin, require_writer, is_admin, can_see_mqj
 from supabase import Client
 
 router = APIRouter()
@@ -37,44 +33,6 @@ def get_chapter(
         raise HTTPException(404, "Chapter not found")
     _check_novel_access(res.data["novel_id"], user, sb)
     return res.data
-
-@router.post("/novel/{novel_id}/upload")
-async def upload_chapter(
-    novel_id: str,
-    chapter_num: int = Form(...),
-    title: Optional[str] = Form(None),
-    image: UploadFile = File(...),
-    user: dict = Depends(require_admin),
-    sb: Client = Depends(get_supabase),
-    sb_admin: Client = Depends(get_supabase_admin),
-):
-    img_bytes = await image.read()
-
-    # OCR
-    pil_img = Image.open(io.BytesIO(img_bytes))
-    ocr_text = pytesseract.image_to_string(pil_img, lang="chi_tra+eng")
-    if not ocr_text.strip():
-        raise HTTPException(422, "OCR returned empty text — check image quality")
-
-    # Upload original to Supabase Storage
-    storage_path = f"{novel_id}/{chapter_num}_{uuid.uuid4().hex[:8]}.png"
-    sb_admin.storage.from_("novel-images").upload(
-        storage_path,
-        img_bytes,
-        {"content-type": image.content_type or "image/png"},
-    )
-
-    # Insert chapter
-    res = sb.table("chapters").insert({
-        "novel_id": novel_id,
-        "chapter_num": chapter_num,
-        "title": title,
-        "content": ocr_text.strip(),
-        "source_image": storage_path,
-        "created_by": user["id"],
-    }).execute()
-    _touch_novel(novel_id, sb_admin)
-    return res.data[0]
 
 class ChapterTextBody(BaseModel):
     chapter_num: int
