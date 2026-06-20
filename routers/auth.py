@@ -54,7 +54,7 @@ class SignUpRequest(BaseModel):
     password: str
 
 @router.post("/signin")
-def signin(body: SignInRequest, request: Request, sb: Client = Depends(get_supabase)):
+def signin(body: SignInRequest, request: Request, sb: Client = Depends(get_supabase), sb_admin: Client = Depends(get_supabase_admin)):
     uname = (body.username or "").lower().strip()
     ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
           or (request.client.host if request.client else "?"))
@@ -70,6 +70,16 @@ def signin(body: SignInRequest, request: Request, sb: Client = Depends(get_supab
     if not ok:
         _record_fail(keys)
         raise HTTPException(401, "用戶名或密碼錯誤")
+
+    # Block banned accounts at the door with a clear message.
+    try:
+        prof = sb_admin.table("profiles").select("banned").eq("id", res.user.id).single().execute()
+        if prof.data and prof.data.get("banned"):
+            raise HTTPException(403, "此帳號已被封禁，如有疑問請聯絡管理員")
+    except HTTPException:
+        raise
+    except Exception:
+        pass
 
     for k in keys:  # success clears the counters
         _FAILS.pop(k, None)

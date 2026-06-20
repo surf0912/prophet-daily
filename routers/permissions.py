@@ -52,7 +52,7 @@ ROLE_RANK = {"reader": 0, "writer": 1, "admin": 2, "super_admin": 3}
 
 @router.get("/users")
 def list_users(user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
-    res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, created_at").order("created_at", desc=True).execute()
+    res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, created_at").order("created_at", desc=True).execute()
     # An admin only sees members at the same rank or lower; only super_admin sees super_admin accounts.
     my_rank = ROLE_RANK.get(user.get("role"), 0)
     return [u for u in res.data if ROLE_RANK.get(u.get("role"), 0) <= my_rank]
@@ -65,6 +65,32 @@ def change_role(user_id: str, body: RoleRequest, sb: Client = Depends(get_supaba
     if not res.data:
         raise HTTPException(404, "User not found")
     return res.data[0]
+
+# ── Ban / delete accounts (super_admin only) ───────────────
+class BanBody(BaseModel):
+    banned: bool
+
+@router.patch("/users/{user_id}/ban")
+def set_banned(user_id: str, body: BanBody, user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
+    if user_id == user["id"]:
+        raise HTTPException(400, "不能封禁自己")
+    res = sb.table("profiles").update({"banned": body.banned}).eq("id", user_id).execute()
+    if not res.data:
+        raise HTTPException(404, "User not found")
+    return res.data[0]
+
+@router.delete("/users/{user_id}")
+def delete_user(user_id: str, user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
+    if user_id == user["id"]:
+        raise HTTPException(400, "不能刪除自己")
+    # Remove the auth user (cascades the profile if FK ON DELETE CASCADE), then make sure
+    # the profile row is gone either way. The member's authored works are left intact.
+    try:
+        sb.auth.admin.delete_user(user_id)
+    except Exception:
+        pass
+    sb.table("profiles").delete().eq("id", user_id).execute()
+    return {"message": "deleted"}
 
 # ── 迷情劑 access gate ──────────────────────────────────────
 @router.post("/me/request-mqj")

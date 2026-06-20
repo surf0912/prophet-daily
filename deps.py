@@ -28,6 +28,9 @@ def get_current_user(
     result = sb_admin.table("profiles").select("*").eq("id", user_id).single().execute()
     if not result.data:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    if result.data.get("banned"):
+        # 401 so the client drops the session and returns to the login screen.
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="此帳號已被封禁")
     return result.data
 
 def _require_role(min_role: str):
