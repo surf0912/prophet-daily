@@ -724,6 +724,10 @@
             <label>🔮 新手導覽</label>
             <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="startTour()">重看導覽</button>
           </div>
+          <div class="settings-row staff-only" style="display:none">
+            <label>🛡️ 防窺工坊</label>
+            <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="showPage('protect')">進入</button>
+          </div>
         </div>
         <div class="settings-section">
           <h3>幫助 & 反饋</h3>
@@ -842,7 +846,6 @@
     <button class="nav-btn active" data-tour="nav-home" onclick="showPage('home',this)"><span class="icon">🏠</span>首頁</button>
     <button class="nav-btn" data-tour="nav-scroll" onclick="showPage('scroll',this)"><span class="icon">🪞</span>意若思鏡</button>
     <button class="nav-btn" data-tour="nav-forum" onclick="showPage('forum',this)"><span class="icon">🦉</span>羊皮紙</button>
-    <button class="nav-btn" onclick="showPage('protect',this)"><span class="icon">🔮</span>防窺</button>
     <button class="nav-btn" data-tour="nav-settings" onclick="showPage('settings',this)"><span class="icon">⚙️</span>設定</button>
     <button class="nav-btn" id="admin-nav-btn" data-tour="nav-admin" style="display:none" onclick="showPage('admin',this)"><span class="icon">🏰</span>後台</button>
   </nav>
@@ -1077,7 +1080,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.18';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.19';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1419,6 +1422,7 @@ async function initApp() {
   const staff = ['writer', 'admin', 'super_admin'].includes(currentUser.role);
   const adminish = ['admin', 'super_admin'].includes(currentUser.role);
   document.getElementById('admin-nav-btn').style.display = staff ? '' : 'none';  // readers: no 後台
+  document.querySelectorAll('.staff-only').forEach(el => el.style.display = staff ? '' : 'none');  // readers: no 防窺工坊
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = adminish ? '' : 'none');  // writers: only 作品管理 + 上傳
   adminNovelScope = null;
   loadOwnerNames();   // super_admin only: map owner uuid → 巫師全名 for the owner hint
