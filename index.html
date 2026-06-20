@@ -1001,7 +1001,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v98';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v99';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1938,6 +1938,7 @@ async function loadChapter(idx) {
   if (novel) {
     localStorage.setItem('pd_last_read', JSON.stringify({
       novelId: currentNovelId, novelTitle: novel.title, kind: currentNovelKind,
+      category: novel.category || null,
       chapterIdx: idx, chapterId: ch.id, chapterCount: currentChapters.length,
       chapterTitle: ch.title || `第 ${ch.chapter_num} 章`,
       scrollTop: Math.round(rv.scrollTop),
@@ -1986,6 +1987,11 @@ async function resumeReading() {
   currentNovelId = p.novelId;
   currentNovelKind = p.kind || 'novel';
   currentNovelTitle = p.novelTitle || '';
+  // 迷情劑 watermark + copy guard — continue-reading used to bypass openNovel and skip this.
+  let _nv = [...forumPosts, ...novels].find(n => n.id === p.novelId);
+  let _cat = _nv ? _nv.category : p.category;
+  if (_cat === undefined) { try { _nv = await api(`/novels/${p.novelId}`); _cat = _nv && _nv.category; } catch {} }
+  applyMqjGuard(_cat === '迷情劑');
   try { currentChapters = await api(`/chapters/novel/${p.novelId}`) || []; }
   catch { toast('無法載入章節'); return; }
   const single = currentNovelKind === 'forum' || currentChapters.length <= 1;
