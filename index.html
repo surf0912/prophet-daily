@@ -711,7 +711,7 @@
       </div>
       <div id="admin-upload" class="admin-pane active">
         <!-- 新增小說 vs 論壇貼文 -->
-        <div style="display:flex;gap:0;margin-bottom:16px;border:1px solid var(--gold);border-radius:4px;overflow:hidden">
+        <div data-tour="upload-kind" style="display:flex;gap:0;margin-bottom:16px;border:1px solid var(--gold);border-radius:4px;overflow:hidden">
           <button id="kind-novel-btn" onclick="setUploadKind('novel')" style="flex:1;padding:10px;font-size:13px;border:none;cursor:pointer;background:var(--scarlet);color:var(--on-dark)">📖 新增小說</button>
           <button id="kind-forum-btn" onclick="setUploadKind('forum')" style="flex:1;padding:10px;font-size:13px;border:none;cursor:pointer;background:var(--parchment2);color:var(--ink-light)">🦉 論壇貼文</button>
         </div>
@@ -730,7 +730,7 @@
             </div>
             <textarea id="new-novel-content" rows="12" placeholder="在此貼上小說內文…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
           </div>
-          <button class="btn-primary" onclick="submitNewNovel()" style="margin-bottom:8px">📨 建立小說</button>
+          <button class="btn-primary" data-tour="upload-submit" onclick="submitNewNovel()" style="margin-bottom:8px">📨 建立小說</button>
           <p id="new-novel-hint" style="font-size:12px;color:var(--ink-light);text-align:center"></p>
         </div>
 
@@ -989,7 +989,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v88';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v89';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1355,9 +1355,15 @@ const TOUR_WRITER_EXTRA = [
   { page: 'admin', target: '[data-tour="nav-admin"]',
     html: "<span class='tour-h'>🏰 創作後台</span>身為執筆人,你比讀者多了一個後台——你的創作基地就在這。" },
   { page: 'admin', before: () => switchAdminTab('upload'), target: '.admin-tab[data-tab="upload"]',
-    html: "<span class='tour-h'>✍️ 發表作品</span>「上傳」可以發<b>小說</b>或<b>論壇貼文</b>(兩種格式各有自己的欄位)。" },
+    html: "<span class='tour-h'>✍️ 發表作品</span>點「上傳」就能開始發表你的故事。" },
+  { page: 'admin', before: () => switchAdminTab('upload'), target: '[data-tour="upload-kind"]',
+    html: "<span class='tour-h'>📖 先選類型</span>先決定要發<b>小說</b>還是<b>論壇貼文</b>——兩種的欄位與格式不一樣,選錯了內容會排版怪怪的。" },
+  { page: 'admin', before: () => { switchAdminTab('upload'); setUploadKind('novel'); }, target: '#new-novel-category',
+    html: "<span class='tour-h'>🏷️ 分類與角色</span>填好標題後,選<b>故事類型</b>(迷情劑/吐真劑/儲思盆)和<b>角色標籤</b>——標好讀者才搜得到、篩得到你的文。" },
+  { page: 'admin', before: () => { switchAdminTab('upload'); setUploadKind('novel'); }, target: '[data-tour="upload-submit"]',
+    html: "<span class='tour-h'>📨 貼上內文送出</span>把內文貼進上方框裡,按這顆就送出了。發佈日期可留空(預設今天),也能補填過去的日期。" },
   { page: 'admin', before: () => switchAdminTab('novels'), target: '.admin-tab[data-tab="novels"]',
-    html: "<span class='tour-h'>📚 作品管理</span>在這裡編輯、分系列、設分類。提醒:作品發表後需<b>等管理員審核</b>通過才會公開。" },
+    html: "<span class='tour-h'>📚 作品管理</span>送出後可在這裡編輯、分系列、改分類。提醒:作品需<b>等管理員審核</b>通過才會公開。" },
 ];
 let _tour = { steps: [], i: 0, on: false };
 
@@ -1365,8 +1371,13 @@ let _tour = { steps: [], i: 0, on: false };
 // shows exactly once per account, across every device. A per-account localStorage
 // key is a fallback (covers the DB-migration gap + offline).
 function tourSeenKey() { return 'pd_tour_seen_' + (currentUser?.id || 'anon'); }
+// Tour is role-scoped: readers complete 'r'+version, writers (incl. readers promoted
+// to writer) complete 'w'+version — so a promoted reader re-sees the writer tour.
+function tourTag() { return (currentUser?.role === 'reader' ? 'r' : 'w') + TOUR_VERSION; }
+function _normTag(v) { return v === TOUR_VERSION ? 'r' + TOUR_VERSION : (v || ''); }  // legacy plain value = reader-seen
 function tourSeen() {
-  return currentUser?.tour_seen === TOUR_VERSION || localStorage.getItem(tourSeenKey()) === TOUR_VERSION;
+  const need = tourTag();
+  return _normTag(currentUser?.tour_seen) === need || _normTag(localStorage.getItem(tourSeenKey())) === need;
 }
 
 function maybeAutoTour() {
@@ -1438,9 +1449,10 @@ function endTour(markSeen) {
   document.getElementById('tour-overlay').classList.remove('open');
   window.removeEventListener('resize', _tourReposition);
   if (markSeen) {
-    localStorage.setItem(tourSeenKey(), TOUR_VERSION);   // device fast-path
-    if (currentUser) currentUser.tour_seen = TOUR_VERSION;
-    api('/auth/me/tour-seen', { method: 'PATCH', body: JSON.stringify({ version: TOUR_VERSION }) }).catch(() => {});  // cross-device record (best effort)
+    const tag = tourTag();   // 'r2' / 'w2' — role-scoped
+    localStorage.setItem(tourSeenKey(), tag);   // device fast-path
+    if (currentUser) currentUser.tour_seen = tag;
+    api('/auth/me/tour-seen', { method: 'PATCH', body: JSON.stringify({ version: tag }) }).catch(() => {});  // cross-device record (best effort)
   }
   showPage('home', document.querySelector('[data-tour="nav-home"]'));
 }
