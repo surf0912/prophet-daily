@@ -937,7 +937,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v76';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v77';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1416,7 +1416,7 @@ function renderShelf() {
     return;
   }
   // 迷情劑 gate for readers without access.
-  if (shelfCat === '迷情劑' && currentUser?.role === 'reader' && currentUser?.mqj_access !== 'approved') {
+  if (shelfCat === '迷情劑' && ['reader', 'writer'].includes(currentUser?.role) && currentUser?.mqj_access !== 'approved') {
     const a = currentUser.mqj_access;
     grid.innerHTML = a === 'pending'
       ? '<div class="empty-shelf">⏳ 你已申請開放「迷情劑」<br><small>等待管理員審核</small></div>'
@@ -1894,11 +1894,18 @@ function switchAdminTab(tab) {
   }
 }
 
+// Admins always; readers & writers need an approved 迷情劑 toggle. Mirrors the backend.
+function canSeeMqj() {
+  return !!currentUser && (['admin', 'super_admin'].includes(currentUser.role) || currentUser.mqj_access === 'approved');
+}
+
 // Populate a category <select> and a character multi-select in an admin form.
 function initClassPicker(catSelId, charDivId) {
   const sel = document.getElementById(catSelId);
   if (sel && !sel.dataset.init) {
-    sel.innerHTML = '<option value="">— 選擇類型 —</option>' + CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+    // Hide 迷情劑 from people who don't have access (they can't upload it anyway).
+    const cats = canSeeMqj() ? CATEGORIES : CATEGORIES.filter(c => c !== '迷情劑');
+    sel.innerHTML = '<option value="">— 選擇類型 —</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
     sel.dataset.init = '1';
   }
   const div = document.getElementById(charDivId);
@@ -2049,7 +2056,7 @@ async function loadAdminNovelList() {
       ns = all.filter(n => (n.owners || []).includes(adminNovelScope.id));
       const sc = adminNovelScope;
       let head = `📂 <b>${escapeHtml(sc.name)}</b> 的作品　<a onclick="adminNovelScope=null;switchAdminTab('users')" style="color:var(--accent);cursor:pointer">← 返回成員名單</a>`;
-      if (sc.role === 'reader') {
+      if (sc.role === 'reader' || sc.role === 'writer') {
         const approved = sc.mqj === 'approved';
         const statusLabel = sc.mqj === 'pending' ? '（⏳ 申請中）' : sc.mqj === 'rejected' ? '（🚫 未通過）' : '';
         head += `<div style="display:flex;align-items:center;gap:10px;margin-top:8px;padding:8px 0;border-top:1px solid rgba(26,10,0,.08)">

@@ -98,6 +98,8 @@ def get_novel(novel_id: str, user: dict = Depends(get_current_user), sb: Client 
 
 @router.post("/", dependencies=[Depends(require_writer)])
 def create_novel(body: NovelCreate, user: dict = Depends(require_writer), sb: Client = Depends(get_supabase_admin)):
+    if body.category == "迷情劑" and not can_see_mqj(user):
+        raise HTTPException(403, "你尚未取得迷情劑權限，無法上傳此分類")
     # Admin/super_admin uploads are public immediately; writers' uploads await approval.
     status = "approved" if is_admin(user) else "pending"
     data = body.dict()
@@ -111,6 +113,8 @@ def create_novel(body: NovelCreate, user: dict = Depends(require_writer), sb: Cl
 
 @router.post("/forum", dependencies=[Depends(require_writer)])
 def create_forum_post(body: ForumPostCreate, user: dict = Depends(require_writer), sb: Client = Depends(get_supabase_admin)):
+    if body.category == "迷情劑" and not can_see_mqj(user):
+        raise HTTPException(403, "你尚未取得迷情劑權限，無法上傳此分類")
     # A forum post is a kind='forum' novel whose single chapter holds the body text.
     status = "approved" if is_admin(user) else "pending"
     record = {
