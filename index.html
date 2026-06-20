@@ -1087,7 +1087,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.33';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.34';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1624,7 +1624,7 @@ function dismissTourBanner() { markTourSeen(); renderTourBanner(); }
 // quotes[0]=早上  quotes[1]=中午  quotes[2]=下午  quotes[3]=晚上
 const CHARS = [
   {
-    name: 'Sean', emoji: '🦁', img: './chars/sean_phone_1.jpg', imgD: './chars/Sean_desktop_1.JPG', bgPos: 'center 20%',
+    name: 'Sean', emoji: '🦁', img: './chars/sean_phone_1.jpg', imgs: ['./chars/sean_phone_1.jpg', './chars/sean_phone_2.JPG'], imgD: './chars/Sean_desktop_1.JPG', imgsD: ['./chars/Sean_desktop_1.JPG', './chars/Sean_desktop_2.JPG'], bgPos: 'center 20%',
     quotes: [
       '早上好，今天也很漂亮。別懷疑，我說的是事實。',
       '中午好。終於下課了？我可以把你借走一會兒嗎？',
@@ -1651,7 +1651,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Adrian', emoji: '🐍', img: './chars/adrian_phone_1.jpg', imgs: ['./chars/adrian_phone_1.jpg', './chars/adrian_phone_2.JPG'], imgD: './chars/Adrian_desktop_1.JPG', bgPos: 'center top', bgPosDesktop: 'center 20%',
+    name: 'Adrian', emoji: '🐍', img: './chars/adrian_phone_1.jpg', imgs: ['./chars/adrian_phone_1.jpg', './chars/adrian_phone_2.JPG'], imgD: './chars/Adrian_desktop_1.JPG', imgsD: ['./chars/Adrian_desktop_1.JPG', './chars/Adrian_desktop_2.JPG'], bgPos: 'center top', bgPosDesktop: 'center 20%',
     quotes: [
       '早上好。你今天沒繞遠路，看來心情不錯。',
       '中午好。當心，西側長廊今天別去。',
