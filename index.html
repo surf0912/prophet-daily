@@ -587,7 +587,7 @@
 
     <!-- SCROLL 卷軸 -->
     <div id="page-scroll" class="page">
-      <div class="shelf-header"><h2>📜 卷軸書架</h2></div>
+      <div class="shelf-header"><h2>🪞 意若思鏡</h2></div>
       <div class="forum-search">
         <input type="search" id="shelf-search-input" placeholder="🔍 搜尋篇名或作者…" oninput="renderShelf()" />
       </div>
@@ -793,7 +793,7 @@
 
   <nav>
     <button class="nav-btn active" onclick="showPage('home',this)"><span class="icon">🏠</span>首頁</button>
-    <button class="nav-btn" onclick="showPage('scroll',this)"><span class="icon">📜</span>卷軸</button>
+    <button class="nav-btn" onclick="showPage('scroll',this)"><span class="icon">🪞</span>意若思鏡</button>
     <button class="nav-btn" onclick="showPage('forum',this)"><span class="icon">🦉</span>羊皮紙</button>
     <button class="nav-btn" onclick="showPage('protect',this)"><span class="icon">🔮</span>防窺</button>
     <button class="nav-btn" onclick="showPage('settings',this)"><span class="icon">⚙️</span>設定</button>
@@ -916,7 +916,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v72';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v73';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
