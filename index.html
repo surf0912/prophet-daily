@@ -1087,7 +1087,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.32';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.33';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1642,7 +1642,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Eli', emoji: '🦡', img: './chars/eli_phone_1.jpg', imgD: './chars/Eli_desktop_1.JPG', bgPos: 'center 20%',
+    name: 'Eli', emoji: '🦡', img: './chars/eli_phone_1.jpg', imgs: ['./chars/eli_phone_1.jpg', './chars/eli_phone_2.JPG'], imgD: './chars/Eli_desktop_1.JPG', imgsD: ['./chars/Eli_desktop_1.JPG', './chars/Eli_desktop_2.JPG'], bgPos: 'center 20%',
     quotes: [
       '啊，早上好。你吃早飯了嗎？我這裡還有一塊餅乾。',
       '啊，中午好。剛剛有一隻蒲絨絨一直跟著我……我想它可能比較喜歡你。',
@@ -1678,9 +1678,10 @@ function renderGreeting() {
   // Desktop and mobile use DIFFERENT image sets (never mixed): wide screens get char.imgD.
   // A char may have several mobile shots in `imgs` → pick one at random each render.
   const mobileImg = (char.imgs && char.imgs.length) ? char.imgs[Math.floor(Math.random() * char.imgs.length)] : char.img;
+  const desktopImg = (char.imgsD && char.imgsD.length) ? char.imgsD[Math.floor(Math.random() * char.imgsD.length)] : char.imgD;
   const isWide = window.matchMedia('(min-width: 600px)').matches;
-  const src = (isWide && char.imgD) ? char.imgD : mobileImg;
-  const heroPos = (src === char.imgD) ? (char.bgPosD || 'center')
+  const src = (isWide && desktopImg) ? desktopImg : mobileImg;
+  const heroPos = (src === desktopImg) ? (char.bgPosD || 'center')
                 : ((isWide && char.bgPosDesktop) || char.bgPos || 'center');
   const showHero = (url, pos) => {     // photo layered OVER the gradient (gradient stays as fallback)
     hero.style.backgroundImage = `url('${url}'), ${GRAD}`;
