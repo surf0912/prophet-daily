@@ -987,7 +987,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v81';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v82';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1309,7 +1309,7 @@ function showPage(id, btn) {
 // ── Guided tour (新手導覽) ─────────────────────────────────────
 // Steps anchor to data-tour / stable ids; a missing target degrades to a
 // centered bubble (auto-skip look) instead of breaking. See infra notes.
-const TOUR_KEY = 'pd_tour_seen_v1';
+const TOUR_KEY = 'pd_tour_seen_v2';   // bump to re-show the tour to everyone after revisions
 const TOUR_READER = [
   { page: 'scroll', target: '[data-tour="nav-scroll"]',
     html: "<span class='tour-h'>🪞 意若思鏡</span>歡迎來到《預言家日報》。這面鏡子映照出大家所有的作品——點這裡就能走進書架找文。" },
@@ -2588,8 +2588,34 @@ async function revokeInvite(id) {
   catch (e) { toast(e.message); }
 }
 
+// ── Self-heal: if this device is running a stale cached build, nuke the
+// cache + SW and reload once so non-technical users never get stuck. The
+// latest version is read from service-worker.js (cache-busted) and compared
+// to the APP_VERSION baked into the running HTML.
+async function selfHealIfStale() {
+  try {
+    if (sessionStorage.getItem('pd_healed')) return;   // only attempt once per launch
+    const res = await fetch('./service-worker.js?cb=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const m = (await res.text()).match(/prophet-daily-(v\d+)/);
+    if (!m || m[1] === APP_VERSION) return;             // up to date (or can't tell) → carry on
+    sessionStorage.setItem('pd_healed', m[1]);          // guard against reload loops
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    if (window.caches) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    location.reload();
+    await new Promise(() => {});   // freeze the rest of boot; the reload takes over
+  } catch (e) {}
+}
+
 // ── Boot ─────────────────────────────────────────────────────
 (async () => {
+  await selfHealIfStale();   // must run before anything else touches the (possibly stale) UI
   // put the feather-pen icon (same as the like icon) on the 已收藏 tab
   const likedTab = document.getElementById('forum-tab-liked');
   if (likedTab) likedTab.insertAdjacentHTML('afterbegin', PEN_SVG);
