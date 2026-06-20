@@ -987,7 +987,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v82';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v83';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1320,7 +1320,7 @@ const TOUR_READER = [
   { page: 'scroll', target: '#shelf-cat-pills',
     html: "<span class='tour-h'>📜 故事分類</span>用分類快速篩選。其中<b>迷情劑</b>需要先向管理員<b>申請開放</b>才看得到喔。" },
   { page: 'forum', target: '[data-tour="nav-forum"]',
-    html: "<span class='tour-h'>🦉 匿名羊皮紙</span>這裡是匿名討論區,大家用羊皮紙交換心得、蓋樓中樓。" },
+    html: "<span class='tour-h'>🦉 匿名羊皮紙</span>從這裡看看其他霍格沃茲學生都在討論些什麼——大家用匿名羊皮紙交換心得、蓋樓中樓。" },
   { page: 'forum', target: '#forum-tab-liked',
     html: "<span class='tour-h'>🪶 收藏你的最愛</span>讀文時點留言上的<b>羽毛筆</b>就會收藏,之後都能在「<b>已收藏</b>」找回來重讀。" },
   { page: 'settings', target: '[data-tour="nav-settings"]',
