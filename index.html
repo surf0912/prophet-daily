@@ -605,6 +605,11 @@
     <symbol id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" /></symbol>
     <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" /> <path d="M12 2v2" /> <path d="M12 20v2" /> <path d="m4.93 4.93 1.41 1.41" /> <path d="m17.66 17.66 1.41 1.41" /> <path d="M2 12h2" /> <path d="M20 12h2" /> <path d="m6.34 17.66-1.41 1.41" /> <path d="m19.07 4.93-1.41 1.41" /></symbol>
     <symbol id="ic-starline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" /></symbol><symbol id="ic-starfill" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" /></symbol>
+."
+".    <symbol id="ic-megaphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" /> <path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14" /> <path d="M8 6v8" /></symbol>
+    <symbol id="ic-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4" /> <path d="M16 2v4" /> <rect width="18" height="18" x="3" y="4" rx="2" /> <path d="M3 10h18" /></symbol>
+    <symbol id="ic-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 17 5-5-5-5" /> <path d="M21 12H9" /> <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /></symbol>
+    <symbol id="ic-idcard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10h2" /> <path d="M16 14h2" /> <path d="M6.17 15a3 3 0 0 1 5.66 0" /> <circle cx="9" cy="11" r="2" /> <rect x="2" y="5" width="20" height="14" rx="2" /></symbol>
 .
   </defs></svg>
   <div id="page-area">
@@ -663,7 +668,7 @@
     <div id="page-forum" class="page">
       <div class="forum-header"><h2><svg width="20" height="20" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-scroll"/></svg> 匿名羊皮紙</h2></div>
       <div class="forum-tabs">
-        <button id="forum-tab-all" class="forum-tab active" onclick="setForumView('all')">📜 全部</button>
+        <button id="forum-tab-all" class="forum-tab active" onclick="setForumView('all')"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-scroll"/></svg> 全部</button>
         <button id="forum-tab-liked" class="forum-tab" onclick="setForumView('liked')">已收藏</button>
       </div>
       <div class="forum-search">
@@ -753,7 +758,7 @@
             </label>
           </div>
           <div class="settings-row">
-            <label>✦ 魔法字體</label>
+            <label><svg width="14" height="14" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-sparkles"/></svg> 魔法字體</label>
             <label class="toggle">
               <input type="checkbox" id="magic-font-toggle" onchange="toggleFont()" />
               <span class="slider"></span>
@@ -779,7 +784,7 @@
             <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="openBugReport()">回報</button>
           </div>
         </div>
-        <button class="btn-logout" onclick="doLogout()">🚪 登出魔法世界</button>
+        <button class="btn-logout" onclick="doLogout()"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-logout"/></svg> 登出魔法世界</button>
         <p id="app-version" style="text-align:center;font-size:11px;color:var(--ink-light);opacity:.55;margin-top:14px"></p>
       </div>
     </div>
@@ -1077,13 +1082,13 @@
 <div class="perm-modal" id="wish-modal">
   <div class="perm-modal-inner">
     <h3><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-star-shine"/></svg> 許願池</h3>
-    <p style="font-size:13px;color:var(--ink-light);margin-bottom:10px">寫下你想看的主題或主角,作者與管理員都看得到。許願一律匿名,放心許 ✨</p>
+    <p style="font-size:13px;color:var(--ink-light);margin-bottom:10px">寫下你想看的主題或主角,作者與管理員都看得到。許願一律匿名,放心許</p>
     <textarea id="wish-input" maxlength="140" rows="2" oninput="updateWishCount()" placeholder="例：想看更多 Sean 吃醋、或 Adrian 的雨天告白…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
     <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink-light);margin:6px 0 10px">
       <span id="wish-quota"></span><span id="wish-count">0/140</span>
     </div>
     <div style="display:flex;gap:8px">
-      <button class="btn-primary" id="wish-submit" style="flex:1;padding:11px;font-size:14px" onclick="submitFeedback('wish')">許願 ✨</button>
+      <button class="btn-primary" id="wish-submit" style="flex:1;padding:11px;font-size:14px" onclick="submitFeedback('wish')">許願</button>
       <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('wish-modal').classList.remove('open')">關閉</button>
     </div>
     <div id="wish-tabs" style="display:flex;gap:6px;margin-top:16px;margin-bottom:4px;flex-wrap:wrap"></div>
@@ -1125,7 +1130,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.42';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.43';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1157,7 +1162,7 @@ function applyFont() {
   }
   el.textContent = magicFont ? MAGIC_FONT_CSS : SYSTEM_FONT_CSS;
   const btn = document.getElementById('font-toggle-btn');
-  if (btn) btn.textContent = magicFont ? '✦ 魔法字體' : '✦ 系統字體';
+  if (btn) btn.innerHTML = magicFont ? ic('ic-sparkles',13)+' 魔法字體' : ic('ic-sparkles',13)+' 系統字體';
   const cb = document.getElementById('magic-font-toggle');
   if (cb) cb.checked = magicFont;
 }
@@ -1495,7 +1500,7 @@ async function loadOwnerNames() {
 function ownerTag(work) {
   if (currentUser?.role !== 'super_admin') return '';
   const names = (work.owners || []).map(id => _ownerNames[id]).filter(Boolean);
-  return names.length ? ` <span style="color:var(--gold);opacity:.85">🪪${escapeHtml(names.join('、'))}</span>` : '';
+  return names.length ? ` <span style="color:var(--gold);opacity:.85">${ic('ic-idcard',12)} ${escapeHtml(names.join('、'))}</span>` : '';
 }
 
 // ── Navigation ───────────────────────────────────────────────
@@ -1865,8 +1870,8 @@ async function toggleReaderFavorite() {
 // ── 許願池 / 回報問題 / 常見問題 (feedback) ────────────────────
 const FB_LIMIT = { wish: { max: 140, perDay: 3 }, bug: { max: 600, perDay: 10 } };
 const FB_STATUS = {
-  wish: { open: '待回應', considering: '🤔 考慮中', done: '✅ 已實現', declined: '🙏 婉拒' },
-  bug:  { open: '待處理', in_progress: '🔧 處理中', fixed: '✅ 已修復', declined: '🙏 婉拒' },
+  wish: { open: '待回應', considering: '考慮中', done: '已實現', declined: '婉拒' },
+  bug:  { open: '待處理', in_progress: '處理中', fixed: '已修復', declined: '婉拒' },
 };
 function isAdminUser() { return ['admin', 'super_admin'].includes(currentUser?.role); }
 
@@ -1883,7 +1888,7 @@ function renderWishFiltered() {
   // tabs with live counts
   const c = { open: 0, done: 0, all: _wishItems.length };
   _wishItems.forEach(i => { if (i.status === 'done') c.done++; else if (i.status !== 'declined') c.open++; });
-  const tabs = [['open', `待處理 ${c.open}`], ['done', `✨ 已實現 ${c.done}`], ['all', `全部 ${c.all}`]];
+  const tabs = [['open', `待處理 ${c.open}`], ['done', `已實現 ${c.done}`], ['all', `全部 ${c.all}`]];
   document.getElementById('wish-tabs').innerHTML = tabs.map(([k, l]) =>
     `<button onclick="setWishFilter('${k}')" style="font-size:12px;padding:5px 12px;border-radius:14px;cursor:pointer;border:1px solid var(--gold-lt);background:${wishFilter === k ? 'var(--scarlet)' : 'none'};color:${wishFilter === k ? 'var(--on-dark)' : 'var(--ink-light)'}">${l}</button>`).join('');
   let items = _wishItems.slice();
@@ -1891,7 +1896,7 @@ function renderWishFiltered() {
   else if (wishFilter === 'done') items = items.filter(i => i.status === 'done');
   else { const rank = s => s === 'done' ? 1 : s === 'declined' ? 2 : 0; items.sort((a, b) => rank(a.status) - rank(b.status)); }
   if (!items.length) {
-    const msg = wishFilter === 'open' ? '沒有待處理的願望 🎉' : wishFilter === 'done' ? '還沒有實現的願望,加油 ✨' : '還沒有人許願,當第一個吧 ✨';
+    const msg = wishFilter === 'open' ? '沒有待處理的願望' : wishFilter === 'done' ? '還沒有實現的願望,加油' : '還沒有人許願,當第一個吧';
     document.getElementById('wish-list').innerHTML = `<p style="color:var(--ink-light);font-size:13px;text-align:center;padding:14px">${msg}</p>`;
     return;
   }
@@ -1916,7 +1921,7 @@ async function loadFeedback(kind) {
   if (qEl) {
     if (kind === 'wish') {
       const coins = Array(left).fill('<img src="./coin.svg" alt="許願幣" style="width:20px;height:20px;vertical-align:-4px;margin-right:2px">').join('');
-      qEl.innerHTML = left > 0 ? coins : '<span style="color:var(--ink-light)">今天的許願已用完,午夜 12:00 重置 ✨</span>';
+      qEl.innerHTML = left > 0 ? coins : '<span style="color:var(--ink-light)">今天的許願已用完,午夜 12:00 重置</span>';
     } else {
       qEl.textContent = `今天還可回報 ${left} 次`;
     }
@@ -1929,21 +1934,21 @@ async function loadFeedback(kind) {
 
 function renderFeedbackList(kind, items) {
   const listEl = document.getElementById(kind + '-list');
-  if (!items.length) { listEl.innerHTML = `<p style="color:var(--ink-light);font-size:13px;text-align:center;padding:14px">${kind === 'wish' ? '還沒有人許願,當第一個吧 ✨' : '目前沒有回報'}</p>`; return; }
+  if (!items.length) { listEl.innerHTML = `<p style="color:var(--ink-light);font-size:13px;text-align:center;padding:14px">${kind === 'wish' ? '還沒有人許願,當第一個吧' : '目前沒有回報'}</p>`; return; }
   const admin = isAdminUser();
   listEl.innerHTML = items.map(it => {
     const label = (FB_STATUS[kind][it.status] || '');
     const badge = it.status && it.status !== 'open'
       ? `<span style="font-size:11px;padding:1px 8px;border-radius:9px;background:rgba(45,74,30,.15);color:var(--series)">${label}</span>` : '';
-    const reply = it.admin_reply ? `<div style="font-size:12px;color:var(--accent);margin-top:5px;padding-left:8px;border-left:2px solid var(--gold-lt)">📣 ${escapeHtml(it.admin_reply)}</div>` : '';
+    const reply = it.admin_reply ? `<div style="font-size:12px;color:var(--accent);margin-top:5px;padding-left:8px;border-left:2px solid var(--gold-lt)">${ic('ic-megaphone',12)} ${escapeHtml(it.admin_reply)}</div>` : '';
     const statusBtns = admin ? Object.keys(FB_STATUS[kind]).map(s =>
       `<button onclick="setFeedbackStatus('${it.id}','${kind}','${s}')" style="font-size:11px;padding:2px 7px;border:1px solid var(--gold-lt);background:${it.status===s?'var(--scarlet)':'none'};color:${it.status===s?'var(--on-dark)':'var(--ink-light)'};border-radius:10px;cursor:pointer">${FB_STATUS[kind][s].replace(/^[^\s]+\s/, '')}</button>`).join('') : '';
-    const adminRow = admin ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center">${statusBtns}<button onclick="replyFeedback('${it.id}','${kind}')" style="font-size:11px;padding:2px 8px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:10px;cursor:pointer">📣 回覆</button></div>` : '';
-    const del = (admin || it.mine) ? `<button onclick="deleteFeedbackItem('${it.id}','${kind}')" style="font-size:11px;background:none;border:none;color:var(--ink-light);cursor:pointer;flex-shrink:0">🗑</button>` : '';
+    const adminRow = admin ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center">${statusBtns}<button onclick="replyFeedback('${it.id}','${kind}')" style="font-size:11px;padding:2px 8px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:10px;cursor:pointer">${ic('ic-megaphone',12)} 回覆</button></div>` : '';
+    const del = (admin || it.mine) ? `<button onclick="deleteFeedbackItem('${it.id}','${kind}')" style="font-size:11px;background:none;border:none;color:var(--ink-light);cursor:pointer;flex-shrink:0">${ic('ic-trash',14)}</button>` : '';
     // Wishes are anonymous and dateless — show only a status badge (if any). Bug reports keep author + date.
     const metaInner = kind === 'wish'
       ? badge
-      : `<span>🕯️ ${escapeHtml(it.author || '讀者')}</span><span>${fmtUpdated(it.created_at)}</span>${badge}`;
+      : `<span>${escapeHtml(it.author || '讀者')}</span><span>${fmtUpdated(it.created_at)}</span>${badge}`;
     const meta = metaInner ? `<div style="font-size:11px;color:var(--ink-light);margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${metaInner}</div>` : '';
     return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
       <div style="display:flex;justify-content:space-between;gap:8px">
@@ -1999,7 +2004,7 @@ async function loadFaqs() {
     <details style="border-bottom:1px solid rgba(26,10,0,.08);padding:8px 0">
       <summary style="font-size:14px;font-weight:bold;color:var(--ink);cursor:pointer">${escapeHtml(f.question)}</summary>
       <div style="font-size:13px;color:var(--ink-light);line-height:1.7;margin-top:8px;white-space:pre-wrap">${escapeHtml(f.answer)}</div>
-      ${admin ? `<div style="margin-top:6px;display:flex;gap:8px"><button onclick="editFaq('${f.id}')" style="font-size:11px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:10px;padding:2px 10px;cursor:pointer">編輯</button><button onclick="deleteFaq('${f.id}')" style="font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer">🗑 刪除</button></div>` : ''}
+      ${admin ? `<div style="margin-top:6px;display:flex;gap:8px"><button onclick="editFaq('${f.id}')" style="font-size:11px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:10px;padding:2px 10px;cursor:pointer">編輯</button><button onclick="deleteFaq('${f.id}')" style="font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer">${ic('ic-trash',12)} 刪除</button></div>` : ''}
     </details>`).join('');
 }
 async function addFaq() {
@@ -2123,7 +2128,7 @@ function renderShelf() {
     let list = applyClassFilter(novels.filter(n => favIds.has(n.id)), shelfCat === '迷情劑' ? '' : shelfCat, shelfChars);
     const q = (document.getElementById('shelf-search-input')?.value || '').trim().toLowerCase();
     if (q) list = list.filter(n => matchesQuery(n, q));
-    renderNovelBlocks(list, grid, '⭐ 收藏夾還是空的<br><small>讀小說時，點右上角的 ☆ 就能收藏整篇</small>');
+    renderNovelBlocks(list, grid, '收藏夾還是空的<br><small>讀小說時，點右上角的 ☆ 就能收藏整篇</small>');
     return;
   }
   // 迷情劑 gate for readers without access.
@@ -2184,7 +2189,7 @@ function shelfRow(n, inSeries) {
   return `
     <div class="novel-row${inSeries ? ' series-member' : ''}" onclick="openNovel('${n.id}')">
       <h4>${inSeries && n.series_order ? `<span style="color:var(--ink-light);font-weight:normal">#${n.series_order}　</span>` : ''}${escapeHtml(n.title)}</h4>
-      <div class="row-meta">${n.author || '佚名'}${ownerTag(n)}${n.created_at ? ` · 📅 ${fmtUpdated(n.created_at)}` : ''}</div>
+      <div class="row-meta">${n.author || '佚名'}${ownerTag(n)}${n.created_at ? ` · ${ic('ic-calendar',11)} ${fmtUpdated(n.created_at)}` : ''}</div>
       <div class="row-tags">
         ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${n.category}</span>` : ''}
         ${(n.characters || []).map(c => `<span class="t-chr">${charNames([c])}</span>`).join('')}
@@ -2340,7 +2345,7 @@ function renderForumContent(content) {
   }).join('');
   const endBox = `
     <div class="fp-end">
-      <div class="fp-end-title">🕯️ 本羊皮紙已自動封存</div>
+      <div class="fp-end-title">本羊皮紙已自動封存</div>
       <p>如需繼續傳閱，請滴一滴墨水。</p>
       <p>如被級長發現，請說這是魔法史筆記。</p>
     </div>`;
@@ -2590,8 +2595,8 @@ function renderForumList() {
     <div class="forum-post-row" onclick="openNovel('${p.id}')">
       <h4>${escapeHtml(p.title)}</h4>
       <div class="meta">
-        <span>🕯️ ${p.author || '匿名'}${ownerTag(p)}</span>
-        <span>📅 ${fmtUpdated(p.created_at)}</span>
+        <span>${p.author || '匿名'}${ownerTag(p)}</span>
+        <span>${ic('ic-calendar',11)} ${fmtUpdated(p.created_at)}</span>
         ${p.liked_count ? `<span style="color:var(--accent)">❤️ 你讚了 ${p.liked_count} 則</span>` : ''}
         ${p.status === 'pending' ? '<span class="pending-tag">' + ic('ic-clock',11) + ' 待審核</span>' : ''}
       </div>
@@ -2850,7 +2855,7 @@ async function loadReviewList() {
           </div>
         </div>`).join('');
     }
-    el.innerHTML = html || '<p style="color:#888;padding:20px;text-align:center">目前沒有待審核的項目 ✨</p>';
+    el.innerHTML = html || '<p style="color:#888;padding:20px;text-align:center">目前沒有待審核的項目</p>';
   } catch (e) { el.innerHTML = '<p>載入失敗</p>'; }
 }
 
@@ -3000,7 +3005,7 @@ function renderAdminNovels() {
           ${(n.characters || []).map(c => `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.18);color:var(--ink-light)">${charNames([c])}</span>`).join('')}
         </div>
         <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${n.author || '佚名'}${ownerTag(n)}</div>
-        ${n.created_at ? `<div style="font-size:12px;color:var(--ink-light);margin-top:2px">📅 發佈日期 ${fmtUpdated(n.created_at)}</div>` : ''}
+        ${n.created_at ? `<div style="font-size:12px;color:var(--ink-light);margin-top:2px">${ic('ic-calendar',11)} 發佈日期 ${fmtUpdated(n.created_at)}</div>` : ''}
         <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${editBtn}${manageBtns}${ownerAssignBtn}${delBtn}</div>
       </div>`;
     }).join('') || `<p style="color:#888;padding:14px;text-align:center">${ns.length ? '此篩選沒有作品' : '尚無作品'}</p>`;
