@@ -589,6 +589,7 @@
           <span id="continue-bar-text" style="font-size:13px;font-weight:bold;color:var(--accent);min-width:0;overflow:hidden;text-overflow:ellipsis"></span>
         </span>
         <span style="color:var(--ink-light);font-size:20px;flex-shrink:0;line-height:1">→</span>
+        <span onclick="event.preventDefault();event.stopPropagation();dismissContinueBar()" role="button" aria-label="收起繼續閱讀" style="flex-shrink:0;color:var(--ink-light);font-size:17px;line-height:1;padding:6px 0 6px 8px;cursor:pointer;opacity:.65">✕</span>
       </a>
       <div id="fav-updates" class="home-section" style="display:none"></div>
       <div id="tour-banner" style="display:none;margin:14px 18px;padding:14px 16px;background:var(--parchment2);border:1.5px solid var(--gold);border-radius:12px">
@@ -1087,7 +1088,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.36';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.37';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2380,15 +2381,53 @@ function renderContinueBar() {
   const bar = document.getElementById('continue-bar');
   if (!raw) { bar.style.display = 'none'; return; }
   const p = JSON.parse(raw);
+  // Dismissed (swiped/✕ away) for this exact read → stay hidden until a different chapter is read.
+  if (localStorage.getItem('pd_continue_dismissed') === p.novelId + '|' + p.chapterId) { bar.style.display = 'none'; return; }
   // Single-piece work → just the title; multi-chapter → title・chapter.
   const label = (p.chapterCount > 1)
     ? ([p.novelTitle, p.chapterTitle].filter(Boolean).join('・') || '繼續上次的閱讀')
     : (p.novelTitle || p.chapterTitle || '繼續上次的閱讀');
   document.getElementById('continue-bar-text').textContent = label;
+  bar.style.transition = ''; bar.style.transform = ''; bar.style.opacity = '';   // reset any leftover swipe
   bar.style.display = 'flex';
 }
 
+// Dismiss the 繼續閱讀 bar (✕ or swipe). Remembers this read so it stays hidden, but a
+// different chapter brings it back. Reading position itself is NOT forgotten.
+let _continueSwiped = false;
+function dismissContinueBar() {
+  const raw = localStorage.getItem('pd_last_read');
+  if (raw) { try { const p = JSON.parse(raw); localStorage.setItem('pd_continue_dismissed', p.novelId + '|' + p.chapterId); } catch {} }
+  const bar = document.getElementById('continue-bar');
+  bar.style.display = 'none';
+  bar.style.transition = ''; bar.style.transform = ''; bar.style.opacity = '';
+}
+(function setupContinueSwipe() {
+  const bar = document.getElementById('continue-bar');
+  if (!bar) return;
+  let x0 = null, y0 = null, dx = 0, swiping = false;
+  bar.addEventListener('touchstart', e => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; dx = 0; swiping = false; _continueSwiped = false; bar.style.transition = ''; }, { passive: true });
+  bar.addEventListener('touchmove', e => {
+    if (x0 === null) return;
+    const t = e.touches[0]; const ndx = t.clientX - x0, ndy = t.clientY - y0;
+    if (!swiping && Math.abs(ndx) > 10 && Math.abs(ndx) > Math.abs(ndy)) { swiping = true; _continueSwiped = true; }
+    if (swiping) { dx = ndx; bar.style.transform = `translateX(${dx}px)`; bar.style.opacity = String(Math.max(0, 1 - Math.abs(dx) / 180)); }
+  }, { passive: true });
+  bar.addEventListener('touchend', () => {
+    if (swiping && Math.abs(dx) > 80) {                      // far enough → dismiss
+      bar.style.transition = 'transform .2s ease, opacity .2s ease';
+      bar.style.transform = `translateX(${dx > 0 ? 500 : -500}px)`; bar.style.opacity = '0';
+      setTimeout(dismissContinueBar, 200);
+    } else if (swiping) {                                    // not far enough → snap back
+      bar.style.transition = 'transform .2s ease, opacity .2s ease';
+      bar.style.transform = ''; bar.style.opacity = '';
+    }
+    x0 = null;
+  }, { passive: true });
+})();
+
 async function resumeReading() {
+  if (_continueSwiped) { _continueSwiped = false; return; }   // that tap was actually a swipe
   const raw = localStorage.getItem('pd_last_read');
   if (!raw) return;
   const p = JSON.parse(raw);
