@@ -221,3 +221,50 @@ create policy "Admins can manage invite tokens"
 -- ============================================================
 -- Bucket: novel-images (private, requires auth)
 -- insert into storage.buckets (id, name, public) values ('novel-images', 'novel-images', false);
+
+-- ============================================================
+-- MIGRATIONS since the initial schema — IDEMPOTENT, SAFE TO RE-RUN.
+-- Run this whole block in the SQL Editor to guarantee the DB has every
+-- column/table the FastAPI backend needs (covers any migration that was
+-- missed). The backend uses the service-role key, which bypasses RLS.
+-- ============================================================
+
+-- profiles: nickname, 迷情劑 access, onboarding-tour flag, ban, guide-seed flag
+alter table public.profiles add column if not exists nickname     text;
+alter table public.profiles add column if not exists mqj_access   text default 'none';
+alter table public.profiles add column if not exists tour_seen    text;
+alter table public.profiles add column if not exists banned       boolean default false;
+alter table public.profiles add column if not exists guide_seeded boolean default false;
+
+-- novels: forum/novel kind, approval status, classification, co-owners, series, guide demo
+alter table public.novels add column if not exists kind         text default 'novel';
+alter table public.novels add column if not exists status       text default 'pending';
+alter table public.novels add column if not exists category     text;
+alter table public.novels add column if not exists characters   text[] default '{}';
+alter table public.novels add column if not exists owners       uuid[] default '{}';
+alter table public.novels add column if not exists series       text;
+alter table public.novels add column if not exists series_order integer default 0;
+alter table public.novels add column if not exists is_guide     boolean default false;
+
+-- comment_likes: per-comment likes for forum 蓋樓 (羊皮紙 已收藏)
+create table if not exists public.comment_likes (
+  id            uuid primary key default uuid_generate_v4(),
+  novel_id      uuid references public.novels(id) on delete cascade not null,
+  comment_index integer not null,
+  user_id       uuid references public.profiles(id) on delete cascade not null,
+  created_at    timestamptz default now(),
+  unique (novel_id, comment_index, user_id)
+);
+
+-- novel_favorites: whole-work favorites for 意若思鏡 收藏夾
+create table if not exists public.novel_favorites (
+  user_id    uuid references public.profiles(id) on delete cascade not null,
+  novel_id   uuid references public.novels(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  primary key (user_id, novel_id)
+);
+
+alter table public.comment_likes   enable row level security;
+alter table public.novel_favorites enable row level security;
+-- (No anon/authenticated policies: only the service-role backend touches these,
+--  and service role bypasses RLS — so anon keys are denied by default.)
