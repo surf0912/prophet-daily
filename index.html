@@ -994,7 +994,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v94';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v95';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1304,8 +1304,10 @@ async function initApp() {
   loadOwnerNames();   // super_admin only: map owner uuid → 巫師全名 for the owner hint
   renderSettings();
   renderGreeting();
-  loadNovels();
-  maybeAutoTour();   // first-time 讀者/作家 onboarding
+  // Run the first-time tour only AFTER the shelf finishes loading — i.e. once the
+  // backend is awake and the 喚醒中 overlay is gone — so it isn't shown over (and
+  // accidentally dismissed during) a cold start.
+  loadNovels().then(() => maybeAutoTour());
 }
 
 // super_admin sees the real owner (巫師全名) after the free-text author, so a changed
@@ -1390,7 +1392,14 @@ function tourSeen() {
 function maybeAutoTour() {
   if (!currentUser || !['reader', 'writer'].includes(currentUser.role)) return;  // auto only for 讀者/作家
   if (tourSeen()) return;
-  setTimeout(startTour, 700);  // let the first page settle
+  // Called after loadNovels resolves (backend awake). Wait out any lingering 喚醒 overlay,
+  // then a short settle so the shelf has rendered before the spotlight appears.
+  let tries = 0;
+  (function go() {
+    const waking = document.getElementById('waking-overlay');
+    if (waking && waking.classList.contains('show') && tries++ < 60) { setTimeout(go, 500); return; }
+    setTimeout(startTour, 350);
+  })();
 }
 
 function startTour() {
