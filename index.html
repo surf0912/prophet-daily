@@ -1018,7 +1018,7 @@
   <div class="perm-modal-inner">
     <h3>🌟 許願池</h3>
     <p style="font-size:13px;color:var(--ink-light);margin-bottom:10px">寫下你想看的主題或主角,作者與管理員都看得到 ✨</p>
-    <textarea id="wish-input" maxlength="140" rows="2" oninput="updateWishCount()" placeholder="例：好想看 Sean 和 Eli 一起淋雨…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
+    <textarea id="wish-input" maxlength="140" rows="2" oninput="updateWishCount()" placeholder="例：想看更多 Sean 吃醋、或 Adrian 的雨天告白…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
     <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink-light);margin:6px 0 10px">
       <span id="wish-quota"></span><span id="wish-count">0/140</span>
     </div>
@@ -1064,7 +1064,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v106';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v107';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
