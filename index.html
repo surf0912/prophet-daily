@@ -168,6 +168,8 @@
     }
     .btn-primary:hover { opacity: .85; }
     .auth-msg { text-align: center; margin-top: 12px; font-size: 12px; color: var(--gold-lt); min-height: 18px; }
+    .auth-msg.shake { color: #ff8a7a; font-weight: 600; animation: authShake .42s cubic-bezier(.36,.07,.19,.97); }
+    @keyframes authShake { 10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(4px)} 30%,50%,70%{transform:translateX(-7px)} 40%,60%{transform:translateX(7px)} }
 
     /* ── Home page ── */
     .greeting-hero {
@@ -987,7 +989,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v86';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v87';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1207,12 +1209,22 @@ function showLoginForm() {
   document.getElementById('auth-msg').textContent = '';
 }
 
+// Show an auth error and shake it to draw the eye (restart the animation each call).
+function shakeMsg(text) {
+  const el = document.getElementById('auth-msg');
+  el.textContent = text;
+  el.classList.remove('shake');
+  void el.offsetWidth;        // force reflow so the animation replays on repeat clicks
+  el.classList.add('shake');
+}
+
 async function doSignIn() {
   const msg = document.getElementById('auth-msg');
+  msg.classList.remove('shake');
   msg.textContent = '驗證中…';
   try {
     const username = document.getElementById('si-username').value.trim();
-    if (!username) { msg.textContent = '請輸入巫師入學全名'; return; }
+    if (!username) { shakeMsg('請輸入巫師入學全名'); return; }
     const res = await api('/auth/signin', {
       method: 'POST',
       body: JSON.stringify({ username, password: document.getElementById('si-pass').value }),
@@ -1224,7 +1236,7 @@ async function doSignIn() {
     url.searchParams.delete('invite');
     history.replaceState({}, '', url);
     await initApp();
-  } catch (e) { msg.textContent = '⚠️ ' + e.message; }
+  } catch (e) { shakeMsg('⚠️ ' + e.message); }
 }
 
 async function doInviteRegister() {
@@ -1233,10 +1245,12 @@ async function doInviteRegister() {
   const nickname = document.getElementById('inv-nickname').value.trim();
   const pass = document.getElementById('inv-pass').value;
   const invToken = new URLSearchParams(window.location.search).get('invite');
-  if (!username) { msg.textContent = '請輸入巫師入學全名'; return; }
-  if (!/^[a-zA-Z0-9_]{2,20}$/.test(username)) { msg.textContent = '⚠️ 入學全名只能用英文、數字、底線，2-20字'; return; }
-  if (!nickname) { msg.textContent = '請輸入巫師姓名（暱稱）'; return; }
-  if (!invToken) { msg.textContent = '找不到邀請令牌'; return; }
+  if (!username) { shakeMsg('請輸入巫師入學全名'); return; }
+  if (/\s/.test(username)) { shakeMsg('⚠️ 入學全名不能有空格'); return; }
+  if (!/^[a-zA-Z0-9_]{2,20}$/.test(username)) { shakeMsg('⚠️ 入學全名只能用英文、數字、底線，2-20字'); return; }
+  if (!nickname) { shakeMsg('請輸入巫師姓名（暱稱）'); return; }
+  if (!invToken) { shakeMsg('找不到邀請令牌'); return; }
+  msg.classList.remove('shake');
   msg.textContent = '建立帳號中…';
   try {
     await api('/invites/register', {
@@ -1249,7 +1263,7 @@ async function doInviteRegister() {
     document.getElementById('si-username').value = username;
     showLoginForm();
     msg.textContent = '✅ 帳號建立成功，請登入';
-  } catch (e) { msg.textContent = '⚠️ ' + e.message; }
+  } catch (e) { shakeMsg('⚠️ ' + e.message); }
 }
 
 function doLogout() {
