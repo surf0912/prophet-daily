@@ -989,7 +989,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v87';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v88';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1260,6 +1260,17 @@ async function doInviteRegister() {
     const url = new URL(window.location.href);
     url.searchParams.delete('invite');
     history.replaceState({}, '', url);
+    // Auto-login straight into the app with the same credentials (skip the manual login step).
+    msg.textContent = '登入中…';
+    try {
+      const res = await api('/auth/signin', { method: 'POST', body: JSON.stringify({ username, password: pass }) });
+      if (res) {
+        token = res.access_token;
+        localStorage.setItem('pd_token', token);
+        await initApp();
+        return;
+      }
+    } catch (_) { /* fall through to manual login */ }
     document.getElementById('si-username').value = username;
     showLoginForm();
     msg.textContent = '✅ 帳號建立成功，請登入';
@@ -2642,6 +2653,7 @@ async function selfHealIfStale() {
 // ── Boot ─────────────────────────────────────────────────────
 (async () => {
   await selfHealIfStale();   // must run before anything else touches the (possibly stale) UI
+  fetch(API + '/health', { cache: 'no-store' }).catch(() => {});  // wake Render early so the first real call isn't cold
   // put the feather-pen icon (same as the like icon) on the 已收藏 tab
   const likedTab = document.getElementById('forum-tab-liked');
   if (likedTab) likedTab.insertAdjacentHTML('afterbegin', PEN_SVG);
@@ -2654,17 +2666,25 @@ async function selfHealIfStale() {
   // Check for invite token in URL
   const inviteToken = new URLSearchParams(window.location.search).get('invite');
   if (inviteToken) {
-    try {
-      const res = await api(`/invites/validate/${inviteToken}`);
-      const roleLabels = { reader: '📚 讀者', writer: '✍️ 作家+讀者', admin: '🏰 管理員' };
-      document.getElementById('invite-role-badge').textContent = `身份：${roleLabels[res.role] || res.role}`;
-      document.getElementById('signin-form').style.display = 'none';
-      document.getElementById('invite-form').style.display = '';
-    } catch (e) {
-      document.getElementById('signin-form').style.display = 'none';
-      document.getElementById('invite-invalid-msg').textContent = e.message || '此邀請連結已失效';
-      document.getElementById('invite-invalid').style.display = '';
-    }
+    // Show the form IMMEDIATELY so the user can start filling it while the backend
+    // wakes; validate in the background with a raw fetch (no blocking 喚醒 overlay).
+    document.getElementById('signin-form').style.display = 'none';
+    document.getElementById('invite-form').style.display = '';
+    fetch(`${API}/invites/validate/${inviteToken}`)
+      .then(async r => {
+        if (r.ok) {
+          const res = await r.json();
+          const roleLabels = { reader: '📚 讀者', writer: '✍️ 作家+讀者', admin: '🏰 管理員' };
+          document.getElementById('invite-role-badge').textContent = `身份：${roleLabels[res.role] || res.role}`;
+        } else {
+          // server explicitly rejected the token (used/expired/unknown) → show invalid
+          const e = await r.json().catch(() => ({}));
+          document.getElementById('invite-form').style.display = 'none';
+          document.getElementById('invite-invalid-msg').textContent = e.detail || '此邀請連結已失效';
+          document.getElementById('invite-invalid').style.display = '';
+        }
+      })
+      .catch(() => { /* network error / cold start: keep the form — register re-validates on submit */ });
     return; // don't auto-login, show invite UI
   }
 
