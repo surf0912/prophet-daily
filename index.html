@@ -1087,7 +1087,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.35';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.36';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1633,7 +1633,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Silas', emoji: '🦅', img: './chars/silas_phone_1.jpg', imgD: './chars/Silas_desktop_1.JPG', bgPos: 'center top', bgPosDesktop: 'center 30%',
+    name: 'Silas', emoji: '🦅', img: './chars/silas_phone_1.jpg', imgs: ['./chars/silas_phone_1.jpg', './chars/silas_phone_2.JPG'], imgD: './chars/Silas_desktop_1.JPG', imgsD: ['./chars/Silas_desktop_1.JPG', './chars/Silas_desktop_2.JPG'], bgPos: 'center top', bgPosDesktop: 'center 30%',
     quotes: [
       '早上好。你的座位在這裡。',
       '中午好。先吃飯，你上午已經喝了兩杯咖啡了。',
