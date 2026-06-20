@@ -1001,7 +1001,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v99';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v100';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1064,7 +1064,35 @@ function _wakeToggle(on) {
   const el = document.getElementById('waking-overlay');
   if (el) el.classList.toggle('show', on);
 }
-async function api(path, opts = {}) {
+// Silently swap an expired access token for a fresh one using the stored refresh token,
+// so the ~1h expiry doesn't force-logout active users. Deduped across concurrent calls.
+let _refreshing = null;
+async function tryRefreshToken() {
+  const rt = localStorage.getItem('pd_refresh');
+  if (!rt) return false;
+  if (!_refreshing) {
+    _refreshing = (async () => {
+      try {
+        const res = await fetch(API + '/auth/refresh', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: rt }),
+        });
+        if (!res.ok) return false;
+        const d = await res.json();
+        if (!d.access_token) return false;
+        token = d.access_token;
+        localStorage.setItem('pd_token', token);
+        if (d.refresh_token) localStorage.setItem('pd_refresh', d.refresh_token);
+        return true;
+      } catch { return false; }
+    })();
+  }
+  const ok = await _refreshing;
+  _refreshing = null;
+  return ok;
+}
+
+async function api(path, opts = {}, _retried) {
   const headers = { ...(opts.headers || {}) };
   if (!(opts.body instanceof FormData)) headers['Content-Type'] = 'application/json';
   if (token) headers['Authorization'] = 'Bearer ' + token;
@@ -1072,7 +1100,13 @@ async function api(path, opts = {}) {
   const wt = setTimeout(() => _wakeToggle(true), 3500);
   try {
     const res = await fetch(API + path, { ...opts, headers });
-    if (res.status === 401) { doLogout(); return null; }
+    if (res.status === 401) {
+      // Try a one-time silent refresh + retry before giving up and logging out.
+      if (!_retried && path !== '/auth/refresh' && await tryRefreshToken()) {
+        return await api(path, opts, true);
+      }
+      doLogout(); return null;
+    }
     if (!res.ok) {
       const e = await res.json().catch(() => ({}));
       throw new Error(e.detail || 'Request failed');
@@ -1244,6 +1278,7 @@ async function doSignIn() {
     if (!res) return;
     token = res.access_token;
     localStorage.setItem('pd_token', token);
+    if (res.refresh_token) localStorage.setItem('pd_refresh', res.refresh_token);
     const url = new URL(window.location.href);
     url.searchParams.delete('invite');
     history.replaceState({}, '', url);
@@ -1279,6 +1314,7 @@ async function doInviteRegister() {
       if (res) {
         token = res.access_token;
         localStorage.setItem('pd_token', token);
+        if (res.refresh_token) localStorage.setItem('pd_refresh', res.refresh_token);
         await initApp();
         return;
       }
@@ -1292,6 +1328,7 @@ async function doInviteRegister() {
 function doLogout() {
   token = null; currentUser = null;
   localStorage.removeItem('pd_token');
+  localStorage.removeItem('pd_refresh');
   document.getElementById('auth-overlay').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   showLoginForm();
@@ -1773,7 +1810,7 @@ function applyMqjGuard(on) {
     const name = (currentUser && (currentUser.nickname || currentUser.username)) || '讀者';
     const d = new Date();
     const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='270' height='160'><text x='12' y='84' transform='rotate(-30 135 80)' fill='rgba(138,45,45,0.14)' font-size='15' font-weight='bold' font-family='sans-serif'>${escapeHtml(name + ' · ' + stamp)}</text></svg>`;
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='360' height='220'><text x='18' y='120' transform='rotate(-30 180 112)' fill='rgba(138,45,45,0.16)' font-size='24' font-weight='bold' font-family='sans-serif'>${escapeHtml(name + ' · ' + stamp)}</text></svg>`;
     ov.style.backgroundImage = `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
     ov.style.backgroundRepeat = 'repeat';
     content.classList.add('noselect');

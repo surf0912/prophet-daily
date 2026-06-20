@@ -1,6 +1,8 @@
 import time
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
+from config import settings
 from deps import get_supabase, get_supabase_admin, get_current_user, ROLE_RANK
 from supabase import Client
 from guide_content import GUIDE_TITLE, GUIDE_AUTHOR, GUIDE_BODY
@@ -87,6 +89,32 @@ def signin(body: SignInRequest, request: Request, sb: Client = Depends(get_supab
         "access_token": res.session.access_token,
         "refresh_token": res.session.refresh_token,
         "user": {"id": res.user.id},
+    }
+
+class RefreshBody(BaseModel):
+    refresh_token: str
+
+@router.post("/refresh")
+def refresh_token(body: RefreshBody):
+    # Exchange a refresh token for a fresh access token (GoTrue REST) so users aren't
+    # force-logged-out when the ~1h access token expires.
+    try:
+        r = httpx.post(
+            f"{settings.supabase_url}/auth/v1/token",
+            params={"grant_type": "refresh_token"},
+            headers={"apikey": settings.supabase_anon_key, "Content-Type": "application/json"},
+            json={"refresh_token": body.refresh_token},
+            timeout=10,
+        )
+    except Exception:
+        raise HTTPException(503, "續期服務暫時無法使用")
+    if r.status_code != 200:
+        raise HTTPException(401, "工作階段已過期，請重新登入")
+    d = r.json()
+    return {
+        "access_token": d.get("access_token"),
+        "refresh_token": d.get("refresh_token"),
+        "user": {"id": (d.get("user") or {}).get("id")},
     }
 
 def maybe_seed_guide(user: dict, sb_admin: Client):
