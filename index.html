@@ -1064,7 +1064,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.08';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.09, v1.10…
+const APP_VERSION = 'v1.09';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.10, v1.11…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2675,13 +2675,15 @@ async function openOwners(novelId, title, owners) {
   const owned = new Set(owners || []);
   try {
     const users = await api('/permissions/users') || [];
-    el.innerHTML = users.map(u => `
+    // Only accounts that can own a work (writer+); readers can't be authors. Keep any
+    // existing owner in the list so they can still be unchecked. Show nickname, no role.
+    const canOwn = r => ['writer', 'admin', 'super_admin'].includes(r);
+    el.innerHTML = users.filter(u => canOwn(u.role) || owned.has(u.id)).map(u => `
       <label class="user-row" style="cursor:pointer">
         ${avatarHTML(u, 32)}
-        <div class="u-name">${u.username}</div>
-        <div class="u-role">${u.role}</div>
+        <div class="u-name" style="flex:1">${escapeHtml(u.nickname || u.username)}</div>
         <input type="checkbox" class="owner-cb" value="${u.id}" ${owned.has(u.id) ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--accent)" />
-      </label>`).join('') || '<p style="color:#888;padding:20px">尚無用戶</p>';
+      </label>`).join('') || '<p style="color:#888;padding:20px">尚無可指定的作者</p>';
   } catch { el.innerHTML = '<p>載入失敗</p>'; }
 }
 
