@@ -916,7 +916,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v70';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v71';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1457,7 +1457,19 @@ function renderForumContent(content) {
     const mb = t.match(BIJI);
     if (mb) { cur = { name: stripMd(mb[1]), body: [] }; comments.push(cur); sep = false; continue; }
     const mf = t.match(FLOOR);
-    if (mf) { const h = splitHead(mf[1].trim()); cur = { name: stripMd(h.name), body: h.first ? [stripMd(h.first)] : [] }; comments.push(cur); sep = false; continue; }
+    if (mf) {
+      const rest = mf[1];
+      let h;
+      if (/^\s*[｜|]/.test(rest)) {
+        // "001L｜身份｜組別…" → the whole identity (after the leading ｜) is the 暱稱
+        h = { name: rest.replace(/^\s*[｜|]\s*/, '').trim(), first: '' };
+      } else {
+        // "1L 暱稱｜內容" → split 暱稱 from inline 內容
+        h = splitHead(rest.trim());
+      }
+      cur = { name: stripMd(h.name), body: h.first ? [stripMd(h.first)] : [] };
+      comments.push(cur); sep = false; continue;
+    }
     if (sep) {
       if (t === '') continue;          // skip blank lines between separator and the floor header
       const bold = t.match(BOLD);
