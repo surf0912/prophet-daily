@@ -97,6 +97,18 @@ def update_nickname(body: NicknameBody, user: dict = Depends(get_current_user), 
         raise HTTPException(404, "User not found")
     return res.data[0]
 
+class TourSeenBody(BaseModel):
+    version: str = "2"
+
+@router.patch("/me/tour-seen")
+def set_tour_seen(body: TourSeenBody, user: dict = Depends(get_current_user), sb_admin: Client = Depends(get_supabase_admin)):
+    # Records which onboarding-tour version this account has completed (cross-device,
+    # once-ever). Requires a profiles.tour_seen text column.
+    res = sb_admin.table("profiles").update({"tour_seen": body.version}).eq("id", user["id"]).execute()
+    if not res.data:
+        raise HTTPException(404, "User not found")
+    return {"tour_seen": body.version}
+
 class AvatarBody(BaseModel):
     avatar: str  # small client-resized data URL (data:image/...;base64,...), or '' to clear
 

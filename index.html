@@ -987,7 +987,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v85';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v86';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1309,7 +1309,7 @@ function showPage(id, btn) {
 // ── Guided tour (新手導覽) ─────────────────────────────────────
 // Steps anchor to data-tour / stable ids; a missing target degrades to a
 // centered bubble (auto-skip look) instead of breaking. See infra notes.
-const TOUR_KEY = 'pd_tour_seen_v2';   // bump to re-show the tour to everyone after revisions
+const TOUR_VERSION = '2';   // bump to re-show the (revised) tour to everyone
 const TOUR_READER = [
   { page: 'scroll', target: '[data-tour="nav-scroll"]',
     html: "<span class='tour-h'>🪞 意若思鏡</span>歡迎來到《預言家日報》。這面鏡子映照出大家所有的作品——點這裡就能走進書架找文。" },
@@ -1336,14 +1336,17 @@ const TOUR_WRITER_EXTRA = [
 ];
 let _tour = { steps: [], i: 0, on: false };
 
-// "Seen" is tracked PER ACCOUNT (keyed by user id), not per device — so every
-// 讀者/作家 gets the tour on their own first login even if another account on
-// the same phone already saw it.
-function tourSeenKey() { return TOUR_KEY + '_' + (currentUser?.id || 'anon'); }
+// "Seen" is tracked PER ACCOUNT on the server (profiles.tour_seen) so the tour
+// shows exactly once per account, across every device. A per-account localStorage
+// key is a fallback (covers the DB-migration gap + offline).
+function tourSeenKey() { return 'pd_tour_seen_' + (currentUser?.id || 'anon'); }
+function tourSeen() {
+  return currentUser?.tour_seen === TOUR_VERSION || localStorage.getItem(tourSeenKey()) === TOUR_VERSION;
+}
 
 function maybeAutoTour() {
   if (!currentUser || !['reader', 'writer'].includes(currentUser.role)) return;  // auto only for 讀者/作家
-  if (localStorage.getItem(tourSeenKey())) return;
+  if (tourSeen()) return;
   setTimeout(startTour, 700);  // let the first page settle
 }
 
@@ -1409,7 +1412,11 @@ function endTour(markSeen) {
   _tour.on = false;
   document.getElementById('tour-overlay').classList.remove('open');
   window.removeEventListener('resize', _tourReposition);
-  if (markSeen) localStorage.setItem(tourSeenKey(), '1');
+  if (markSeen) {
+    localStorage.setItem(tourSeenKey(), TOUR_VERSION);   // device fast-path
+    if (currentUser) currentUser.tour_seen = TOUR_VERSION;
+    api('/auth/me/tour-seen', { method: 'PATCH', body: JSON.stringify({ version: TOUR_VERSION }) }).catch(() => {});  // cross-device record (best effort)
+  }
   showPage('home', document.querySelector('[data-tour="nav-home"]'));
 }
 
