@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -11,7 +11,11 @@ router = APIRouter()
 LIMITS = {"wish": (140, 3), "bug": (600, 10)}
 
 def _today_start_iso() -> str:
-    return datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    # Start of the current day in Taiwan (UTC+8), converted to UTC for the created_at compare,
+    # so the daily quota resets at local midnight (matches the coin display).
+    tw = timezone(timedelta(hours=8))
+    start_tw = datetime.now(tw).replace(hour=0, minute=0, second=0, microsecond=0)
+    return start_tw.astimezone(timezone.utc).isoformat()
 
 # ── Wishes / bug reports (shared `feedback` table) ───────────
 class FeedbackCreate(BaseModel):

@@ -1064,7 +1064,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v107';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v1.07';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.08, v1.09…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1756,12 +1756,20 @@ async function loadFeedback(kind) {
   let items = [];
   try { items = await api(`/feedback/?kind=${kind}`) || []; }
   catch (e) { listEl.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${e.message}</p>`; return; }
-  // daily quota (count my own items created today)
-  const today = new Date().toISOString().slice(0, 10);
-  const usedToday = items.filter(i => i.mine && (i.created_at || '').slice(0, 10) === today).length;
+  // daily quota — counted on the Taiwan (UTC+8) calendar day so it resets at local midnight.
+  const twDay = ts => new Date((ts ? new Date(ts) : new Date()).getTime() + 8 * 3600e3).toISOString().slice(0, 10);
+  const today = twDay();
+  const usedToday = items.filter(i => i.mine && twDay(i.created_at) === today).length;
   const left = Math.max(0, FB_LIMIT[kind].perDay - usedToday);
   const qEl = document.getElementById(kind + '-quota');
-  if (qEl) qEl.textContent = `今天還可${kind === 'wish' ? '許願' : '回報'} ${left} 次`;
+  if (qEl) {
+    if (kind === 'wish') {
+      const coins = Array(left).fill('<img src="./coin.svg" alt="許願幣" style="width:20px;height:20px;vertical-align:-4px;margin-right:2px">').join('');
+      qEl.innerHTML = left > 0 ? coins : '<span style="color:var(--ink-light)">今天的許願已用完,午夜 12:00 重置 ✨</span>';
+    } else {
+      qEl.textContent = `今天還可回報 ${left} 次`;
+    }
+  }
   const sub = document.getElementById(kind + '-submit');
   if (sub) sub.disabled = left <= 0;
   renderFeedbackList(kind, items);
@@ -3043,7 +3051,7 @@ async function selfHealIfStale() {
     const res = await fetch('./service-worker.js?cb=' + Date.now(), { cache: 'no-store', signal: ctrl.signal });
     clearTimeout(to);
     if (!res.ok) return;
-    const m = (await res.text()).match(/prophet-daily-(v\d+)/);
+    const m = (await res.text()).match(/prophet-daily-(v[\d.]+)/);
     if (!m || m[1] === APP_VERSION) return;             // up to date (or can't tell) → carry on
     sessionStorage.setItem('pd_healed', m[1]);          // guard against reload loops
     if ('serviceWorker' in navigator) {
