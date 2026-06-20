@@ -589,6 +589,13 @@
         </span>
         <span style="color:var(--ink-light);font-size:12px;flex-shrink:0">→</span>
       </a>
+      <div id="tour-banner" style="display:none;margin:14px 18px;padding:14px 16px;background:var(--parchment2);border:1.5px solid var(--gold);border-radius:12px">
+        <div style="font-size:14px;color:var(--ink);line-height:1.6">👋 歡迎來到《預言家日報》！要不要花 30 秒看一下新手導覽，快速上手？</div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn-primary" style="flex:1;padding:10px;font-size:13px" onclick="startTour()">✨ 開始導覽</button>
+          <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="dismissTourBanner()">先略過</button>
+        </div>
+      </div>
     </div>
 
     <!-- SCROLL 卷軸 -->
@@ -979,7 +986,7 @@
     <div class="tour-foot">
       <span id="tour-step-num"></span>
       <div class="tour-btns">
-        <button class="tour-skip" onclick="endTour(true)">跳過</button>
+        <button class="tour-skip" onclick="endTour(false)">跳過</button>
         <button id="tour-back" class="tour-skip" onclick="tourBack()" style="display:none">‹ 上一步</button>
         <button id="tour-next" class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="tourNext()">下一步 ›</button>
       </div>
@@ -994,7 +1001,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v97';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v98';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1304,10 +1311,12 @@ async function initApp() {
   loadOwnerNames();   // super_admin only: map owner uuid → 巫師全名 for the owner hint
   renderSettings();
   renderGreeting();
+  renderTourBanner();   // persistent home prompt for anyone not yet onboarded
   // Run the first-time tour only AFTER the shelf finishes loading — i.e. once the
   // backend is awake and the 喚醒中 overlay is gone — so it isn't shown over (and
-  // accidentally dismissed during) a cold start.
-  loadNovels().then(() => maybeAutoTour());
+  // accidentally dismissed during) a cold start. .catch keeps the chain alive even if
+  // loadNovels' render throws, so the tour still fires.
+  loadNovels().catch(() => {}).then(() => maybeAutoTour());
 }
 
 // super_admin sees the real owner (巫師全名) after the free-text author, so a changed
@@ -1341,7 +1350,7 @@ function showPage(id, btn) {
 // ── Guided tour (新手導覽) ─────────────────────────────────────
 // Steps anchor to data-tour / stable ids; a missing target degrades to a
 // centered bubble (auto-skip look) instead of breaking. See infra notes.
-const TOUR_VERSION = '2';   // bump to re-show the (revised) tour to everyone
+const TOUR_VERSION = '3';   // bump to re-show the (revised) tour to everyone
 const TOUR_READER = [
   { page: 'scroll', target: '[data-tour="nav-scroll"]',
     html: "<span class='tour-h'>🪞 意若思鏡</span>歡迎來到《預言家日報》。這面鏡子映照出大家所有的作品——點這裡就能走進書架找文。" },
@@ -1460,18 +1469,31 @@ function _placeTour(s) {
 }
 function _tourReposition() { if (_tour.on) _placeTour(_tour.steps[_tour.i]); }
 
+function markTourSeen() {
+  const tag = tourTag();   // 'r2' / 'w2' — role-scoped
+  localStorage.setItem(tourSeenKey(), tag);   // device fast-path
+  if (currentUser) currentUser.tour_seen = tag;
+  api('/auth/me/tour-seen', { method: 'PATCH', body: JSON.stringify({ version: tag }) }).catch(() => {});  // cross-device record (best effort)
+}
+
+// markSeen=true only when the tour is COMPLETED. A mere 跳過 just closes it and leaves the
+// home banner up, so onboarding isn't silently consumed (e.g. by the register→auto-login flash).
 function endTour(markSeen) {
   _tour.on = false;
   document.getElementById('tour-overlay').classList.remove('open');
   window.removeEventListener('resize', _tourReposition);
-  if (markSeen) {
-    const tag = tourTag();   // 'r2' / 'w2' — role-scoped
-    localStorage.setItem(tourSeenKey(), tag);   // device fast-path
-    if (currentUser) currentUser.tour_seen = tag;
-    api('/auth/me/tour-seen', { method: 'PATCH', body: JSON.stringify({ version: tag }) }).catch(() => {});  // cross-device record (best effort)
-  }
+  if (markSeen) markTourSeen();
   showPage('home', document.querySelector('[data-tour="nav-home"]'));
+  renderTourBanner();
 }
+
+// Persistent home prompt — the reliable entry point that can't be missed/consumed.
+function renderTourBanner() {
+  const b = document.getElementById('tour-banner');
+  if (!b) return;
+  b.style.display = (currentUser && ['reader', 'writer'].includes(currentUser.role) && !tourSeen()) ? 'block' : 'none';
+}
+function dismissTourBanner() { markTourSeen(); renderTourBanner(); }
 
 // ── Home ─────────────────────────────────────────────────────
 // quotes[0]=早上  quotes[1]=中午  quotes[2]=下午  quotes[3]=晚上
