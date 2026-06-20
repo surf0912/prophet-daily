@@ -709,7 +709,7 @@
           <div class="settings-row">
             <label>夜間模式</label>
             <label class="toggle">
-              <input type="checkbox" id="dark-toggle" onchange="toggleDark(this.checked)" />
+              <input type="checkbox" id="dark-toggle" onchange="toggleDark(this.checked); updateReaderDarkBtn()" />
               <span class="slider"></span>
             </label>
           </div>
@@ -861,6 +861,7 @@
       <span id="reader-font-label">15</span>
       <button onclick="stepReaderFont(1)" aria-label="放大字體">A+</button>
     </div>
+    <button id="reader-dark-btn" onclick="toggleReaderDark()" aria-label="夜間模式" style="background:none;border:none;color:var(--gold-lt);font-size:19px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0">🌙</button>
     <button id="reader-fav-btn" onclick="toggleReaderFavorite()" aria-label="收藏" style="display:none;background:none;border:none;color:var(--gold-lt);font-size:22px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0">☆</button>
   </div>
   <div class="chapter-list-panel" id="reader-toc-panel">
@@ -1080,7 +1081,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.26';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.27';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2133,6 +2134,7 @@ async function openNovel(novelId) {
   currentNovelTitle = (novel && novel.title) || '';
   applyMqjGuard(!!(novel && novel.category === '迷情劑'));   // personalized watermark + copy guard on 迷情劑
   updateReaderFavBtn();   // show ☆/★ for 意若思鏡 works
+  updateReaderDarkBtn();  // 🌙/☀️ reflects current 夜間模式
   try { currentChapters = await api(`/chapters/novel/${novelId}`) || []; }
   catch { toast('無法載入內容'); return; }
   if (!currentChapters.length) { toast('此作品尚無內容'); return; }
@@ -2333,6 +2335,7 @@ async function resumeReading() {
   if (_cat === undefined) { try { _nv = await api(`/novels/${p.novelId}`); _cat = _nv && _nv.category; } catch {} }
   applyMqjGuard(_cat === '迷情劑');
   updateReaderFavBtn();   // show ☆/★ for 意若思鏡 works
+  updateReaderDarkBtn();  // 🌙/☀️ reflects current 夜間模式
   try { currentChapters = await api(`/chapters/novel/${p.novelId}`) || []; }
   catch { toast('無法載入章節'); return; }
   const single = currentNovelKind === 'forum' || currentChapters.length <= 1;
@@ -2490,6 +2493,19 @@ function toggleDark(on) {
   r.colorScheme = on ? 'dark' : 'light';   // native pickers (select/date) render dark in 夜間模式
   document.documentElement.classList.toggle('dark', on);
   localStorage.setItem('pd_dark', on ? '1' : '0');
+}
+
+// Reader-header shortcut: flip 夜間模式 without leaving the reader, kept in sync with the 檔案 toggle.
+function toggleReaderDark() {
+  const on = localStorage.getItem('pd_dark') !== '1';
+  toggleDark(on);
+  const cb = document.getElementById('dark-toggle');
+  if (cb) cb.checked = on;
+  updateReaderDarkBtn();
+}
+function updateReaderDarkBtn() {
+  const b = document.getElementById('reader-dark-btn');
+  if (b) b.textContent = localStorage.getItem('pd_dark') === '1' ? '☀️' : '🌙';
 }
 
 // ── Admin ────────────────────────────────────────────────────
