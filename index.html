@@ -1102,7 +1102,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.39';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.40';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3156,7 +3156,7 @@ async function loadAdminUsers() {
   try {
     const users = await api('/permissions/users') || [];
     window._adminUsers = users;   // looked up by viewUserNovels (avoids embedding names in onclick)
-    const ROLES = [['reader','📚 讀者'],['writer','✍️ 作家'],['admin','🏰 管理員'],['super_admin','👑 超級管理員']];
+    const ROLES = [['reader','讀者'],['writer','作家'],['admin','管理員'],['super_admin','超級管理員']];
     const isSuper = currentUser.role === 'super_admin';
     el.innerHTML = users.map(u => {
       const display = u.nickname || u.username;
