@@ -1077,7 +1077,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.17';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.18';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1830,13 +1830,15 @@ function renderFeedbackList(kind, items) {
       `<button onclick="setFeedbackStatus('${it.id}','${kind}','${s}')" style="font-size:11px;padding:2px 7px;border:1px solid var(--gold-lt);background:${it.status===s?'var(--scarlet)':'none'};color:${it.status===s?'var(--on-dark)':'var(--ink-light)'};border-radius:10px;cursor:pointer">${FB_STATUS[kind][s].replace(/^[^\s]+\s/, '')}</button>`).join('') : '';
     const adminRow = admin ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center">${statusBtns}<button onclick="replyFeedback('${it.id}','${kind}')" style="font-size:11px;padding:2px 8px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:10px;cursor:pointer">📣 回覆</button></div>` : '';
     const del = (admin || it.mine) ? `<button onclick="deleteFeedbackItem('${it.id}','${kind}')" style="font-size:11px;background:none;border:none;color:var(--ink-light);cursor:pointer;flex-shrink:0">🗑</button>` : '';
+    // Wishes are anonymous and dateless — show only a status badge (if any). Bug reports keep author + date.
+    const metaInner = kind === 'wish'
+      ? badge
+      : `<span>🕯️ ${escapeHtml(it.author || '讀者')}</span><span>${fmtUpdated(it.created_at)}</span>${badge}`;
+    const meta = metaInner ? `<div style="font-size:11px;color:var(--ink-light);margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${metaInner}</div>` : '';
     return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
       <div style="display:flex;justify-content:space-between;gap:8px">
         <div style="font-size:14px;color:var(--ink);line-height:1.5;white-space:pre-wrap;flex:1">${escapeHtml(it.content)}</div>${del}
-      </div>
-      <div style="font-size:11px;color:var(--ink-light);margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <span>🕯️ ${kind === 'wish' ? '匿名許願' : escapeHtml(it.author || '讀者')}</span><span>${fmtUpdated(it.created_at)}</span>${badge}
-      </div>${reply}${adminRow}
+      </div>${meta}${reply}${adminRow}
     </div>`;
   }).join('');
 }

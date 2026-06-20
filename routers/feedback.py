@@ -29,6 +29,15 @@ class FeedbackCreate(BaseModel):
 def list_feedback(kind: str, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
     if kind not in LIMITS:
         raise HTTPException(400, "Invalid kind")
+    if kind == "wish":
+        # Wishes nobody responded to (still 待回應, no admin reply) auto-expire after 30 days.
+        # Lazy cleanup on read — no cron needed.
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+        try:
+            sb.table("feedback").delete().eq("kind", "wish").eq("status", "open") \
+                .is_("admin_reply", "null").lt("created_at", cutoff).execute()
+        except Exception:
+            pass
     q = sb.table("feedback").select("*").eq("kind", kind).order("created_at", desc=True)
     # Wishes are public; bug reports are private (own + admins) since they can mention account details.
     if kind == "bug" and not is_admin(user):
