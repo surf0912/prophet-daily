@@ -1064,7 +1064,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.09';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.10, v1.11…
+const APP_VERSION = 'v1.10';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.11, v1.12…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3068,6 +3068,11 @@ async function selfHealIfStale() {
     await new Promise(() => {});   // freeze the rest of boot; the reload takes over
   } catch (e) {}
 }
+
+// Tap the dim backdrop (outside the sheet) to close any .perm-modal — applies to all modals.
+document.addEventListener('click', (e) => {
+  if (e.target.classList && e.target.classList.contains('perm-modal')) e.target.classList.remove('open');
+});
 
 // ── Boot ─────────────────────────────────────────────────────
 (async () => {
