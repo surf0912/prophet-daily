@@ -1087,7 +1087,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.31';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.32';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1651,7 +1651,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Adrian', emoji: '🐍', img: './chars/adrian_phone_1.jpg', imgD: './chars/Adrian_desktop_1.JPG', bgPos: 'center top', bgPosDesktop: 'center 20%',
+    name: 'Adrian', emoji: '🐍', img: './chars/adrian_phone_1.jpg', imgs: ['./chars/adrian_phone_1.jpg', './chars/adrian_phone_2.JPG'], imgD: './chars/Adrian_desktop_1.JPG', bgPos: 'center top', bgPosDesktop: 'center 20%',
     quotes: [
       '早上好。你今天沒繞遠路，看來心情不錯。',
       '中午好。當心，西側長廊今天別去。',
@@ -1676,8 +1676,10 @@ function renderGreeting() {
   document.getElementById('greeting-line-text').textContent = `${period}，${currentUser.nickname || currentUser.username || '你'} ✨`;
   document.getElementById('greeting-quote-text').textContent = char.quotes[timeIdx];
   // Desktop and mobile use DIFFERENT image sets (never mixed): wide screens get char.imgD.
+  // A char may have several mobile shots in `imgs` → pick one at random each render.
+  const mobileImg = (char.imgs && char.imgs.length) ? char.imgs[Math.floor(Math.random() * char.imgs.length)] : char.img;
   const isWide = window.matchMedia('(min-width: 600px)').matches;
-  const src = (isWide && char.imgD) ? char.imgD : char.img;
+  const src = (isWide && char.imgD) ? char.imgD : mobileImg;
   const heroPos = (src === char.imgD) ? (char.bgPosD || 'center')
                 : ((isWide && char.bgPosDesktop) || char.bgPos || 'center');
   const showHero = (url, pos) => {     // photo layered OVER the gradient (gradient stays as fallback)
@@ -1691,10 +1693,10 @@ function renderGreeting() {
     const probe = new Image();         // only swap in the photo once it actually loads
     probe.onload = () => showHero(src, heroPos);
     probe.onerror = () => {            // desktop image not uploaded yet → fall back to the mobile one
-      if (src !== char.img && char.img) {
+      if (src !== mobileImg && mobileImg) {
         const p2 = new Image();
-        p2.onload = () => showHero(char.img, (isWide && char.bgPosDesktop) || char.bgPos || 'center');
-        p2.src = char.img;
+        p2.onload = () => showHero(mobileImg, (isWide && char.bgPosDesktop) || char.bgPos || 'center');
+        p2.src = mobileImg;
       }
     };
     probe.src = src;
