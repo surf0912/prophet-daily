@@ -1,3 +1,4 @@
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
@@ -98,6 +99,26 @@ def my_liked(user: dict = Depends(get_current_user), sb: Client = Depends(get_su
         out.append(n)
     out.sort(key=lambda n: n["liked_count"], reverse=True)
     return out
+
+# Top-3 "hot" works over the last 24h (distinct viewers + weighted favorites). Returns ids
+# only; the client floats them to the top of the shelf silently (no label). Needs novel_views.
+@router.get("/hot")
+def hot_novels(user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
+    since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    score: dict = {}
+    try:
+        for v in (sb.table("novel_views").select("novel_id").gte("created_at", since).execute().data or []):
+            score[v["novel_id"]] = score.get(v["novel_id"], 0) + 1            # 1 per distinct recent viewer
+        for f in (sb.table("novel_favorites").select("novel_id").gte("created_at", since).execute().data or []):
+            score[f["novel_id"]] = score.get(f["novel_id"], 0) + 3            # a favorite weighs more
+    except Exception:
+        return []
+    if not score:
+        return []
+    rows = sb.table("novels").select("id, status, kind").in_("id", list(score.keys())).execute().data or []
+    ok = {r["id"] for r in rows if r.get("status") == "approved" and r.get("kind") == "novel"}
+    ranked = sorted((i for i in score if i in ok), key=lambda i: score[i], reverse=True)
+    return ranked[:3]
 
 # Whole-work favorites (意若思鏡 收藏夾). Needs a novel_favorites(user_id, novel_id) table.
 @router.get("/my-favorite-ids")
@@ -253,6 +274,19 @@ def toggle_favorite(novel_id: str, user: dict = Depends(get_current_user), sb: C
         return {"favorited": False}
     sb.table("novel_favorites").insert({"user_id": user["id"], "novel_id": novel_id}).execute()
     return {"favorited": True}
+
+@router.post("/{novel_id}/view")
+def log_view(novel_id: str, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
+    # Record one view per user per work per 24h (so a single reader can't inflate the hot ranking).
+    since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    try:
+        existing = (sb.table("novel_views").select("id")
+                    .eq("novel_id", novel_id).eq("user_id", user["id"]).gte("created_at", since).execute().data)
+        if not existing:
+            sb.table("novel_views").insert({"novel_id": novel_id, "user_id": user["id"]}).execute()
+    except Exception:
+        pass  # view logging is best-effort; never block reading
+    return {"ok": True}
 
 def _check_novel_access(novel: dict, user: dict):
     # Approved works are visible to every logged-in user.

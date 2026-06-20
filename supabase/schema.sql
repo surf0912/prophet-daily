@@ -291,3 +291,12 @@ create table if not exists public.faqs (
 
 alter table public.feedback enable row level security;
 alter table public.faqs     enable row level security;
+
+-- novel_views: per-open view log for the silent 24h "hot" ranking on the shelf
+create table if not exists public.novel_views (
+  id         uuid primary key default uuid_generate_v4(),
+  novel_id   uuid references public.novels(id) on delete cascade not null,
+  user_id    uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now()
+);
+alter table public.novel_views enable row level security;

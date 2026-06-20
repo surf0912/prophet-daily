@@ -1065,7 +1065,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.11';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.12, v1.13…
+const APP_VERSION = 'v1.12';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1690,9 +1690,11 @@ function fmtUpdated(ts) {
 }
 
 let novelsError = false;
+let hotIds = [];   // top-3 works (last 24h) floated to the front of the default shelf, silently
 async function loadNovels() {
   try { novels = await api('/novels/?kind=novel') || []; novelsError = false; }
   catch { novels = []; novelsError = true; }
+  try { hotIds = await api('/novels/hot') || []; } catch { hotIds = []; }
   renderShelf();
   renderContinueBar();
 }
@@ -2018,6 +2020,16 @@ function renderShelf() {
   let list = applyClassFilter(novels, shelfCat, shelfChars);
   const q = (document.getElementById('shelf-search-input')?.value || '').trim().toLowerCase();
   if (q) list = list.filter(n => matchesQuery(n, q));
+  // Only on the plain default view (no search, 全部, no character filter), float the 24h hot
+  // works to the front — silently, no label.
+  const noCharFilter = shelfChars.length === 0 || shelfChars.length === CHAR_LIST.length;
+  if (!q && shelfCat === '' && noCharFilter && hotIds.length) {
+    const hot = hotIds.map(id => list.find(n => n.id === id)).filter(Boolean);
+    if (hot.length) {
+      const hotSet = new Set(hot.map(n => n.id));
+      list = [...hot, ...list.filter(n => !hotSet.has(n.id))];
+    }
+  }
   renderNovelBlocks(list, grid, '🔍 沒有符合的作品');
 }
 
@@ -2096,6 +2108,7 @@ function applyMqjGuard(on) {
 
 async function openNovel(novelId) {
   currentNovelId = novelId;
+  api(`/novels/${novelId}/view`, { method: 'POST' }).catch(() => {});   // log a view (best-effort) for the hot ranking
   let novel = [...forumPosts, ...novels].find(n => n.id === novelId);
   if (!novel) { try { novel = await api(`/novels/${novelId}`); } catch {} }
   currentNovelKind = (novel && novel.kind) || 'novel';
