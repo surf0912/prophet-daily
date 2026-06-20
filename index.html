@@ -1029,7 +1029,7 @@
 <div class="perm-modal" id="wish-modal">
   <div class="perm-modal-inner">
     <h3>🌟 許願池</h3>
-    <p style="font-size:13px;color:var(--ink-light);margin-bottom:10px">寫下你想看的主題或主角,作者與管理員都看得到 ✨</p>
+    <p style="font-size:13px;color:var(--ink-light);margin-bottom:10px">寫下你想看的主題或主角,作者與管理員都看得到。許願一律匿名,放心許 ✨</p>
     <textarea id="wish-input" maxlength="140" rows="2" oninput="updateWishCount()" placeholder="例：想看更多 Sean 吃醋、或 Adrian 的雨天告白…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
     <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink-light);margin:6px 0 10px">
       <span id="wish-quota"></span><span id="wish-count">0/140</span>
@@ -1077,7 +1077,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.16';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.17';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1835,7 +1835,7 @@ function renderFeedbackList(kind, items) {
         <div style="font-size:14px;color:var(--ink);line-height:1.5;white-space:pre-wrap;flex:1">${escapeHtml(it.content)}</div>${del}
       </div>
       <div style="font-size:11px;color:var(--ink-light);margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <span>🕯️ ${escapeHtml(it.author || '讀者')}</span><span>${fmtUpdated(it.created_at)}</span>${badge}
+        <span>🕯️ ${kind === 'wish' ? '匿名許願' : escapeHtml(it.author || '讀者')}</span><span>${fmtUpdated(it.created_at)}</span>${badge}
       </div>${reply}${adminRow}
     </div>`;
   }).join('');

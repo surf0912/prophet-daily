@@ -34,15 +34,22 @@ def list_feedback(kind: str, user: dict = Depends(get_current_user), sb: Client 
     if kind == "bug" and not is_admin(user):
         q = q.eq("user_id", user["id"])
     rows = q.execute().data or []
-    # Attach author display name (nickname) via a second lookup — robust, no FK-embed magic.
-    uids = list({r["user_id"] for r in rows if r.get("user_id")})
-    names = {}
-    if uids:
-        profs = sb.table("profiles").select("id, nickname, username").in_("id", uids).execute().data or []
-        names = {p["id"]: (p.get("nickname") or p.get("username") or "讀者") for p in profs}
-    for r in rows:
-        r["author"] = names.get(r.get("user_id"), "讀者")
-        r["mine"] = r.get("user_id") == user["id"]
+    # Wishes are anonymous — never expose the wisher's identity. Only bug reports carry an
+    # author name (admins need it to triage). `mine` is computed server-side either way so a
+    # user can still see/delete their own row without leaking anyone else's name.
+    if kind == "bug":
+        uids = list({r["user_id"] for r in rows if r.get("user_id")})
+        names = {}
+        if uids:
+            profs = sb.table("profiles").select("id, nickname, username").in_("id", uids).execute().data or []
+            names = {p["id"]: (p.get("nickname") or p.get("username") or "讀者") for p in profs}
+        for r in rows:
+            r["author"] = names.get(r.get("user_id"), "讀者")
+            r["mine"] = r.get("user_id") == user["id"]
+    else:  # wish
+        for r in rows:
+            r["author"] = "匿名"
+            r["mine"] = r.get("user_id") == user["id"]
     return rows
 
 @router.post("/")
