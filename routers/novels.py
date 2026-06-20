@@ -40,19 +40,30 @@ def list_novels(
     user: dict = Depends(get_current_user),
     sb: Client = Depends(get_supabase_admin),
 ):
-    # Everyone sees all APPROVED works (no per-user permission gating anymore).
-    # Admins additionally see pending works so they can review.
-    q = sb.table("novels").select("*")
-    if kind:
-        q = q.eq("kind", kind)
     # mine=true → only the caller's own works (any status), for 作品管理.
     if mine:
+        q = sb.table("novels").select("*")
+        if kind:
+            q = q.eq("kind", kind)
         q = q.contains("owners", [user["id"]])
         return q.order("created_at", desc=True).execute().data
-    if not is_admin(user):
-        q = q.eq("status", "approved")
-    res = q.order("created_at", desc=True).execute()
-    data = res.data
+
+    # Public shelf: everyone sees APPROVED works (admins also see pending for review),
+    # never the per-writer 作家入職指南 demo works. is_guide filter is applied defensively
+    # so the shelf keeps working even before the is_guide column exists.
+    def fetch(use_guide_filter: bool):
+        q = sb.table("novels").select("*")
+        if kind:
+            q = q.eq("kind", kind)
+        if use_guide_filter:
+            q = q.eq("is_guide", False)
+        if not is_admin(user):
+            q = q.eq("status", "approved")
+        return q.order("created_at", desc=True).execute().data
+    try:
+        data = fetch(True)
+    except Exception:
+        data = fetch(False)
     # Readers without 迷情劑 access don't see 迷情劑 works.
     if not can_see_mqj(user):
         data = [n for n in data if n.get("category") != "迷情劑"]
@@ -161,15 +172,18 @@ class SeriesBody(BaseModel):
     series: Optional[str] = None       # series name; null/empty = standalone
     series_order: int = 0              # position within the series (1=上, 2=下, ...)
 
-@router.patch("/{novel_id}/series", dependencies=[Depends(require_admin)])
-def set_series(novel_id: str, body: SeriesBody, sb: Client = Depends(get_supabase_admin)):
+@router.patch("/{novel_id}/series")
+def set_series(novel_id: str, body: SeriesBody, user: dict = Depends(require_writer), sb: Client = Depends(get_supabase_admin)):
+    nv = sb.table("novels").select("owners").eq("id", novel_id).single().execute()
+    if not nv.data:
+        raise HTTPException(404, "Novel not found")
+    if not is_admin(user) and user["id"] not in (nv.data.get("owners") or []):
+        raise HTTPException(403, "只能管理自己的作品")
     name = (body.series or "").strip() or None
     res = sb.table("novels").update({
         "series": name,
         "series_order": body.series_order if name else 0,
     }).eq("id", novel_id).execute()
-    if not res.data:
-        raise HTTPException(404, "Novel not found")
     return res.data[0]
 
 @router.patch("/{novel_id}")
@@ -189,8 +203,13 @@ def update_novel(novel_id: str, body: NovelUpdate, user: dict = Depends(require_
     res = sb.table("novels").update(updates).eq("id", novel_id).execute()
     return res.data[0]
 
-@router.delete("/{novel_id}", dependencies=[Depends(require_admin)])
-def delete_novel(novel_id: str, sb: Client = Depends(get_supabase_admin)):
+@router.delete("/{novel_id}")
+def delete_novel(novel_id: str, user: dict = Depends(require_writer), sb: Client = Depends(get_supabase_admin)):
+    nv = sb.table("novels").select("owners").eq("id", novel_id).single().execute()
+    if not nv.data:
+        raise HTTPException(404, "Novel not found")
+    if not is_admin(user) and user["id"] not in (nv.data.get("owners") or []):
+        raise HTTPException(403, "只能刪除自己的作品")
     sb.table("novels").delete().eq("id", novel_id).execute()
     return {"message": "Deleted"}
 

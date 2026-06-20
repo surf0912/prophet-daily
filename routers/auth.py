@@ -1,8 +1,9 @@
 import time
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
-from deps import get_supabase, get_supabase_admin, get_current_user
+from deps import get_supabase, get_supabase_admin, get_current_user, ROLE_RANK
 from supabase import Client
+from guide_content import GUIDE_TITLE, GUIDE_AUTHOR, GUIDE_BODY
 
 router = APIRouter()
 
@@ -78,8 +79,40 @@ def signin(body: SignInRequest, request: Request, sb: Client = Depends(get_supab
         "user": {"id": res.user.id},
     }
 
+def maybe_seed_guide(user: dict, sb_admin: Client):
+    # Once per writer (and above), drop a deletable 作家入職指南 demo work into their
+    # 作品管理 (status=approved + is_guide=True → hidden from the public shelf/review).
+    # Lazy: runs on /auth/me, so it covers both new writers and existing ones on next login.
+    if ROLE_RANK.get(user.get("role"), 0) < ROLE_RANK["writer"]:
+        return
+    if user.get("guide_seeded"):
+        return
+    try:
+        nv = sb_admin.table("novels").insert({
+            "title": GUIDE_TITLE,
+            "author": GUIDE_AUTHOR,
+            "kind": "novel",
+            "status": "approved",
+            "is_guide": True,
+            "owners": [user["id"]],
+            "created_by": user["id"],
+        }).execute()
+        novel_id = nv.data[0]["id"]
+        sb_admin.table("chapters").insert({
+            "novel_id": novel_id,
+            "chapter_num": 1,
+            "title": None,
+            "content": GUIDE_BODY,
+            "created_by": user["id"],
+        }).execute()
+        sb_admin.table("profiles").update({"guide_seeded": True}).eq("id", user["id"]).execute()
+        user["guide_seeded"] = True
+    except Exception:
+        pass  # never let seeding break login (e.g. column not yet added)
+
 @router.get("/me")
-def me(user: dict = Depends(get_current_user)):
+def me(user: dict = Depends(get_current_user), sb_admin: Client = Depends(get_supabase_admin)):
+    maybe_seed_guide(user, sb_admin)
     return user
 
 class NicknameBody(BaseModel):
