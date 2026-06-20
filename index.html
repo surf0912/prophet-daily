@@ -409,29 +409,6 @@
     /* ── Protect page (embeds the standalone 防窺工坊 Streamlit app) ── */
     #page-protect { padding: 0; }
     #protect-frame { display: block; width: 100%; height: calc(100dvh - var(--nav-h) - var(--safe-bottom)); border: 0; background: #EFE2C4; }
-    .protect-header { padding: 20px 18px 8px; border-bottom: 2px solid var(--gold-lt); }
-    .protect-header h2 { font-size: 18px; }
-    .protect-body { padding: 20px 18px; }
-    .protect-drop {
-      border: 2px dashed var(--gold-lt); border-radius: 6px;
-      padding: 40px 20px; text-align: center; cursor: pointer;
-      transition: border-color .2s, background .2s;
-    }
-    .protect-drop:hover, .protect-drop.drag-over { border-color: var(--gold); background: rgba(201,168,76,.05); }
-    .protect-drop .drop-icon { font-size: 48px; }
-    .protect-drop p { margin-top: 10px; font-size: 14px; color: var(--ink-light); }
-    .preset-row { display: flex; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
-    .preset-btn {
-      padding: 7px 14px; border-radius: 20px; font-size: 12px;
-      border: 1px solid var(--gold-lt); background: transparent;
-      color: var(--ink); cursor: pointer; transition: all .2s;
-    }
-    .preset-btn.active { background: var(--scarlet); border-color: var(--accent); color: #fff; }
-    .protect-preview { margin-top: 16px; display: none; }
-    .protect-preview img { width: 100%; border-radius: 4px; border: 1px solid var(--gold-lt); }
-    .protect-preview .dl-btn { display: block; width: 100%; margin-top: 10px; padding: 12px; text-align: center; background: var(--scarlet); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; text-decoration: none; }
-    .progress-bar { height: 4px; background: var(--gold-lt); border-radius: 2px; overflow: hidden; margin: 12px 0; display: none; }
-    .progress-bar .fill { height: 100%; background: var(--scarlet); width: 0; transition: width .3s; }
 
     /* ── Settings page ── */
     .settings-header { padding: 20px 18px 8px; border-bottom: 2px solid var(--gold-lt); }
@@ -970,7 +947,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v79';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v80';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1024,7 +1001,6 @@ let currentChapters = [];
 let currentChapterIdx = 0;
 let replyToId = null;
 let currentForumChapterId = null;
-let protectPreset = 'standard';
 
 // ── API helper ───────────────────────────────────────────────
 // Render free tier sleeps when idle; the first request can take 30-50s to wake.
@@ -1857,42 +1833,6 @@ function renderForumList() {
 
 function escapeHtml(s) {
   return (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
-// ── Protect ──────────────────────────────────────────────────
-function selectPreset(btn) {
-  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  protectPreset = btn.dataset.preset;
-}
-
-function handleProtectDrop(e) {
-  e.preventDefault();
-  document.getElementById('protect-drop').classList.remove('drag-over');
-  const f = e.dataTransfer.files[0];
-  if (f && f.type.startsWith('image/')) processProtect(f);
-}
-
-function handleProtectFile(e) { if (e.target.files[0]) processProtect(e.target.files[0]); }
-
-async function processProtect(file) {
-  const bar = document.getElementById('protect-progress');
-  const fill = document.getElementById('protect-fill');
-  bar.style.display = ''; fill.style.width = '30%';
-  const fd = new FormData();
-  fd.append('image', file);
-  fd.append('preset', protectPreset);
-  try {
-    fill.style.width = '60%';
-    const res = await fetch(API + '/protect/image', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
-    if (!res.ok) throw new Error('處理失敗');
-    fill.style.width = '100%';
-    const url = URL.createObjectURL(await res.blob());
-    document.getElementById('protect-result-img').src = url;
-    document.getElementById('protect-dl').href = url;
-    document.getElementById('protect-preview').style.display = '';
-  } catch (e) { toast('⚠️ ' + e.message); }
-  finally { setTimeout(() => { bar.style.display = 'none'; fill.style.width = '0'; }, 800); }
 }
 
 // ── Settings ─────────────────────────────────────────────────
