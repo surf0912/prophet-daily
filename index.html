@@ -603,7 +603,10 @@
     <div id="page-scroll" class="page">
       <div class="shelf-header" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <h2 style="margin:0">🪞 意若思鏡</h2>
-        <button id="shelf-fav-btn" onclick="toggleShelfFav()" style="flex-shrink:0;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer">⭐ 收藏夾</button>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button onclick="openWishPool()" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer">🌟 許願池</button>
+          <button id="shelf-fav-btn" onclick="toggleShelfFav()" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer">⭐ 收藏夾</button>
+        </div>
       </div>
       <div class="forum-search">
         <input type="search" id="shelf-search-input" placeholder="🔍 搜尋篇名、作者或角色…" oninput="renderShelf()" />
@@ -708,6 +711,17 @@
           <div class="settings-row">
             <label>🔮 新手導覽</label>
             <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="startTour()">重看導覽</button>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h3>幫助 & 反饋</h3>
+          <div class="settings-row">
+            <label>❓ 常見問題</label>
+            <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="openFaq()">查看</button>
+          </div>
+          <div class="settings-row">
+            <label>🐛 回報問題</label>
+            <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="openBugReport()">回報</button>
           </div>
         </div>
         <button class="btn-logout" onclick="doLogout()">🚪 登出魔法世界</button>
@@ -999,6 +1013,50 @@
   </div>
 </div>
 
+<!-- 許願池 -->
+<div class="perm-modal" id="wish-modal">
+  <div class="perm-modal-inner">
+    <h3>🌟 許願池</h3>
+    <p style="font-size:13px;color:var(--ink-light);margin-bottom:10px">寫下你想看的主題或主角,作者與管理員都看得到 ✨</p>
+    <textarea id="wish-input" maxlength="140" rows="2" oninput="updateWishCount()" placeholder="例：好想看 Sean 和 Eli 一起淋雨…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink-light);margin:6px 0 10px">
+      <span id="wish-quota"></span><span id="wish-count">0/140</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-primary" id="wish-submit" style="flex:1;padding:11px;font-size:14px" onclick="submitFeedback('wish')">許願 ✨</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('wish-modal').classList.remove('open')">關閉</button>
+    </div>
+    <div id="wish-list" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- 回報問題 -->
+<div class="perm-modal" id="bug-modal">
+  <div class="perm-modal-inner">
+    <h3>🐛 回報問題</h3>
+    <p style="font-size:13px;color:var(--ink-light);margin-bottom:10px">遇到 bug、卡頓、顯示怪怪的?描述一下,會自動附上你的裝置與版本。</p>
+    <textarea id="bug-input" maxlength="600" rows="4" oninput="updateBugCount()" placeholder="發生什麼、在哪一頁、怎麼重現…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink-light);margin:6px 0 10px">
+      <span id="bug-quota"></span><span id="bug-count">0/600</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-primary" id="bug-submit" style="flex:1;padding:11px;font-size:14px" onclick="submitFeedback('bug')">送出回報</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('bug-modal').classList.remove('open')">關閉</button>
+    </div>
+    <div id="bug-list" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- 常見問題 -->
+<div class="perm-modal" id="faq-modal">
+  <div class="perm-modal-inner">
+    <h3>❓ 常見問題</h3>
+    <div id="faq-admin-add" style="display:none;margin-bottom:12px"></div>
+    <div id="faq-list"></div>
+    <button class="btn-close-modal" style="margin-top:6px" onclick="document.getElementById('faq-modal').classList.remove('open')">關閉</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1006,7 +1064,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v105';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v106';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1677,6 +1735,129 @@ async function toggleReaderFavorite() {
     updateReaderFavBtn();
     toast(r.favorited ? '⭐ 已加入收藏夾' : '已從收藏夾移除');
   } catch (e) { toast(e.message); }
+}
+
+// ── 許願池 / 回報問題 / 常見問題 (feedback) ────────────────────
+const FB_LIMIT = { wish: { max: 140, perDay: 3 }, bug: { max: 600, perDay: 10 } };
+const FB_STATUS = {
+  wish: { open: '待回應', considering: '🤔 考慮中', done: '✅ 已實現', declined: '🙏 婉拒' },
+  bug:  { open: '待處理', in_progress: '🔧 處理中', fixed: '✅ 已修復', declined: '🙏 婉拒' },
+};
+function isAdminUser() { return ['admin', 'super_admin'].includes(currentUser?.role); }
+
+function openWishPool() { document.getElementById('wish-modal').classList.add('open'); document.getElementById('wish-input').value=''; updateWishCount(); loadFeedback('wish'); }
+function openBugReport() { document.getElementById('bug-modal').classList.add('open'); document.getElementById('bug-input').value=''; updateBugCount(); loadFeedback('bug'); }
+function updateWishCount() { document.getElementById('wish-count').textContent = `${document.getElementById('wish-input').value.length}/140`; }
+function updateBugCount() { document.getElementById('bug-count').textContent = `${document.getElementById('bug-input').value.length}/600`; }
+
+async function loadFeedback(kind) {
+  const listEl = document.getElementById(kind + '-list');
+  listEl.innerHTML = '<div class="spinner" style="margin:10px auto"></div>';
+  let items = [];
+  try { items = await api(`/feedback/?kind=${kind}`) || []; }
+  catch (e) { listEl.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${e.message}</p>`; return; }
+  // daily quota (count my own items created today)
+  const today = new Date().toISOString().slice(0, 10);
+  const usedToday = items.filter(i => i.mine && (i.created_at || '').slice(0, 10) === today).length;
+  const left = Math.max(0, FB_LIMIT[kind].perDay - usedToday);
+  const qEl = document.getElementById(kind + '-quota');
+  if (qEl) qEl.textContent = `今天還可${kind === 'wish' ? '許願' : '回報'} ${left} 次`;
+  const sub = document.getElementById(kind + '-submit');
+  if (sub) sub.disabled = left <= 0;
+  renderFeedbackList(kind, items);
+}
+
+function renderFeedbackList(kind, items) {
+  const listEl = document.getElementById(kind + '-list');
+  if (!items.length) { listEl.innerHTML = `<p style="color:var(--ink-light);font-size:13px;text-align:center;padding:14px">${kind === 'wish' ? '還沒有人許願,當第一個吧 ✨' : '目前沒有回報'}</p>`; return; }
+  const admin = isAdminUser();
+  listEl.innerHTML = items.map(it => {
+    const label = (FB_STATUS[kind][it.status] || '');
+    const badge = it.status && it.status !== 'open'
+      ? `<span style="font-size:11px;padding:1px 8px;border-radius:9px;background:rgba(45,74,30,.15);color:var(--series)">${label}</span>` : '';
+    const reply = it.admin_reply ? `<div style="font-size:12px;color:var(--accent);margin-top:5px;padding-left:8px;border-left:2px solid var(--gold-lt)">📣 ${escapeHtml(it.admin_reply)}</div>` : '';
+    const statusBtns = admin ? Object.keys(FB_STATUS[kind]).map(s =>
+      `<button onclick="setFeedbackStatus('${it.id}','${kind}','${s}')" style="font-size:11px;padding:2px 7px;border:1px solid var(--gold-lt);background:${it.status===s?'var(--scarlet)':'none'};color:${it.status===s?'var(--on-dark)':'var(--ink-light)'};border-radius:10px;cursor:pointer">${FB_STATUS[kind][s].replace(/^[^\s]+\s/, '')}</button>`).join('') : '';
+    const adminRow = admin ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center">${statusBtns}<button onclick="replyFeedback('${it.id}','${kind}')" style="font-size:11px;padding:2px 8px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:10px;cursor:pointer">📣 回覆</button></div>` : '';
+    const del = (admin || it.mine) ? `<button onclick="deleteFeedbackItem('${it.id}','${kind}')" style="font-size:11px;background:none;border:none;color:var(--ink-light);cursor:pointer;flex-shrink:0">🗑</button>` : '';
+    return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
+      <div style="display:flex;justify-content:space-between;gap:8px">
+        <div style="font-size:14px;color:var(--ink);line-height:1.5;white-space:pre-wrap;flex:1">${escapeHtml(it.content)}</div>${del}
+      </div>
+      <div style="font-size:11px;color:var(--ink-light);margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span>🕯️ ${escapeHtml(it.author || '讀者')}</span><span>${fmtUpdated(it.created_at)}</span>${badge}
+      </div>${reply}${adminRow}
+    </div>`;
+  }).join('');
+}
+
+async function submitFeedback(kind) {
+  const inp = document.getElementById(kind + '-input');
+  let content = (inp.value || '').trim();
+  if (!content) { toast('請先輸入內容'); return; }
+  if (kind === 'bug') content += `\n\n— ${navigator.userAgent} · ${APP_VERSION}`;   // auto device+version
+  try {
+    await api('/feedback/', { method: 'POST', body: JSON.stringify({ kind, content }) });
+    inp.value = ''; (kind === 'wish' ? updateWishCount : updateBugCount)();
+    toast(kind === 'wish' ? '✨ 願望已送出' : '✅ 已送出回報,謝謝!');
+    loadFeedback(kind);
+  } catch (e) { toast('⚠️ ' + e.message); }
+}
+
+async function setFeedbackStatus(id, kind, status) {
+  try { await api(`/feedback/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }); loadFeedback(kind); }
+  catch (e) { toast(e.message); }
+}
+async function replyFeedback(id, kind) {
+  const reply = prompt('回覆內容(留白可清除):');
+  if (reply === null) return;
+  try { await api(`/feedback/${id}`, { method: 'PATCH', body: JSON.stringify({ admin_reply: reply || ' ' }) }); loadFeedback(kind); }
+  catch (e) { toast(e.message); }
+}
+async function deleteFeedbackItem(id, kind) {
+  if (!confirm('確定刪除?')) return;
+  try { await api(`/feedback/${id}`, { method: 'DELETE' }); loadFeedback(kind); }
+  catch (e) { toast(e.message); }
+}
+
+// ── FAQ ──
+async function openFaq() { document.getElementById('faq-modal').classList.add('open'); loadFaqs(); }
+async function loadFaqs() {
+  const listEl = document.getElementById('faq-list');
+  const addEl = document.getElementById('faq-admin-add');
+  listEl.innerHTML = '<div class="spinner" style="margin:10px auto"></div>';
+  const admin = isAdminUser();
+  addEl.style.display = admin ? '' : 'none';
+  if (admin) addEl.innerHTML = `<button class="btn-primary" style="width:auto;padding:7px 14px;font-size:13px" onclick="addFaq()">＋ 新增問答</button>`;
+  let faqs = [];
+  try { faqs = await api('/feedback/faqs') || []; }
+  catch (e) { listEl.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${e.message}</p>`; return; }
+  if (!faqs.length) { listEl.innerHTML = '<p style="color:var(--ink-light);font-size:13px;text-align:center;padding:14px">尚無常見問題</p>'; return; }
+  listEl.innerHTML = faqs.map(f => `
+    <details style="border-bottom:1px solid rgba(26,10,0,.08);padding:8px 0">
+      <summary style="font-size:14px;font-weight:bold;color:var(--ink);cursor:pointer">${escapeHtml(f.question)}</summary>
+      <div style="font-size:13px;color:var(--ink-light);line-height:1.7;margin-top:8px;white-space:pre-wrap">${escapeHtml(f.answer)}</div>
+      ${admin ? `<div style="margin-top:6px;display:flex;gap:8px"><button onclick="editFaq('${f.id}')" style="font-size:11px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:10px;padding:2px 10px;cursor:pointer">編輯</button><button onclick="deleteFaq('${f.id}')" style="font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer">🗑 刪除</button></div>` : ''}
+    </details>`).join('');
+}
+async function addFaq() {
+  const q = prompt('問題:'); if (!q) return;
+  const a = prompt('答案:'); if (a === null) return;
+  try { await api('/feedback/faqs', { method: 'POST', body: JSON.stringify({ question: q, answer: a }) }); loadFaqs(); }
+  catch (e) { toast(e.message); }
+}
+async function editFaq(id) {
+  const faqs = await api('/feedback/faqs').catch(() => []);
+  const f = (faqs || []).find(x => x.id === id) || {};
+  const q = prompt('問題:', f.question || ''); if (q === null) return;
+  const a = prompt('答案:', f.answer || ''); if (a === null) return;
+  try { await api(`/feedback/faqs/${id}`, { method: 'PATCH', body: JSON.stringify({ question: q, answer: a }) }); loadFaqs(); }
+  catch (e) { toast(e.message); }
+}
+async function deleteFaq(id) {
+  if (!confirm('刪除這則問答?')) return;
+  try { await api(`/feedback/faqs/${id}`, { method: 'DELETE' }); loadFaqs(); }
+  catch (e) { toast(e.message); }
 }
 let adminNovelScope = null;   // null = manage my own works; {id,name} = managing another user's works (#3)
 

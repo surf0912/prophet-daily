@@ -268,3 +268,26 @@ alter table public.comment_likes   enable row level security;
 alter table public.novel_favorites enable row level security;
 -- (No anon/authenticated policies: only the service-role backend touches these,
 --  and service role bypasses RLS — so anon keys are denied by default.)
+
+-- feedback: 許願池 (wish) + 回報問題 (bug), shared table
+create table if not exists public.feedback (
+  id          uuid primary key default uuid_generate_v4(),
+  user_id     uuid references public.profiles(id) on delete cascade,
+  kind        text not null check (kind in ('wish','bug')),
+  content     text not null,
+  status      text default 'open',
+  admin_reply text,
+  created_at  timestamptz default now()
+);
+
+-- faqs: admin-authored 常見問題
+create table if not exists public.faqs (
+  id          uuid primary key default uuid_generate_v4(),
+  question    text not null,
+  answer      text not null,
+  sort_order  integer default 0,
+  created_at  timestamptz default now()
+);
+
+alter table public.feedback enable row level security;
+alter table public.faqs     enable row level security;
