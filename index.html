@@ -994,7 +994,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v95';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v96';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2708,7 +2708,10 @@ async function revokeInvite(id) {
 async function selfHealIfStale() {
   try {
     if (sessionStorage.getItem('pd_healed')) return;   // only attempt once per launch
-    const res = await fetch('./service-worker.js?cb=' + Date.now(), { cache: 'no-store' });
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 2500);    // never hang boot on a slow network
+    const res = await fetch('./service-worker.js?cb=' + Date.now(), { cache: 'no-store', signal: ctrl.signal });
+    clearTimeout(to);
     if (!res.ok) return;
     const m = (await res.text()).match(/prophet-daily-(v\d+)/);
     if (!m || m[1] === APP_VERSION) return;             // up to date (or can't tell) → carry on
@@ -2728,8 +2731,10 @@ async function selfHealIfStale() {
 
 // ── Boot ─────────────────────────────────────────────────────
 (async () => {
-  await selfHealIfStale();   // must run before anything else touches the (possibly stale) UI
-  fetch(API + '/health', { cache: 'no-store' }).catch(() => {});  // wake Render early so the first real call isn't cold
+  fetch(API + '/health', { cache: 'no-store' }).catch(() => {});  // wake Render FIRST so a backgrounded→resumed reload isn't cold
+  // Don't let the stale-check block the boot on a slow network: if it hasn't resolved in
+  // 1.5s, show the app now and let self-heal finish (and reload only if stale) in the background.
+  await Promise.race([selfHealIfStale(), new Promise(r => setTimeout(r, 1500))]);
   // put the feather-pen icon (same as the like icon) on the 已收藏 tab
   const likedTab = document.getElementById('forum-tab-liked');
   if (likedTab) likedTab.insertAdjacentHTML('afterbegin', PEN_SVG);
