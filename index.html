@@ -877,7 +877,7 @@
         <div class="user-list" id="user-list"></div>
       </div>
       <div id="admin-invites" class="admin-pane">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div id="invite-qty-row" style="display:none;align-items:center;gap:8px;margin-bottom:8px">
           <span style="font-size:13px;color:var(--ink-light)">一次產生</span>
           <select id="invite-qty" style="padding:5px 8px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:13px">
             <option value="1">1 個</option><option value="3">3 個</option><option value="5">5 個</option><option value="10">10 個</option><option value="15">15 個</option>
@@ -1135,7 +1135,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.45';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.46';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2681,9 +2681,11 @@ function switchAdminTab(tab) {
   if (tab === 'upload') { setUploadKind('novel'); initUploadDraftWatch(); restoreUploadDraft(); }
   if (tab === 'review') loadReviewList();
   if (tab === 'invites') {
-    // show admin-invite button only for super_admin
-    document.getElementById('invite-admin-btn').style.display =
-      currentUser.role === 'super_admin' ? '' : 'none';
+    // super_admin only: 管理員邀請 button + 批次數量 selector (admins generate one at a time)
+    const isSuper = currentUser.role === 'super_admin';
+    document.getElementById('invite-admin-btn').style.display = isSuper ? '' : 'none';
+    document.getElementById('invite-qty-row').style.display = isSuper ? 'flex' : 'none';
+    if (!isSuper) document.getElementById('invite-qty').value = '1';
     loadInviteList();
   }
 }

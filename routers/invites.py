@@ -44,7 +44,8 @@ def generate_invite(
 
     from datetime import datetime, timezone, timedelta
     expires_at = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
-    count = max(1, min(20, body.count or 1))   # bulk: up to 20 at once
+    # Bulk generation is super_admin-only; admins always get exactly one.
+    count = max(1, min(20, body.count or 1)) if user["role"] == "super_admin" else 1
     tokens = []
     for _ in range(count):
         for attempt in range(6):                # short codes can collide → retry
