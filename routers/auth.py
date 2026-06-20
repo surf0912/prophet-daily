@@ -180,6 +180,28 @@ def set_tour_seen(body: TourSeenBody, user: dict = Depends(get_current_user), sb
         raise HTTPException(404, "User not found")
     return {"tour_seen": body.version}
 
+class ChangePwBody(BaseModel):
+    current: str
+    new: str
+
+@router.patch("/me/password")
+def change_my_password(body: ChangePwBody, user: dict = Depends(get_current_user),
+                       sb: Client = Depends(get_supabase), sb_admin: Client = Depends(get_supabase_admin)):
+    new = (body.new or "").strip()
+    if len(new) < 6:
+        raise HTTPException(400, "新通關密語至少 6 字")
+    # Verify the current password by attempting a sign-in (accounts use internal emails).
+    email = username_to_email(user.get("username", ""))
+    try:
+        res = sb.auth.sign_in_with_password({"email": email, "password": body.current})
+        ok = res.session is not None
+    except Exception:
+        ok = False
+    if not ok:
+        raise HTTPException(403, "目前的通關密語不正確")
+    sb_admin.auth.admin.update_user_by_id(user["id"], {"password": new})
+    return {"message": "ok"}
+
 class AvatarBody(BaseModel):
     avatar: str  # small client-resized data URL (data:image/...;base64,...), or '' to clear
 
