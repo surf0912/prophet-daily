@@ -1077,7 +1077,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.15';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.16';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2676,6 +2676,13 @@ async function loadAdminNovelList() {
           </label>
         </div>`;
       }
+      if (currentUser.role === 'super_admin' && sc.id !== currentUser.id) {
+        head += `<div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(26,10,0,.08);flex-wrap:wrap">
+          <button onclick='resetPassword(${JSON.stringify(sc.id)}, ${JSON.stringify(sc.name)})' style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">🔑 重設密碼</button>
+          <button onclick='banUser(${JSON.stringify(sc.id)}, ${JSON.stringify(sc.name)}, ${sc.banned ? 1 : 0})' style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${sc.banned ? '✅ 解除封禁' : '🚫 封禁'}</button>
+          <button onclick='deleteUser(${JSON.stringify(sc.id)}, ${JSON.stringify(sc.name)})' style="font-size:12px;padding:4px 12px;background:var(--scarlet);border:none;color:var(--on-dark);border-radius:3px;cursor:pointer">🗑 刪除帳號</button>
+        </div>`;
+      }
       note.innerHTML = head;
     } else {
       ns = await api('/novels/?mine=true') || [];
@@ -2905,13 +2912,8 @@ async function loadAdminUsers() {
       // Tap the name to drill into this member's detail (their works + 迷情劑 toggle for readers).
       const open = `viewUserNovels('${u.id}')`;
       const banTag = u.banned ? '<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(138,45,45,.18);color:var(--accent);margin-left:6px">🚫 已封禁</span>' : '';
-      // super_admin only, never on yourself: ban/unban + delete.
-      const superControls = (isSuper && !isSelf) ? `
-        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
-          <button onclick='resetPassword(${JSON.stringify(u.id)}, ${JSON.stringify(display)})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">🔑 重設密碼</button>
-          <button onclick='banUser(${JSON.stringify(u.id)}, ${JSON.stringify(display)}, ${u.banned ? 1 : 0})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${u.banned ? '✅ 解除封禁' : '🚫 封禁'}</button>
-          <button onclick='deleteUser(${JSON.stringify(u.id)}, ${JSON.stringify(display)})' style="font-size:12px;padding:3px 10px;background:var(--scarlet);border:none;color:var(--on-dark);border-radius:3px;cursor:pointer">🗑 刪除帳號</button>
-        </div>` : '';
+      // Destructive actions (重設密碼/封禁/刪除) live inside the member's detail page now —
+      // tap the row to enter — so scrolling the list can't mis-fire them.
       return `
       <div style="padding:8px 0;border-bottom:1px solid rgba(26,10,0,.07)">
         <div class="user-row" style="border:none;padding:0">
@@ -2919,7 +2921,6 @@ async function loadAdminUsers() {
           <div class="u-name" onclick="${open}" style="cursor:pointer;line-height:1.3">${escapeHtml(display)}${banTag}<span style="color:var(--gold);font-weight:bold;margin-left:6px">›</span><div style="font-size:12px;color:var(--ink-light);font-weight:normal">@${escapeHtml(u.username)}</div></div>
           ${picker}
         </div>
-        ${superControls}
       </div>`;
     }).join('') || '<p style="color:#888;padding:20px">尚無用戶</p>';
   } catch { el.innerHTML = '<p>載入失敗</p>'; }
@@ -2928,7 +2929,7 @@ async function loadAdminUsers() {
 // Admin taps a member's name → their detail (scoped 作品管理 + 迷情劑 toggle for readers).
 function viewUserNovels(id) {
   const u = (window._adminUsers || []).find(x => x.id === id) || {};
-  adminNovelScope = { id, name: u.nickname || u.username || '', role: u.role, mqj: u.mqj_access };
+  adminNovelScope = { id, name: u.nickname || u.username || '', role: u.role, mqj: u.mqj_access, banned: u.banned };
   switchAdminTab('novels');
 }
 
@@ -2957,7 +2958,8 @@ async function banUser(id, name, isBanned) {
   try {
     await api(`/permissions/users/${id}/ban`, { method: 'PATCH', body: JSON.stringify({ banned: ban }) });
     toast(ban ? `🚫 已封禁 ${name}` : `✅ 已解除 ${name} 的封禁`);
-    loadAdminUsers();
+    if (adminNovelScope && adminNovelScope.id === id) { adminNovelScope.banned = ban; loadAdminNovelList(); }
+    else loadAdminUsers();
   } catch (e) { toast(e.message); }
 }
 
@@ -2967,7 +2969,8 @@ async function deleteUser(id, name) {
   try {
     await api(`/permissions/users/${id}`, { method: 'DELETE' });
     toast(`🗑 已刪除 ${name}`);
-    loadAdminUsers();
+    adminNovelScope = null;            // they're gone — return to the member list
+    switchAdminTab('users');
   } catch (e) { toast(e.message); }
 }
 
