@@ -989,7 +989,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v91';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v92';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1620,6 +1620,24 @@ function openMqjDisclaimer() {
   document.getElementById('mqj-disclaimer-modal').classList.add('open');
 }
 
+// Re-fetch the caller's profile to pick up a freshly-granted 迷情劑 approval without
+// a re-login. If it flipped to approved, unlock the shelf live + toast.
+let _mqjChecking = false;
+async function refreshMqjStatus() {
+  if (_mqjChecking || !currentUser) return;
+  _mqjChecking = true;
+  try {
+    const me = await api('/auth/me');
+    if (me && me.mqj_access !== currentUser.mqj_access) {
+      const becameApproved = me.mqj_access === 'approved';
+      currentUser.mqj_access = me.mqj_access;
+      if (becameApproved) { toast('✅ 你的迷情劑權限已開放'); loadNovels(); }
+      else renderShelf();
+    }
+  } catch (e) { /* ignore */ }
+  finally { _mqjChecking = false; }
+}
+
 async function requestMqj() {
   document.getElementById('mqj-disclaimer-modal').classList.remove('open');
   try {
@@ -1641,9 +1659,10 @@ function renderShelf() {
   }
   // 迷情劑 gate for readers without access.
   if (shelfCat === '迷情劑' && ['reader', 'writer'].includes(currentUser?.role) && currentUser?.mqj_access !== 'approved') {
+    refreshMqjStatus();   // live re-check: if an admin just approved, unlock without re-login
     const a = currentUser.mqj_access;
     grid.innerHTML = a === 'pending'
-      ? '<div class="empty-shelf">⏳ 你已申請開放「迷情劑」<br><small>等待管理員審核</small></div>'
+      ? '<div class="empty-shelf">⏳ 你已申請開放「迷情劑」<br><small>管理員通過後，回到這頁即可自動解鎖（不必重新登入）</small></div>'
       : a === 'rejected'
       ? '<div class="empty-shelf">🚫 你的「迷情劑」閱讀申請未通過<br><small>如有異議，請找管理員申訴</small></div>'
       : `<div class="empty-shelf">🔒 「迷情劑」分類需開放才能閱讀<br><small style="margin-bottom:14px">點下方按鈕向管理員申請</small><button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" onclick="openMqjDisclaimer()">📨 要求管理員開放</button></div>`;
