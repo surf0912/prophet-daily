@@ -12,9 +12,16 @@ INTERNAL_DOMAIN = "prophet-daily.internal"
 def username_to_email(username: str) -> str:
     return f"{username.lower()}@{INTERNAL_DOMAIN}"
 
+import secrets
+# Short, unambiguous invite codes (no 0/O/1/I/l). ~8 chars from a 54-char set ≈ huge space.
+_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"
+def _make_code(n: int = 8) -> str:
+    return "".join(secrets.choice(_CODE_ALPHABET) for _ in range(n))
+
 class InviteCreate(BaseModel):
     role: str = "reader"
     note: Optional[str] = None
+    count: int = 1
 
 class RegisterWithInvite(BaseModel):
     token: str
@@ -37,13 +44,23 @@ def generate_invite(
 
     from datetime import datetime, timezone, timedelta
     expires_at = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
-    res = sb.table("invite_tokens").insert({
-        "role": body.role,
-        "created_by": user["id"],
-        "expires_at": expires_at,
-    }).execute()
-    token = res.data[0]["token"]
-    return {"token": token, "role": body.role}
+    count = max(1, min(20, body.count or 1))   # bulk: up to 20 at once
+    tokens = []
+    for _ in range(count):
+        for attempt in range(6):                # short codes can collide → retry
+            try:
+                res = sb.table("invite_tokens").insert({
+                    "token": _make_code(8),
+                    "role": body.role,
+                    "created_by": user["id"],
+                    "expires_at": expires_at,
+                }).execute()
+                tokens.append(res.data[0]["token"])
+                break
+            except Exception:
+                if attempt == 5:
+                    raise HTTPException(500, "產生邀請失敗，請重試")
+    return {"tokens": tokens, "token": tokens[0], "role": body.role}
 
 @router.get("/validate/{token}")
 def validate_invite(token: str, sb: Client = Depends(get_supabase_admin)):

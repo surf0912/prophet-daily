@@ -877,19 +877,19 @@
         <div class="user-list" id="user-list"></div>
       </div>
       <div id="admin-invites" class="admin-pane">
-        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-          <button class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px" onclick="generateInvite('reader')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 讀者邀請</button>
-          <button class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px;background:var(--chrome)" onclick="generateInvite('writer')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 作家邀請</button>
-          <button id="invite-admin-btn" class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px;background:#2d4a1e;display:none" onclick="generateInvite('admin')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 管理員邀請</button>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:13px;color:var(--ink-light)">一次產生</span>
+          <select id="invite-qty" style="padding:5px 8px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:13px">
+            <option value="1">1 個</option><option value="3">3 個</option><option value="5">5 個</option><option value="10">10 個</option><option value="15">15 個</option>
+          </select>
         </div>
-        <!-- generated link box -->
-        <div id="invite-result" style="display:none;background:var(--parchment2);border:1px solid var(--gold-lt);border-radius:4px;padding:12px;margin-bottom:16px">
-          <div style="font-size:12px;color:var(--accent);margin-bottom:6px">邀請連結已生成（3天有效，用一次即失效）</div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <input id="invite-link-box" type="text" readonly style="flex:1;padding:8px;font-size:12px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment);color:var(--ink)" />
-            <button onclick="copyInviteLink()" style="padding:8px 12px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;white-space:nowrap">複製</button>
-          </div>
+        <div style="display:flex;gap:6px;margin-bottom:16px">
+          <button class="btn-primary" style="flex:1;padding:9px 4px;font-size:13px;white-space:nowrap" onclick="generateInvite('reader')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 讀者</button>
+          <button class="btn-primary" style="flex:1;padding:9px 4px;font-size:13px;white-space:nowrap;background:var(--chrome)" onclick="generateInvite('writer')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 作家</button>
+          <button id="invite-admin-btn" class="btn-primary" style="flex:1;padding:9px 4px;font-size:13px;white-space:nowrap;background:#2d4a1e;display:none" onclick="generateInvite('admin')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 管理員</button>
         </div>
+        <!-- freshly generated links (with per-link + 複製全部) -->
+        <div id="invite-result" style="display:none;background:var(--parchment2);border:1px solid var(--gold-lt);border-radius:4px;padding:12px;margin-bottom:16px"></div>
         <!-- existing invites list -->
         <div id="invite-list"></div>
       </div>
@@ -1135,7 +1135,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.44';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.45';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3374,19 +3374,29 @@ async function saveMyPassword() {
 }
 
 // ── Admin: invites ────────────────────────────────────────────
+function inviteLink(token) { return `${window.location.origin}${window.location.pathname}?invite=${token}`; }
+function copyText(text, label) { navigator.clipboard.writeText(text).then(() => toast(label || '✅ 已複製')); }
+let _lastInviteLinks = [];
+function copyAllInvites() { copyText(_lastInviteLinks.join('\n'), `✅ 已複製全部 ${_lastInviteLinks.length} 條連結`); }
+const ROLE_NAME_INV = { reader: '讀者', writer: '作家', admin: '管理員' };
+
 async function generateInvite(role) {
+  const qty = parseInt(document.getElementById('invite-qty').value, 10) || 1;
   try {
-    const res = await api('/invites/generate', { method: 'POST', body: JSON.stringify({ role }) });
-    const link = `${window.location.origin}${window.location.pathname}?invite=${res.token}`;
-    document.getElementById('invite-link-box').value = link;
-    document.getElementById('invite-result').style.display = '';
+    const res = await api('/invites/generate', { method: 'POST', body: JSON.stringify({ role, count: qty }) });
+    const tokens = res.tokens || (res.token ? [res.token] : []);
+    _lastInviteLinks = tokens.map(inviteLink);
+    const box = document.getElementById('invite-result');
+    box.style.display = '';
+    const rows = tokens.map(t => `
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+        <code style="flex:1;font-size:13px;color:var(--ink);background:var(--parchment);border:1px solid var(--gold-lt);border-radius:4px;padding:6px 8px;word-break:break-all">${t}</code>
+        <button onclick="copyText('${inviteLink(t)}', '✅ 已複製（${t}）')" style="padding:6px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;white-space:nowrap">複製</button>
+      </div>`).join('');
+    const all = tokens.length > 1 ? `<button onclick="copyAllInvites()" style="margin-top:10px;width:100%;padding:9px;background:var(--scarlet);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px">複製全部 ${tokens.length} 條</button>` : '';
+    box.innerHTML = `<div style="font-size:12px;color:var(--accent);margin-bottom:2px">已產生 ${tokens.length} 個${ROLE_NAME_INV[role] || ''}邀請（3 天有效、各用一次）</div>${rows}${all}`;
     loadInviteList();
   } catch (e) { toast('⚠️ ' + e.message); }
-}
-
-function copyInviteLink() {
-  const box = document.getElementById('invite-link-box');
-  navigator.clipboard.writeText(box.value).then(() => toast('✅ 已複製到剪貼簿'));
 }
 
 async function loadInviteList() {
@@ -3398,15 +3408,18 @@ async function loadInviteList() {
     el.innerHTML = list.map(inv => {
       const used = !!inv.used_at;
       const usedBy = inv.profiles?.username || '';
+      const expired = !used && new Date(inv.expires_at) < new Date();
       const expires = new Date(inv.expires_at).toLocaleDateString('zh-TW');
+      const dim = used || expired;
       return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08);font-size:13px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <span style="background:${used ? '#ccc' : 'var(--scarlet)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;flex-shrink:0;white-space:nowrap">${roleBadge(inv.role, 12)}</span>
-          <span style="color:${used ? '#aaa' : 'var(--ink-light)'}">到期：${expires}</span>
-          ${used ? `<span style="color:#aaa">${ic('ic-check',11)} 已使用（${usedBy}）</span>` : ''}
+          <span style="background:${dim ? '#ccc' : 'var(--scarlet)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;flex-shrink:0;white-space:nowrap">${roleBadge(inv.role, 12)}</span>
+          <span style="color:${dim ? '#aaa' : 'var(--ink-light)'}">到期：${expires}</span>
+          ${used ? `<span style="color:#aaa">${ic('ic-check',11)} 已使用（${usedBy}）</span>` : (expired ? `<span style="color:#aaa">已過期</span>` : '')}
         </div>
         <div style="display:flex;align-items:center;gap:6px">
-          <code style="font-size:12px;color:#888;word-break:break-all;flex:1">${inv.token}</code>
+          <code style="font-size:13px;color:${dim ? '#aaa' : 'var(--ink)'};word-break:break-all;flex:1">${inv.token}</code>
+          ${!used && !expired ? `<button onclick="copyText('${inviteLink(inv.token)}', '✅ 已複製（${inv.token}）')" style="font-size:12px;padding:3px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap">複製</button>` : ''}
           ${!used ? `<button onclick="revokeInvite('${inv.id}')" style="font-size:12px;padding:3px 8px;background:none;border:1px solid #ccc;border-radius:3px;cursor:pointer;white-space:nowrap">撤銷</button>` : ''}
         </div>
       </div>`;
