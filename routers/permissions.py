@@ -66,6 +66,23 @@ def change_role(user_id: str, body: RoleRequest, sb: Client = Depends(get_supaba
         raise HTTPException(404, "User not found")
     return res.data[0]
 
+# ── Reset a member's 通關密語 (super_admin only) ──────────────
+# Accounts use fake internal emails, so Supabase's email reset can't work — an admin sets
+# a new password here, then tells the member privately.
+class PasswordBody(BaseModel):
+    password: str
+
+@router.patch("/users/{user_id}/password", dependencies=[Depends(require_super_admin)])
+def reset_password(user_id: str, body: PasswordBody, sb: Client = Depends(get_supabase_admin)):
+    pw = (body.password or "").strip()
+    if len(pw) < 6:
+        raise HTTPException(400, "通關密語至少 6 字")
+    try:
+        sb.auth.admin.update_user_by_id(user_id, {"password": pw})
+    except Exception as e:
+        raise HTTPException(500, f"重設失敗：{e}")
+    return {"message": "ok"}
+
 # ── Ban / delete accounts (super_admin only) ───────────────
 class BanBody(BaseModel):
     banned: bool
