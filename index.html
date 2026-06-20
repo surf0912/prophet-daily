@@ -489,6 +489,7 @@
     .perm-modal.open { display: flex; }
     .perm-modal-inner { background: var(--parchment); color: var(--ink); width: 100%; padding: 20px; border-radius: 12px 12px 0 0; max-height: 70vh; overflow-y: auto; }
     .perm-modal-inner h3 { font-size: 16px; margin-bottom: 14px; }
+    .btn-primary:disabled { opacity: .4; filter: grayscale(.4); cursor: not-allowed; }
     .perm-novel-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(26,10,0,.08); }
     .perm-novel-row label { font-size: 14px; }
     .btn-close-modal { display: block; width: 100%; margin-top: 16px; padding: 12px; background: var(--chrome-dk); color: var(--gold); border: none; border-radius: 3px; cursor: pointer; }
@@ -930,6 +931,38 @@
   </div>
 </div>
 
+<div class="perm-modal" id="mqj-disclaimer-modal">
+  <div class="perm-modal-inner" style="max-height:85vh">
+    <h3 style="text-align:center;line-height:1.5">迷情劑內容｜魔法部特別公告</h3>
+    <div style="font-size:13px;line-height:1.75;color:var(--ink-light)">
+      <p style="margin-bottom:10px">依據《未成年巫師保護條例》及《迷情劑流通管理辦法》相關規定，魔法部傲羅辦公室與《預言家日報》編務處聯合發布以下公告：</p>
+      <p style="margin-bottom:10px">凡未滿十八歲之巫師、女巫、魔法學徒，均不得以任何形式瀏覽、閱讀、取得、儲存、轉傳或接觸標記為「迷情劑」之內容。</p>
+      <p style="margin-bottom:10px">本限制適用於所有魔法通訊裝置、《預言家日報》網路版、私人閱讀終端、魔法鏡面投影、壁爐訊息傳輸，以及任何可連接本站之巫師設備。</p>
+      <p style="margin-bottom:10px">進入「迷情劑」標記內容前，使用者須確認自己已年滿十八歲，並理解該區域可能包含不適合未成年巫師閱讀之文字、情節或討論內容。若未滿十八歲，請立即離開該頁面，不得繼續瀏覽。</p>
+      <p style="margin-bottom:10px">若有未成年巫師透過增齡劑、混淆咒、複方湯劑、變形術、借用他人帳號、偽造身分、共享邀請連結，或任何其他方式蓄意規避已設立之魔法年齡線，將視為嚴重違規行為。經查明後，可能依情節採取以下處置：</p>
+      <ol style="margin:0 0 10px 0;padding-left:20px">
+        <li style="margin-bottom:8px"><b>年齡線反制</b><br>系統將自動識別異常進入行為，並立即中斷該名使用者對「迷情劑」內容之存取權限。相關帳號可能被暫時凍結、限制登入，或要求重新驗證身分。</li>
+        <li style="margin-bottom:8px"><b>閱讀權限暫停</b><br>違規者之帳號可能被移出相關內容區域，並於一定期間內限制閱讀、留言、收藏、發布或互動功能。情節嚴重者，相關閱讀權限將被永久撤銷。</li>
+        <li style="margin-bottom:8px"><b>邀請資格限制</b><br>若使用者將邀請連結轉發予未授權對象，或協助未成年使用者進入受限內容區，該使用者之邀請資格、帳號權限及站內存取權可能被取消。</li>
+        <li style="margin-bottom:8px"><b>管理員審查記錄</b><br>所有疑似規避年齡限制、冒用帳號或惡意轉傳之行為，均可能由管理員記錄並進行審查。必要時，本站保留限制、停用或刪除相關帳號之權利。</li>
+        <li style="margin-bottom:8px"><b>嚴重違規處置</b><br>若使用者將「迷情劑」內容外傳、截圖散布、轉載至其他平台，或提供予未成年巫師接觸，本站保留立即封鎖帳號、移除存取權限及採取進一步處理措施之權利。</li>
+      </ol>
+      <p style="margin-bottom:10px"><b>魔法部鄭重提醒：</b><br>增齡劑或許能暫時迷惑一條年齡線，卻瞞不過傲羅辦公室的追蹤咒。</p>
+      <p style="margin-bottom:10px">請所有巫師家庭、監護人與成年使用者善盡監護與自律義務。若發現疑似未成年使用者試圖進入受限內容區，請立即停止相關操作，並通知本站管理員處理。</p>
+      <p style="margin-bottom:10px">未滿十八歲者，請自行遠離。<br>迷情劑的力量，遠比你想像中更危險。</p>
+      <p style="margin-bottom:4px;color:var(--ink);opacity:.85">本公告為《預言家日報》站內世界觀提示與使用規則說明。進入受限內容區，即代表你已確認自己年滿十八歲，並同意遵守本站相關內容限制與管理規則。</p>
+    </div>
+    <label style="display:flex;align-items:flex-start;gap:8px;margin:16px 0 12px;font-size:14px;color:var(--ink);cursor:pointer">
+      <input type="checkbox" id="mqj-age-check" style="margin-top:2px;flex-shrink:0;width:18px;height:18px" onchange="document.getElementById('mqj-confirm-btn').disabled=!this.checked">
+      <span>我確認我已年滿 18 歲，並同意以上內容限制與管理規則</span>
+    </label>
+    <div style="display:flex;gap:8px">
+      <button class="btn-primary" id="mqj-confirm-btn" disabled style="flex:1;padding:12px;font-size:13px" onclick="requestMqj()">送出申請</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('mqj-disclaimer-modal').classList.remove('open')">取消</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -937,7 +970,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v77';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v78';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1397,7 +1430,18 @@ function onShelfFilter(type, val) {
   renderShelf();
 }
 
+function openMqjDisclaimer() {
+  const cb = document.getElementById('mqj-age-check');
+  if (cb) cb.checked = false;
+  const btn = document.getElementById('mqj-confirm-btn');
+  if (btn) btn.disabled = true;
+  const inner = document.querySelector('#mqj-disclaimer-modal .perm-modal-inner');
+  if (inner) inner.scrollTop = 0;
+  document.getElementById('mqj-disclaimer-modal').classList.add('open');
+}
+
 async function requestMqj() {
+  document.getElementById('mqj-disclaimer-modal').classList.remove('open');
   try {
     const res = await api('/permissions/me/request-mqj', { method: 'POST' });
     currentUser.mqj_access = res.mqj_access;
@@ -1422,7 +1466,7 @@ function renderShelf() {
       ? '<div class="empty-shelf">⏳ 你已申請開放「迷情劑」<br><small>等待管理員審核</small></div>'
       : a === 'rejected'
       ? '<div class="empty-shelf">🚫 你的「迷情劑」閱讀申請未通過<br><small>如有異議，請找管理員申訴</small></div>'
-      : `<div class="empty-shelf">🔒 「迷情劑」分類需開放才能閱讀<br><small style="margin-bottom:14px">點下方按鈕向管理員申請</small><button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" onclick="requestMqj()">📨 要求管理員開放</button></div>`;
+      : `<div class="empty-shelf">🔒 「迷情劑」分類需開放才能閱讀<br><small style="margin-bottom:14px">點下方按鈕向管理員申請</small><button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" onclick="openMqjDisclaimer()">📨 要求管理員開放</button></div>`;
     return;
   }
   if (!novels.length) {
