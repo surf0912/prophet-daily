@@ -99,6 +99,12 @@ def my_liked(user: dict = Depends(get_current_user), sb: Client = Depends(get_su
     out.sort(key=lambda n: n["liked_count"], reverse=True)
     return out
 
+# Whole-work favorites (意若思鏡 收藏夾). Needs a novel_favorites(user_id, novel_id) table.
+@router.get("/my-favorite-ids")
+def my_favorite_ids(user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
+    rows = sb.table("novel_favorites").select("novel_id").eq("user_id", user["id"]).execute().data or []
+    return [r["novel_id"] for r in rows]
+
 @router.get("/{novel_id}")
 def get_novel(novel_id: str, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
     res = sb.table("novels").select("*").eq("id", novel_id).single().execute()
@@ -237,6 +243,16 @@ def toggle_comment_like(novel_id: str, idx: int, user: dict = Depends(get_curren
         liked = True
     cnt = sb.table("comment_likes").select("id", count="exact").eq("novel_id", novel_id).eq("comment_index", idx).execute()
     return {"liked": liked, "count": cnt.count or 0}
+
+@router.post("/{novel_id}/favorite")
+def toggle_favorite(novel_id: str, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
+    existing = (sb.table("novel_favorites").select("user_id")
+                .eq("user_id", user["id"]).eq("novel_id", novel_id).execute().data)
+    if existing:
+        sb.table("novel_favorites").delete().eq("user_id", user["id"]).eq("novel_id", novel_id).execute()
+        return {"favorited": False}
+    sb.table("novel_favorites").insert({"user_id": user["id"], "novel_id": novel_id}).execute()
+    return {"favorited": True}
 
 def _check_novel_access(novel: dict, user: dict):
     # Approved works are visible to every logged-in user.

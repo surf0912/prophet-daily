@@ -474,6 +474,7 @@
     .perm-modal-inner { background: var(--parchment); color: var(--ink); width: 100%; padding: 20px; border-radius: 12px 12px 0 0; max-height: 70vh; overflow-y: auto; }
     .perm-modal-inner h3 { font-size: 16px; margin-bottom: 14px; }
     .btn-primary:disabled { opacity: .4; filter: grayscale(.4); cursor: not-allowed; }
+    #shelf-fav-btn.on { background: var(--scarlet) !important; color: var(--on-dark) !important; border-color: var(--scarlet) !important; }
 
     /* ── Guided tour (新手導覽) ── */
     #tour-overlay { position: fixed; inset: 0; z-index: 400; display: none; }
@@ -600,7 +601,10 @@
 
     <!-- SCROLL 卷軸 -->
     <div id="page-scroll" class="page">
-      <div class="shelf-header"><h2>🪞 意若思鏡</h2></div>
+      <div class="shelf-header" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <h2 style="margin:0">🪞 意若思鏡</h2>
+        <button id="shelf-fav-btn" onclick="toggleShelfFav()" style="flex-shrink:0;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer">⭐ 收藏夾</button>
+      </div>
       <div class="forum-search">
         <input type="search" id="shelf-search-input" placeholder="🔍 搜尋篇名、作者或角色…" oninput="renderShelf()" />
       </div>
@@ -828,6 +832,7 @@
       <span id="reader-font-label">15</span>
       <button onclick="stepReaderFont(1)" aria-label="放大字體">A+</button>
     </div>
+    <button id="reader-fav-btn" onclick="toggleReaderFavorite()" aria-label="收藏" style="display:none;background:none;border:none;color:var(--gold-lt);font-size:22px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0">☆</button>
   </div>
   <div class="chapter-list-panel" id="reader-toc-panel">
     <details>
@@ -1001,7 +1006,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v104';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v105';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1346,6 +1351,7 @@ async function initApp() {
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = adminish ? '' : 'none');  // writers: only 作品管理 + 上傳
   adminNovelScope = null;
   loadOwnerNames();   // super_admin only: map owner uuid → 巫師全名 for the owner hint
+  loadFavIds();       // 意若思鏡 收藏夾 ids
   renderSettings();
   renderGreeting();
   renderTourBanner();   // persistent home prompt for anyone not yet onboarded
@@ -1642,6 +1648,36 @@ const CHAR_LIST = [
 ];
 let shelfCat = '';        // '' = 全部
 let shelfChars = [];   // default: none lit = show everything; tap a character to filter to them (OR)
+let favIds = new Set();   // 意若思鏡 收藏夾: ids of whole works the user has favorited
+let shelfFav = false;     // 收藏夾 view toggle
+
+async function loadFavIds() {
+  try { favIds = new Set(await api('/novels/my-favorite-ids') || []); }
+  catch { favIds = new Set(); }
+}
+function toggleShelfFav() {
+  shelfFav = !shelfFav;
+  document.getElementById('shelf-fav-btn').classList.toggle('on', shelfFav);
+  renderShelf();
+}
+// Reader: favorite the whole work (意若思鏡 only).
+function updateReaderFavBtn() {
+  const b = document.getElementById('reader-fav-btn');
+  if (!b) return;
+  b.style.display = currentNovelKind === 'novel' ? '' : 'none';   // 意若思鏡 works only
+  const fav = favIds.has(currentNovelId);
+  b.textContent = fav ? '★' : '☆';
+  b.style.color = fav ? 'var(--gold)' : 'var(--gold-lt)';
+}
+async function toggleReaderFavorite() {
+  if (!currentNovelId) return;
+  try {
+    const r = await api(`/novels/${currentNovelId}/favorite`, { method: 'POST' });
+    if (r.favorited) favIds.add(currentNovelId); else favIds.delete(currentNovelId);
+    updateReaderFavBtn();
+    toast(r.favorited ? '⭐ 已加入收藏夾' : '已從收藏夾移除');
+  } catch (e) { toast(e.message); }
+}
 let adminNovelScope = null;   // null = manage my own works; {id,name} = managing another user's works (#3)
 
 // Map character codes -> display names (e.g. ['sean'] -> 'Sean')
@@ -1739,6 +1775,14 @@ function renderShelf() {
     grid.innerHTML = '<div class="empty-shelf" style="color:var(--accent);cursor:pointer" onclick="loadNovels()">⚠️ 載入失敗，點此重試</div>';
     return;
   }
+  // 收藏夾 view: only favorited works (skip the 迷情劑 gate — favorites are already accessible).
+  if (shelfFav) {
+    let list = applyClassFilter(novels.filter(n => favIds.has(n.id)), shelfCat === '迷情劑' ? '' : shelfCat, shelfChars);
+    const q = (document.getElementById('shelf-search-input')?.value || '').trim().toLowerCase();
+    if (q) list = list.filter(n => matchesQuery(n, q));
+    renderNovelBlocks(list, grid, '⭐ 收藏夾還是空的<br><small>讀小說時，點右上角的 ☆ 就能收藏整篇</small>');
+    return;
+  }
   // 迷情劑 gate for readers without access.
   if (shelfCat === '迷情劑' && ['reader', 'writer'].includes(currentUser?.role) && currentUser?.mqj_access !== 'approved') {
     refreshMqjStatus();   // live re-check: if an admin just approved, unlock without re-login
@@ -1757,11 +1801,12 @@ function renderShelf() {
   let list = applyClassFilter(novels, shelfCat, shelfChars);
   const q = (document.getElementById('shelf-search-input')?.value || '').trim().toLowerCase();
   if (q) list = list.filter(n => matchesQuery(n, q));
-  if (!list.length) {
-    grid.innerHTML = '<div class="empty-shelf">🔍 沒有符合的作品</div>';
-    return;
-  }
-  // Group series members together; standalone works render as plain rows.
+  renderNovelBlocks(list, grid, '🔍 沒有符合的作品');
+}
+
+// Render a list of novels into the grid, grouping series members under a 📚 header.
+function renderNovelBlocks(list, grid, emptyMsg) {
+  if (!list.length) { grid.innerHTML = `<div class="empty-shelf">${emptyMsg}</div>`; return; }
   const seen = new Set();
   const blocks = [];
   for (const n of list) {
@@ -1839,6 +1884,7 @@ async function openNovel(novelId) {
   currentNovelKind = (novel && novel.kind) || 'novel';
   currentNovelTitle = (novel && novel.title) || '';
   applyMqjGuard(!!(novel && novel.category === '迷情劑'));   // personalized watermark + copy guard on 迷情劑
+  updateReaderFavBtn();   // show ☆/★ for 意若思鏡 works
   try { currentChapters = await api(`/chapters/novel/${novelId}`) || []; }
   catch { toast('無法載入內容'); return; }
   if (!currentChapters.length) { toast('此作品尚無內容'); return; }
@@ -2038,6 +2084,7 @@ async function resumeReading() {
   let _cat = _nv ? _nv.category : p.category;
   if (_cat === undefined) { try { _nv = await api(`/novels/${p.novelId}`); _cat = _nv && _nv.category; } catch {} }
   applyMqjGuard(_cat === '迷情劑');
+  updateReaderFavBtn();   // show ☆/★ for 意若思鏡 works
   try { currentChapters = await api(`/chapters/novel/${p.novelId}`) || []; }
   catch { toast('無法載入章節'); return; }
   const single = currentNovelKind === 'forum' || currentChapters.length <= 1;
