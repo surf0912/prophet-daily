@@ -1102,7 +1102,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.40';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.41';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1708,10 +1708,12 @@ function renderGreeting() {
   if (src) {
     const probe = new Image();         // only swap in the photo once it actually loads
     probe.onload = () => showHero(src, heroPos);
-    probe.onerror = () => {            // desktop image not uploaded yet → fall back to the mobile one
-      if (src !== mobileImg && mobileImg) {
+    // Desktop NEVER substitutes a phone (portrait) image — if a desktop image fails, keep the
+    // gradient+emoji rather than show a phone-sized shot. On phones, only retry within the phone set.
+    probe.onerror = () => {
+      if (!isWide && src !== mobileImg && mobileImg) {
         const p2 = new Image();
-        p2.onload = () => showHero(mobileImg, (isWide && char.bgPosDesktop) || char.bgPos || 'center');
+        p2.onload = () => showHero(mobileImg, char.bgPos || 'center');
         p2.src = mobileImg;
       }
     };
