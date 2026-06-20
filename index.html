@@ -987,7 +987,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v84';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v85';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1318,7 +1318,7 @@ const TOUR_READER = [
   { page: 'scroll', target: '#shelf-char-chips',
     html: "<span class='tour-h'>🎭 只看某個人</span>點角色頭像籤,就只顯示有那位角色的故事;再點一次即可取消。" },
   { page: 'scroll', target: '#shelf-cat-pills',
-    html: "<span class='tour-h'>📜 故事分類</span>用分類快速篩選。其中<b>迷情劑</b>需要先向管理員<b>申請開放</b>才看得到喔。" },
+    html: "<span class='tour-h'>📜 故事分類</span><b>迷情劑</b>為成人向、<b>吐真劑</b>為全年齡向、<b>儲思盆</b>是人物小傳與背景故事。其中迷情劑需先向管理員<b>申請開放</b>才看得到喔。" },
   { page: 'forum', target: '[data-tour="nav-forum"]',
     html: "<span class='tour-h'>🦉 匿名羊皮紙</span>從這裡看看其他霍格沃茲學生都在討論些什麼——傳閱時小心點,別被級長抓到!" },
   { page: 'forum', target: '#forum-tab-liked',
