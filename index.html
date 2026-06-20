@@ -1001,7 +1001,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v100';   // MUST match service-worker CACHE_NAME (self-heal compares them)
+const APP_VERSION = 'v101';   // MUST match service-worker CACHE_NAME (self-heal compares them)
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1536,7 +1536,7 @@ function dismissTourBanner() { markTourSeen(); renderTourBanner(); }
 // quotes[0]=早上  quotes[1]=中午  quotes[2]=下午  quotes[3]=晚上
 const CHARS = [
   {
-    name: 'Sean', emoji: '🦁', img: './chars/sean.jpg', bgPos: 'center 20%',
+    name: 'Sean', emoji: '🦁', img: './chars/sean.jpg', imgD: './chars/sean-d.jpg', bgPos: 'center 20%',
     quotes: [
       '早上好，今天也很漂亮。別懷疑，我說的是事實。',
       '中午好。終於下課了？我可以把你借走一會兒嗎？',
@@ -1545,7 +1545,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Silas', emoji: '🦅', img: './chars/silas.jpg', bgPos: 'center top', bgPosDesktop: 'center 30%',
+    name: 'Silas', emoji: '🦅', img: './chars/silas.jpg', imgD: './chars/silas-d.jpg', bgPos: 'center top', bgPosDesktop: 'center 30%',
     quotes: [
       '早上好。你的座位在這裡。',
       '中午好。先吃飯，你上午已經喝了兩杯咖啡了。',
@@ -1554,7 +1554,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Eli', emoji: '🦡', img: './chars/eli.jpg', bgPos: 'center 20%',
+    name: 'Eli', emoji: '🦡', img: './chars/eli.jpg', imgD: './chars/eli-d.jpg', bgPos: 'center 20%',
     quotes: [
       '啊，早上好。你吃早飯了嗎？我這裡還有一塊餅乾。',
       '啊，中午好。剛剛有一隻蒲絨絨一直跟著我……我想它可能比較喜歡你。',
@@ -1563,7 +1563,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Adrian', emoji: '🐍', img: './chars/adrian.jpg', bgPos: 'center top', bgPosDesktop: 'center 20%',
+    name: 'Adrian', emoji: '🐍', img: './chars/adrian.jpg', imgD: './chars/adrian-d.jpg', bgPos: 'center top', bgPosDesktop: 'center 20%',
     quotes: [
       '早上好。你今天沒繞遠路，看來心情不錯。',
       '中午好。當心，西側長廊今天別去。',
@@ -1587,20 +1587,29 @@ function renderGreeting() {
   hero.style.backgroundImage = GRAD;   // gradient base — never let parchment show through
   document.getElementById('greeting-line-text').textContent = `${period}，${currentUser.nickname || currentUser.username || '你'} ✨`;
   document.getElementById('greeting-quote-text').textContent = char.quotes[timeIdx];
-  // On wide screens the hero box is short+wide, so portraits need a lower anchor to show the face.
+  // Desktop and mobile use DIFFERENT image sets (never mixed): wide screens get char.imgD.
   const isWide = window.matchMedia('(min-width: 600px)').matches;
-  const heroPos = (isWide && char.bgPosDesktop) || char.bgPos || 'center';
-  if (char.img) {
+  const src = (isWide && char.imgD) ? char.imgD : char.img;
+  const heroPos = (src === char.imgD) ? (char.bgPosD || 'center')
+                : ((isWide && char.bgPosDesktop) || char.bgPos || 'center');
+  const showHero = (url, pos) => {     // photo layered OVER the gradient (gradient stays as fallback)
+    hero.style.backgroundImage = `url('${url}'), ${GRAD}`;
+    hero.style.backgroundPosition = `${pos}, center`;
+    hero.style.backgroundRepeat = 'no-repeat, no-repeat';
+    hero.style.backgroundSize = `${char.bgSize || 'cover'}, cover`;
+    emoji.style.display = 'none';
+  };
+  if (src) {
     const probe = new Image();         // only swap in the photo once it actually loads
-    probe.onload = () => {             // photo layered OVER the gradient (gradient stays as fallback)
-      hero.style.backgroundImage = `url('${char.img}'), ${GRAD}`;
-      hero.style.backgroundPosition = `${heroPos}, center`;
-      hero.style.backgroundRepeat = 'no-repeat, no-repeat';
-      hero.style.backgroundSize = `${char.bgSize || 'cover'}, cover`;
-      emoji.style.display = 'none';
+    probe.onload = () => showHero(src, heroPos);
+    probe.onerror = () => {            // desktop image not uploaded yet → fall back to the mobile one
+      if (src !== char.img && char.img) {
+        const p2 = new Image();
+        p2.onload = () => showHero(char.img, (isWide && char.bgPosDesktop) || char.bgPos || 'center');
+        p2.src = char.img;
+      }
     };
-    probe.onerror = () => {};          // keep emoji + gradient if the photo fails
-    probe.src = char.img;
+    probe.src = src;
   }
   const now = new Date();
   document.getElementById('date-banner').textContent =
