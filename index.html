@@ -893,6 +893,25 @@
   </div>
 </div>
 
+<div class="perm-modal" id="avatar-crop-modal">
+  <div class="perm-modal-inner" style="text-align:center">
+    <h3>調整頭像</h3>
+    <div id="avatar-crop-box" onpointerdown="avatarDragStart(event)" ontouchstart="avatarDragStart(event)"
+         style="width:260px;height:260px;max-width:78vw;aspect-ratio:1;margin:12px auto;border-radius:50%;overflow:hidden;position:relative;background:#000;touch-action:none;cursor:grab">
+      <img id="avatar-crop-img" alt="" style="position:absolute;left:0;top:0;transform-origin:0 0;user-select:none;-webkit-user-drag:none;pointer-events:none;max-width:none" />
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:0 6px;margin-bottom:8px">
+      <span style="font-size:12px;color:var(--ink)">縮放</span>
+      <input type="range" id="avatar-crop-zoom" min="1" max="3" step="0.01" value="1" style="flex:1" oninput="avatarZoom(this.value)" />
+    </div>
+    <p style="font-size:12px;color:var(--ink-light);opacity:.8;margin-bottom:4px">拖曳移動、滑桿縮放，圓圈內就是你的頭像</p>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveAvatarCrop()">儲存</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('avatar-crop-modal').classList.remove('open')">取消</button>
+    </div>
+  </div>
+</div>
+
 <div id="waking-overlay">
   <div class="box">
     <div class="spinner" style="margin:0 auto 12px"></div>
@@ -917,7 +936,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v74';   // bump together with the service-worker CACHE_NAME on each release
+const APP_VERSION = 'v75';   // bump together with the service-worker CACHE_NAME on each release
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1046,16 +1065,86 @@ function resizeImage(file, size) {
   });
 }
 
-async function handleAvatarUpload(e) {
+// ── Avatar crop (drag to move, slider to zoom, before saving) ──
+const _crop = { img: null, V: 260, scale: 1, minScale: 1, tx: 0, ty: 0, url: null };
+
+function handleAvatarUpload(e) {
   const f = e.target.files[0];
   e.target.value = '';
   if (!f) return;
   if (!f.type.startsWith('image/')) { toast('請選擇圖片檔'); return; }
+  if (_crop.url) URL.revokeObjectURL(_crop.url);
+  _crop.url = URL.createObjectURL(f);
+  const img = new Image();
+  img.onload = () => openAvatarCrop(img);
+  img.onerror = () => toast('圖片讀取失敗');
+  img.src = _crop.url;
+}
+
+function _cropApply() {
+  const el = document.getElementById('avatar-crop-img');
+  el.style.transform = `translate(${_crop.tx}px, ${_crop.ty}px) scale(${_crop.scale})`;
+}
+function _cropClamp() {
+  const { V, scale, img } = _crop;
+  _crop.tx = Math.min(0, Math.max(V - img.naturalWidth * scale, _crop.tx));
+  _crop.ty = Math.min(0, Math.max(V - img.naturalHeight * scale, _crop.ty));
+}
+
+function openAvatarCrop(img) {
+  _crop.img = img;
+  const V = _crop.V;
+  _crop.minScale = V / Math.min(img.naturalWidth, img.naturalHeight);
+  _crop.scale = _crop.minScale;
+  _crop.tx = (V - img.naturalWidth * _crop.scale) / 2;
+  _crop.ty = (V - img.naturalHeight * _crop.scale) / 2;
+  const el = document.getElementById('avatar-crop-img');
+  el.src = img.src;
+  el.style.width = img.naturalWidth + 'px';
+  el.style.height = img.naturalHeight + 'px';
+  document.getElementById('avatar-crop-zoom').value = 1;
+  _cropApply();
+  document.getElementById('avatar-crop-modal').classList.add('open');
+}
+
+function avatarZoom(mult) {
+  const { V } = _crop;
+  const cx = (V / 2 - _crop.tx) / _crop.scale;   // keep viewport centre fixed
+  const cy = (V / 2 - _crop.ty) / _crop.scale;
+  _crop.scale = _crop.minScale * parseFloat(mult);
+  _crop.tx = V / 2 - cx * _crop.scale;
+  _crop.ty = V / 2 - cy * _crop.scale;
+  _cropClamp(); _cropApply();
+}
+
+function avatarDragStart(ev) {
+  ev.preventDefault();
+  const p = ev.touches ? ev.touches[0] : ev;
+  let lastX = p.clientX, lastY = p.clientY;
+  const move = (e) => {
+    const q = e.touches ? e.touches[0] : e;
+    _crop.tx += q.clientX - lastX; _crop.ty += q.clientY - lastY;
+    lastX = q.clientX; lastY = q.clientY;
+    _cropClamp(); _cropApply();
+  };
+  const end = () => {
+    window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', end);
+  };
+  window.addEventListener('pointermove', move); window.addEventListener('pointerup', end);
+}
+
+async function saveAvatarCrop() {
+  const { img, V, scale, tx, ty } = _crop;
+  const sx = -tx / scale, sy = -ty / scale, sSize = V / scale;
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  c.getContext('2d').drawImage(img, sx, sy, sSize, sSize, 0, 0, 128, 128);
+  const dataUrl = c.toDataURL('image/jpeg', 0.82);
   try {
-    const dataUrl = await resizeImage(f, 128);
     const updated = await api('/auth/me/avatar', { method: 'PATCH', body: JSON.stringify({ avatar: dataUrl }) });
     currentUser.avatar_url = (updated && updated.avatar_url) || dataUrl;
     toast('✅ 頭像已更新');
+    document.getElementById('avatar-crop-modal').classList.remove('open');
+    if (_crop.url) { URL.revokeObjectURL(_crop.url); _crop.url = null; }
     renderSettings();
   } catch (err) { toast('⚠️ ' + (err.message || '頭像更新失敗')); }
 }
