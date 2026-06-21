@@ -1180,11 +1180,26 @@
 <div id="toast"></div>
 
 <script>
+// ── Block double-tap-to-zoom ─────────────────────────────────
+// iOS Safari often ignores touch-action / user-scalable for double-tap zoom. Suppress the second
+// of two quick taps; pinch-zoom and single taps still work. Skip form fields so text editing is
+// unaffected.
+(function () {
+  let lastTap = 0;
+  document.addEventListener('touchend', function (e) {
+    const t = e.target;
+    if (t && (t.closest('input, textarea, select, [contenteditable]'))) { lastTap = 0; return; }
+    const now = Date.now();
+    if (now - lastTap <= 350) e.preventDefault();   // cancels the zoom gesture on the 2nd tap
+    lastTap = now;
+  }, { passive: false });
+}());
+
 // ── Config (update after deploy) ────────────────────────────
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.70';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.71';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
