@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prophet-daily-v1.64';
+const CACHE_NAME = 'prophet-daily-v1.65';
 const ASSETS = [
   './manifest.json',
   './favicon.png',
@@ -44,6 +44,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Other same-origin assets: cache-first (fast + offline).
-  event.respondWith(caches.match(req).then((cached) => cached || fetch(req)));
+  // Other same-origin assets (images, etc.): cache-first, but STORE on first fetch so
+  // refreshes are instant/offline — previously the fetch result was never cached, so the
+  // 心動 hero photo was re-downloaded every reload and often failed on slow/flaky networks.
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      if (cached) return cached;
+      return fetch(req).then((res) => {
+        if (res && res.ok && req.method === 'GET') {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(req, copy));
+        }
+        return res;
+      });
+    })
+  );
 });

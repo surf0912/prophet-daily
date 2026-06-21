@@ -1159,6 +1159,21 @@
   </div>
 </div>
 
+<!-- 常見問題：新增/編輯（支援多行貼上） -->
+<div class="perm-modal" id="faq-edit-modal">
+  <div class="perm-modal-inner">
+    <h3 id="faq-edit-title"><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-help"/></svg> 新增問答</h3>
+    <label style="display:block;font-size:12px;color:var(--ink-light);margin-bottom:4px">問題</label>
+    <input id="faq-edit-q" type="text" placeholder="輸入問題…" style="width:100%;box-sizing:border-box;padding:9px 12px;margin-bottom:12px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment2);color:var(--ink);font-size:14px" />
+    <label style="display:block;font-size:12px;color:var(--ink-light);margin-bottom:4px">答案（可直接貼上多行）</label>
+    <textarea id="faq-edit-a" rows="6" placeholder="輸入答案…可換行、可整段貼上" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment2);color:var(--ink);font-size:14px;line-height:1.6;resize:vertical;white-space:pre-wrap"></textarea>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-primary" id="faq-edit-save" style="flex:1;padding:11px;font-size:14px" onclick="saveFaqEditor()">儲存</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:14px" onclick="document.getElementById('faq-edit-modal').classList.remove('open')">取消</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1166,7 +1181,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.64';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.65';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2078,19 +2093,35 @@ async function loadFaqs() {
       ${admin ? `<div style="margin-top:6px;display:flex;gap:8px"><button onclick="editFaq('${f.id}')" style="font-size:11px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:10px;padding:2px 10px;cursor:pointer">編輯</button><button onclick="deleteFaq('${f.id}')" style="font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer">${ic('ic-trash',12)} 刪除</button></div>` : ''}
     </details>`).join('');
 }
-async function addFaq() {
-  const q = prompt('問題:'); if (!q) return;
-  const a = prompt('答案:'); if (a === null) return;
-  try { await api('/feedback/faqs', { method: 'POST', body: JSON.stringify({ question: q, answer: a }) }); loadFaqs(); }
-  catch (e) { toast(e.message); }
+let _faqEditId = null;   // null = 新增；否則為編輯中的 id
+function _openFaqEditor(id, q, a) {
+  _faqEditId = id || null;
+  document.getElementById('faq-edit-title').innerHTML = `<svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-help"/></svg> ${id ? '編輯問答' : '新增問答'}`;
+  document.getElementById('faq-edit-q').value = q || '';
+  document.getElementById('faq-edit-a').value = a || '';
+  document.getElementById('faq-edit-modal').classList.add('open');
+  setTimeout(() => document.getElementById('faq-edit-q').focus(), 50);
 }
+function addFaq() { _openFaqEditor(null, '', ''); }
 async function editFaq(id) {
   const faqs = await api('/feedback/faqs').catch(() => []);
   const f = (faqs || []).find(x => x.id === id) || {};
-  const q = prompt('問題:', f.question || ''); if (q === null) return;
-  const a = prompt('答案:', f.answer || ''); if (a === null) return;
-  try { await api(`/feedback/faqs/${id}`, { method: 'PATCH', body: JSON.stringify({ question: q, answer: a }) }); loadFaqs(); }
-  catch (e) { toast(e.message); }
+  _openFaqEditor(id, f.question || '', f.answer || '');
+}
+async function saveFaqEditor() {
+  const q = document.getElementById('faq-edit-q').value.trim();
+  const a = document.getElementById('faq-edit-a').value.trim();
+  if (!q) { toast('請輸入問題'); return; }
+  if (!a) { toast('請輸入答案'); return; }
+  const btn = document.getElementById('faq-edit-save');
+  btn.disabled = true;
+  try {
+    if (_faqEditId) await api(`/feedback/faqs/${_faqEditId}`, { method: 'PATCH', body: JSON.stringify({ question: q, answer: a }) });
+    else await api('/feedback/faqs', { method: 'POST', body: JSON.stringify({ question: q, answer: a }) });
+    document.getElementById('faq-edit-modal').classList.remove('open');
+    loadFaqs();
+  } catch (e) { toast(e.message); }
+  finally { btn.disabled = false; }
 }
 async function deleteFaq(id) {
   if (!confirm('刪除這則問答?')) return;
