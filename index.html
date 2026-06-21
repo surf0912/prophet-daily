@@ -1181,7 +1181,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.65';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.66';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3013,8 +3013,8 @@ async function loadReviewList() {
     const mqjReqs = (users || []).filter(u => u.mqj_access === 'pending');
     const novelsPending = pending || [];
     const arrow = `<svg class="rv-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>`;
-    const section = (icon, title, count, bodyHtml) => `
-      <details class="review-sec"${count ? ' open' : ''}>
+    const section = (icon, title, count, bodyHtml, openByDefault = true) => `
+      <details class="review-sec"${count && openByDefault ? ' open' : ''}>
         <summary>${arrow}${ic(icon, 14)} ${title}<span class="rv-count${count ? '' : ' zero'}">${count}</span></summary>
         <div class="rv-body">${count ? bodyHtml : '<p style="color:var(--ink-light);font-size:13px;padding:8px 0 14px">目前沒有待審核的項目</p>'}</div>
       </details>`;
@@ -3040,7 +3040,7 @@ async function loadReviewList() {
           </div>
         </div>`).join('');
 
-    el.innerHTML = section('ic-wine', '迷情劑閱讀權申請', mqjReqs.length, mqjBody)
+    el.innerHTML = section('ic-wine', '迷情劑閱讀權申請', mqjReqs.length, mqjBody, false)   // 預設收起
                  + section('ic-book', '作品審核', novelsPending.length, novelBody);
   } catch (e) { el.innerHTML = '<p>載入失敗</p>'; }
 }
