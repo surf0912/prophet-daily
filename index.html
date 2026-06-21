@@ -283,10 +283,14 @@
     /* ── Reader ── */
     #reader-view {
       display: none; position: fixed; inset: 0; z-index: 50;
-      background:
+      /* Opaque base colour so the page behind never shows through if parchment.jpg fails to load. */
+      background-color: #f4e8c1;
+      background-image:
         linear-gradient(var(--reader-overlay), var(--reader-overlay)),
         url('./parchment.jpg');
-      background-size: cover; background-position: center; background-attachment: fixed;
+      background-size: cover; background-position: center;
+      /* NOTE: no `background-attachment: fixed` — it triggers iOS Safari repaint/ghosting in this
+         scrolling overlay (old content bleeds through until a font change forces a repaint). */
       overflow-y: auto; overflow-x: hidden; overscroll-behavior: none;
       touch-action: pan-y; flex-direction: column;
     }
@@ -1210,7 +1214,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.73';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.74';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
