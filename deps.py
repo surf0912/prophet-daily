@@ -2,10 +2,27 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from config import settings
 from supabase import create_client, Client
+import jwt
 
 bearer = HTTPBearer()
 
 ROLE_RANK = {'super_admin': 4, 'admin': 3, 'writer': 2, 'reader': 1}
+
+def _verify_jwt_local(token: str):
+    """Validate a Supabase access token locally (HS256) so we can skip the network round-trip to
+    the Supabase Auth server on every authenticated request. Returns the user id (sub claim), or
+    None when local verification isn't possible — wrong/missing secret, expired token, or a project
+    that signs with asymmetric keys — so the caller can fall back to sb.auth.get_user(). Signature
+    and expiry are still enforced, so a None result is always either "let the slow path decide" or
+    a genuinely bad token (which the slow path will also reject)."""
+    secret = getattr(settings, "jwt_secret", "") or ""
+    if not secret:
+        return None
+    try:
+        payload = jwt.decode(token, secret, algorithms=["HS256"], options={"verify_aud": False})
+        return payload.get("sub")
+    except Exception:
+        return None
 
 def get_supabase() -> Client:
     return create_client(settings.supabase_url, settings.supabase_anon_key)
@@ -19,11 +36,15 @@ def get_current_user(
     sb_admin: Client = Depends(get_supabase_admin),
 ):
     token = creds.credentials
-    try:
-        auth_user = sb.auth.get_user(token)
-        user_id = auth_user.user.id
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    # Fast path: verify the JWT locally (no network). Falls back to the Auth server only when
+    # local verification can't decide (e.g. JWT_SECRET not set to the Supabase secret yet).
+    user_id = _verify_jwt_local(token)
+    if not user_id:
+        try:
+            auth_user = sb.auth.get_user(token)
+            user_id = auth_user.user.id
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     result = sb_admin.table("profiles").select("*").eq("id", user_id).single().execute()
     if not result.data:
