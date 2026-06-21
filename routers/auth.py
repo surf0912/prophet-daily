@@ -3,7 +3,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from config import settings
-from deps import get_supabase, get_supabase_admin, get_current_user, ROLE_RANK
+from deps import get_supabase, get_supabase_admin, get_current_user, ROLE_RANK, invalidate_profile
 from supabase import Client
 from guide_content import GUIDE_TITLE, GUIDE_AUTHOR, GUIDE_BODY
 
@@ -187,6 +187,7 @@ def update_nickname(body: NicknameBody, user: dict = Depends(get_current_user), 
     res = sb_admin.table("profiles").update({"nickname": nick}).eq("id", user["id"]).execute()
     if not res.data:
         raise HTTPException(404, "User not found")
+    invalidate_profile(user["id"])
     return res.data[0]
 
 class TourSeenBody(BaseModel):
@@ -199,6 +200,7 @@ def set_tour_seen(body: TourSeenBody, user: dict = Depends(get_current_user), sb
     res = sb_admin.table("profiles").update({"tour_seen": body.version}).eq("id", user["id"]).execute()
     if not res.data:
         raise HTTPException(404, "User not found")
+    invalidate_profile(user["id"])
     return {"tour_seen": body.version}
 
 class ChangePwBody(BaseModel):
@@ -236,4 +238,5 @@ def update_avatar(body: AvatarBody, user: dict = Depends(get_current_user), sb_a
     res = sb_admin.table("profiles").update({"avatar_url": av or None}).eq("id", user["id"]).execute()
     if not res.data:
         raise HTTPException(404, "User not found")
+    invalidate_profile(user["id"])
     return res.data[0]

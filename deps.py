@@ -2,12 +2,22 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from config import settings
 from supabase import create_client, Client
-import jwt
+import jwt, time
 from jwt import PyJWKClient
 
 bearer = HTTPBearer()
 
 ROLE_RANK = {'super_admin': 4, 'admin': 3, 'writer': 2, 'reader': 1}
+
+# Short-lived in-process cache of the profile row, so every authenticated request doesn't re-fetch
+# it from Supabase. Every endpoint that mutates a profile (role/ban/mqj/nickname/avatar/…) calls
+# invalidate_profile(), so changes are effectively instant; the TTL is just a safety net for any
+# out-of-band edit (e.g. editing the row directly in the Supabase dashboard).
+_PROFILE_TTL = 60          # seconds
+_profile_cache: dict = {}  # user_id -> (profile_dict, fetched_at)
+
+def invalidate_profile(user_id: str):
+    _profile_cache.pop(user_id, None)
 
 # Public JWKS for asymmetric (ES256/RS256) access tokens — fetched once and cached in-process,
 # so verification stays local after the first hit. New Supabase projects sign with ES256.
@@ -74,10 +84,18 @@ def get_current_user(
         except Exception:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    result = sb_admin.table("profiles").select("*").eq("id", user_id).single().execute()
-    if not result.data:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-    if result.data.get("banned"):
+    now = time.time()
+    cached = _profile_cache.get(user_id)
+    if cached and now - cached[1] < _PROFILE_TTL:
+        profile = cached[0]
+    else:
+        result = sb_admin.table("profiles").select("*").eq("id", user_id).single().execute()
+        if not result.data:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        profile = result.data
+        _profile_cache[user_id] = (profile, now)
+    if profile.get("banned"):
+        _profile_cache.pop(user_id, None)   # never let a ban linger in cache
         # 401 so the client drops the session and returns to the login screen.
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="此帳號已被封禁")
     try:
@@ -86,7 +104,7 @@ def get_current_user(
         record_auth(used_local)
     except Exception:
         pass
-    return result.data
+    return profile
 
 def _require_role(min_role: str):
     def dep(user: dict = Depends(get_current_user)):

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from deps import get_supabase_admin, get_current_user, require_admin, require_super_admin
+from deps import get_supabase_admin, get_current_user, require_admin, require_super_admin, invalidate_profile
 from supabase import Client
 
 router = APIRouter()
@@ -102,6 +102,7 @@ def change_role(user_id: str, body: RoleRequest, sb: Client = Depends(get_supaba
     res = sb.table("profiles").update({"role": body.role}).eq("id", user_id).execute()
     if not res.data:
         raise HTTPException(404, "User not found")
+    invalidate_profile(user_id)
     return res.data[0]
 
 # ── Reset a member's 通關密語 (super_admin only) ──────────────
@@ -132,6 +133,7 @@ def set_banned(user_id: str, body: BanBody, user: dict = Depends(require_super_a
     res = sb.table("profiles").update({"banned": body.banned}).eq("id", user_id).execute()
     if not res.data:
         raise HTTPException(404, "User not found")
+    invalidate_profile(user_id)   # ban/unban takes effect immediately
     return res.data[0]
 
 @router.delete("/users/{user_id}")
@@ -166,6 +168,7 @@ def delete_user(user_id: str, user: dict = Depends(require_super_admin), sb: Cli
         err = (err + " | " if err else "") + f"auth: {e}"
     if err:
         raise HTTPException(500, f"刪除未完成：{err}")
+    invalidate_profile(user_id)
     return {"message": "deleted"}
 
 # ── 迷情劑 access gate ──────────────────────────────────────
@@ -174,6 +177,7 @@ def request_mqj(user: dict = Depends(get_current_user), sb: Client = Depends(get
     # A reader asks for 迷情劑 access; admin approves later. No-op if already approved.
     if user.get("mqj_access") != "approved":
         sb.table("profiles").update({"mqj_access": "pending"}).eq("id", user["id"]).execute()
+        invalidate_profile(user["id"])
     return {"mqj_access": "approved" if user.get("mqj_access") == "approved" else "pending"}
 
 class MqjBody(BaseModel):
@@ -186,4 +190,5 @@ def set_mqj(user_id: str, body: MqjBody, sb: Client = Depends(get_supabase_admin
     res = sb.table("profiles").update({"mqj_access": body.access}).eq("id", user_id).execute()
     if not res.data:
         raise HTTPException(404, "User not found")
+    invalidate_profile(user_id)   # 迷情劑 approval/revoke takes effect immediately
     return res.data[0]
