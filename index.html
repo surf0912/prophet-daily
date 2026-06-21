@@ -1135,7 +1135,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.46';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.47';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2216,27 +2216,36 @@ function renderHomeNovels() {
 let currentNovelKind = 'novel';
 let currentNovelTitle = '';
 
-// 迷情劑 guard: tile a per-reader watermark (nickname + date) over the reader so any
-// leaked screenshot is traceable, and block casual copy/select/save. (Cannot stop
-// screenshots — no web API allows that; this is a deterrent + attribution.)
+// Stable, obscure per-account watermark code (first 8 hex of the UUID). Nicknames can be
+// changed by the user, so they can't be used for attribution; the UUID can't. An admin maps
+// a leaked code back to a user via 用戶管理 → 水印碼.
+function wmCode(id) { return ((id || '').replace(/-/g, '').slice(0, 8).toUpperCase()) || '訪客'; }
+let _mqjActive = false;
+// 迷情劑 guard: tile a dense per-reader watermark (account code + date) over the reader so any
+// leaked screenshot is traceable, and block casual copy/select/save. (Cannot stop screenshots
+// — no web API allows that; this is a deterrent + attribution.)
 function applyMqjGuard(on) {
   const ov = document.querySelector('#reader-view .watermark-overlay');
   const content = document.getElementById('reader-content');
   if (!ov || !content) return;
   if (on) {
-    const name = (currentUser && (currentUser.nickname || currentUser.username)) || '讀者';
+    const code = wmCode(currentUser && currentUser.id);
     const d = new Date();
     const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='360' height='220'><text x='18' y='120' transform='rotate(-30 180 112)' fill='rgba(138,45,45,0.16)' font-size='24' font-weight='bold' font-family='sans-serif'>${escapeHtml(name + ' · ' + stamp)}</text></svg>`;
+    const dark = document.documentElement.classList.contains('dark');
+    const color = dark ? 'rgba(242,227,184,0.22)' : 'rgba(138,45,45,0.18)';   // brighter/warmer in 夜間
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='208' height='128'><text x='10' y='78' transform='rotate(-30 104 70)' fill='${color}' font-size='19' font-weight='bold' font-family='sans-serif'>${escapeHtml(code + ' · ' + stamp)}</text></svg>`;
     ov.style.backgroundImage = `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
     ov.style.backgroundRepeat = 'repeat';
     content.classList.add('noselect');
     content.oncontextmenu = (e) => e.preventDefault();
+    _mqjActive = true;
   } else {
     ov.style.backgroundImage = '';
     ov.style.backgroundRepeat = '';
     content.classList.remove('noselect');
     content.oncontextmenu = null;
+    _mqjActive = false;
   }
 }
 
@@ -2656,6 +2665,7 @@ function toggleDark(on) {
   r.colorScheme = on ? 'dark' : 'light';   // native pickers (select/date) render dark in 夜間模式
   document.documentElement.classList.toggle('dark', on);
   localStorage.setItem('pd_dark', on ? '1' : '0');
+  if (_mqjActive) applyMqjGuard(true);   // rebake the watermark colour for the new theme
 }
 
 // Reader-header shortcut: flip 夜間模式 without leaving the reader, kept in sync with the 檔案 toggle.
@@ -2935,7 +2945,8 @@ async function loadAdminNovelList() {
           <button onclick='resetPassword(${JSON.stringify(sc.id)}, ${JSON.stringify(sc.name)})' style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-key',12)} 重設密碼</button>
           <button onclick='banUser(${JSON.stringify(sc.id)}, ${JSON.stringify(sc.name)}, ${sc.banned ? 1 : 0})' style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${sc.banned ? ic('ic-check',12)+' 解除封禁' : ic('ic-ban',12)+' 封禁'}</button>
           <button onclick='deleteUser(${JSON.stringify(sc.id)}, ${JSON.stringify(sc.name)})' style="font-size:12px;padding:4px 12px;background:var(--scarlet);border:none;color:var(--on-dark);border-radius:3px;cursor:pointer">${ic('ic-trash',12)} 刪除帳號</button>
-        </div>`;
+        </div>
+        <div style="font-size:12px;color:var(--ink-light);margin-top:8px">${ic('ic-shield',12)} 水印碼 <code style="font-size:12px;color:var(--ink)">${wmCode(sc.id)}</code><span style="opacity:.7"> — 迷情劑外流截圖上的代碼對得上此人</span></div>`;
       }
       note.innerHTML = head;
     } else {
