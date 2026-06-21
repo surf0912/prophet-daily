@@ -1146,7 +1146,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.56';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.57';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2197,15 +2197,16 @@ function renderShelf() {
   if (shelfCat === '迷情劑' && ['reader', 'writer'].includes(currentUser?.role) && currentUser?.mqj_access !== 'approved') {
     refreshMqjStatus();   // live re-check: if an admin just approved, unlock without re-login
     const a = currentUser.mqj_access;
+    const eIc = (id) => `<span style="display:block;margin-bottom:8px">${ic(id, 30)}</span>`;
     grid.innerHTML = a === 'pending'
-      ? '<div class="empty-shelf">⏳ 你已申請開放「迷情劑」<br><small>管理員通過後，回到這頁即可自動解鎖（不必重新登入）</small></div>'
+      ? `<div class="empty-shelf">${eIc('ic-clock')}你已申請開放「迷情劑」<br><small>管理員通過後，回到這頁即可自動解鎖（不必重新登入）</small></div>`
       : a === 'rejected'
-      ? '<div class="empty-shelf">🚫 你的「迷情劑」閱讀申請未通過<br><small>如有異議，請找管理員申訴</small></div>'
-      : `<div class="empty-shelf">🔒 「迷情劑」分類需開放才能閱讀<br><small style="margin-bottom:14px">點下方按鈕向管理員申請</small><button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" onclick="openMqjDisclaimer()">📨 要求管理員開放</button></div>`;
+      ? `<div class="empty-shelf">${eIc('ic-ban')}你的「迷情劑」閱讀申請未通過<br><small>如有異議，請找管理員申訴</small></div>`
+      : `<div class="empty-shelf">${eIc('ic-key')}「迷情劑」分類需開放才能閱讀<br><small style="margin-bottom:14px">點下方按鈕向管理員申請</small><button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" onclick="openMqjDisclaimer()">${ic('ic-send', 14)} 要求管理員開放</button></div>`;
     return;
   }
   if (!novels.length) {
-    grid.innerHTML = '<div class="empty-shelf">📭 目前沒有作品<br><small>等管理員上傳作品</small></div>';
+    grid.innerHTML = `<div class="empty-shelf"><span style="display:block;margin-bottom:8px">${ic('ic-books', 30)}</span>目前沒有作品<br><small>等管理員上傳作品</small></div>`;
     return;
   }
   let list = applyClassFilter(novels, shelfCat, shelfChars);
@@ -2221,7 +2222,7 @@ function renderShelf() {
       list = [...hot, ...list.filter(n => !hotSet.has(n.id))];
     }
   }
-  renderNovelBlocks(list, grid, '🔍 沒有符合的作品');
+  renderNovelBlocks(list, grid, `<span style="display:block;margin-bottom:8px">${ic('ic-mirror', 30)}</span>沒有符合的作品`);
 }
 
 // Render a list of novels into the grid, grouping series members under a 📚 header.
