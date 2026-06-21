@@ -827,6 +827,7 @@
         <button class="admin-tab admin-only" data-tab="review" onclick="switchAdminTab('review')">審核</button>
         <button class="admin-tab admin-only" data-tab="users" onclick="switchAdminTab('users')">用戶管理</button>
         <button class="admin-tab admin-only" data-tab="invites" onclick="switchAdminTab('invites')">邀請連結</button>
+        <button class="admin-tab super-only" data-tab="monitor" onclick="switchAdminTab('monitor')">監看</button>
       </div>
       <div id="admin-upload" class="admin-pane active">
         <div id="upload-draft-banner" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:var(--parchment2);border:1px solid var(--gold-lt);border-radius:6px;padding:8px 12px;margin-bottom:14px">
@@ -918,6 +919,10 @@
         <div id="invite-result" style="display:none;background:var(--parchment2);border:1px solid var(--gold-lt);border-radius:4px;padding:12px;margin-bottom:16px"></div>
         <!-- existing invites list -->
         <div id="invite-list"></div>
+      </div>
+      <div id="admin-monitor" class="admin-pane">
+        <p style="font-size:12px;color:var(--ink-light);margin-bottom:12px">即時負載快照（每 10 秒自動刷新）。數據自伺服器上次啟動後累計，冷啟動會歸零。</p>
+        <div id="monitor-body"></div>
       </div>
     </div>
   </div>
@@ -1161,7 +1166,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.62';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.63';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1517,6 +1522,7 @@ async function initApp() {
   document.getElementById('admin-nav-btn').style.display = staff ? '' : 'none';  // readers: no 後台
   document.querySelectorAll('.staff-only').forEach(el => el.style.display = staff ? '' : 'none');  // readers: no 防窺工坊
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = adminish ? '' : 'none');  // writers: only 作品管理 + 上傳
+  document.querySelectorAll('.super-only').forEach(el => el.style.display = currentUser.role === 'super_admin' ? '' : 'none');  // 監看面板：只給 SA
   adminNovelScope = null;
   loadOwnerNames();   // super_admin only: map owner uuid → 巫師全名 for the owner hint
   loadFavIds().then(renderFavUpdates);   // 意若思鏡 收藏夾 ids + 追蹤更新 alert
@@ -1552,6 +1558,7 @@ function showPage(id, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
   if (btn) btn.classList.add('active');
+  if (id !== 'admin') stopMonitor();   // leaving 編輯部 cancels the live monitor poll
   if (id === 'home') { renderContinueBar(); renderFavUpdates(); }
   if (id === 'scroll') loadNovels();
   if (id === 'forum') loadForumPosts();
@@ -2759,6 +2766,8 @@ function switchAdminTab(tab) {
   document.querySelectorAll('.admin-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.admin-pane').forEach(p => p.classList.remove('active'));
   document.getElementById('admin-' + tab).classList.add('active');
+  stopMonitor();                       // leaving any tab cancels the live monitor poll
+  if (tab === 'monitor') startMonitor();
   if (tab === 'novels') loadAdminNovelList();
   if (tab === 'users') loadAdminUsers();
   if (tab === 'upload') { setUploadKind('novel'); initUploadDraftWatch(); restoreUploadDraft(); }
@@ -2770,6 +2779,49 @@ function switchAdminTab(tab) {
     document.getElementById('invite-qty-row').style.display = isSuper ? 'flex' : 'none';
     if (!isSuper) document.getElementById('invite-qty').value = '1';
     loadInviteList();
+  }
+}
+
+// ── SA 監看面板 ─────────────────────────────────────────────
+let _monitorTimer = null;
+function stopMonitor() { if (_monitorTimer) { clearInterval(_monitorTimer); _monitorTimer = null; } }
+function startMonitor() {
+  loadMonitor();
+  _monitorTimer = setInterval(loadMonitor, 10000);   // refresh every 10s while viewing
+}
+function _fmtUptime(s) {
+  if (s < 60) return s + ' 秒';
+  if (s < 3600) return Math.floor(s / 60) + ' 分 ' + (s % 60) + ' 秒';
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h + ' 小時 ' + m + ' 分';
+}
+async function loadMonitor() {
+  const el = document.getElementById('monitor-body');
+  if (!el) return;
+  if (!el.dataset.loaded) el.innerHTML = '<div class="spinner"></div>';
+  try {
+    const s = await api('/permissions/server-stats');
+    el.dataset.loaded = '1';
+    // load light: avg<400ms green, <1000 amber, else red; rps as a rough health hint
+    const ms = s.avg_ms_5m;
+    const health = ms === 0 ? ['var(--ink-light)', '閒置'] : ms < 400 ? ['#2d4a1e', '順暢'] : ms < 1000 ? ['#a8761f', '略慢'] : ['var(--scarlet)', '吃緊'];
+    const card = (label, val, sub) => `
+      <div style="flex:1;min-width:128px;background:var(--parchment);border:1px solid var(--gold-lt);border-radius:10px;padding:12px 14px">
+        <div style="font-size:12px;color:var(--ink-light)">${label}</div>
+        <div style="font-size:22px;font-weight:bold;color:var(--ink);line-height:1.3">${val}</div>
+        ${sub ? `<div style="font-size:11px;color:var(--ink-light);opacity:.8">${sub}</div>` : ''}
+      </div>`;
+    el.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${card(ic('ic-users', 12) + ' 在線（5 分鐘）', s.active_5m, '15 分鐘內：' + s.active_15m + ' 人')}
+        ${card(ic('ic-clock', 12) + ' 回應時間', ms + ' ms', `<span style="color:${health[0]};font-weight:bold">● ${health[1]}</span>`)}
+        ${card(ic('ic-send', 12) + ' 請求量', s.req_1m + ' /分', '近 5 分鐘：' + s.req_5m + '　(' + s.rps_1m + ' req/s)')}
+        ${card(ic('ic-shield', 12) + ' 錯誤（5 分鐘）', s.errors_5m, s.errors_5m ? '伺服器錯誤，請留意' : '無 5xx 錯誤')}
+        ${card(ic('ic-castle', 12) + ' 已運行', _fmtUptime(s.uptime_seconds), s.uptime_seconds < 90 ? '剛冷啟動' : '累計請求 ' + s.total_since_boot)}
+      </div>
+      <div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:10px">※「在線」以近 5 分鐘有送出請求的登入用戶計；純閱讀時前端不送請求，故為活躍下限值。</div>`;
+  } catch (e) {
+    el.innerHTML = `<p style="color:var(--scarlet);padding:14px">載入失敗：${escapeHtml(e.message || '')}</p>`;
   }
 }
 

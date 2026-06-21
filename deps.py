@@ -31,6 +31,11 @@ def get_current_user(
     if result.data.get("banned"):
         # 401 so the client drops the session and returns to the login screen.
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="此帳號已被封禁")
+    try:
+        from monitor import record_user
+        record_user(user_id)
+    except Exception:
+        pass
     return result.data
 
 def _require_role(min_role: str):

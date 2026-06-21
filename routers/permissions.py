@@ -50,6 +50,12 @@ def revoke(body: GrantRequest, user: dict = Depends(require_admin), sb: Client =
 
 ROLE_RANK = {"reader": 0, "writer": 1, "admin": 2, "super_admin": 3}
 
+@router.get("/server-stats", dependencies=[Depends(require_super_admin)])
+def server_stats():
+    """Live in-memory load snapshot for the SA 監看 panel (super_admin only)."""
+    from monitor import snapshot
+    return snapshot()
+
 @router.get("/users")
 def list_users(user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     # last_seen_at powers the 不活躍用戶 report; fall back gracefully if the column isn't added yet.

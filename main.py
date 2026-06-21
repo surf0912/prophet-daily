@@ -13,6 +13,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import time as _time
+from monitor import record_request
+
+@app.middleware("http")
+async def _monitor_requests(request, call_next):
+    start = _time.perf_counter()
+    response = await call_next(request)
+    try:
+        record_request((_time.perf_counter() - start) * 1000, response.status_code)
+    except Exception:
+        pass
+    return response
+
 app.include_router(auth.router,        prefix="/auth",        tags=["auth"])
 app.include_router(novels.router,      prefix="/novels",      tags=["novels"])
 app.include_router(chapters.router,    prefix="/chapters",    tags=["chapters"])
