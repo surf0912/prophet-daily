@@ -819,7 +819,7 @@
         <div id="upload-kind-novel">
           <div class="form-group"><label>作品名稱</label><input type="text" id="new-novel-title" placeholder="例：火焰杯後" /></div>
           <div class="form-group"><label>作者署名（選填）</label><input type="text" id="new-novel-author" placeholder="留空則佚名" /></div>
-          <div class="form-group"><label>發佈日期（選填，可填過去日期）</label><input type="date" id="new-novel-date" /></div>
+          <div class="form-group"><label>發佈日期（選填；填未來日期＝排程，到當天才自動公開）</label><input type="date" id="new-novel-date" /></div>
           <div class="form-group"><label>故事類型</label><select id="new-novel-category"></select></div>
           <div class="form-group"><label>角色（可多選）</label><div id="new-novel-chars" class="char-picker"></div></div>
           <div class="form-group">
@@ -844,7 +844,7 @@
             <input type="text" id="forum-post-author" placeholder="留空則匿名" />
           </div>
           <div class="form-group">
-            <label>發佈日期（選填，可填過去日期）</label>
+            <label>發佈日期（選填；填未來日期＝排程，到當天才自動公開）</label>
             <input type="date" id="forum-post-date" />
           </div>
           <div class="form-group">
@@ -874,6 +874,7 @@
         <div id="admin-novel-list"></div>
       </div>
       <div id="admin-users" class="admin-pane">
+        <input id="user-search" type="text" oninput="renderUserRows(this.value)" placeholder="搜尋暱稱或入學全名…" style="width:100%;box-sizing:border-box;padding:9px 12px;margin-bottom:10px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment2);color:var(--ink);font-size:14px" />
         <div class="user-list" id="user-list"></div>
       </div>
       <div id="admin-invites" class="admin-pane">
@@ -1135,7 +1136,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.47';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.48';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2746,9 +2747,15 @@ function setUploadKind(kind) {
   const nh = document.getElementById('new-novel-hint'); if (nh) nh.textContent = writerNote;
 }
 
-// Turn a <input type="date"> value (YYYY-MM-DD) into an ISO timestamp at noon UTC
-// (noon avoids the displayed date shifting a day due to timezone).
-function dateToIso(d) { return d ? `${d}T12:00:00Z` : null; }
+// Turn a <input type="date"> value (YYYY-MM-DD) into the UTC instant of LOCAL midnight of that
+// day. So a future date schedules the work to go live exactly at 00:00 of that day in the
+// author's timezone (and it displays as that date locally). Past dates just back-date it.
+function dateToIso(d) {
+  if (!d) return null;
+  const [y, m, day] = d.split('-').map(Number);
+  return new Date(y, m - 1, day, 0, 0, 0).toISOString();
+}
+function isFutureIso(ts) { return !!ts && new Date(ts) > new Date(); }
 
 // ── Upload draft autosave ────────────────────────────────────
 // Keeps the in-progress 上傳 form in localStorage so a self-heal reload or token
@@ -2998,8 +3005,9 @@ function renderAdminNovels() {
   renderAdminFilterBar(ns);
   const list = applyAdminFilter(ns);
   el.innerHTML = list.map(n => {
-      const statusTag = n.status === 'pending'
-        ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-clock',11) + ' 待審核</span>' : '';
+      const statusTag = (n.status === 'pending'
+        ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-clock',11) + ' 待審核</span>' : '')
+        + (isFutureIso(n.created_at) ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">' + ic('ic-clock',11) + ' 排程·' + fmtUpdated(n.created_at) + '公開</span>' : '');
       // 編輯 is for everyone here (the list only shows works the viewer owns, or an admin's scoped view).
       const editBtn = `<button onclick="openEditWork('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-edit',12)} 編輯</button>`;
       // Owners manage their own works (mine view) — admins also in the scoped member view.
@@ -3202,10 +3210,18 @@ async function loadAdminUsers() {
   const el = document.getElementById('user-list');
   el.innerHTML = '<div class="spinner"></div>';
   try {
-    const users = await api('/permissions/users') || [];
-    window._adminUsers = users;   // looked up by viewUserNovels (avoids embedding names in onclick)
-    const ROLES = [['reader','讀者'],['writer','作家'],['admin','管理員'],['super_admin','超級管理員']];
-    const isSuper = currentUser.role === 'super_admin';
+    window._adminUsers = await api('/permissions/users') || [];   // looked up by viewUserNovels
+    renderUserRows(document.getElementById('user-search')?.value || '');
+  } catch { el.innerHTML = '<p>載入失敗</p>'; }
+}
+// Render (optionally filtered) user rows. Search matches 巫師暱稱 or 入學全名.
+function renderUserRows(q) {
+  const el = document.getElementById('user-list');
+  const all = window._adminUsers || [];
+  const ROLES = [['reader','讀者'],['writer','作家'],['admin','管理員'],['super_admin','超級管理員']];
+  const isSuper = currentUser.role === 'super_admin';
+  const needle = (q || '').trim().toLowerCase();
+  const users = needle ? all.filter(u => (u.nickname || '').toLowerCase().includes(needle) || (u.username || '').toLowerCase().includes(needle)) : all;
     el.innerHTML = users.map(u => {
       const display = u.nickname || u.username;
       const isSelf = u.id === currentUser.id;
@@ -3227,8 +3243,7 @@ async function loadAdminUsers() {
           ${picker}
         </div>
       </div>`;
-    }).join('') || '<p style="color:#888;padding:20px">尚無用戶</p>';
-  } catch { el.innerHTML = '<p>載入失敗</p>'; }
+    }).join('') || `<p style="color:#888;padding:20px">${needle ? '找不到符合的用戶' : '尚無用戶'}</p>`;
 }
 
 // Admin taps a member's name → their detail (scoped 作品管理 + 迷情劑 toggle for readers).

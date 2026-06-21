@@ -65,6 +65,21 @@ def list_novels(
         data = fetch(True)
     except Exception:
         data = fetch(False)
+    # Scheduled publish: a work whose 發佈日期 (created_at) is still in the future is hidden from
+    # the public shelf and auto-appears once that moment arrives. Owners still see it in 作品管理
+    # (mine=true) and admins see everything here.
+    if not is_admin(user):
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        def _live(n):
+            ts = n.get("created_at")
+            if not ts:
+                return True
+            try:
+                return datetime.fromisoformat(ts.replace("Z", "+00:00")) <= now
+            except Exception:
+                return True
+        data = [n for n in data if _live(n)]
     # Readers without 迷情劑 access don't see 迷情劑 works.
     if not can_see_mqj(user):
         data = [n for n in data if n.get("category") != "迷情劑"]
