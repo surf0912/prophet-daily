@@ -1166,7 +1166,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.63';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.64';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1261,8 +1261,9 @@ async function api(path, opts = {}, _retried) {
   const headers = { ...(opts.headers || {}) };
   if (!(opts.body instanceof FormData)) headers['Content-Type'] = 'application/json';
   if (token) headers['Authorization'] = 'Bearer ' + token;
-  _wakeCount++;
-  const wt = setTimeout(() => _wakeToggle(true), 3500);
+  const bg = opts.background;   // background polls (e.g. SA 監看) must never flash the 喚醒 overlay
+  if (!bg) _wakeCount++;
+  const wt = bg ? null : setTimeout(() => _wakeToggle(true), 3500);
   try {
     // Render free tier sleeps when idle; the first hit can drop the connection while it wakes.
     // Retry network-level failures a few times (keeping the 喚醒中 overlay up) so cold starts are transparent.
@@ -1271,7 +1272,7 @@ async function api(path, opts = {}, _retried) {
       try { res = await fetch(API + path, { ...opts, headers }); break; }
       catch (netErr) {
         if (attempt >= 4) throw netErr;            // ~5 tries over ~30s, then give up
-        _wakeToggle(true);
+        if (!bg) _wakeToggle(true);
         await new Promise(r => setTimeout(r, 2000 + attempt * 2000));
       }
     }
@@ -1288,9 +1289,11 @@ async function api(path, opts = {}, _retried) {
     }
     return await res.json();
   } finally {
-    clearTimeout(wt);
-    _wakeCount = Math.max(0, _wakeCount - 1);
-    if (_wakeCount === 0) _wakeToggle(false);
+    if (wt) clearTimeout(wt);
+    if (!bg) {
+      _wakeCount = Math.max(0, _wakeCount - 1);
+      if (_wakeCount === 0) _wakeToggle(false);
+    }
   }
 }
 
@@ -2800,7 +2803,7 @@ async function loadMonitor() {
   if (!el) return;
   if (!el.dataset.loaded) el.innerHTML = '<div class="spinner"></div>';
   try {
-    const s = await api('/permissions/server-stats');
+    const s = await api('/permissions/server-stats', { background: true });
     el.dataset.loaded = '1';
     // load light: avg<400ms green, <1000 amber, else red; rps as a rough health hint
     const ms = s.avg_ms_5m;
