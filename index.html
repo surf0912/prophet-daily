@@ -250,6 +250,8 @@
     }
     .char-chip.active img { border-color: var(--gold); }
     .char-chip span { font-size: 12px; color: var(--ink-light); }
+    .char-and-btn { align-self: center; display: inline-flex; align-items: center; gap: 4px; padding: 6px 11px; border-radius: 16px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); font-size: 12px; cursor: pointer; white-space: nowrap; }
+    .char-and-btn.on { background: var(--scarlet); color: var(--on-dark); border-color: var(--scarlet); }
     /* admin form character multi-select */
     .char-picker { display: flex; gap: 8px; flex-wrap: wrap; }
     .char-picker .opt {
@@ -1144,7 +1146,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.52';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.53';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2072,16 +2074,30 @@ function matchesQuery(item, q) {
 // Filter by category, plus characters with OR semantics.
 // All chips lit (default) or none lit = no character filtering (show everything);
 // deselect chips to narrow down to works featuring ANY still-lit character.
+let charAnd = false;   // false = 任一角色 (OR); true = 同框 (AND — every selected character must appear)
 function applyClassFilter(list, cat, chars) {
-  const allLit = chars.length === 0 || chars.length === CHAR_LIST.length;
+  const sel = (chars || []).filter(Boolean);
+  const noFilter = sel.length === 0 || (!charAnd && sel.length === CHAR_LIST.length);
   return list.filter(n => {
     if (cat && n.category !== cat) return false;
-    if (!allLit) {
+    if (!noFilter) {
       const have = n.characters || [];
-      if (!chars.some(c => have.includes(c))) return false;
+      const ok = charAnd ? sel.every(c => have.includes(c)) : sel.some(c => have.includes(c));
+      if (!ok) return false;
     }
     return true;
   });
+}
+// 「同框」toggle, appended after the character chips in every filter bar.
+function charAndBtnHtml() {
+  return `<button type="button" class="char-and-btn${charAnd ? ' on' : ''}" onclick="toggleCharAnd()" title="開啟後只顯示所選角色「同時出現」的文，不看單人">`
+    + `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg> 同框</button>`;
+}
+function toggleCharAnd() {
+  charAnd = !charAnd;
+  if (document.getElementById('page-scroll').classList.contains('active')) renderShelf();
+  else if (document.getElementById('page-forum').classList.contains('active')) renderForumList();
+  else if (document.getElementById('page-admin').classList.contains('active')) renderAdminNovels();
 }
 
 function renderFilterBar(catEl, chipEl, curCat, curChars, onChange) {
@@ -2092,7 +2108,7 @@ function renderFilterBar(catEl, chipEl, curCat, curChars, onChange) {
   chipEl.innerHTML = CHAR_LIST.map(ch =>
     `<div class="char-chip ${curChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}">
        <img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span>
-     </div>`).join('');
+     </div>`).join('') + charAndBtnHtml();
   chipEl.querySelectorAll('.char-chip').forEach(el => el.onclick = () => onChange('char', el.dataset.ch));
 }
 
@@ -2607,7 +2623,7 @@ function renderForumList() {
     chipEl.innerHTML = CHAR_LIST.map(ch =>
       `<div class="char-chip ${forumChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}">
          <img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span>
-       </div>`).join('');
+       </div>`).join('') + charAndBtnHtml();
     chipEl.querySelectorAll('.char-chip').forEach(el => el.onclick = () => onForumFilter('char', el.dataset.ch));
   }
   const q = (document.getElementById('forum-search-input').value || '').trim().toLowerCase();
@@ -2987,11 +3003,16 @@ async function loadAdminNovelList() {
 
 // Type (含羊皮紙) + 角色 filter for 作品管理. 羊皮紙 = forum kind; the 3 categories are novels.
 function applyAdminFilter(list) {
-  const allLit = adminChars.length === 0 || adminChars.length === CHAR_LIST.length;
+  const sel = adminChars.filter(Boolean);
+  const noFilter = sel.length === 0 || (!charAnd && sel.length === CHAR_LIST.length);
   return list.filter(n => {
     if (adminCat === '羊皮紙') { if (n.kind !== 'forum') return false; }
     else if (adminCat) { if (n.kind === 'forum' || n.category !== adminCat) return false; }
-    if (!allLit) { const have = n.characters || []; if (!adminChars.some(c => have.includes(c))) return false; }
+    if (!noFilter) {
+      const have = n.characters || [];
+      const ok = charAnd ? sel.every(c => have.includes(c)) : sel.some(c => have.includes(c));
+      if (!ok) return false;
+    }
     return true;
   });
 }
@@ -3000,14 +3021,15 @@ function renderAdminFilterBar(ns) {
   if (!wrap) return;
   if (!ns.length) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
   wrap.style.display = 'block';
-  wrap.innerHTML = `<div class="cat-pills" id="admin-cat-pills"></div><div class="char-chips" id="admin-char-chips" style="margin-top:8px"></div>`;
+  wrap.innerHTML = `<div class="filter-label">${ic('ic-sparkles', 12)} 故事類型</div><div class="cat-pills" id="admin-cat-pills"></div>`
+    + `<div class="filter-label" style="margin-top:8px">${ic('ic-sparkles', 12)} 角色</div><div class="char-chips" id="admin-char-chips"></div>`;
   const catEl = document.getElementById('admin-cat-pills');
   catEl.innerHTML = `<button class="cat-pill ${adminCat === '' ? 'active' : ''}" data-c="">全部</button>` +
     ADMIN_CATS.map(c => `<button class="cat-pill ${adminCat === c ? 'active' : ''}" data-c="${c}">${c}</button>`).join('');
   catEl.querySelectorAll('.cat-pill').forEach(b => b.onclick = () => { adminCat = b.dataset.c; renderAdminNovels(); });
   const chipEl = document.getElementById('admin-char-chips');
   chipEl.innerHTML = CHAR_LIST.map(ch =>
-    `<div class="char-chip ${adminChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}"><img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span></div>`).join('');
+    `<div class="char-chip ${adminChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}"><img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span></div>`).join('') + charAndBtnHtml();
   chipEl.querySelectorAll('.char-chip').forEach(el => el.onclick = () => {
     adminChars = adminChars.includes(el.dataset.ch) ? adminChars.filter(c => c !== el.dataset.ch) : [...adminChars, el.dataset.ch];
     renderAdminNovels();
