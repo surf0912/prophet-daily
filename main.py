@@ -21,7 +21,10 @@ async def _monitor_requests(request, call_next):
     start = _time.perf_counter()
     response = await call_next(request)
     try:
-        record_request((_time.perf_counter() - start) * 1000, response.status_code)
+        # Don't let the monitor measure its own poll (every 10s) — that would bias the
+        # latency stats toward the auth-heavy /server-stats request when real traffic is low.
+        if not request.url.path.endswith("/server-stats"):
+            record_request((_time.perf_counter() - start) * 1000, response.status_code)
     except Exception:
         pass
     return response
