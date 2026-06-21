@@ -65,18 +65,19 @@ def list_novels(
         data = fetch(True)
     except Exception:
         data = fetch(False)
-    # Scheduled publish: a work whose 發佈日期 (created_at) is still in the future is hidden from
-    # the public shelf and auto-appears once that moment arrives. Owners still see it in 作品管理
-    # (mine=true) and admins see everything here.
+    # Scheduled publish: hide a work only if its 發佈日期 is a FUTURE calendar day. We compare by
+    # day in the group's timezone (UTC+8) so a work dated "today" shows all day, and a work dated
+    # tomorrow stays hidden until that day. Owners still see it in 作品管理 (mine=true); admins see all.
     if not is_admin(user):
-        from datetime import datetime, timezone
-        now = datetime.now(timezone.utc)
+        from datetime import datetime, timezone, timedelta
+        TW = timezone(timedelta(hours=8))
+        today_tw = datetime.now(TW).date()
         def _live(n):
             ts = n.get("created_at")
             if not ts:
                 return True
             try:
-                return datetime.fromisoformat(ts.replace("Z", "+00:00")) <= now
+                return datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(TW).date() <= today_tw
             except Exception:
                 return True
         data = [n for n in data if _live(n)]
