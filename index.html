@@ -432,6 +432,14 @@
     .settings-section h3 { font-size: 12px; color: var(--accent); letter-spacing: .1em; margin-bottom: 12px; }
     .profile-details > summary { font-size: 12px; color: var(--accent); letter-spacing: .1em; cursor: pointer; padding: 4px 0; }
     .profile-details > summary::-webkit-details-marker { color: var(--accent); }
+    .review-sec { border: 1px solid var(--gold-lt); border-radius: 10px; margin-bottom: 10px; overflow: hidden; background: var(--parchment); }
+    .review-sec > summary { list-style: none; cursor: pointer; padding: 12px 14px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: bold; color: var(--ink); }
+    .review-sec > summary::-webkit-details-marker { display: none; }
+    .review-sec > summary .rv-arrow { transition: transform .2s; color: var(--ink-light); flex-shrink: 0; }
+    .review-sec[open] > summary .rv-arrow { transform: rotate(90deg); }
+    .review-sec > summary .rv-count { margin-left: auto; font-size: 12px; font-weight: bold; min-width: 22px; text-align: center; padding: 1px 8px; border-radius: 11px; background: var(--scarlet); color: var(--on-dark); }
+    .review-sec > summary .rv-count.zero { background: rgba(26,10,0,.12); color: var(--ink-light); }
+    .review-sec .rv-body { padding: 0 14px 4px; }
     .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(26,10,0,.07); }
     .settings-row label { font-size: 14px; }
     .settings-row select { padding: 6px 10px; border: 1px solid var(--gold-lt); border-radius: 3px; font-size: 13px; background: var(--parchment2); }
@@ -1153,7 +1161,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.61';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.62';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2917,10 +2925,15 @@ async function loadReviewList() {
       api('/permissions/users').catch(() => []),
     ]);
     const mqjReqs = (users || []).filter(u => u.mqj_access === 'pending');
-    let html = '';
-    if (mqjReqs.length) {
-      html += `<div style="font-size:12px;color:var(--accent);letter-spacing:.05em;margin-bottom:4px">${ic('ic-wine',12)} 迷情劑閱讀權申請</div>`;
-      html += mqjReqs.map(u => `
+    const novelsPending = pending || [];
+    const arrow = `<svg class="rv-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>`;
+    const section = (icon, title, count, bodyHtml) => `
+      <details class="review-sec"${count ? ' open' : ''}>
+        <summary>${arrow}${ic(icon, 14)} ${title}<span class="rv-count${count ? '' : ' zero'}">${count}</span></summary>
+        <div class="rv-body">${count ? bodyHtml : '<p style="color:var(--ink-light);font-size:13px;padding:8px 0 14px">目前沒有待審核的項目</p>'}</div>
+      </details>`;
+
+    const mqjBody = mqjReqs.map(u => `
         <div style="padding:12px 0;border-bottom:1px solid rgba(26,10,0,.1)">
           <div style="font-size:14px;font-weight:bold">${escapeHtml(u.nickname || u.username)} <span style="font-size:12px;color:var(--ink-light);font-weight:normal">@${escapeHtml(u.username)}</span></div>
           <div style="font-size:12px;color:var(--ink-light);margin-top:3px">申請閱讀「迷情劑」分類</div>
@@ -2929,21 +2942,20 @@ async function loadReviewList() {
             <button onclick="reviewMqj('${u.id}', false)" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-x',12)} 不通過</button>
           </div>
         </div>`).join('');
-    }
-    if ((pending || []).length) {
-      if (mqjReqs.length) html += `<div style="font-size:12px;color:var(--accent);letter-spacing:.05em;margin:16px 0 4px">📝 內容審核</div>`;
-      html += pending.map(n => `
+
+    const novelBody = novelsPending.map(n => `
         <div style="padding:12px 0;border-bottom:1px solid rgba(26,10,0,.1)">
           <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)}</div>
           <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${n.kind === 'forum' ? ic('ic-scroll', 12) + ' 論壇貼文' : ic('ic-book', 12) + ' 小說'}・${n.author || '匿名'}・${fmtUpdated(n.created_at)}</div>
           <div style="display:flex;gap:8px;margin-top:8px">
             <button onclick="openNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">預覽</button>
             <button onclick="approveNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:#2d4a1e;border:none;color:#fff;border-radius:3px;cursor:pointer">${ic('ic-check',12)} 通過</button>
-            <button onclick="deleteNovel('${n.id}', true)" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">✕ 退回</button>
+            <button onclick="deleteNovel('${n.id}', true)" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-x',12)} 退回</button>
           </div>
         </div>`).join('');
-    }
-    el.innerHTML = html || '<p style="color:#888;padding:20px;text-align:center">目前沒有待審核的項目</p>';
+
+    el.innerHTML = section('ic-wine', '迷情劑閱讀權申請', mqjReqs.length, mqjBody)
+                 + section('ic-book', '作品審核', novelsPending.length, novelBody);
   } catch (e) { el.innerHTML = '<p>載入失敗</p>'; }
 }
 
