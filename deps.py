@@ -39,6 +39,7 @@ def get_current_user(
     # Fast path: verify the JWT locally (no network). Falls back to the Auth server only when
     # local verification can't decide (e.g. JWT_SECRET not set to the Supabase secret yet).
     user_id = _verify_jwt_local(token)
+    used_local = user_id is not None
     if not user_id:
         try:
             auth_user = sb.auth.get_user(token)
@@ -53,8 +54,9 @@ def get_current_user(
         # 401 so the client drops the session and returns to the login screen.
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="此帳號已被封禁")
     try:
-        from monitor import record_user
+        from monitor import record_user, record_auth
         record_user(user_id)
+        record_auth(used_local)
     except Exception:
         pass
     return result.data

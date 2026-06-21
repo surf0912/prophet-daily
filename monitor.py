@@ -12,6 +12,7 @@ _WINDOW = 900          # keep the last 15 minutes
 _lock = Lock()
 _requests = deque()    # (ts, duration_ms, status_code)
 _active = {}           # user_id -> last_seen_ts (authenticated activity)
+_auths = deque()       # (ts, local_bool) — did this auth use local JWT verify or the slow fallback?
 _total = 0             # all requests since boot (not trimmed)
 
 
@@ -19,8 +20,17 @@ def _trim(now: float):
     cutoff = now - _WINDOW
     while _requests and _requests[0][0] < cutoff:
         _requests.popleft()
+    while _auths and _auths[0][0] < cutoff:
+        _auths.popleft()
     for u in [u for u, t in _active.items() if t < cutoff]:
         del _active[u]
+
+
+def record_auth(local: bool):
+    now = time.time()
+    with _lock:
+        _auths.append((now, bool(local)))
+        _trim(now)
 
 
 def record_request(duration_ms: float, status: int):
@@ -46,6 +56,7 @@ def snapshot() -> dict:
         _trim(now)
         reqs = list(_requests)
         active_ts = list(_active.values())
+        auths = list(_auths)
         total = _total
     def reqs_since(sec):
         c = now - sec
@@ -54,6 +65,7 @@ def snapshot() -> dict:
         c = now - sec
         return sum(1 for t in active_ts if t >= c)
     recent = sorted(d for (t, d, _s) in reqs if t >= now - 300)
+    auth_recent = [lo for (t, lo) in auths if t >= now - 300]
     def pct(p):
         if not recent:
             return 0
@@ -72,5 +84,7 @@ def snapshot() -> dict:
         "avg_ms_5m": int(sum(recent) / len(recent)) if recent else 0,
         "samples_5m": len(recent),
         "errors_5m": sum(1 for (t, _d, s) in reqs if t >= now - 300 and s >= 500),
+        "auth_total_5m": len(auth_recent),
+        "auth_local_5m": sum(1 for lo in auth_recent if lo),   # how many auths used local JWT verify
         "total_since_boot": total,
     }

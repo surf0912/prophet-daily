@@ -1184,7 +1184,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.69';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.70';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2856,9 +2856,11 @@ async function loadMonitor() {
   try {
     const s = await api('/permissions/server-stats', { background: true });
     el.dataset.loaded = '1';
-    // Right after a cold start (or with too few samples) the median is dominated by warm-up
-    // requests — don't grade it as 略慢/吃緊 then; show 暖機中 until the data settles.
-    const warming = (s.uptime_seconds < 180) || ((s.samples_5m || 0) < 10);
+    // Grace = 5 min: the 5-min median stays warm-up-contaminated until the cold-boot requests
+    // age out of the window, so don't grade it 略慢/吃緊 before then.
+    const warming = (s.uptime_seconds < 300) || ((s.samples_5m || 0) < 10);
+    const authTotal = s.auth_total_5m || 0;
+    const jwtPct = authTotal ? Math.round((s.auth_local_5m || 0) / authTotal * 100) : null;
     const ms = s.p50_ms_5m || 0;       // MEDIAN — robust to a single cold-start outlier
     const p95 = s.p95_ms_5m || 0;
     const p95High = p95 >= 2000 && !warming;   // 暖機期的高 p95 屬正常，不報警
@@ -2884,6 +2886,9 @@ async function loadMonitor() {
         ${card(ic('ic-shield', 12) + ' 錯誤（5 分鐘）', s.errors_5m, s.errors_5m ? '伺服器錯誤，請留意' : '無 5xx 錯誤')}
         ${card(ic('ic-castle', 12) + ' 已運行', _fmtUptime(s.uptime_seconds), s.uptime_seconds < 90 ? '剛冷啟動' : '累計請求 ' + s.total_since_boot)}
       </div>
+      ${jwtPct === null ? '' : (jwtPct >= 80
+        ? `<div style="font-size:11px;color:#2d4a1e;margin-top:10px">${ic('ic-shield', 11)} JWT 本機驗證：<b>啟用中</b>（${jwtPct}%）— 已省去每次請求對 Supabase 的一次往返</div>`
+        : `<div style="font-size:12px;color:var(--scarlet);margin-top:10px;line-height:1.5">${ic('ic-shield', 11)} JWT 本機驗證：<b>未啟用</b>（本機僅 ${jwtPct}%）— 請把 Render 的 <b>JWT_SECRET</b> 設成你的 Supabase JWT 密鑰，回應時間才會降下來</div>`)}
       <div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:10px">※「在線」以近 5 分鐘有送出請求的登入用戶計；純閱讀時前端不送請求，故為活躍下限值。</div>`;
   } catch (e) {
     el.innerHTML = `<p style="color:var(--scarlet);padding:14px">載入失敗：${escapeHtml(e.message || '')}</p>`;
