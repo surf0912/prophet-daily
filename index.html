@@ -1136,7 +1136,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.48';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.49';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2389,13 +2389,16 @@ async function loadChapter(idx) {
   renderToc();
   try {
     const full = await api(`/chapters/${ch.id}`);
+    const el = document.getElementById('reader-content');
     if (currentNovelKind === 'forum') {
       try { forumLikes = await api(`/novels/${currentNovelId}/likes`) || { counts: {}, mine: [] }; }
       catch { forumLikes = { counts: {}, mine: [] }; }
-      document.getElementById('reader-content').innerHTML = renderForumContent(full.content);
+      el.style.whiteSpace = '';
+      el.innerHTML = renderForumContent(full.content);
     } else {
-      document.getElementById('reader-content').innerHTML =
-        full.content.split('\n').filter(l => l.trim()).map(l => `<p>${escapeHtml(l)}</p>`).join('');
+      // Render exactly as the author typed it — preserve blank lines & spacing (WYSIWYG with the editor).
+      el.style.whiteSpace = 'pre-wrap';
+      el.textContent = full.content;
     }
   } catch { document.getElementById('reader-content').textContent = '載入失敗'; }
   const rv = document.getElementById('reader-view');
