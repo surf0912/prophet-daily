@@ -1153,7 +1153,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.60';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.61';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2128,7 +2128,6 @@ function toggleCharAnd() {
 
 function renderFilterBar(catEl, chipEl, curCat, curChars, onChange) {
   catEl.innerHTML =
-    `<button class="cat-pill ${curCat === '' ? 'active' : ''}" data-c="">全部</button>` +
     CATEGORIES.map(c => `<button class="cat-pill ${curCat === c ? 'active' : ''}" data-c="${c}">${c}</button>`).join('');
   catEl.querySelectorAll('.cat-pill').forEach(b => b.onclick = () => onChange('cat', b.dataset.c));
   chipEl.innerHTML = CHAR_LIST.map(ch =>
@@ -2140,7 +2139,7 @@ function renderFilterBar(catEl, chipEl, curCat, curChars, onChange) {
 }
 
 function onShelfFilter(type, val) {
-  if (type === 'cat') shelfCat = val;
+  if (type === 'cat') shelfCat = (shelfCat === val) ? '' : val;   // 再點同一顆 = 取消 = 全部顯示
   else shelfChars = shelfChars.includes(val) ? shelfChars.filter(c => c !== val) : [...shelfChars, val];
   renderShelf();
 }
@@ -3053,9 +3052,8 @@ function renderAdminFilterBar(ns) {
   wrap.innerHTML = `<div class="filter-label">${ic('ic-sparkles', 12)} 故事類型</div><div class="cat-pills" id="admin-cat-pills"></div>`
     + `<div class="filter-label" style="margin-top:8px;display:flex;align-items:center;gap:10px"><span>${ic('ic-sparkles', 12)} 角色</span><span id="admin-char-and"></span></div><div class="char-chips" id="admin-char-chips"></div>`;
   const catEl = document.getElementById('admin-cat-pills');
-  catEl.innerHTML = `<button class="cat-pill ${adminCat === '' ? 'active' : ''}" data-c="">全部</button>` +
-    ADMIN_CATS.map(c => `<button class="cat-pill ${adminCat === c ? 'active' : ''}" data-c="${c}">${c}</button>`).join('');
-  catEl.querySelectorAll('.cat-pill').forEach(b => b.onclick = () => { adminCat = b.dataset.c; renderAdminNovels(); });
+  catEl.innerHTML = ADMIN_CATS.map(c => `<button class="cat-pill ${adminCat === c ? 'active' : ''}" data-c="${c}">${c}</button>`).join('');
+  catEl.querySelectorAll('.cat-pill').forEach(b => b.onclick = () => { adminCat = (adminCat === b.dataset.c) ? '' : b.dataset.c; renderAdminNovels(); });   // 再點同一顆 = 取消 = 全部
   const chipEl = document.getElementById('admin-char-chips');
   chipEl.innerHTML = CHAR_LIST.map(ch =>
     `<div class="char-chip ${adminChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}"><img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span></div>`).join('');
