@@ -9,7 +9,7 @@ name: 每週資料庫備份 (DB backup)
 #                      e.g. postgresql://postgres.<ref>:<DB-PASSWORD>@aws-0-<region>.pooler.supabase.com:5432/postgres
 #   BACKUP_PASSPHRASE  any long passphrase you keep safe — needed to DECRYPT the backup later
 #
-# Restore later:  gpg --batch --passphrase '<passphrase>' -d db-XXXX.sql.gz.gpg | gunzip | psql '<DB_URL>'
+# Restore later:  gpg -d db-XXXX.sql.gz.gpg | gunzip | psql '<DB_URL>'   (gpg will prompt for the passphrase)
 
 on:
   schedule:
@@ -20,23 +20,21 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Install PostgreSQL 17 client
-        run: |
-          set -euo pipefail
-          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client-17
-
-      - name: Dump → gzip → encrypt
+      - name: Dump (postgres:17 via Docker) → gzip → encrypt
         env:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
         run: |
           set -euo pipefail
+          [ -n "${DB_URL:-}" ]     || { echo "::error::SUPABASE_DB_URL secret is empty"; exit 1; }
+          [ -n "${PASSPHRASE:-}" ] || { echo "::error::BACKUP_PASSPHRASE secret is empty"; exit 1; }
           ts=$(date -u +%Y%m%d-%H%M)
-          pg_dump "$DB_URL" --no-owner --no-privileges | gzip > "db-$ts.sql.gz"
-          gpg --batch --yes --symmetric --cipher-algo AES256 --passphrase "$PASSPHRASE" "db-$ts.sql.gz"
+          # pg_dump from an official postgres:17 image — no apt install / PATH / version headaches.
+          docker run --rm -e PGCONNECT_TIMEOUT=30 postgres:17-alpine \
+            pg_dump "$DB_URL" --no-owner --no-privileges | gzip > "db-$ts.sql.gz"
+          # gpg 2.x needs loopback to take a passphrase non-interactively.
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" \
+              --symmetric --cipher-algo AES256 "db-$ts.sql.gz"
           rm -f "db-$ts.sql.gz"
           ls -lh db-*.sql.gz.gpg
 
