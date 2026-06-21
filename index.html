@@ -250,7 +250,7 @@
     }
     .char-chip.active img { border-color: var(--gold); }
     .char-chip span { font-size: 12px; color: var(--ink-light); }
-    .char-and-btn { align-self: center; display: inline-flex; align-items: center; gap: 4px; padding: 6px 11px; border-radius: 16px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); font-size: 12px; cursor: pointer; white-space: nowrap; }
+    .char-and-btn { display: inline-flex; align-items: center; gap: 3px; padding: 2px 9px; border-radius: 14px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); font-size: 12px; letter-spacing: 0; cursor: pointer; white-space: nowrap; }
     .char-and-btn.on { background: var(--scarlet); color: var(--on-dark); border-color: var(--scarlet); }
     /* admin form character multi-select */
     .char-picker { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -665,7 +665,7 @@
       <div class="filter-bar">
         <div class="filter-label"><svg width="12" height="12" aria-hidden="true" style="vertical-align:-1px"><use href="#ic-sparkles"/></svg> 故事類型</div>
         <div class="cat-pills" id="shelf-cat-pills"></div>
-        <div class="filter-label"><svg width="12" height="12" aria-hidden="true" style="vertical-align:-1px"><use href="#ic-sparkles"/></svg> 角色</div>
+        <div class="filter-label" style="display:flex;align-items:center;gap:10px"><span><svg width="12" height="12" aria-hidden="true" style="vertical-align:-1px"><use href="#ic-sparkles"/></svg> 角色</span><span id="shelf-char-and"></span></div>
         <div class="char-chips" id="shelf-char-chips"></div>
       </div>
       <div id="novel-grid" class="novel-list"></div>
@@ -681,7 +681,7 @@
         <input type="search" id="forum-search-input" placeholder="🔍 搜尋標題、作者或角色…" oninput="renderForumList()" />
       </div>
       <div class="filter-bar">
-        <div class="filter-label"><svg width="12" height="12" aria-hidden="true" style="vertical-align:-1px"><use href="#ic-sparkles"/></svg> 角色</div>
+        <div class="filter-label" style="display:flex;align-items:center;gap:10px"><span><svg width="12" height="12" aria-hidden="true" style="vertical-align:-1px"><use href="#ic-sparkles"/></svg> 角色</span><span id="forum-char-and"></span></div>
         <div class="char-chips" id="forum-char-chips"></div>
       </div>
       <div class="forum-list" id="forum-list"></div>
@@ -1146,7 +1146,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.55';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.56';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2106,11 +2106,12 @@ function applyClassFilter(list, cat, chars) {
     return true;
   });
 }
-// 「同框」toggle, appended after the character chips in every filter bar.
+// 「同框」toggle — mounted on the 「角色」 label row in every filter bar.
 function charAndBtnHtml() {
   return `<button type="button" class="char-and-btn${charAnd ? ' on' : ''}" onclick="toggleCharAnd()" title="開啟後只顯示所選角色「同時出現」的文，不看單人">`
-    + `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg> 同框</button>`;
+    + `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg> 同框</button>`;
 }
+function mountCharAndBtn(id) { const e = document.getElementById(id); if (e) e.innerHTML = charAndBtnHtml(); }
 function toggleCharAnd() {
   charAnd = !charAnd;
   if (document.getElementById('page-scroll').classList.contains('active')) renderShelf();
@@ -2126,8 +2127,9 @@ function renderFilterBar(catEl, chipEl, curCat, curChars, onChange) {
   chipEl.innerHTML = CHAR_LIST.map(ch =>
     `<div class="char-chip ${curChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}">
        <img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span>
-     </div>`).join('') + charAndBtnHtml();
+     </div>`).join('');
   chipEl.querySelectorAll('.char-chip').forEach(el => el.onclick = () => onChange('char', el.dataset.ch));
+  mountCharAndBtn('shelf-char-and');
 }
 
 function onShelfFilter(type, val) {
@@ -2641,8 +2643,9 @@ function renderForumList() {
     chipEl.innerHTML = CHAR_LIST.map(ch =>
       `<div class="char-chip ${forumChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}">
          <img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span>
-       </div>`).join('') + charAndBtnHtml();
+       </div>`).join('');
     chipEl.querySelectorAll('.char-chip').forEach(el => el.onclick = () => onForumFilter('char', el.dataset.ch));
+    mountCharAndBtn('forum-char-and');
   }
   const q = (document.getElementById('forum-search-input').value || '').trim().toLowerCase();
   let posts;
@@ -3040,18 +3043,19 @@ function renderAdminFilterBar(ns) {
   if (!ns.length) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
   wrap.style.display = 'block';
   wrap.innerHTML = `<div class="filter-label">${ic('ic-sparkles', 12)} 故事類型</div><div class="cat-pills" id="admin-cat-pills"></div>`
-    + `<div class="filter-label" style="margin-top:8px">${ic('ic-sparkles', 12)} 角色</div><div class="char-chips" id="admin-char-chips"></div>`;
+    + `<div class="filter-label" style="margin-top:8px;display:flex;align-items:center;gap:10px"><span>${ic('ic-sparkles', 12)} 角色</span><span id="admin-char-and"></span></div><div class="char-chips" id="admin-char-chips"></div>`;
   const catEl = document.getElementById('admin-cat-pills');
   catEl.innerHTML = `<button class="cat-pill ${adminCat === '' ? 'active' : ''}" data-c="">全部</button>` +
     ADMIN_CATS.map(c => `<button class="cat-pill ${adminCat === c ? 'active' : ''}" data-c="${c}">${c}</button>`).join('');
   catEl.querySelectorAll('.cat-pill').forEach(b => b.onclick = () => { adminCat = b.dataset.c; renderAdminNovels(); });
   const chipEl = document.getElementById('admin-char-chips');
   chipEl.innerHTML = CHAR_LIST.map(ch =>
-    `<div class="char-chip ${adminChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}"><img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span></div>`).join('') + charAndBtnHtml();
+    `<div class="char-chip ${adminChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}"><img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span></div>`).join('');
   chipEl.querySelectorAll('.char-chip').forEach(el => el.onclick = () => {
     adminChars = adminChars.includes(el.dataset.ch) ? adminChars.filter(c => c !== el.dataset.ch) : [...adminChars, el.dataset.ch];
     renderAdminNovels();
   });
+  mountCharAndBtn('admin-char-and');
 }
 
 // Render the 作品管理 list from cached works, applying the filter. Filter clicks re-render
