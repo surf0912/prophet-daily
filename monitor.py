@@ -53,7 +53,12 @@ def snapshot() -> dict:
     def users_since(sec):
         c = now - sec
         return sum(1 for t in active_ts if t >= c)
-    recent = [d for (t, d, _s) in reqs if t >= now - 300]
+    recent = sorted(d for (t, d, _s) in reqs if t >= now - 300)
+    def pct(p):
+        if not recent:
+            return 0
+        k = max(0, min(len(recent) - 1, int(round((p / 100) * (len(recent) - 1)))))
+        return int(recent[k])
     return {
         "uptime_seconds": int(now - _BOOT),
         "active_5m": users_since(300),
@@ -61,7 +66,11 @@ def snapshot() -> dict:
         "req_1m": reqs_since(60),
         "req_5m": reqs_since(300),
         "rps_1m": round(reqs_since(60) / 60, 2),
+        "p50_ms_5m": pct(50),                                   # 中位數：反映「典型體感」，不被冷啟動離群值帶歪
+        "p95_ms_5m": pct(95),                                   # 最慢 5%：看尾端 / 抓特別高的值
+        "max_ms_5m": int(recent[-1]) if recent else 0,
         "avg_ms_5m": int(sum(recent) / len(recent)) if recent else 0,
+        "samples_5m": len(recent),
         "errors_5m": sum(1 for (t, _d, s) in reqs if t >= now - 300 and s >= 500),
         "total_since_boot": total,
     }

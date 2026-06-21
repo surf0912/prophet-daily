@@ -1181,7 +1181,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.66';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.67';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2836,8 +2836,10 @@ async function loadMonitor() {
   try {
     const s = await api('/permissions/server-stats', { background: true });
     el.dataset.loaded = '1';
-    // load light: avg<400ms green, <1000 amber, else red; rps as a rough health hint
-    const ms = s.avg_ms_5m;
+    // Health light is on the MEDIAN (p50) so one cold-start outlier can't fake a red 吃緊.
+    const ms = s.p50_ms_5m || 0;
+    const p95 = s.p95_ms_5m || 0;
+    const p95High = p95 >= 2000;       // 特別高的尾端值 → 標警示（多半是冷啟動那一發）
     const health = ms === 0 ? ['var(--ink-light)', '閒置'] : ms < 400 ? ['#2d4a1e', '順暢'] : ms < 1000 ? ['#a8761f', '略慢'] : ['var(--scarlet)', '吃緊'];
     const card = (label, val, sub) => `
       <div style="flex:1;min-width:128px;background:var(--parchment);border:1px solid var(--gold-lt);border-radius:10px;padding:12px 14px">
@@ -2848,7 +2850,7 @@ async function loadMonitor() {
     el.innerHTML = `
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         ${card(ic('ic-users', 12) + ' 在線（5 分鐘）', s.active_5m, '15 分鐘內：' + s.active_15m + ' 人')}
-        ${card(ic('ic-clock', 12) + ' 回應時間', ms + ' ms', `<span style="color:${health[0]};font-weight:bold">● ${health[1]}</span>`)}
+        ${card(ic('ic-clock', 12) + ' 回應時間（中位數）', ms + ' ms', `<span style="color:${health[0]};font-weight:bold">● ${health[1]}</span><br><span style="color:${p95High ? 'var(--scarlet)' : 'var(--ink-light)'}">最慢5% (p95)：${p95} ms${p95High ? ' ⚠️' : ''}</span>`)}
         ${card(ic('ic-send', 12) + ' 請求量', s.req_1m + ' /分', '近 5 分鐘：' + s.req_5m + '　(' + s.rps_1m + ' req/s)')}
         ${card(ic('ic-shield', 12) + ' 錯誤（5 分鐘）', s.errors_5m, s.errors_5m ? '伺服器錯誤，請留意' : '無 5xx 錯誤')}
         ${card(ic('ic-castle', 12) + ' 已運行', _fmtUptime(s.uptime_seconds), s.uptime_seconds < 90 ? '剛冷啟動' : '累計請求 ' + s.total_since_boot)}
