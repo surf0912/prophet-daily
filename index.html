@@ -1146,7 +1146,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.54';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.55';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1597,10 +1597,18 @@ function tourSeen() {
   const need = tourTag();
   return _normTag(currentUser?.tour_seen) === need || _normTag(localStorage.getItem(tourSeenKey())) === need;
 }
+// Has this account seen ANY version of the tour for its CURRENT role? Used so a content/version
+// bump doesn't force a full replay — auto-run only fires for genuinely new accounts (or a reader
+// freshly promoted to writer). Existing users get the optional home banner instead.
+function tourSeenAnyForRole() {
+  const roleChar = currentUser?.role === 'reader' ? 'r' : 'w';
+  const stored = _normTag(currentUser?.tour_seen) || _normTag(localStorage.getItem(tourSeenKey())) || '';
+  return stored.startsWith(roleChar);
+}
 
 function maybeAutoTour() {
   if (!currentUser || !['reader', 'writer'].includes(currentUser.role)) return;  // auto only for 讀者/作家
-  if (tourSeen()) return;
+  if (tourSeenAnyForRole()) return;   // already saw this role's tour (any version) → don't force a replay
   // Called after loadNovels resolves (backend awake). Wait out any lingering 喚醒 overlay,
   // then a short settle so the shelf has rendered before the spotlight appears.
   let tries = 0;
@@ -1649,8 +1657,9 @@ function _placeTour(s) {
   }
   bub.style.transform = 'none';
   el.scrollIntoView({ block: 'center', inline: 'nearest' });
-  requestAnimationFrame(() => {
+  const place = () => {
     const r = el.getBoundingClientRect();
+    if (!r.width && !r.height) return;   // not laid out yet — wait for the next pass
     const pad = 6;
     spot.classList.remove('nohole');
     spot.style.left = (r.left - pad) + 'px';
@@ -1665,7 +1674,12 @@ function _placeTour(s) {
     left = Math.max(12, Math.min(left, innerWidth - bw - 12));
     bub.style.left = left + 'px';
     bub.style.top = top + 'px';
-  });
+  };
+  // Place now, then re-measure after layout/scroll/URL-bar settle — fixes the auto-run case
+  // where the shelf/viewport is still shifting when the tour first opens (manual open is fine).
+  requestAnimationFrame(place);
+  setTimeout(place, 350);
+  setTimeout(place, 700);
 }
 function _tourReposition() { if (_tour.on) _placeTour(_tour.steps[_tour.i]); }
 
