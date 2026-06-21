@@ -52,7 +52,11 @@ ROLE_RANK = {"reader": 0, "writer": 1, "admin": 2, "super_admin": 3}
 
 @router.get("/users")
 def list_users(user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
-    res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, created_at").order("created_at", desc=True).execute()
+    # last_seen_at powers the 不活躍用戶 report; fall back gracefully if the column isn't added yet.
+    try:
+        res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, created_at, last_seen_at").order("created_at", desc=True).execute()
+    except Exception:
+        res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, created_at").order("created_at", desc=True).execute()
     # An admin only sees members at the same rank or lower; only super_admin sees super_admin accounts.
     my_rank = ROLE_RANK.get(user.get("role"), 0)
     return [u for u in res.data if ROLE_RANK.get(u.get("role"), 0) <= my_rank]

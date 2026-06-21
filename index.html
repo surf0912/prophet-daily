@@ -252,6 +252,9 @@
     .char-chip span { font-size: 12px; color: var(--ink-light); }
     .char-and-btn { display: inline-flex; align-items: center; gap: 3px; padding: 2px 9px; border-radius: 14px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); font-size: 12px; letter-spacing: 0; cursor: pointer; white-space: nowrap; }
     .char-and-btn.on { background: var(--scarlet); color: var(--on-dark); border-color: var(--scarlet); }
+    .uf-chip { font-size: 12px; padding: 4px 11px; border-radius: 14px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); cursor: pointer; }
+    .uf-chip.on { background: var(--accent); color: var(--on-dark); border-color: var(--accent); }
+    .uf-del { font-size: 12px; padding: 4px 10px; background: var(--scarlet); border: none; color: var(--on-dark); border-radius: 6px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
     /* admin form character multi-select */
     .char-picker { display: flex; gap: 8px; flex-wrap: wrap; }
     .char-picker .opt {
@@ -887,6 +890,7 @@
         <div id="admin-novel-list"></div>
       </div>
       <div id="admin-users" class="admin-pane">
+        <div id="user-stats" style="margin-bottom:10px"></div>
         <input id="user-search" type="text" oninput="renderUserRows(this.value)" placeholder="搜尋暱稱或入學全名…" style="width:100%;box-sizing:border-box;padding:9px 12px;margin-bottom:10px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment2);color:var(--ink);font-size:14px" />
         <div class="user-list" id="user-list"></div>
       </div>
@@ -1149,7 +1153,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.58';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.59';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3277,8 +3281,57 @@ async function loadAdminUsers() {
   el.innerHTML = '<div class="spinner"></div>';
   try {
     window._adminUsers = await api('/permissions/users') || [];   // looked up by viewUserNovels
+    renderUserStats();
     renderUserRows(document.getElementById('user-search')?.value || '');
   } catch { el.innerHTML = '<p>載入失敗</p>'; }
+}
+
+// ── 用戶活躍度 / 不活躍清理 ─────────────────────────────────
+// last_seen_at is recorded on every app open (backend /auth/me). For accounts with no record
+// yet (e.g. before this feature shipped) we estimate from 註冊日 so the report still works;
+// it becomes exact as people open the app.
+let userActivityFilter = '';   // '' | '15' | '30'  (≥N 天未上線)
+function _daysSince(ts) {
+  if (!ts) return null;
+  const t = new Date(ts).getTime();
+  if (isNaN(t)) return null;
+  return Math.floor((Date.now() - t) / 86400000);
+}
+function userInactiveDays(u) { const d = _daysSince(u.last_seen_at); return d != null ? d : _daysSince(u.created_at); }
+function lastSeenLabel(u) {
+  const d = _daysSince(u.last_seen_at);
+  if (d == null) return '尚無上線紀錄';
+  if (d <= 0) return '今天上線';
+  if (d === 1) return '昨天上線';
+  return `${d} 天前上線`;
+}
+function setUserFilter(v) {
+  userActivityFilter = v;
+  renderUserStats();
+  renderUserRows(document.getElementById('user-search')?.value || '');
+}
+function renderUserStats() {
+  const box = document.getElementById('user-stats');
+  if (!box) return;
+  const all = window._adminUsers || [];
+  const total = all.length;
+  const rc = { reader: 0, writer: 0, admin: 0, super_admin: 0 };
+  let in15 = 0, in30 = 0, noRec = 0;
+  all.forEach(u => {
+    rc[u.role] = (rc[u.role] || 0) + 1;
+    if (!u.last_seen_at) noRec++;
+    const d = userInactiveDays(u);
+    if (d != null && d >= 30) in30++;
+    else if (d != null && d >= 15) in15++;
+  });
+  const in15cum = in15 + in30;   // ≥15 天包含 ≥30 天
+  const chip = (v, label, n) => `<button class="uf-chip${userActivityFilter === v ? ' on' : ''}" onclick="setUserFilter('${v}')">${label}${n != null ? `（${n}）` : ''}</button>`;
+  box.innerHTML =
+    `<div style="font-size:13px;color:var(--ink-light);line-height:1.7">共 <b style="color:var(--ink);font-size:15px">${total}</b> 位用戶`
+    + `<span style="opacity:.75"> · 讀者 ${rc.reader} · 作家 ${rc.writer} · 管理 ${rc.admin + rc.super_admin}</span></div>`
+    + `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">`
+    + chip('', '全部', total) + chip('15', '≥15天未上線', in15cum) + chip('30', '≥30天未上線', in30) + `</div>`
+    + (noRec ? `<div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:6px">※ ${noRec} 位尚無上線紀錄，暫以註冊日估算（之後自動精準）</div>` : '');
 }
 // Render (optionally filtered) user rows. Search matches 巫師暱稱 or 入學全名.
 function renderUserRows(q) {
@@ -3287,7 +3340,12 @@ function renderUserRows(q) {
   const ROLES = [['reader','讀者'],['writer','作家'],['admin','管理員'],['super_admin','超級管理員']];
   const isSuper = currentUser.role === 'super_admin';
   const needle = (q || '').trim().toLowerCase();
-  const users = needle ? all.filter(u => (u.nickname || '').toLowerCase().includes(needle) || (u.username || '').toLowerCase().includes(needle)) : all;
+  let users = needle ? all.filter(u => (u.nickname || '').toLowerCase().includes(needle) || (u.username || '').toLowerCase().includes(needle)) : all;
+  if (userActivityFilter) {
+    const min = parseInt(userActivityFilter, 10);
+    users = users.filter(u => { const d = userInactiveDays(u); return d != null && d >= min; });
+    users = [...users].sort((a, b) => (userInactiveDays(b) || 0) - (userInactiveDays(a) || 0));   // 最久未上線在前
+  }
     el.innerHTML = users.map(u => {
       const display = u.nickname || u.username;
       const isSelf = u.id === currentUser.id;
@@ -3299,17 +3357,22 @@ function renderUserRows(q) {
       // Tap the name to drill into this member's detail (their works + 迷情劑 toggle for readers).
       const open = `viewUserNovels('${u.id}')`;
       const banTag = u.banned ? '<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(138,45,45,.18);color:var(--accent);margin-left:6px">' + ic('ic-ban',10) + ' 已封禁</span>' : '';
-      // Destructive actions (重設密碼/封禁/刪除) live inside the member's detail page now —
+      const seen = `<div style="font-size:11px;color:var(--ink-light);font-weight:normal;opacity:.8">${lastSeenLabel(u)}</div>`;
+      // In an inactivity view, super_admin gets an inline 刪除 for quick manual cleanup (never automatic).
+      const delBtn = (isSuper && !isSelf && userActivityFilter)
+        ? `<button class="uf-del" onclick='deleteUser(${JSON.stringify(u.id)}, ${JSON.stringify(display)})'>${ic('ic-trash', 11)} 刪除</button>`
+        : '';
+      // Destructive actions (重設密碼/封禁/刪除) live inside the member's detail page too —
       // tap the row to enter — so scrolling the list can't mis-fire them.
       return `
       <div style="padding:8px 0;border-bottom:1px solid rgba(26,10,0,.07)">
         <div class="user-row" style="border:none;padding:0">
           <span onclick="${open}" style="cursor:pointer;flex-shrink:0">${avatarHTML(u, 32)}</span>
-          <div class="u-name" onclick="${open}" style="cursor:pointer;line-height:1.3">${escapeHtml(display)}${banTag}<span style="color:var(--gold);font-weight:bold;margin-left:6px">›</span><div style="font-size:12px;color:var(--ink-light);font-weight:normal">@${escapeHtml(u.username)}</div></div>
-          ${picker}
+          <div class="u-name" onclick="${open}" style="cursor:pointer;line-height:1.3">${escapeHtml(display)}${banTag}<span style="color:var(--gold);font-weight:bold;margin-left:6px">›</span><div style="font-size:12px;color:var(--ink-light);font-weight:normal">@${escapeHtml(u.username)}</div>${seen}</div>
+          ${delBtn || picker}
         </div>
       </div>`;
-    }).join('') || `<p style="color:#888;padding:20px">${needle ? '找不到符合的用戶' : '尚無用戶'}</p>`;
+    }).join('') || `<p style="color:#888;padding:20px">${needle ? '找不到符合的用戶' : (userActivityFilter ? '沒有符合的不活躍用戶' : '尚無用戶')}</p>`;
 }
 
 // Admin taps a member's name → their detail (scoped 作品管理 + 迷情劑 toggle for readers).

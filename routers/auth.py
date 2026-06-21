@@ -148,9 +148,30 @@ def maybe_seed_guide(user: dict, sb_admin: Client):
     except Exception:
         pass  # never let seeding break login (e.g. column not yet added)
 
+def _touch_last_seen(user: dict, sb_admin: Client):
+    """Record activity for the 不活躍用戶 report. /me fires on every app open + token refresh,
+    so this reflects true activity (unlike auth.last_sign_in_at, which is stale under refresh).
+    Throttled to ~30 min to avoid a write per call. Requires a profiles.last_seen_at timestamptz
+    column; silently no-ops if the column is missing."""
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone.utc)
+    last = user.get("last_seen_at")
+    if last:
+        try:
+            if now - datetime.fromisoformat(str(last).replace("Z", "+00:00")) < timedelta(minutes=30):
+                return
+        except Exception:
+            pass
+    try:
+        sb_admin.table("profiles").update({"last_seen_at": now.isoformat()}).eq("id", user["id"]).execute()
+        user["last_seen_at"] = now.isoformat()
+    except Exception:
+        pass
+
 @router.get("/me")
 def me(user: dict = Depends(get_current_user), sb_admin: Client = Depends(get_supabase_admin)):
     maybe_seed_guide(user, sb_admin)
+    _touch_last_seen(user, sb_admin)
     return user
 
 class NicknameBody(BaseModel):
