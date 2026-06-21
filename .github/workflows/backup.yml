@@ -1,0 +1,48 @@
+name: 每週資料庫備份 (DB backup)
+
+# Full disaster-recovery backup: pg_dump of the WHOLE database (content + auth/passwords),
+# gzipped and AES256-encrypted, stored as a 90-day GitHub artifact. Encryption means the dump
+# is safe even if this repo is public (artifacts on public repos are downloadable by anyone).
+#
+# One-time setup — add two repo secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_DB_URL    Supabase → Connect → "Session pooler" connection string (IPv4, pg_dump-able),
+#                      e.g. postgresql://postgres.<ref>:<DB-PASSWORD>@aws-0-<region>.pooler.supabase.com:5432/postgres
+#   BACKUP_PASSPHRASE  any long passphrase you keep safe — needed to DECRYPT the backup later
+#
+# Restore later:  gpg --batch --passphrase '<passphrase>' -d db-XXXX.sql.gz.gpg | gunzip | psql '<DB_URL>'
+
+on:
+  schedule:
+    - cron: '0 19 * * 0'     # 每週日 19:00 UTC = 週一 03:00 台灣時間
+  workflow_dispatch: {}        # 也可在 Actions 頁面手動執行一次
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install PostgreSQL 17 client
+        run: |
+          set -euo pipefail
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+
+      - name: Dump → gzip → encrypt
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          ts=$(date -u +%Y%m%d-%H%M)
+          pg_dump "$DB_URL" --no-owner --no-privileges | gzip > "db-$ts.sql.gz"
+          gpg --batch --yes --symmetric --cipher-algo AES256 --passphrase "$PASSPHRASE" "db-$ts.sql.gz"
+          rm -f "db-$ts.sql.gz"
+          ls -lh db-*.sql.gz.gpg
+
+      - name: Upload encrypted backup (90-day artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup
+          path: '*.sql.gz.gpg'
+          retention-days: 90
