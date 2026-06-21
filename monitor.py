@@ -64,7 +64,10 @@ def snapshot() -> dict:
     def users_since(sec):
         c = now - sec
         return sum(1 for t in active_ts if t >= c)
-    recent = sorted(d for (t, d, _s) in reqs if t >= now - 300)
+    # Latency percentiles use a SHORT 2-min window so they reflect "current" speed: a 5-min window
+    # over sparse traffic stays dominated by stale cold-start requests and falsely reads 吃緊 while
+    # the server is actually idle. samples over this window drive the idle/insufficient guard.
+    recent = sorted(d for (t, d, _s) in reqs if t >= now - 120)
     auth_recent = [lo for (t, lo) in auths if t >= now - 300]
     def pct(p):
         if not recent:

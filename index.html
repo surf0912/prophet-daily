@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -1193,13 +1193,21 @@
     if (now - lastTap <= 350) e.preventDefault();   // cancels the zoom gesture on the 2nd tap
     lastTap = now;
   }, { passive: false });
+  // Block pinch-zoom too: iOS fires gesture* events; other browsers do a 2-finger touchmove.
+  // (Avatar crop uses a slider + single-finger drag, so this doesn't affect it.)
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false });
+  });
+  document.addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
 }());
 
 // ── Config (update after deploy) ────────────────────────────
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.71';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.72';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2871,16 +2879,17 @@ async function loadMonitor() {
   try {
     const s = await api('/permissions/server-stats', { background: true });
     el.dataset.loaded = '1';
-    // Grace = 5 min: the 5-min median stays warm-up-contaminated until the cold-boot requests
-    // age out of the window, so don't grade it 略慢/吃緊 before then.
-    const warming = (s.uptime_seconds < 300) || ((s.samples_5m || 0) < 10);
+    // Latency is now a 2-min window, so the cold-boot requests age out by ~150s → shorter grace.
+    const warming = s.uptime_seconds < 150;
+    const latSamples = s.samples_5m || 0;            // samples in the recent 2-min latency window
+    const insufficient = !warming && latSamples < 5; // too little recent traffic to judge → 閒置, don't cry 吃緊
     const authTotal = s.auth_total_5m || 0;
     const jwtPct = authTotal ? Math.round((s.auth_local_5m || 0) / authTotal * 100) : null;
     const ms = s.p50_ms_5m || 0;       // MEDIAN — robust to a single cold-start outlier
     const p95 = s.p95_ms_5m || 0;
-    const p95High = p95 >= 2000 && !warming;   // 暖機期的高 p95 屬正常，不報警
+    const p95High = p95 >= 2000 && !warming && !insufficient;
     const health = warming ? ['var(--gold)', '暖機中']
-      : ms === 0 ? ['var(--ink-light)', '閒置']
+      : insufficient || ms === 0 ? ['var(--ink-light)', '閒置']
       : ms < 400 ? ['#2d4a1e', '順暢']
       : ms < 1000 ? ['#a8761f', '略慢']
       : ['var(--scarlet)', '吃緊'];
@@ -2891,11 +2900,14 @@ async function loadMonitor() {
         ${sub ? `<div style="font-size:11px;color:var(--ink-light);opacity:.85;margin-top:3px;line-height:1.5">${sub}</div>` : ''}
       </div>`;
     const rtSub = warming
-      ? `<span style="color:${health[0]};font-weight:bold">● 暖機中</span>　剛啟動／樣本少，數據穩定前先不評級`
+      ? `<span style="color:${health[0]};font-weight:bold">● 暖機中</span>　剛啟動，數據穩定前先不評級`
+      : insufficient
+      ? `<span style="color:${health[0]};font-weight:bold">● 閒置</span>　近 2 分鐘流量太少，暫不評級`
       : `<span style="color:${health[0]};font-weight:bold">● ${health[1]}</span>（中位數）　｜　最慢5% (p95)：<span style="color:${p95High ? 'var(--scarlet)' : 'inherit'}">${p95} ms${p95High ? ' ⚠️' : ''}</span>`;
+    const rtVal = insufficient ? '—' : ms + ' ms';
     el.innerHTML = `
       <div style="display:flex;flex-wrap:wrap;gap:8px">
-        ${card(ic('ic-clock', 12) + ' 回應時間', ms + ' ms', rtSub, true)}
+        ${card(ic('ic-clock', 12) + ' 回應時間', rtVal, rtSub, true)}
         ${card(ic('ic-users', 12) + ' 在線（5 分鐘）', s.active_5m, '15 分鐘內 ' + s.active_15m + ' 人')}
         ${card(ic('ic-send', 12) + ' 請求量', s.req_1m + ' /分', '近 5 分 ' + s.req_5m + '　' + s.rps_1m + ' req/s')}
         ${card(ic('ic-shield', 12) + ' 錯誤（5 分鐘）', s.errors_5m, s.errors_5m ? '伺服器錯誤，請留意' : '無 5xx 錯誤')}
