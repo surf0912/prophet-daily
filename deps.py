@@ -43,10 +43,19 @@ def _verify_jwt_local(token: str):
     return None
 
 def get_supabase() -> Client:
+    # Anon client is used for auth flows (sign-in / get_user) which carry per-call session state,
+    # so it stays per-request — don't share it across users.
     return create_client(settings.supabase_url, settings.supabase_anon_key)
 
+# Service-role client is stateless for our usage (.table() REST + admin API), so reuse ONE instance
+# across all requests instead of building a new httpx/supabase client on every call. This is the
+# hot path — get_current_user + every endpoint hit it — so it shaves real per-request overhead.
+_admin_client: Client = None
 def get_supabase_admin() -> Client:
-    return create_client(settings.supabase_url, settings.supabase_service_key)
+    global _admin_client
+    if _admin_client is None:
+        _admin_client = create_client(settings.supabase_url, settings.supabase_service_key)
+    return _admin_client
 
 def get_current_user(
     creds: HTTPAuthorizationCredentials = Depends(bearer),
