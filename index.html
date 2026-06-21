@@ -252,7 +252,7 @@
     .char-chip span { font-size: 12px; color: var(--ink-light); }
     .char-and-btn { display: inline-flex; align-items: center; gap: 3px; padding: 2px 9px; border-radius: 14px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); font-size: 12px; letter-spacing: 0; cursor: pointer; white-space: nowrap; }
     .char-and-btn.on { background: var(--scarlet); color: var(--on-dark); border-color: var(--scarlet); }
-    .uf-chip { font-size: 12px; padding: 4px 11px; border-radius: 14px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); cursor: pointer; }
+    .uf-chip { font-size: 11px; padding: 4px 9px; border-radius: 14px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
     .uf-chip.on { background: var(--accent); color: var(--on-dark); border-color: var(--accent); }
     .uf-del { font-size: 12px; padding: 4px 10px; background: var(--scarlet); border: none; color: var(--on-dark); border-radius: 6px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
     /* admin form character multi-select */
@@ -1153,7 +1153,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.59';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.60';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3329,7 +3329,7 @@ function renderUserStats() {
   box.innerHTML =
     `<div style="font-size:13px;color:var(--ink-light);line-height:1.7">共 <b style="color:var(--ink);font-size:15px">${total}</b> 位用戶`
     + `<span style="opacity:.75"> · 讀者 ${rc.reader} · 作家 ${rc.writer} · 管理 ${rc.admin + rc.super_admin}</span></div>`
-    + `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">`
+    + `<div style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;margin-top:7px">`
     + chip('', '全部', total) + chip('15', '≥15天未上線', in15cum) + chip('30', '≥30天未上線', in30) + `</div>`
     + (noRec ? `<div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:6px">※ ${noRec} 位尚無上線紀錄，暫以註冊日估算（之後自動精準）</div>` : '');
 }
