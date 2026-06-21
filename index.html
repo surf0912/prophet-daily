@@ -655,7 +655,7 @@
       <div class="shelf-header" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <h2 style="margin:0"><svg width="20" height="20" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-mirror"/></svg> 意若思鏡</h2>
         <div style="display:flex;gap:6px;flex-shrink:0">
-          <button onclick="openWishPool()" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-shine"/></svg> 許願池</button>
+          <button id="shelf-wish-btn" onclick="openWishPool()" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-shine"/></svg> 許願池</button>
           <button id="shelf-fav-btn" onclick="toggleShelfFav()" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-circle"/></svg> 收藏夾</button>
         </div>
       </div>
@@ -1146,7 +1146,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.53';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.54';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1546,38 +1546,42 @@ function showPage(id, btn) {
 // ── Guided tour (新手導覽) ─────────────────────────────────────
 // Steps anchor to data-tour / stable ids; a missing target degrades to a
 // centered bubble (auto-skip look) instead of breaking. See infra notes.
-const TOUR_VERSION = '3';   // bump to re-show the (revised) tour to everyone
+const TOUR_VERSION = '4';   // bump to re-show the (revised) tour to everyone
 const TOUR_READER = [
   { page: 'scroll', target: '[data-tour="nav-scroll"]',
-    html: "<span class='tour-h'>🪞 意若思鏡</span>歡迎來到《預言家日報》。這面鏡子映照出大家所有的作品——點這裡就能走進書架找文。" },
+    html: "<span class='tour-h'>意若思鏡</span>歡迎來到《預言家日報》!<br>這面鏡子映照出大家所有的作品——點這裡就能走進書架找文。" },
   { page: 'scroll', target: '#shelf-search-input',
-    html: "<span class='tour-h'>🔍 召喚你想看的</span>輸入<b>篇名、作者或角色名</b>,想找的文章就會自己浮現,不必翻遍整座書庫。" },
+    html: "<span class='tour-h'>召喚你想看的</span>輸入<b>篇名、作者或角色名</b>,想找的文章就會自己浮現,不必翻遍整座書庫。" },
   { page: 'scroll', target: '#shelf-char-chips',
-    html: "<span class='tour-h'>🎭 只看某個人</span>點角色頭像籤,就只顯示有那位角色的故事;再點一次即可取消。" },
+    html: "<span class='tour-h'>只看某個人</span>點角色頭像,就只顯示有那位角色的故事,再點一次即可取消。想只看兩個角色<b>同框</b>的文,選好兩個頭像後再點「同框」就好。" },
   { page: 'scroll', target: '#shelf-cat-pills',
-    html: "<span class='tour-h'>📜 故事分類</span><b>迷情劑</b>為成人向、<b>吐真劑</b>為全年齡向、<b>儲思盆</b>是人物小傳與背景故事。其中迷情劑需先向管理員<b>申請開放</b>才看得到喔。" },
+    html: "<span class='tour-h'>故事分類</span><b>迷情劑</b>為受限內容、<b>吐真劑</b>為全年齡向、<b>儲思盆</b>是人物小傳與背景故事。迷情劑需先向管理員<b>申請開放</b>才看得到。" },
+  { page: 'scroll', target: '#shelf-wish-btn',
+    html: "<span class='tour-h'>許願池</span>想看的主題、主角,或想加的網站功能,都能在這裡許願——作者與管理員都看得到,而且一律匿名,放心許。" },
+  { page: 'scroll', target: '#shelf-fav-btn',
+    html: "<span class='tour-h'>收藏夾</span>讀作品時點右上角的<b>星星</b>就能收藏整篇,之後從這裡找回來重讀。" },
   { page: 'forum', target: '[data-tour="nav-forum"]',
-    html: "<span class='tour-h'>🦉 匿名羊皮紙</span>從這裡進入論壇體文章,看看其他霍格沃茲學生都在討論些什麼——傳閱時小心點,別被級長抓到!" },
-  { page: 'forum', target: '#forum-tab-liked',
-    html: "<span class='tour-h'>🪶 收藏你的最愛</span>讀文時點留言上的<b>羽毛筆</b>就會收藏,之後都能在「<b>已收藏</b>」找回來重讀。" },
+    html: "<span class='tour-h'>匿名羊皮紙</span>從這裡進入論壇體文章,看看大家都在討論些什麼——傳閱時小心點,別被級長抓到!" },
+  { page: 'forum', target: '#forum-fav-btn',
+    html: "<span class='tour-h'>收藏喜歡的留言</span>讀文時點留言上的<b>羽毛筆</b>就會收藏,再點右上角的「<b>收藏夾</b>」就能找回來重讀。" },
   { page: 'settings', target: '[data-tour="nav-settings"]',
-    html: "<span class='tour-h'>⚙️ 個人檔案</span>在這裡調字體、夜間模式、魔法字體,也能換頭像。想<b>重看這份導覽</b>隨時都能回到這裡。" },
+    html: "<span class='tour-h'>個人檔案</span>在這裡調字體大小、夜間模式,也能換頭像。想<b>重看這份導覽</b>,到「檔案 → 小工具 → 新手導覽」隨時都能再看。" },
 ];
 const TOUR_WRITER_EXTRA = [
   { page: 'admin', target: '[data-tour="nav-admin"]',
-    html: "<span class='tour-h'>🏰 編輯部</span>身為執筆人,你比讀者多了一個編輯部——你的創作基地就在這。" },
+    html: "<span class='tour-h'>編輯部</span>身為執筆人,你比讀者多了一個編輯部——你的創作基地就在這。" },
   { page: 'admin', before: () => switchAdminTab('upload'), target: '.admin-tab[data-tab="upload"]',
-    html: "<span class='tour-h'>✍️ 發表作品</span>點「上傳」就能開始發表你的故事。" },
+    html: "<span class='tour-h'>發表作品</span>點「上傳」就能開始發表你的故事。" },
   { page: 'admin', before: () => switchAdminTab('upload'), target: '[data-tour="upload-kind"]',
-    html: "<span class='tour-h'>📖 先選類型</span>先決定要發<b>小說</b>還是<b>論壇貼文</b>——兩種的欄位與格式不一樣,選錯了內容會排版怪怪的。" },
+    html: "<span class='tour-h'>先選類型</span>先決定要發<b>小說</b>還是<b>論壇貼文</b>——兩種的欄位與格式不一樣,選錯了排版會怪怪的。" },
   { page: 'admin', before: () => { switchAdminTab('upload'); setUploadKind('novel'); }, target: '#new-novel-category',
-    html: "<span class='tour-h'>🏷️ 分類與角色</span>填好標題後,選<b>故事類型</b>(迷情劑/吐真劑/儲思盆)和<b>角色標籤</b>——標好讀者才搜得到、篩得到你的文。" },
+    html: "<span class='tour-h'>分類與角色</span>填好標題後,選<b>故事類型</b>和<b>角色標籤</b>——標好讀者才搜得到、篩得到你的文。" },
   { page: 'admin', before: () => { switchAdminTab('upload'); setUploadKind('novel'); }, target: '[data-tour="upload-submit"]',
-    html: "<span class='tour-h'>📨 貼上內文送出</span>把內文貼進上方框裡,按這顆就送出了。發佈日期可留空(預設今天),也能補填過去的日期。" },
+    html: "<span class='tour-h'>貼上內文送出</span>把內文貼進上方框裡,按這顆就送出。發佈日期可留空(預設今天),也能補填過去日期;<b>填未來日期會排程,到當天才自動公開</b>。" },
   { page: 'admin', before: () => switchAdminTab('novels'), target: '.admin-tab[data-tab="novels"]',
-    html: "<span class='tour-h'>📚 作品管理</span>送出後可在這裡編輯、分系列、改分類。提醒:作品需<b>等管理員審核</b>通過才會公開。" },
+    html: "<span class='tour-h'>作品管理</span>送出後可在這裡編輯、分系列、改分類。提醒,作品需<b>等管理員審核</b>通過才會公開。" },
   { page: 'admin', before: () => switchAdminTab('novels'), target: '#admin-novel-list',
-    html: "<span class='tour-h'>📖 拿範例練手</span>系統在這放了一篇《作家入職指南》當範例。點開讀一遍,並在它上面試 <b>📝編輯</b>、<b>✏️分類</b>、<b>🔗系列</b>(把上下集連在一起)。讀完想刪就刪,不影響你的身份。" },
+    html: "<span class='tour-h'>拿範例練手</span>系統在這放了一篇《作家入職指南》當範例,點開讀一遍,並在它上面試<b>編輯、分類、系列</b>(把上下集連在一起)。讀完想刪就刪,不影響你的身份。" },
 ];
 let _tour = { steps: [], i: 0, on: false };
 
