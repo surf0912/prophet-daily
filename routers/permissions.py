@@ -56,6 +56,34 @@ def server_stats():
     from monitor import snapshot
     return snapshot()
 
+# Content tables worth backing up (everything the community created + account metadata).
+_EXPORT_TABLES = [
+    "profiles", "novels", "chapters", "comments", "comment_likes",
+    "novel_favorites", "novel_views", "faqs", "feedback", "invite_tokens", "permissions",
+]
+
+@router.get("/export", dependencies=[Depends(require_super_admin)])
+def export_all(sb: Client = Depends(get_supabase_admin)):
+    """One-click content backup (super_admin only). Returns every content table as JSON. Covers the
+    creative content + account metadata — NOT auth passwords (those live in Supabase auth.users; use
+    the pg_dump GitHub Action for a full disaster-recovery backup)."""
+    from datetime import datetime, timezone
+    def fetch_all(table):
+        rows, start, page = [], 0, 1000
+        while True:
+            chunk = sb.table(table).select("*").range(start, start + page - 1).execute().data or []
+            rows.extend(chunk)
+            if len(chunk) < page:
+                return rows
+            start += page
+    out = {"_exported_at": datetime.now(timezone.utc).isoformat(), "_version": "1", "tables": {}}
+    for t in _EXPORT_TABLES:
+        try:
+            out["tables"][t] = fetch_all(t)
+        except Exception as e:
+            out["tables"][t] = {"_error": str(e)}
+    return out
+
 @router.get("/users")
 def list_users(user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     # last_seen_at powers the 不活躍用戶 report; fall back gracefully if the column isn't added yet.

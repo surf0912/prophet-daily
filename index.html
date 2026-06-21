@@ -923,7 +923,10 @@
       <div id="admin-monitor" class="admin-pane">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px">
           <p style="font-size:12px;color:var(--ink-light);margin:0">即時負載快照（每 10 秒自動刷新）。數據自伺服器上次啟動後累計，冷啟動會歸零。</p>
-          <button onclick="forceRefresh()" title="清除本機快取並重新載入最新版本" style="flex-shrink:0;font-size:13px;padding:7px 13px;background:var(--chrome);border:none;color:var(--on-dark);border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>強制刷新</button>
+          <div style="flex-shrink:0;display:flex;flex-direction:column;gap:6px">
+            <button onclick="forceRefresh()" title="清除本機快取並重新載入最新版本" style="font-size:13px;padding:7px 13px;background:var(--chrome);border:none;color:var(--on-dark);border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>強制刷新</button>
+            <button id="export-backup-btn" onclick="exportBackup()" title="下載一份全站內容備份（JSON）" style="font-size:13px;padding:7px 13px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap"><svg width="14" height="14" aria-hidden="true"><use href="#ic-send"/></svg>匯出備份</button>
+          </div>
         </div>
         <div id="monitor-body"></div>
       </div>
@@ -1207,7 +1210,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.72';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.73';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2859,6 +2862,30 @@ async function forceRefresh() {
   } catch (e) { /* best effort — reload regardless */ }
   // cache-busting query so even the HTTP cache can't hand back a stale document
   location.replace(location.pathname + '?fresh=' + Date.now());
+}
+// Download a full content backup (all tables as JSON). SA-only. Best run on desktop.
+async function exportBackup() {
+  if (!confirm('下載一份全站內容備份（JSON）？\n（含作品、留言、用戶資料；不含登入密碼）')) return;
+  const btn = document.getElementById('export-backup-btn');
+  const label = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = '匯出中…'; }
+  try {
+    const data = await api('/permissions/export');
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    a.href = url;
+    a.download = `prophet-daily-backup-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    const n = data && data.tables ? Object.values(data.tables).reduce((s, v) => s + (Array.isArray(v) ? v.length : 0), 0) : 0;
+    toast(`✅ 備份已下載（${n} 筆）`);
+  } catch (e) {
+    toast('⚠️ ' + (e.message || '匯出失敗'));
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = label; }
+  }
 }
 let _monitorTimer = null;
 function stopMonitor() { if (_monitorTimer) { clearInterval(_monitorTimer); _monitorTimer = null; } }
