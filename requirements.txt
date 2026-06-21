@@ -1,8 +1,9 @@
 # 預言家日報 — FastAPI backend (main.py), deployed on Render.
 # Render's build command (set in the dashboard) runs: pip install -r requirements.txt
-# Auth: JWTs are verified locally (deps._verify_jwt_local, HS256) to skip the per-request
-# round-trip to the Supabase Auth server; sb.auth.get_user is the fallback.
-pyjwt>=2.8.0
+# Auth: access tokens are verified locally (deps._verify_jwt_local) to skip the per-request
+# round-trip to the Supabase Auth server; sb.auth.get_user is the fallback. [crypto] pulls in
+# `cryptography`, required for the ES256 (asymmetric JWKS) verification path.
+pyjwt[crypto]>=2.8.0
 fastapi>=0.111.0
 uvicorn[standard]>=0.29.0
 python-multipart>=0.0.9

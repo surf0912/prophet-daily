@@ -3,26 +3,44 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from config import settings
 from supabase import create_client, Client
 import jwt
+from jwt import PyJWKClient
 
 bearer = HTTPBearer()
 
 ROLE_RANK = {'super_admin': 4, 'admin': 3, 'writer': 2, 'reader': 1}
 
+# Public JWKS for asymmetric (ES256/RS256) access tokens — fetched once and cached in-process,
+# so verification stays local after the first hit. New Supabase projects sign with ES256.
+_jwks_client = None
+def _jwks():
+    global _jwks_client
+    if _jwks_client is None:
+        url = settings.supabase_url.rstrip("/") + "/auth/v1/.well-known/jwks.json"
+        _jwks_client = PyJWKClient(url, cache_keys=True)
+    return _jwks_client
+
 def _verify_jwt_local(token: str):
-    """Validate a Supabase access token locally (HS256) so we can skip the network round-trip to
-    the Supabase Auth server on every authenticated request. Returns the user id (sub claim), or
-    None when local verification isn't possible — wrong/missing secret, expired token, or a project
-    that signs with asymmetric keys — so the caller can fall back to sb.auth.get_user(). Signature
-    and expiry are still enforced, so a None result is always either "let the slow path decide" or
-    a genuinely bad token (which the slow path will also reject)."""
-    secret = getattr(settings, "jwt_secret", "") or ""
-    if not secret:
-        return None
+    """Validate a Supabase access token locally so we skip the network round-trip to the Auth
+    server on every authenticated request. Migrated projects sign with an asymmetric key (ES256),
+    verified against the project's public JWKS (cached); legacy/older tokens use the HS256 shared
+    secret. Returns the user id (sub), or None when it can't decide so the caller falls back to
+    sb.auth.get_user(). Signature + expiry are always enforced."""
+    # 1) Asymmetric (ES256/RS256) via the project's public JWKS — the default for migrated projects.
     try:
-        payload = jwt.decode(token, secret, algorithms=["HS256"], options={"verify_aud": False})
-        return payload.get("sub")
+        alg = (jwt.get_unverified_header(token).get("alg") or "")
+        if alg and alg.upper() != "HS256":
+            key = _jwks().get_signing_key_from_jwt(token).key
+            return jwt.decode(token, key, algorithms=[alg], options={"verify_aud": False}).get("sub")
     except Exception:
-        return None
+        pass
+    # 2) Legacy HS256 shared secret (older tokens / projects not yet migrated).
+    secret = getattr(settings, "jwt_secret", "") or ""
+    if secret:
+        try:
+            return jwt.decode(token, secret, algorithms=["HS256"], options={"verify_aud": False}).get("sub")
+        except Exception:
+            pass
+    return None
 
 def get_supabase() -> Client:
     return create_client(settings.supabase_url, settings.supabase_anon_key)
