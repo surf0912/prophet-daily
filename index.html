@@ -474,7 +474,7 @@
     .perm-modal-inner { background: var(--parchment); color: var(--ink); width: 100%; padding: 20px; border-radius: 12px 12px 0 0; max-height: 70vh; overflow-y: auto; }
     .perm-modal-inner h3 { font-size: 16px; margin-bottom: 14px; }
     .btn-primary:disabled { opacity: .4; filter: grayscale(.4); cursor: not-allowed; }
-    #shelf-fav-btn.on { background: var(--scarlet) !important; color: var(--on-dark) !important; border-color: var(--scarlet) !important; }
+    #shelf-fav-btn.on, #forum-fav-btn.on { background: var(--scarlet) !important; color: var(--on-dark) !important; border-color: var(--scarlet) !important; }
 
     /* ── Guided tour (新手導覽) ── */
     #tour-overlay { position: fixed; inset: 0; z-index: 400; display: none; }
@@ -671,10 +671,9 @@
 
     <!-- FORUM 論壇 -->
     <div id="page-forum" class="page">
-      <div class="forum-header"><h2><svg width="20" height="20" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-scroll"/></svg> 匿名羊皮紙</h2></div>
-      <div class="forum-tabs">
-        <button id="forum-tab-all" class="forum-tab active" onclick="setForumView('all')"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-scroll"/></svg> 全部</button>
-        <button id="forum-tab-liked" class="forum-tab" onclick="setForumView('liked')">已收藏</button>
+      <div class="forum-header" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <h2 style="margin:0"><svg width="20" height="20" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-scroll"/></svg> 匿名羊皮紙</h2>
+        <button id="forum-fav-btn" onclick="toggleForumFav()" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer;flex-shrink:0"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-circle"/></svg> 收藏夾</button>
       </div>
       <div class="forum-search">
         <input type="search" id="forum-search-input" placeholder="🔍 搜尋標題、作者或角色…" oninput="renderForumList()" />
@@ -718,7 +717,7 @@
               <label>巫師暱稱</label>
               <div id="nick-view" style="display:flex;align-items:center;gap:8px">
                 <span id="nick-display" style="font-size:14px;color:var(--ink)">—</span>
-                <button onclick="editNick()" aria-label="編輯暱稱" style="background:none;border:none;cursor:pointer;font-size:16px;padding:0 2px;line-height:1">✏️</button>
+                <button onclick="editNick()" aria-label="編輯暱稱" style="background:none;border:none;cursor:pointer;padding:0 2px;line-height:1;color:var(--accent)"><svg width="15" height="15" aria-hidden="true" style="display:block"><use href="#ic-edit"/></svg></button>
               </div>
               <div id="nick-edit" style="display:none;align-items:center;gap:8px">
                 <input type="text" id="profile-nickname" maxlength="7" style="width:130px;padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
@@ -745,7 +744,8 @@
           </details>
         </div>
         <div class="settings-section">
-          <h3>閱讀偏好</h3>
+          <details class="profile-details">
+            <summary>閱讀偏好</summary>
           <div class="settings-row">
             <label>介面字體大小</label>
             <select id="font-size-select" onchange="applyAppFontSize(this.value)">
@@ -769,6 +769,11 @@
               <span class="slider"></span>
             </label>
           </div>
+          </details>
+        </div>
+        <div class="settings-section">
+          <details class="profile-details">
+            <summary>小工具</summary>
           <div class="settings-row">
             <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-compass"/></svg> 新手導覽</label>
             <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="startTour()">重看導覽</button>
@@ -777,9 +782,11 @@
             <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-shield"/></svg> 防窺工坊</label>
             <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="showPage('protect')">進入</button>
           </div>
+          </details>
         </div>
         <div class="settings-section">
-          <h3>幫助 & 反饋</h3>
+          <details class="profile-details">
+            <summary>幫助 & 反饋</summary>
           <div class="settings-row">
             <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-help"/></svg> 常見問題</label>
             <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="openFaq()">查看</button>
@@ -788,6 +795,7 @@
             <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-bug"/></svg> 回報問題</label>
             <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="openBugReport()">回報</button>
           </div>
+          </details>
         </div>
         <button class="btn-logout" onclick="doLogout()"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-logout"/></svg> 登出魔法世界</button>
         <p id="app-version" style="text-align:center;font-size:11px;color:var(--ink-light);opacity:.55;margin-top:14px"></p>
@@ -1136,7 +1144,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.51';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.52';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2560,9 +2568,7 @@ let forumLiked = [];
 async function loadForumPosts() {
   // entering the forum always resets to the 全部 view
   forumView = 'all';
-  const at = document.getElementById('forum-tab-all'), lt = document.getElementById('forum-tab-liked');
-  if (at) at.classList.add('active');
-  if (lt) lt.classList.remove('active');
+  const ffb = document.getElementById('forum-fav-btn'); if (ffb) ffb.classList.remove('on');
   const fb = document.querySelector('#page-forum .filter-bar'); if (fb) fb.style.display = '';
   const el = document.getElementById('forum-list');
   el.innerHTML = '<div class="spinner"></div>';
@@ -2580,12 +2586,11 @@ function onForumFilter(type, val) {
   renderForumList();
 }
 
-async function setForumView(v) {
-  forumView = v;
-  document.getElementById('forum-tab-all').classList.toggle('active', v === 'all');
-  document.getElementById('forum-tab-liked').classList.toggle('active', v === 'liked');
-  document.querySelector('#page-forum .filter-bar').style.display = v === 'liked' ? 'none' : '';
-  if (v === 'liked') {
+async function toggleForumFav() {
+  forumView = forumView === 'liked' ? 'all' : 'liked';
+  const btn = document.getElementById('forum-fav-btn'); if (btn) btn.classList.toggle('on', forumView === 'liked');
+  document.querySelector('#page-forum .filter-bar').style.display = forumView === 'liked' ? 'none' : '';
+  if (forumView === 'liked') {
     const el = document.getElementById('forum-list');
     el.innerHTML = '<div class="spinner"></div>';
     try { forumLiked = await api('/novels/my-liked') || []; } catch { forumLiked = []; }
@@ -3512,9 +3517,6 @@ document.addEventListener('click', (e) => {
   // Don't let the stale-check block the boot on a slow network: if it hasn't resolved in
   // 1.5s, show the app now and let self-heal finish (and reload only if stale) in the background.
   await Promise.race([selfHealIfStale(), new Promise(r => setTimeout(r, 1500))]);
-  // put the feather-pen icon (same as the like icon) on the 已收藏 tab
-  const likedTab = document.getElementById('forum-tab-liked');
-  if (likedTab) likedTab.insertAdjacentHTML('afterbegin', PEN_SVG);
   const appZoom = localStorage.getItem('pd_app_zoom') || '1.12';
   document.getElementById('font-size-select').value = appZoom; applyAppFontSize(appZoom);
   const readerFs = localStorage.getItem('pd_reader_font');
