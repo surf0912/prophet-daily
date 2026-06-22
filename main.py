@@ -6,7 +6,10 @@ from fastapi.staticfiles import StaticFiles
 from config import settings
 from routers import auth, novels, chapters, permissions, invites, feedback
 
-app = FastAPI(title="預言家日報 API", version="1.0.0")
+# docs_url/redoc_url/openapi_url=None: don't publicly expose the interactive API explorer or the
+# OpenAPI blueprint (every endpoint + field). Not a vuln (routes stay auth-guarded) but a closed
+# platform shouldn't advertise its internals. Re-enable temporarily if you need to explore the API.
+app = FastAPI(title="預言家日報 API", version="1.0.0", docs_url=None, redoc_url=None, openapi_url=None)
 
 app.add_middleware(
     CORSMiddleware,
