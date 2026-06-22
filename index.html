@@ -318,7 +318,7 @@
       color: var(--gold); font-size: 13px; padding: 4px 9px; border-radius: 4px; cursor: pointer;
     }
     .reader-font-ctrl span { color: var(--gold-lt); font-size: 12px; min-width: 18px; text-align: center; }
-    .reader-content { padding: 24px 20px 100px; font-size: var(--reader-font, 15px); line-height: 2; color: var(--ink); user-select: none; }
+    .reader-content { padding: 24px 20px 100px; font-size: var(--reader-font, 15px); line-height: 2; color: var(--ink); user-select: none; flex: 1 0 auto; }
     .reader-content p { font-size: inherit; }
     /* ── Forum post layout (post body separated from comments) ── */
     .fp-intro {
@@ -1229,7 +1229,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.87';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.88';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2492,8 +2492,9 @@ function showMqjGateInReader(target) {
   document.getElementById('reader-chapter-nav').style.display = 'none';
   document.getElementById('reader-toc-panel').style.display = 'none';
   const content = document.getElementById('reader-content');
-  content.innerHTML = `<div class="empty-shelf" style="margin-top:48px">${mqjGateBody()}</div>`;
-  content.scrollTop = 0;
+  content.style.display = 'flex'; content.style.flexDirection = 'column'; content.style.justifyContent = 'center';
+  content.innerHTML = `<div class="empty-shelf">${mqjGateBody()}</div>`;
+  document.getElementById('reader-view').scrollTo(0, 0);
   // point the series nav at this locked part so 上一篇/下一篇 keep working
   _seriesIdx = _seriesSibs.findIndex(n => n.id === target.id);
   document.getElementById('prev-series-btn').disabled = !_seriesSibs[_seriesIdx - 1];
@@ -2612,7 +2613,9 @@ async function loadChapter(idx) {
     ? (currentNovelTitle || ch.title || '貼文')
     : (ch.title || `第 ${ch.chapter_num} 章`);
   document.getElementById('reader-ch-label').textContent = `${idx + 1} / ${currentChapters.length}`;
-  document.getElementById('reader-content').innerHTML = '<div class="spinner"></div>';
+  const _rc = document.getElementById('reader-content');
+  _rc.style.display = ''; _rc.style.justifyContent = '';   // clear 迷情 gate centering if it was active
+  _rc.innerHTML = '<div class="spinner"></div>';
   document.getElementById('prev-ch-btn').disabled = idx === 0;
   document.getElementById('next-ch-btn').disabled = idx === currentChapters.length - 1;
   renderToc();
@@ -2737,10 +2740,11 @@ async function resumeReading() {
   const single = currentNovelKind === 'forum' || currentChapters.length <= 1;
   document.getElementById('reader-chapter-nav').style.display = single ? 'none' : '';
   document.getElementById('reader-toc-panel').style.display = single ? 'none' : '';
+  document.getElementById('reader-series-nav').style.display = 'none';   // updateSeriesNav decides after load
   renderToc();
   const idx = currentChapters.findIndex(c => c.id === p.chapterId);
   pendingScroll = p.scrollTop || 0;   // jump back to where you stopped
-  loadChapter(idx >= 0 ? idx : p.chapterIdx);
+  loadChapter(idx >= 0 ? idx : p.chapterIdx).then(() => updateSeriesNav(_nv));   // 上下篇 also work from 繼續閱讀
   document.getElementById('reader-view').classList.add('open');
 }
 
