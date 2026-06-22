@@ -1229,7 +1229,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.88';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.89';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1339,7 +1339,11 @@ async function api(path, opts = {}, _retried) {
         await new Promise(r => setTimeout(r, 2000 + attempt * 2000));
       }
     }
-    if (res.status === 401) {
+    // A 401 from the login / invite-register forms means "wrong credentials" — surface that message
+    // instead of treating it as an expired session (the refresh+logout path swallows it, so the user
+    // saw nothing when they mistyped their 通關密語).
+    const _authSubmit = path === '/auth/signin' || path === '/invites/register';
+    if (res.status === 401 && !_authSubmit) {
       // Try a one-time silent refresh + retry before giving up and logging out.
       if (!_retried && path !== '/auth/refresh' && await tryRefreshToken()) {
         return await api(path, opts, true);
