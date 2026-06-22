@@ -1230,7 +1230,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.91';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.92';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3390,11 +3390,14 @@ function renderAdminNovels() {
           <button onclick='openOwners(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.owners || [])})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-users',12)} 作者</button>` : '';
       const delBtn = canManage ? `
           <button onclick="deleteNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-trash',12)} 刪除</button>` : '';
+      // 鎖起來：作者本人(owner)或超管才有；鎖住後其他人完全看不到這篇存在。
+      const canLock = !adminNovelScope || currentUser.role === 'super_admin';
+      const lockBtn = canLock ? `<button onclick='toggleLock(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${!n.locked})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid ${n.locked ? 'var(--series)' : 'var(--accent)'};color:${n.locked ? 'var(--series)' : 'var(--accent)'};border-radius:3px;cursor:pointer">${n.locked ? '🔓 解鎖' : '🔒 鎖起來'}</button>` : '';
       return `
       <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
         <div style="margin-bottom:3px;display:flex;gap:5px;flex-wrap:wrap">${n.kind === 'forum'
           ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-scroll', 12) + ' 論壇體</span>'
-          : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-book', 12) + ' 小說</span>'}${statusTag}${n.is_guide ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-book', 12) + ' 範例·可刪除</span>' : ''}</div>
+          : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-book', 12) + ' 小說</span>'}${statusTag}${n.is_guide ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-book', 12) + ' 範例·可刪除</span>' : ''}${n.locked ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.2);color:var(--accent)">🔒 已鎖·只你和超管可見</span>' : ''}</div>
         <div onclick="openNovel('${n.id}')" style="font-size:14px;font-weight:bold;cursor:pointer">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
           ${n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">🔗 ${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : ''}
@@ -3403,9 +3406,22 @@ function renderAdminNovels() {
         </div>
         <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${n.author || '佚名'}${ownerTag(n)}</div>
         ${n.created_at ? `<div style="font-size:12px;color:var(--ink-light);margin-top:2px">${ic('ic-calendar',11)} 發佈日期 ${fmtUpdated(n.created_at)}</div>` : ''}
-        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${editBtn}${manageBtns}${ownerAssignBtn}${delBtn}</div>
+        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${editBtn}${manageBtns}${ownerAssignBtn}${lockBtn}${delBtn}</div>
       </div>`;
     }).join('') || `<p style="color:#888;padding:14px;text-align:center">${ns.length ? '此篩選沒有作品' : '尚無作品'}</p>`;
+}
+
+// 作者把自己的作品鎖起來：鎖住後除了作者本人和超管,其他人完全看不到這篇存在。
+async function toggleLock(id, title, locked) {
+  const msg = locked
+    ? `把《${title}》鎖起來？\n\n鎖住後,除了你和超級管理員,其他人都看不到這篇存在（書架、搜尋、連結全都不顯示）。`
+    : `解鎖《${title}》？解鎖後恢復原本的公開狀態。`;
+  if (!confirm(msg)) return;
+  try {
+    await api(`/novels/${id}/lock`, { method: 'PATCH', body: JSON.stringify({ locked }) });
+    toast(locked ? '🔒 已鎖起來' : '🔓 已解鎖');
+    loadAdminNovelList();
+  } catch (e) { toast('⚠️ ' + e.message); }
 }
 
 let ownersNovelId = null;

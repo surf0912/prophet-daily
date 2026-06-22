@@ -84,6 +84,10 @@ def list_novels(
     # Readers without 迷情劑 access don't see 迷情劑 works.
     if not can_see_mqj(user):
         data = [n for n in data if n.get("category") != "迷情劑"]
+    # Author-locked works exist only for super_admin here; the author still sees/manages their own
+    # via mine=true (作品管理). .get() is None-safe before the `locked` column is added.
+    if user.get("role") != "super_admin":
+        data = [n for n in data if not n.get("locked")]
     return data
 
 @router.get("/{novel_id}/siblings")
@@ -307,6 +311,22 @@ def delete_novel(novel_id: str, user: dict = Depends(require_writer), sb: Client
     sb.table("novels").delete().eq("id", novel_id).execute()
     return {"message": "Deleted"}
 
+class LockBody(BaseModel):
+    locked: bool
+
+@router.patch("/{novel_id}/lock")
+def set_locked(novel_id: str, body: LockBody, user: dict = Depends(require_writer), sb: Client = Depends(get_supabase_admin)):
+    """Author (an owner) or super_admin hides/unhides a work. A locked work exists only for its
+    owners and super_admin — it vanishes from everyone else's shelf, search and reader (enforced in
+    list_novels + _check_novel_access). A plain admin who isn't an owner cannot lock it."""
+    rows = sb.table("novels").select("owners").eq("id", novel_id).limit(1).execute().data
+    if not rows:
+        raise HTTPException(404, "Novel not found")
+    if user.get("role") != "super_admin" and user["id"] not in (rows[0].get("owners") or []):
+        raise HTTPException(403, "只能鎖自己的作品")
+    res = sb.table("novels").update({"locked": body.locked}).eq("id", novel_id).execute()
+    return res.data[0] if res.data else {"id": novel_id, "locked": body.locked}
+
 # ── Comment likes (forum 蓋樓) ───────────────────────────────
 @router.get("/{novel_id}/likes")
 def get_comment_likes(novel_id: str, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
@@ -361,6 +381,10 @@ def log_view(novel_id: str, user: dict = Depends(get_current_user), sb: Client =
     return {"ok": True}
 
 def _check_novel_access(novel: dict, user: dict):
+    # Author-locked → invisible to all but super_admin + owners. 404 (not 403) so it doesn't reveal
+    # the work exists. Owners are exempt so the author can still preview their own locked work.
+    if novel.get("locked") and user.get("role") != "super_admin" and user["id"] not in (novel.get("owners") or []):
+        raise HTTPException(404, "Novel not found")
     # Approved works are visible to every logged-in user.
     # Pending works are visible only to admins and the creator (for preview/review).
     if novel.get("category") == "迷情劑" and not can_see_mqj(user):

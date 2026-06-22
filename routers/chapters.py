@@ -96,9 +96,12 @@ def _touch_novel(novel_id: str, sb_admin: Client):
 
 def _check_novel_access(novel_id: str, user: dict, sb: Client):
     # Approved works → any logged-in user. Pending → admins and the creator only.
-    rows = sb.table("novels").select("status, owners, category").eq("id", novel_id).limit(1).execute().data
+    rows = sb.table("novels").select("*").eq("id", novel_id).limit(1).execute().data
     nv = rows[0] if rows else None
     if not nv:
+        raise HTTPException(404, "Novel not found")
+    # Author-locked → 404 for everyone but super_admin + owners (don't reveal the work exists).
+    if nv.get("locked") and user.get("role") != "super_admin" and user["id"] not in (nv.get("owners") or []):
         raise HTTPException(404, "Novel not found")
     if nv.get("category") == "迷情劑" and not can_see_mqj(user):
         raise HTTPException(403, "迷情劑分類需管理員開放才能閱讀")
