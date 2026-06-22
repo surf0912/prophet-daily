@@ -1230,7 +1230,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.93';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.94';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3616,9 +3616,12 @@ function setUserRole(role) {
 }
 function _daysSince(ts) {
   if (!ts) return null;
-  const t = new Date(ts).getTime();
-  if (isNaN(t)) return null;
-  return Math.floor((Date.now() - t) / 86400000);
+  const t = new Date(ts);
+  if (isNaN(t.getTime())) return null;
+  // Calendar-day difference in the viewer's local time, so 今天/昨天 flip at local midnight
+  // — a 23:00 login reads 今天 until midnight, then 昨天 — instead of a rolling 24h window.
+  const dayStart = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  return Math.round((dayStart(new Date()) - dayStart(t)) / 86400000);
 }
 function userInactiveDays(u) { const d = _daysSince(u.last_seen_at); return d != null ? d : _daysSince(u.created_at); }
 function lastSeenLabel(u) {
