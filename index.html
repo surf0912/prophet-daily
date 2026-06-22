@@ -1221,7 +1221,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.78';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.79';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2982,9 +2982,16 @@ async function loadMonitor() {
       ? `<span style="color:${health[0]};font-weight:bold">● 閒置</span>　近 2 分鐘流量太少，暫不評級`
       : `<span style="color:${health[0]};font-weight:bold">● ${health[1]}</span>（中位數）　｜　最慢5% (p95)：<span style="color:${p95High ? 'var(--scarlet)' : 'inherit'}">${p95} ms${p95High ? ' ⚠️' : ''}</span>`;
     const rtVal = insufficient ? '—' : ms + ' ms';
+    const memMb = s.mem_mb, memLimit = s.mem_limit_mb || 512;
+    const memPct = memMb != null ? Math.round(memMb / memLimit * 100) : null;
+    const memColor = memPct == null ? 'var(--ink-light)' : memPct < 70 ? '#2d4a1e' : memPct < 88 ? '#a8761f' : 'var(--scarlet)';
+    const memSub = memMb != null
+      ? `<span style="color:${memColor};font-weight:bold">${memPct}%</span> / ${memLimit} MB${memPct >= 88 ? ' ⚠️ 接近上限' : ''}`
+      : '無法取得';
     el.innerHTML = `
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         ${card(ic('ic-clock', 12) + ' 回應時間', rtVal, rtSub, true)}
+        ${card(ic('ic-gear', 12) + ' 記憶體', memMb != null ? memMb + ' MB' : '—', memSub)}
         ${card(ic('ic-users', 12) + ' 在線（5 分鐘）', s.active_5m, '15 分鐘內 ' + s.active_15m + ' 人')}
         ${card(ic('ic-send', 12) + ' 請求量', s.req_1m + ' /分', '近 5 分 ' + s.req_5m + '　' + s.rps_1m + ' req/s')}
         ${card(ic('ic-shield', 12) + ' 錯誤（5 分鐘）', s.errors_5m, s.errors_5m ? '伺服器錯誤，請留意' : '無 5xx 錯誤')}

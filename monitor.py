@@ -50,6 +50,17 @@ def record_user(user_id: str):
         _active[user_id] = now
 
 
+def _rss_mb():
+    """Current process resident memory in MB (Render free tier hides this, so we self-report)."""
+    try:
+        with open("/proc/self/status") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    return round(int(line.split()[1]) / 1024, 1)   # KB → MB
+    except Exception:
+        return None
+    return None
+
 def snapshot() -> dict:
     now = time.time()
     with _lock:
@@ -89,5 +100,7 @@ def snapshot() -> dict:
         "errors_5m": sum(1 for (t, _d, s) in reqs if t >= now - 300 and s >= 500),
         "auth_total_5m": len(auth_recent),
         "auth_local_5m": sum(1 for lo in auth_recent if lo),   # how many auths used local JWT verify
+        "mem_mb": _rss_mb(),
+        "mem_limit_mb": 512,
         "total_since_boot": total,
     }
