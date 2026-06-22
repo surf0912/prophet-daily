@@ -372,6 +372,8 @@
     .chapter-nav { display: flex; justify-content: space-between; padding: 16px 20px; border-top: 1px solid var(--gold-lt); background: var(--parchment2); }
     .chapter-nav button { padding: 8px 16px; background: var(--scarlet); color: var(--on-dark); border: none; border-radius: 3px; cursor: pointer; font-size: 13px; }
     .chapter-nav button:disabled { opacity: .4; cursor: default; }
+    /* Series (上下篇) nav floats at the bottom of the reader so you can jump parts at any scroll. */
+    #reader-series-nav { position: sticky; bottom: 0; z-index: 6; box-shadow: 0 -3px 10px rgba(26,10,0,.10); }
     .chapter-list-panel { padding: 12px 18px; background: var(--parchment2); border-bottom: 1px solid var(--gold-lt); }
     .chapter-list-panel details summary { cursor: pointer; font-size: 13px; color: var(--accent); }
     .chapter-list-panel ol { margin: 8px 0 0 18px; font-size: 13px; }
@@ -1220,7 +1222,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.81';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.82';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
