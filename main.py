@@ -1,5 +1,8 @@
-from fastapi import FastAPI
+import os
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from config import settings
 from routers import auth, novels, chapters, permissions, invites, feedback
 
@@ -64,11 +67,32 @@ app.include_router(permissions.router, prefix="/permissions", tags=["permissions
 app.include_router(invites.router,     prefix="/invites",     tags=["invites"])
 app.include_router(feedback.router,    prefix="/feedback",    tags=["feedback"])
 
-@app.get("/")
-def root():
-    return {"message": "預言家日報 API is running"}
-
 # GET + HEAD so uptime monitors (e.g. UptimeRobot, which probes with HEAD) get 200.
 @app.api_route("/health", methods=["GET", "HEAD"])
 def health():
     return {"status": "ok"}
+
+# ── Serve the frontend straight from this backend ──────────────────────────────
+# The static frontend normally lives on GitHub Pages (surf0912.github.io), but that host is
+# blocked on some mainland-China networks while THIS origin (onrender.com) is reachable. Serving
+# index.html + assets here gives those users a working mirror at the same origin as the API — so
+# there's no CORS hop, and invite links (which use location.origin) just work. Every API route
+# above is registered first and takes precedence; only unmatched paths fall through to the files
+# below.
+app.mount("/chars", StaticFiles(directory="chars"), name="chars")
+
+# Top-level static assets we allow, by extension. Excludes .py so backend source is never served,
+# and the guard blocks path traversal — even though the repo is already public.
+_STATIC_EXT = {".woff2", ".jpg", ".jpeg", ".png", ".svg", ".json", ".js", ".ico"}
+
+@app.get("/")
+def _frontend_index():
+    return FileResponse("index.html")
+
+@app.get("/{name}")
+def _frontend_asset(name: str):
+    if "/" in name or ".." in name:
+        raise HTTPException(404)
+    if os.path.splitext(name)[1].lower() in _STATIC_EXT and os.path.isfile(name):
+        return FileResponse(name)
+    raise HTTPException(404)
