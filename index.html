@@ -930,7 +930,6 @@
           <div style="flex-shrink:0;display:flex;flex-direction:column;gap:6px">
             <button onclick="forceRefresh()" title="清除本機快取並重新載入最新版本" style="font-size:13px;padding:7px 13px;background:var(--chrome);border:none;color:var(--on-dark);border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>強制刷新</button>
             <button id="export-backup-btn" onclick="exportBackup()" title="下載一份全站內容備份（JSON）" style="font-size:13px;padding:7px 13px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap"><svg width="14" height="14" aria-hidden="true"><use href="#ic-send"/></svg>匯出備份</button>
-            <button id="refresh-guides-btn" onclick="refreshGuides()" title="把所有人帳號裡的「作家入職指南」更新成最新內文" style="font-size:13px;padding:7px 13px;background:none;border:1px solid var(--gold-lt);color:var(--ink-light);border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap"><svg width="14" height="14" aria-hidden="true"><use href="#ic-book"/></svg>更新入職指南</button>
           </div>
         </div>
         <div id="monitor-body"></div>
@@ -1221,7 +1220,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.79';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.80';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2924,18 +2923,6 @@ async function exportBackup() {
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = label; }
   }
-}
-// One-time maintenance: push the latest 作家入職指南 text into every existing seeded copy.
-async function refreshGuides() {
-  if (!confirm('把所有帳號裡的「作家入職指南」更新成最新內文？')) return;
-  const btn = document.getElementById('refresh-guides-btn');
-  const label = btn ? btn.innerHTML : '';
-  if (btn) { btn.disabled = true; btn.textContent = '更新中…'; }
-  try {
-    const r = await api('/permissions/refresh-guides', { method: 'POST' });
-    toast(`✅ 已更新 ${r && r.refreshed != null ? r.refreshed : 0} 份入職指南`);
-  } catch (e) { toast('⚠️ ' + (e.message || '更新失敗')); }
-  finally { if (btn) { btn.disabled = false; btn.innerHTML = label; } }
 }
 let _monitorTimer = null;
 function stopMonitor() { if (_monitorTimer) { clearInterval(_monitorTimer); _monitorTimer = null; } }

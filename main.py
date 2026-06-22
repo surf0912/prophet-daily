@@ -30,13 +30,30 @@ async def _monitor_requests(request, call_next):
     return response
 
 @app.on_event("startup")
-async def _cap_thread_pool():
+async def _on_startup():
     # Sync endpoints run in a threadpool (default 40). Each in-flight request allocates, so on a
     # 512MB free instance 40 concurrent requests can spike memory over the limit (OOM). Cap to 15:
     # plenty for our scale, and excess requests just queue briefly instead of blowing up RAM.
     import anyio
     try:
         anyio.to_thread.current_default_thread_limiter().total_tokens = 15
+    except Exception:
+        pass
+    # One-shot, self-terminating migration: bring any seeded 作家入職指南 that STILL contains the
+    # old trial-period text up to the current template. Matching on the old text means it only
+    # touches unedited guides (won't clobber a writer who repurposed theirs) and becomes a no-op
+    # once every guide is updated — so no recurring button is needed.
+    try:
+        from deps import get_supabase_admin
+        from guide_content import GUIDE_TITLE, GUIDE_BODY
+        sb = get_supabase_admin()
+        ids = [g["id"] for g in (sb.table("novels").select("id").eq("is_guide", True).execute().data or [])]
+        if ids:
+            stale = sb.table("chapters").select("id, novel_id").in_("novel_id", ids).ilike("content", "%可能會遇到的異常狀況%").execute().data or []
+            for ch in stale:
+                sb.table("chapters").update({"content": GUIDE_BODY}).eq("id", ch["id"]).execute()
+            for nid in {ch["novel_id"] for ch in stale}:
+                sb.table("novels").update({"title": GUIDE_TITLE}).eq("id", nid).execute()
     except Exception:
         pass
 
