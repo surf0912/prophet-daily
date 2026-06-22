@@ -1221,7 +1221,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.76';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.77';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3040,7 +3040,9 @@ function setUploadKind(kind) {
   // Default the novel author署名 to the uploader's nickname (still editable).
   const na = document.getElementById('new-novel-author');
   if (isNovel && na && !na.value) na.value = currentUser.nickname || currentUser.username || '';
-  const writerNote = (currentUser.role === 'writer') ? '⏳ 作品需審核通過才公開；累積發佈滿 10 篇的作家可直接發佈、免審核' : '';
+  const writerNote = (currentUser.role === 'writer')
+    ? (currentUser.auto_publish ? '✅ 你已獲得自動審核，作品送出後直接公開、免等待' : '⏳ 作品需經管理員審核通過才公開')
+    : '';
   const fh = document.getElementById('forum-post-hint'); if (fh) fh.textContent = writerNote;
   const nh = document.getElementById('new-novel-hint'); if (nh) nh.textContent = writerNote;
 }
@@ -3245,6 +3247,15 @@ async function loadAdminNovelList() {
           <span style="font-size:13px;color:var(--ink-light)">${ic('ic-wine',13)} 迷情劑閱讀權${statusLabel}</span>
           <label class="toggle green" style="flex-shrink:0">
             <input type="checkbox" ${approved ? 'checked' : ''} onchange="setMqjAccess('${sc.id}','${escapeHtml(sc.name)}',this.checked)" />
+            <span class="slider"></span>
+          </label>
+        </div>`;
+      }
+      if (sc.role === 'writer') {
+        head += `<div style="display:flex;align-items:center;gap:10px;margin-top:8px;padding:8px 0;border-top:1px solid rgba(26,10,0,.08)">
+          <span style="font-size:13px;color:var(--ink-light)">${ic('ic-check',13)} 自動審核<span style="opacity:.7">（開啟後此作家發文免審核、直接公開）</span></span>
+          <label class="toggle green" style="flex-shrink:0">
+            <input type="checkbox" ${sc.auto ? 'checked' : ''} onchange="setAutoPublish('${sc.id}','${escapeHtml(sc.name)}',this.checked)" />
             <span class="slider"></span>
           </label>
         </div>`;
@@ -3614,7 +3625,7 @@ function renderUserRows(q) {
 // Admin taps a member's name → their detail (scoped 作品管理 + 迷情劑 toggle for readers).
 function viewUserNovels(id) {
   const u = (window._adminUsers || []).find(x => x.id === id) || {};
-  adminNovelScope = { id, name: u.nickname || u.username || '', role: u.role, mqj: u.mqj_access, banned: u.banned };
+  adminNovelScope = { id, name: u.nickname || u.username || '', role: u.role, mqj: u.mqj_access, banned: u.banned, auto: !!u.auto_publish };
   switchAdminTab('novels');
 }
 
@@ -3666,6 +3677,15 @@ async function setMqjAccess(userId, username, on) {
   try {
     await api(`/permissions/users/${userId}/mqj`, { method: 'PATCH', body: JSON.stringify({ access }) });
     toast(on ? `✅ 已開放 ${username} 的迷情劑閱讀權` : `已關閉 ${username} 的迷情劑閱讀權`);
+    refresh();
+  } catch (e) { toast(e.message); refresh(); }
+}
+
+async function setAutoPublish(userId, username, on) {
+  const refresh = () => { if (adminNovelScope) { adminNovelScope.auto = on; loadAdminNovelList(); } else loadAdminUsers(); };
+  try {
+    await api(`/permissions/users/${userId}/auto-publish`, { method: 'PATCH', body: JSON.stringify({ auto_publish: on }) });
+    toast(on ? `✅ 已開啟 ${username} 的自動審核（發文免審）` : `已關閉 ${username} 的自動審核`);
     refresh();
   } catch (e) { toast(e.message); refresh(); }
 }

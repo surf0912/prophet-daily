@@ -150,22 +150,12 @@ def get_novel(novel_id: str, user: dict = Depends(get_current_user), sb: Client 
     _check_novel_access(res.data, user)
     return res.data
 
-AUTO_PUBLISH_AT = 10   # writers with >= this many published (approved, non-guide) works skip review
-
-def _published_count(user_id: str, sb: Client) -> int:
-    """How many approved, non-guide works this writer owns (the 作家入職指南 demo doesn't count)."""
-    try:
-        res = sb.table("novels").select("is_guide").contains("owners", [user_id]).eq("status", "approved").execute()
-        return sum(1 for r in (res.data or []) if not r.get("is_guide"))
-    except Exception:
-        return 0
-
 def _upload_status(user: dict, sb: Client) -> str:
-    # Admin/super_admin publish immediately; veteran writers (>= AUTO_PUBLISH_AT published works)
-    # also auto-publish; everyone else awaits approval.
-    if is_admin(user):
+    # Admin/super_admin publish immediately; writers an admin has granted 自動審核 (auto_publish)
+    # also publish without review; everyone else awaits approval.
+    if is_admin(user) or user.get("auto_publish"):
         return "approved"
-    return "approved" if _published_count(user["id"], sb) >= AUTO_PUBLISH_AT else "pending"
+    return "pending"
 
 @router.post("/", dependencies=[Depends(require_writer)])
 def create_novel(body: NovelCreate, user: dict = Depends(require_writer), sb: Client = Depends(get_supabase_admin)):

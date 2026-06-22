@@ -102,9 +102,9 @@ def refresh_guides(sb: Client = Depends(get_supabase_admin)):
 
 @router.get("/users")
 def list_users(user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
-    # last_seen_at powers the 不活躍用戶 report; fall back gracefully if the column isn't added yet.
+    # last_seen_at / auto_publish are optional columns; fall back gracefully if not added yet.
     try:
-        res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, created_at, last_seen_at").order("created_at", desc=True).execute()
+        res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, created_at, last_seen_at, auto_publish").order("created_at", desc=True).execute()
     except Exception:
         res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, created_at").order("created_at", desc=True).execute()
     # An admin only sees members at the same rank or lower; only super_admin sees super_admin accounts.
@@ -195,6 +195,18 @@ def request_mqj(user: dict = Depends(get_current_user), sb: Client = Depends(get
         sb.table("profiles").update({"mqj_access": "pending"}).eq("id", user["id"]).execute()
         invalidate_profile(user["id"])
     return {"mqj_access": "approved" if user.get("mqj_access") == "approved" else "pending"}
+
+# ── 自動審核（auto-publish）：admin grants a writer review-free publishing ──
+class AutoPublishBody(BaseModel):
+    auto_publish: bool
+
+@router.patch("/users/{user_id}/auto-publish", dependencies=[Depends(require_admin)])
+def set_auto_publish(user_id: str, body: AutoPublishBody, sb: Client = Depends(get_supabase_admin)):
+    res = sb.table("profiles").update({"auto_publish": body.auto_publish}).eq("id", user_id).execute()
+    if not res.data:
+        raise HTTPException(404, "User not found")
+    invalidate_profile(user_id)   # takes effect on the writer's next upload immediately
+    return res.data[0]
 
 class MqjBody(BaseModel):
     access: str  # 'none' | 'pending' | 'approved' | 'rejected'
