@@ -84,6 +84,22 @@ def export_all(sb: Client = Depends(get_supabase_admin)):
             out["tables"][t] = {"_error": str(e)}
     return out
 
+@router.post("/refresh-guides", dependencies=[Depends(require_super_admin)])
+def refresh_guides(sb: Client = Depends(get_supabase_admin)):
+    """Rewrite every existing 作家入職指南 demo work to the current guide content — for guides that
+    were seeded (per writer/admin) before the template was updated."""
+    from guide_content import GUIDE_TITLE, GUIDE_BODY
+    guides = sb.table("novels").select("id").eq("is_guide", True).execute().data or []
+    n = 0
+    for g in guides:
+        try:
+            sb.table("novels").update({"title": GUIDE_TITLE}).eq("id", g["id"]).execute()
+            sb.table("chapters").update({"content": GUIDE_BODY}).eq("novel_id", g["id"]).execute()
+            n += 1
+        except Exception:
+            pass
+    return {"refreshed": n}
+
 @router.get("/users")
 def list_users(user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     # last_seen_at powers the 不活躍用戶 report; fall back gracefully if the column isn't added yet.

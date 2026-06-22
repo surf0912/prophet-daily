@@ -150,12 +150,29 @@ def get_novel(novel_id: str, user: dict = Depends(get_current_user), sb: Client 
     _check_novel_access(res.data, user)
     return res.data
 
+AUTO_PUBLISH_AT = 10   # writers with >= this many published (approved, non-guide) works skip review
+
+def _published_count(user_id: str, sb: Client) -> int:
+    """How many approved, non-guide works this writer owns (the 作家入職指南 demo doesn't count)."""
+    try:
+        res = sb.table("novels").select("is_guide").contains("owners", [user_id]).eq("status", "approved").execute()
+        return sum(1 for r in (res.data or []) if not r.get("is_guide"))
+    except Exception:
+        return 0
+
+def _upload_status(user: dict, sb: Client) -> str:
+    # Admin/super_admin publish immediately; veteran writers (>= AUTO_PUBLISH_AT published works)
+    # also auto-publish; everyone else awaits approval.
+    if is_admin(user):
+        return "approved"
+    return "approved" if _published_count(user["id"], sb) >= AUTO_PUBLISH_AT else "pending"
+
 @router.post("/", dependencies=[Depends(require_writer)])
 def create_novel(body: NovelCreate, user: dict = Depends(require_writer), sb: Client = Depends(get_supabase_admin)):
     if body.category == "迷情劑" and not can_see_mqj(user):
         raise HTTPException(403, "你尚未取得迷情劑權限，無法上傳此分類")
     # Admin/super_admin uploads are public immediately; writers' uploads await approval.
-    status = "approved" if is_admin(user) else "pending"
+    status = _upload_status(user, sb)
     data = body.dict()
     published_at = data.pop("published_at", None)
     record = {**data, "created_by": user["id"], "status": status, "owners": [user["id"]]}
@@ -170,7 +187,7 @@ def create_forum_post(body: ForumPostCreate, user: dict = Depends(require_writer
     if body.category == "迷情劑" and not can_see_mqj(user):
         raise HTTPException(403, "你尚未取得迷情劑權限，無法上傳此分類")
     # A forum post is a kind='forum' novel whose single chapter holds the body text.
-    status = "approved" if is_admin(user) else "pending"
+    status = _upload_status(user, sb)
     record = {
         "title": body.title,
         "author": body.author,
