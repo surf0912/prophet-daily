@@ -57,9 +57,11 @@ def server_stats():
     return snapshot()
 
 # Content tables worth backing up (everything the community created + account metadata).
+# novel_views is deliberately excluded: it's high-volume view-log analytics, not creative content,
+# and loading it all into memory could OOM the 512MB instance — the pg_dump backup still captures it.
 _EXPORT_TABLES = [
     "profiles", "novels", "chapters", "comments", "comment_likes",
-    "novel_favorites", "novel_views", "faqs", "feedback", "invite_tokens", "permissions",
+    "novel_favorites", "faqs", "feedback", "invite_tokens", "permissions",
 ]
 
 @router.get("/export", dependencies=[Depends(require_super_admin)])

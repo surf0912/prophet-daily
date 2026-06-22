@@ -29,6 +29,17 @@ async def _monitor_requests(request, call_next):
         pass
     return response
 
+@app.on_event("startup")
+async def _cap_thread_pool():
+    # Sync endpoints run in a threadpool (default 40). Each in-flight request allocates, so on a
+    # 512MB free instance 40 concurrent requests can spike memory over the limit (OOM). Cap to 15:
+    # plenty for our scale, and excess requests just queue briefly instead of blowing up RAM.
+    import anyio
+    try:
+        anyio.to_thread.current_default_thread_limiter().total_tokens = 15
+    except Exception:
+        pass
+
 app.include_router(auth.router,        prefix="/auth",        tags=["auth"])
 app.include_router(novels.router,      prefix="/novels",      tags=["novels"])
 app.include_router(chapters.router,    prefix="/chapters",    tags=["chapters"])
