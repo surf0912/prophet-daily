@@ -99,9 +99,7 @@ def list_series_siblings(novel_id: str, user: dict = Depends(get_current_user), 
     cur = cur[0] if cur else None
     if not cur or not cur.get("series") or cur.get("kind") == "forum":
         return []
-    rows = sb.table("novels").select(
-        "id, title, series, series_order, category, status, owners, created_at, is_guide"
-    ).eq("series", cur["series"]).execute().data or []
+    rows = sb.table("novels").select("*").eq("series", cur["series"]).execute().data or []
     TW = timezone(timedelta(hours=8))
     today_tw = datetime.now(TW).date()
     admin = is_admin(user)
@@ -110,6 +108,8 @@ def list_series_siblings(novel_id: str, user: dict = Depends(get_current_user), 
             return False
         if not (admin or n.get("status") == "approved" or user["id"] in (n.get("owners") or [])):
             return False
+        if n.get("locked") and user.get("role") != "super_admin" and user["id"] not in (n.get("owners") or []):
+            return False   # author-locked → don't even reveal it exists in the 上下篇 nav
         if not admin:   # scheduled-publish: hide future-dated parts
             ts = n.get("created_at")
             try:
@@ -135,14 +135,17 @@ def list_series_siblings(novel_id: str, user: dict = Depends(get_current_user), 
     return out
 
 @router.get("/pending", dependencies=[Depends(require_admin)])
-def list_pending(sb: Client = Depends(get_supabase_admin)):
+def list_pending(user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     res = (
         sb.table("novels").select("*")
         .eq("status", "pending")
         .order("created_at", desc=True)
         .execute()
     )
-    return res.data
+    data = res.data or []
+    if user.get("role") != "super_admin":
+        data = [n for n in data if not n.get("locked")]   # a locked pending work hides even from review
+    return data
 
 # Posts/works the caller has liked at least one comment in (for the "我讚過的" view).
 # Declared before /{novel_id} so the static path wins.
@@ -159,6 +162,8 @@ def my_liked(user: dict = Depends(get_current_user), sb: Client = Depends(get_su
     for n in novels:
         if n.get("status") != "approved" and not is_admin(user):
             continue  # don't surface works that are no longer public
+        if n.get("locked") and user.get("role") != "super_admin" and user["id"] not in (n.get("owners") or []):
+            continue  # author-locked → invisible to others
         n["liked_count"] = counts.get(n["id"], 0)
         out.append(n)
     out.sort(key=lambda n: n["liked_count"], reverse=True)
