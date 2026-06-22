@@ -1222,7 +1222,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.82';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.83';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1850,9 +1850,6 @@ function renderGreeting() {
   const mobileImg = (char.imgs && char.imgs.length) ? char.imgs[Math.floor(Math.random() * char.imgs.length)] : char.img;
   const desktopImg = (char.imgsD && char.imgsD.length) ? char.imgsD[Math.floor(Math.random() * char.imgsD.length)] : char.imgD;
   const isWide = window.matchMedia('(min-width: 600px)').matches;
-  const src = (isWide && desktopImg) ? desktopImg : mobileImg;
-  const heroPos = (src === desktopImg) ? (char.bgPosD || 'center')
-                : ((isWide && char.bgPosDesktop) || char.bgPos || 'center');
   const showHero = (url, pos) => {     // photo layered OVER the gradient (gradient stays as fallback)
     hero.style.backgroundImage = `url('${url}'), ${GRAD}`;
     hero.style.backgroundPosition = `${pos}, center`;
@@ -1860,20 +1857,26 @@ function renderGreeting() {
     hero.style.backgroundSize = `${char.bgSize || 'cover'}, cover`;
     emoji.style.display = 'none';
   };
-  if (src) {
-    const probe = new Image();         // only swap in the photo once it actually loads
-    probe.onload = () => showHero(src, heroPos);
-    // Desktop NEVER substitutes a phone (portrait) image — if a desktop image fails, keep the
-    // gradient+emoji rather than show a phone-sized shot. On phones, only retry within the phone set.
-    probe.onerror = () => {
-      if (!isWide && src !== mobileImg && mobileImg) {
-        const p2 = new Image();
-        p2.onload = () => showHero(mobileImg, char.bgPos || 'center');
-        p2.src = mobileImg;
-      }
-    };
-    probe.src = src;
+  // Ordered candidate images + position. Desktop stays within the desktop (landscape) set, phone
+  // within the phone (portrait) set — but we now try EVERY image in the set in turn, so one slow or
+  // failed shot (e.g. a phone photo on a flaky device) falls back to another instead of leaving the
+  // hero blank. Previously the phone path never retried, so a single failed image showed no photo.
+  let candidates, heroPos;
+  if (isWide && desktopImg) {
+    candidates = [desktopImg, ...(char.imgsD || []), char.imgD];
+    heroPos = char.bgPosD || 'center';
+  } else {
+    candidates = [mobileImg, ...(char.imgs || []), char.img];
+    heroPos = isWide ? (char.bgPosDesktop || char.bgPos || 'center') : (char.bgPos || 'center');
   }
+  candidates = [...new Set(candidates.filter(Boolean))];   // dedup, keep order
+  (function tryLoad(i) {
+    if (i >= candidates.length) return;   // all failed → keep the gradient + emoji
+    const im = new Image();
+    im.onload = () => showHero(candidates[i], heroPos);
+    im.onerror = () => tryLoad(i + 1);
+    im.src = candidates[i];
+  })(0);
   const now = new Date();
   const db = document.getElementById('date-banner');   // element was removed; guard so renderGreeting can't throw
   if (db) db.textContent = `📰 ${now.getFullYear()} 年 ${now.getMonth()+1} 月 ${now.getDate()} 日 · 巫師界頭條`;
