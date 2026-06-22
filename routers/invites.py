@@ -67,10 +67,10 @@ def generate_invite(
 def validate_invite(token: str, sb: Client = Depends(get_supabase_admin)):
     res = sb.table("invite_tokens").select("*").eq("token", token).single().execute()
     if not res.data:
-        raise HTTPException(404, "邀請連結無效")
+        raise HTTPException(410, "此邀請連結已用盡")   # not found = revoked (hard-deleted) or bad token → show "used up", not a scary "invalid"
     inv = res.data
     if inv["used_at"] is not None:
-        raise HTTPException(410, "此邀請連結已使用")
+        raise HTTPException(410, "此邀請連結已用盡")
     # Check expiry
     from datetime import datetime, timezone
     expires = datetime.fromisoformat(inv["expires_at"].replace("Z", "+00:00"))
@@ -83,10 +83,10 @@ def register_with_invite(body: RegisterWithInvite, sb_admin: Client = Depends(ge
     # Validate token first
     res = sb_admin.table("invite_tokens").select("*").eq("token", body.token).single().execute()
     if not res.data:
-        raise HTTPException(404, "邀請連結無效")
+        raise HTTPException(410, "此邀請連結已用盡")   # not found = revoked (hard-deleted) or bad token → show "used up", not a scary "invalid"
     inv = res.data
     if inv["used_at"] is not None:
-        raise HTTPException(410, "此邀請連結已使用")
+        raise HTTPException(410, "此邀請連結已用盡")
     from datetime import datetime, timezone
     expires = datetime.fromisoformat(inv["expires_at"].replace("Z", "+00:00"))
     if datetime.now(timezone.utc) > expires:
