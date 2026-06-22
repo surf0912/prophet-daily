@@ -338,15 +338,14 @@
     }
     .fp-name-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
     .fp-name-row .fp-name { margin-bottom: 0; }
+    /* 收藏 star — matches 意若思鏡's ☆/★. Sits at the comment's bottom-right, level with the last line. */
+    .fp-bottom { display: flex; align-items: flex-end; gap: 10px; }
     .fp-like {
-      background: none; border: none; cursor: pointer; flex-shrink: 0;
-      display: flex; align-items: center; gap: 3px; padding: 2px 6px; color: var(--ink-light);
+      background: none; border: none; cursor: pointer; flex-shrink: 0; padding: 0;
+      display: inline-flex; align-items: center; gap: 4px; color: var(--ink-light); align-self: flex-end;
     }
-    .fp-like .pen { width: 18px; height: 18px; display: block; }
-    .fp-like .pen path { transition: fill .15s ease; }
-    /* default (not liked): grey line-art — fills hidden, only the outline shows */
-    .fp-like:not(.liked) .pen .pf { fill: transparent !important; }
-    .fp-like:not(.liked) .pen .pl { fill: #a9a69c !important; }
+    .fp-like .star { width: 22px; height: 22px; display: block; }
+    .fp-like.liked { color: var(--accent); }   /* ★ filled scarlet once collected */
     .fp-like .cnt { font-size: 12px; min-width: 6px; }
     .fp-like.liked .cnt { color: var(--accent); font-weight: bold; }
     .fp-like:active { transform: scale(.9); }
@@ -354,7 +353,7 @@
       font-family: ui-monospace, monospace; color: var(--gold); background: var(--scarlet);
       padding: 1px 6px; border-radius: 8px; margin-right: 8px; font-size: .92em; letter-spacing: .03em;
     }
-    .fp-comment .fp-body { line-height: 1.75; padding-left: 2px; }
+    .fp-comment .fp-body { line-height: 1.75; padding-left: 2px; flex: 1; min-width: 0; }
     .fp-comment .fp-body p { margin-bottom: 2px; }
     /* Fixed "post sealed" box appended to the end of every forum post */
     .fp-end {
@@ -1230,7 +1229,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.94';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.95';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2586,11 +2585,13 @@ function renderForumContent(content) {
     <div class="fp-comment">
       <div class="fp-name-row">
         <div class="fp-name"><span class="fp-floor">${String(i + 1).padStart(2, '0')}L</span>${escapeHtml(c.name)}</div>
-        <button id="like-${i}" class="fp-like${liked ? ' liked' : ''}" onclick="event.stopPropagation();toggleLike(${i})">
-          ${PEN_SVG}<span class="cnt">${count || ''}</span>
+      </div>
+      <div class="fp-bottom">
+        <div class="fp-body">${c.body.filter(l => l.trim()).map(l => `<p>${escapeHtml(l)}</p>`).join('')}</div>
+        <button id="like-${i}" class="fp-like${liked ? ' liked' : ''}" onclick="event.stopPropagation();toggleLike(${i})" aria-label="收藏這則留言">
+          <svg class="star" width="22" height="22" aria-hidden="true"><use href="#ic-star${liked ? 'fill' : 'line'}"/></svg><span class="cnt">${count || ''}</span>
         </button>
       </div>
-      <div class="fp-body">${c.body.filter(l => l.trim()).map(l => `<p>${escapeHtml(l)}</p>`).join('')}</div>
     </div>`;
   }).join('');
   const endBox = `
@@ -2775,6 +2776,8 @@ async function toggleLike(idx) {
     if (btn) {
       btn.classList.toggle('liked', res.liked);
       btn.querySelector('.cnt').textContent = res.count || '';
+      const use = btn.querySelector('use');
+      if (use) use.setAttribute('href', res.liked ? '#ic-starfill' : '#ic-starline');   // ☆ ↔ ★
     }
   } catch (e) { toast(e.message); }
 }
