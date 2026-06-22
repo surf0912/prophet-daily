@@ -1220,7 +1220,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.80';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.81';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2421,9 +2421,9 @@ async function openNovel(novelId) {
   document.getElementById('reader-chapter-nav').style.display = single ? 'none' : '';
   document.getElementById('reader-toc-panel').style.display = single ? 'none' : '';
   renderToc();
-  loadChapter(0);
-  updateSeriesNav(novel);   // 上一篇/下一篇(同系列的不同作品)
+  document.getElementById('reader-series-nav').style.display = 'none';   // hide until content loads (don't float over the spinner)
   document.getElementById('reader-view').classList.add('open');
+  loadChapter(0).then(() => updateSeriesNav(novel));   // show 上一篇/下一篇 only after the content is in
 }
 
 // ── 系列(上下集)導覽 ─────────────────────────────────────────
@@ -2441,7 +2441,7 @@ function updateSeriesNav(novel) {
     const prev = _seriesSibs[_seriesIdx - 1], next = _seriesSibs[_seriesIdx + 1];
     document.getElementById('prev-series-btn').disabled = !prev;
     document.getElementById('next-series-btn').disabled = !next;
-    document.getElementById('reader-series-label').textContent = `${novel.series}・${_seriesIdx + 1}/${_seriesSibs.length}`;
+    document.getElementById('reader-series-label').textContent = `${_seriesIdx + 1} / ${_seriesSibs.length}`;
     nav.style.display = '';
   } else {
     nav.style.display = 'none';
