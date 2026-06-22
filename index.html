@@ -1230,7 +1230,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.92';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.93';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2433,7 +2433,7 @@ async function openNovel(novelId) {
   markSeriesSeenForWork(novel);   // opening a new series installment clears its 追蹤更新 flag
   currentNovelKind = (novel && novel.kind) || 'novel';
   currentNovelTitle = (novel && novel.title) || '';
-  applyMqjGuard(!!(novel && novel.category === '迷情劑'));   // personalized watermark + copy guard on 迷情劑
+  applyMqjGuard(true);   // personalized watermark + copy guard on EVERY work now (was 迷情劑-only)
   updateReaderFavBtn();   // show ☆/★ for 意若思鏡 works
   updateReaderDarkBtn();  // 🌙/☀️ reflects current 夜間模式
   try { currentChapters = await api(`/chapters/novel/${novelId}`) || []; }
@@ -2737,7 +2737,7 @@ async function resumeReading() {
   let _nv = [...forumPosts, ...novels].find(n => n.id === p.novelId);
   let _cat = _nv ? _nv.category : p.category;
   if (_cat === undefined) { try { _nv = await api(`/novels/${p.novelId}`); _cat = _nv && _nv.category; } catch {} }
-  applyMqjGuard(_cat === '迷情劑');
+  applyMqjGuard(true);   // watermark + copy guard on every work (was 迷情劑-only)
   updateReaderFavBtn();   // show ☆/★ for 意若思鏡 works
   updateReaderDarkBtn();  // 🌙/☀️ reflects current 夜間模式
   try { currentChapters = await api(`/chapters/novel/${p.novelId}`) || []; }
