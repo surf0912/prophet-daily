@@ -188,11 +188,11 @@ def my_favorite_ids(user: dict = Depends(get_current_user), sb: Client = Depends
 
 @router.get("/{novel_id}")
 def get_novel(novel_id: str, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
-    res = sb.table("novels").select("*").eq("id", novel_id).single().execute()
-    if not res.data:
-        raise HTTPException(404, "Novel not found")
-    _check_novel_access(res.data, user)
-    return res.data
+    rows = sb.table("novels").select("*").eq("id", novel_id).limit(1).execute().data
+    if not rows:
+        raise HTTPException(404, "Novel not found")   # .single() raises on a missing/deleted id (→500), so use limit(1)
+    _check_novel_access(rows[0], user)
+    return rows[0]
 
 def _upload_status(user: dict, sb: Client) -> str:
     # Admin/super_admin publish immediately; writers an admin has granted 自動審核 (auto_publish)

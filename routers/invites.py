@@ -65,10 +65,10 @@ def generate_invite(
 
 @router.get("/validate/{token}")
 def validate_invite(token: str, sb: Client = Depends(get_supabase_admin)):
-    res = sb.table("invite_tokens").select("*").eq("token", token).single().execute()
-    if not res.data:
-        raise HTTPException(410, "此邀請連結已用盡")   # not found = revoked (hard-deleted) or bad token → show "used up", not a scary "invalid"
-    inv = res.data
+    rows = sb.table("invite_tokens").select("*").eq("token", token).limit(1).execute().data
+    inv = rows[0] if rows else None
+    if not inv:
+        raise HTTPException(410, "此邀請連結已用盡")   # not found = revoked (hard-deleted) or bad token → "used up", not "invalid". .single() raises on no row (→500), so use limit(1).
     if inv["used_at"] is not None:
         raise HTTPException(410, "此邀請連結已用盡")
     # Check expiry
@@ -81,10 +81,10 @@ def validate_invite(token: str, sb: Client = Depends(get_supabase_admin)):
 @router.post("/register")
 def register_with_invite(body: RegisterWithInvite, sb_admin: Client = Depends(get_supabase_admin)):
     # Validate token first
-    res = sb_admin.table("invite_tokens").select("*").eq("token", body.token).single().execute()
-    if not res.data:
-        raise HTTPException(410, "此邀請連結已用盡")   # not found = revoked (hard-deleted) or bad token → show "used up", not a scary "invalid"
-    inv = res.data
+    rows = sb_admin.table("invite_tokens").select("*").eq("token", body.token).limit(1).execute().data
+    inv = rows[0] if rows else None
+    if not inv:
+        raise HTTPException(410, "此邀請連結已用盡")   # not found = revoked (hard-deleted) or bad token → "used up", not "invalid". .single() raises on no row (→500), so use limit(1).
     if inv["used_at"] is not None:
         raise HTTPException(410, "此邀請連結已用盡")
     from datetime import datetime, timezone
