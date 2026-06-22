@@ -349,6 +349,14 @@
     .fp-like .cnt { font-size: 12px; min-width: 6px; }
     .fp-like.liked .cnt { color: var(--accent); font-weight: bold; }
     .fp-like:active { transform: scale(.9); }
+    /* 點讚發散小火花 */
+    .like-spark { position: fixed; z-index: 9999; border-radius: 50%; pointer-events: none;
+      transform: translate(-50%, -50%); animation: spark-fly .6s ease-out forwards; }
+    @keyframes spark-fly {
+      0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.2); }
+    }
+    @media (prefers-reduced-motion: reduce) { .like-spark { display: none; } }
     .fp-comment .fp-name .fp-floor {
       font-family: ui-monospace, monospace; color: var(--gold); background: var(--scarlet);
       padding: 1px 6px; border-radius: 8px; margin-right: 8px; font-size: .92em; letter-spacing: .03em;
@@ -1229,7 +1237,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.95';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.96';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2765,6 +2773,33 @@ function closeReader() { document.getElementById('reader-view').classList.remove
 let forumPosts = [];
 let forumLikes = { counts: {}, mine: [] };
 
+// Celebratory burst when you 點讚: the star pops and scarlet/gold sparks radiate out. Only on
+// like (not unlike), and skipped under prefers-reduced-motion (via the .like-spark CSS).
+function likeBurst(btn) {
+  const star = btn.querySelector('.star');
+  if (!star) return;
+  if (star.animate) star.animate(
+    [{ transform: 'scale(1)' }, { transform: 'scale(1.45)' }, { transform: 'scale(1)' }],
+    { duration: 420, easing: 'cubic-bezier(.3,1.4,.5,1)' });
+  const r = star.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const colors = ['var(--accent)', 'var(--gold)', 'var(--accent)'];
+  const N = 9;
+  for (let i = 0; i < N; i++) {
+    const p = document.createElement('span');
+    p.className = 'like-spark';
+    const ang = (2 * Math.PI * i) / N + (Math.random() - 0.5) * 0.5;
+    const dist = 16 + Math.random() * 16, sz = 4 + Math.random() * 3;
+    p.style.left = cx + 'px'; p.style.top = cy + 'px';
+    p.style.width = p.style.height = sz.toFixed(1) + 'px';
+    p.style.background = colors[i % colors.length];
+    p.style.setProperty('--dx', (Math.cos(ang) * dist).toFixed(1) + 'px');
+    p.style.setProperty('--dy', (Math.sin(ang) * dist).toFixed(1) + 'px');
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 650);
+  }
+}
+
 async function toggleLike(idx) {
   try {
     const res = await api(`/novels/${currentNovelId}/comments/${idx}/like`, { method: 'POST' });
@@ -2778,6 +2813,7 @@ async function toggleLike(idx) {
       btn.querySelector('.cnt').textContent = res.count || '';
       const use = btn.querySelector('use');
       if (use) use.setAttribute('href', res.liked ? '#ic-starfill' : '#ic-starline');   // ☆ ↔ ★
+      if (res.liked) likeBurst(btn);   // 發散小火花 — only when liking, not un-liking
     }
   } catch (e) { toast(e.message); }
 }
