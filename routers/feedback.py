@@ -98,10 +98,10 @@ def update_feedback(fb_id: str, body: FeedbackUpdate, sb: Client = Depends(get_s
 
 @router.delete("/{fb_id}")
 def delete_feedback(fb_id: str, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
-    row = sb.table("feedback").select("user_id").eq("id", fb_id).single().execute()
-    if not row.data:
+    rows = sb.table("feedback").select("user_id").eq("id", fb_id).limit(1).execute().data
+    if not rows:
         raise HTTPException(404, "Not found")
-    if not is_admin(user) and row.data["user_id"] != user["id"]:
+    if not is_admin(user) and rows[0]["user_id"] != user["id"]:
         raise HTTPException(403, "只能刪除自己的")
     sb.table("feedback").delete().eq("id", fb_id).execute()
     return {"message": "deleted"}

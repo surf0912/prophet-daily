@@ -28,11 +28,11 @@ def get_chapter(
     user: dict = Depends(get_current_user),
     sb: Client = Depends(get_supabase_admin),
 ):
-    res = sb.table("chapters").select("*").eq("id", chapter_id).single().execute()
-    if not res.data:
-        raise HTTPException(404, "Chapter not found")
-    _check_novel_access(res.data["novel_id"], user, sb)
-    return res.data
+    rows = sb.table("chapters").select("*").eq("id", chapter_id).limit(1).execute().data
+    if not rows:
+        raise HTTPException(404, "Chapter not found")   # .single() raises on a missing id (→500); limit(1) → clean 404
+    _check_novel_access(rows[0]["novel_id"], user, sb)
+    return rows[0]
 
 class ChapterTextBody(BaseModel):
     chapter_num: int
@@ -40,10 +40,10 @@ class ChapterTextBody(BaseModel):
     content: str
 
 def _require_owner_or_admin(novel_id: str, user: dict, sb: Client):
-    nv = sb.table("novels").select("owners").eq("id", novel_id).single().execute()
-    if not nv.data:
+    rows = sb.table("novels").select("owners").eq("id", novel_id).limit(1).execute().data
+    if not rows:
         raise HTTPException(404, "Novel not found")
-    if is_admin(user) or user["id"] in (nv.data.get("owners") or []):
+    if is_admin(user) or user["id"] in (rows[0].get("owners") or []):
         return
     raise HTTPException(403, "只能管理自己的作品")
 
@@ -72,10 +72,10 @@ def update_chapter_text(
     user: dict = Depends(require_writer),
     sb_admin: Client = Depends(get_supabase_admin),
 ):
-    ch = sb_admin.table("chapters").select("novel_id").eq("id", chapter_id).single().execute()
-    if not ch.data:
+    rows = sb_admin.table("chapters").select("novel_id").eq("id", chapter_id).limit(1).execute().data
+    if not rows:
         raise HTTPException(404, "Chapter not found")
-    _require_owner_or_admin(ch.data["novel_id"], user, sb_admin)
+    _require_owner_or_admin(rows[0]["novel_id"], user, sb_admin)
     res = sb_admin.table("chapters").update({
         "chapter_num": body.chapter_num,
         "title": body.title,
@@ -96,13 +96,14 @@ def _touch_novel(novel_id: str, sb_admin: Client):
 
 def _check_novel_access(novel_id: str, user: dict, sb: Client):
     # Approved works → any logged-in user. Pending → admins and the creator only.
-    nv = sb.table("novels").select("status, owners, category").eq("id", novel_id).single().execute()
-    if not nv.data:
+    rows = sb.table("novels").select("status, owners, category").eq("id", novel_id).limit(1).execute().data
+    nv = rows[0] if rows else None
+    if not nv:
         raise HTTPException(404, "Novel not found")
-    if nv.data.get("category") == "迷情劑" and not can_see_mqj(user):
+    if nv.get("category") == "迷情劑" and not can_see_mqj(user):
         raise HTTPException(403, "迷情劑分類需管理員開放才能閱讀")
-    if nv.data.get("status") == "approved":
+    if nv.get("status") == "approved":
         return
-    if is_admin(user) or user["id"] in (nv.data.get("owners") or []):
+    if is_admin(user) or user["id"] in (nv.get("owners") or []):
         return
     raise HTTPException(403, "This work is awaiting approval")

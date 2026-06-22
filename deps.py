@@ -89,10 +89,10 @@ def get_current_user(
     if cached and now - cached[1] < _PROFILE_TTL:
         profile = cached[0]
     else:
-        result = sb_admin.table("profiles").select("*").eq("id", user_id).single().execute()
-        if not result.data:
+        rows = sb_admin.table("profiles").select("*").eq("id", user_id).limit(1).execute().data
+        if not rows:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-        profile = result.data
+        profile = rows[0]
         _profile_cache[user_id] = (profile, now)
     if profile.get("banned"):
         _profile_cache.pop(user_id, None)   # never let a ban linger in cache

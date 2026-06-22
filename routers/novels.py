@@ -268,10 +268,10 @@ class SeriesBody(BaseModel):
 
 @router.patch("/{novel_id}/series")
 def set_series(novel_id: str, body: SeriesBody, user: dict = Depends(require_writer), sb: Client = Depends(get_supabase_admin)):
-    nv = sb.table("novels").select("owners").eq("id", novel_id).single().execute()
-    if not nv.data:
+    rows = sb.table("novels").select("owners").eq("id", novel_id).limit(1).execute().data
+    if not rows:
         raise HTTPException(404, "Novel not found")
-    if not is_admin(user) and user["id"] not in (nv.data.get("owners") or []):
+    if not is_admin(user) and user["id"] not in (rows[0].get("owners") or []):
         raise HTTPException(403, "只能管理自己的作品")
     name = (body.series or "").strip() or None
     res = sb.table("novels").update({
@@ -282,10 +282,10 @@ def set_series(novel_id: str, body: SeriesBody, user: dict = Depends(require_wri
 
 @router.patch("/{novel_id}")
 def update_novel(novel_id: str, body: NovelUpdate, user: dict = Depends(require_writer), sb: Client = Depends(get_supabase_admin)):
-    nv = sb.table("novels").select("owners").eq("id", novel_id).single().execute()
-    if not nv.data:
+    rows = sb.table("novels").select("owners").eq("id", novel_id).limit(1).execute().data
+    if not rows:
         raise HTTPException(404, "Novel not found")
-    if not is_admin(user) and user["id"] not in (nv.data.get("owners") or []):
+    if not is_admin(user) and user["id"] not in (rows[0].get("owners") or []):
         raise HTTPException(403, "只能編輯自己的作品")
     updates = {k: v for k, v in body.dict().items() if v is not None}
     published_at = updates.pop("published_at", None)
@@ -299,10 +299,10 @@ def update_novel(novel_id: str, body: NovelUpdate, user: dict = Depends(require_
 
 @router.delete("/{novel_id}")
 def delete_novel(novel_id: str, user: dict = Depends(require_writer), sb: Client = Depends(get_supabase_admin)):
-    nv = sb.table("novels").select("owners").eq("id", novel_id).single().execute()
-    if not nv.data:
+    rows = sb.table("novels").select("owners").eq("id", novel_id).limit(1).execute().data
+    if not rows:
         raise HTTPException(404, "Novel not found")
-    if not is_admin(user) and user["id"] not in (nv.data.get("owners") or []):
+    if not is_admin(user) and user["id"] not in (rows[0].get("owners") or []):
         raise HTTPException(403, "只能刪除自己的作品")
     sb.table("novels").delete().eq("id", novel_id).execute()
     return {"message": "Deleted"}
