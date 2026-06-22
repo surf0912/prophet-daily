@@ -69,17 +69,17 @@ def get_supabase_admin() -> Client:
 
 def get_current_user(
     creds: HTTPAuthorizationCredentials = Depends(bearer),
-    sb: Client = Depends(get_supabase),
     sb_admin: Client = Depends(get_supabase_admin),
 ):
     token = creds.credentials
-    # Fast path: verify the JWT locally (no network). Falls back to the Auth server only when
-    # local verification can't decide (e.g. JWT_SECRET not set to the Supabase secret yet).
+    # Fast path: verify the JWT locally (no network, no client). Falls back to the Auth server only
+    # when local verification can't decide — and only THEN do we build an anon client. Building it
+    # on every request (the old Depends) leaked memory and was OOM-ing the 512MB free instance.
     user_id = _verify_jwt_local(token)
     used_local = user_id is not None
     if not user_id:
         try:
-            auth_user = sb.auth.get_user(token)
+            auth_user = get_supabase().auth.get_user(token)
             user_id = auth_user.user.id
         except Exception:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
