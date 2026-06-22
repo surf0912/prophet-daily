@@ -86,6 +86,50 @@ def list_novels(
         data = [n for n in data if n.get("category") != "迷情劑"]
     return data
 
+@router.get("/{novel_id}/siblings")
+def list_series_siblings(novel_id: str, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
+    """Ordered parts of this work's series, INCLUDING 迷情劑 parts the caller can't read yet — those
+    come back as locked stubs (no title) so the reader's 上下篇 nav can surface a 'request access'
+    gate instead of silently skipping them. Visibility otherwise matches the public shelf."""
+    cur = sb.table("novels").select("series, kind").eq("id", novel_id).execute().data
+    cur = cur[0] if cur else None
+    if not cur or not cur.get("series") or cur.get("kind") == "forum":
+        return []
+    rows = sb.table("novels").select(
+        "id, title, series, series_order, category, status, owners, created_at, is_guide"
+    ).eq("series", cur["series"]).execute().data or []
+    TW = timezone(timedelta(hours=8))
+    today_tw = datetime.now(TW).date()
+    admin = is_admin(user)
+    def visible(n):
+        if n.get("is_guide"):
+            return False
+        if not (admin or n.get("status") == "approved" or user["id"] in (n.get("owners") or [])):
+            return False
+        if not admin:   # scheduled-publish: hide future-dated parts
+            ts = n.get("created_at")
+            try:
+                if ts and datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(TW).date() > today_tw:
+                    return False
+            except Exception:
+                pass
+        return True
+    out = []
+    for n in rows:
+        if not visible(n):
+            continue
+        locked = n.get("category") == "迷情劑" and not can_see_mqj(user)
+        out.append({
+            "id": n["id"],
+            "title": None if locked else n.get("title"),   # never leak a locked work's title
+            "series_order": n.get("series_order") or 0,
+            "category": n.get("category"),
+            "locked": locked,
+            "created_at": n.get("created_at"),
+        })
+    out.sort(key=lambda x: (x["series_order"], x.get("created_at") or ""))
+    return out
+
 @router.get("/pending", dependencies=[Depends(require_admin)])
 def list_pending(sb: Client = Depends(get_supabase_admin)):
     res = (
@@ -295,6 +339,11 @@ def toggle_favorite(novel_id: str, user: dict = Depends(get_current_user), sb: C
     if existing:
         sb.table("novel_favorites").delete().eq("user_id", user["id"]).eq("novel_id", novel_id).execute()
         return {"favorited": False}
+    # Adding a new favourite: block 迷情劑 works the caller can't read (backstop — the UI already
+    # hides the ☆ on the access-gate page). Un-favouriting above is always allowed.
+    nv = sb.table("novels").select("category").eq("id", novel_id).execute().data
+    if nv and nv[0].get("category") == "迷情劑" and not can_see_mqj(user):
+        raise HTTPException(403, "迷情劑分類需管理員開放才能收藏")
     sb.table("novel_favorites").insert({"user_id": user["id"], "novel_id": novel_id}).execute()
     return {"favorited": True}
 

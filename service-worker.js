@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prophet-daily-v1.86';
+const CACHE_NAME = 'prophet-daily-v1.87';
 const ASSETS = [
   './manifest.json',
   './favicon.png',

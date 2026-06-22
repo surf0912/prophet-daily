@@ -1229,7 +1229,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.86';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.87';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2282,6 +2282,19 @@ async function requestMqj() {
   } catch (e) { toast(e.message); }
 }
 
+// Shared 迷情劑 access-gate body — used by the 迷情 shelf tab AND the in-reader 上下篇 gate.
+// Rejected users KEEP the right to re-apply; we never strip their button.
+function mqjGateBody() {
+  const a = currentUser?.mqj_access;
+  const eIc = (id) => `<span style="display:block;margin-bottom:8px">${ic(id, 30)}</span>`;
+  const applyBtn = (label) => `<button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" onclick="openMqjDisclaimer()">${ic('ic-send', 14)} ${label}</button>`;
+  if (a === 'pending')
+    return `${eIc('ic-clock')}你已申請開放「迷情劑」<br><small>管理員通過後即可閱讀（不必重新登入）</small>`;
+  if (a === 'rejected')
+    return `${eIc('ic-ban')}你的「迷情劑」閱讀申請未通過<br><small style="display:block;margin-bottom:14px">如有異議，可再次提出申請</small>${applyBtn('再次申請')}`;
+  return `${eIc('ic-key')}「迷情劑」分類需開放才能閱讀<br><small style="display:block;margin-bottom:14px">點下方按鈕向管理員申請</small>${applyBtn('要求管理員開放')}`;
+}
+
 function renderShelf() {
   renderFilterBar(
     document.getElementById('shelf-cat-pills'), document.getElementById('shelf-char-chips'),
@@ -2302,13 +2315,7 @@ function renderShelf() {
   // 迷情劑 gate for readers without access.
   if (shelfCat === '迷情劑' && ['reader', 'writer'].includes(currentUser?.role) && currentUser?.mqj_access !== 'approved') {
     refreshMqjStatus();   // live re-check: if an admin just approved, unlock without re-login
-    const a = currentUser.mqj_access;
-    const eIc = (id) => `<span style="display:block;margin-bottom:8px">${ic(id, 30)}</span>`;
-    grid.innerHTML = a === 'pending'
-      ? `<div class="empty-shelf">${eIc('ic-clock')}你已申請開放「迷情劑」<br><small>管理員通過後，回到這頁即可自動解鎖（不必重新登入）</small></div>`
-      : a === 'rejected'
-      ? `<div class="empty-shelf">${eIc('ic-ban')}你的「迷情劑」閱讀申請未通過<br><small>如有異議，請找管理員申訴</small></div>`
-      : `<div class="empty-shelf">${eIc('ic-key')}「迷情劑」分類需開放才能閱讀<br><small style="margin-bottom:14px">點下方按鈕向管理員申請</small><button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" onclick="openMqjDisclaimer()">${ic('ic-send', 14)} 要求管理員開放</button></div>`;
+    grid.innerHTML = `<div class="empty-shelf">${mqjGateBody()}</div>`;
     return;
   }
   if (!novels.length) {
@@ -2440,19 +2447,26 @@ async function openNovel(novelId) {
 
 // ── 系列(上下集)導覽 ─────────────────────────────────────────
 let _seriesSibs = [], _seriesIdx = -1;
-function updateSeriesNav(novel) {
+async function updateSeriesNav(novel) {
   const nav = document.getElementById('reader-series-nav');
   _seriesSibs = []; _seriesIdx = -1;
-  // Only for 小說 that belong to a series; siblings come from the reader-visible shelf list.
+  // Only for 小說 that belong to a series. The server returns the FULL part list — including 迷情劑
+  // parts the reader can't open yet (as locked stubs) — so 上下篇 surfaces an access gate for them
+  // instead of silently skipping. Fall back to the visible shelf list if the call fails.
   if (novel && novel.series && novel.kind !== 'forum') {
-    _seriesSibs = novels.filter(n => n.series === novel.series)
-      .sort((a, b) => (a.series_order || 0) - (b.series_order || 0) || new Date(a.created_at) - new Date(b.created_at));
+    let sibs = null;
+    try { sibs = await api(`/novels/${novel.id}/siblings`); } catch {}
+    if (sibs && sibs.length > 1) {
+      _seriesSibs = sibs;
+    } else {
+      _seriesSibs = novels.filter(n => n.series === novel.series)
+        .sort((a, b) => (a.series_order || 0) - (b.series_order || 0) || new Date(a.created_at) - new Date(b.created_at));
+    }
     _seriesIdx = _seriesSibs.findIndex(n => n.id === novel.id);
   }
   if (_seriesIdx >= 0 && _seriesSibs.length > 1) {
-    const prev = _seriesSibs[_seriesIdx - 1], next = _seriesSibs[_seriesIdx + 1];
-    document.getElementById('prev-series-btn').disabled = !prev;
-    document.getElementById('next-series-btn').disabled = !next;
+    document.getElementById('prev-series-btn').disabled = !_seriesSibs[_seriesIdx - 1];
+    document.getElementById('next-series-btn').disabled = !_seriesSibs[_seriesIdx + 1];
     document.getElementById('reader-series-label').textContent = `${_seriesIdx + 1} / ${_seriesSibs.length}`;
     nav.style.display = '';
   } else {
@@ -2461,7 +2475,32 @@ function updateSeriesNav(novel) {
 }
 function navigateSeries(delta) {
   const target = _seriesSibs[_seriesIdx + delta];
-  if (target) openNovel(target.id);   // openNovel→loadChapter resets the reader scroll to top
+  if (!target) return;
+  if (target.locked) showMqjGateInReader(target);     // 迷情劑 with no access → gate page, nav stays
+  else openNovel(target.id);                          // openNovel→loadChapter resets the reader scroll to top
+}
+
+// 上下篇 landed on a 迷情劑 part the reader can't open: show an in-reader access gate (no title,
+// no content, no ☆) but KEEP 上一篇/下一篇 so they can still move to the other parts.
+function showMqjGateInReader(target) {
+  currentNovelId = target.id;
+  currentChapters = [];
+  applyMqjGuard(false);          // nothing protected to read here
+  refreshMqjStatus();            // re-check in case an admin just approved
+  document.getElementById('reader-title').textContent = '迷情劑內容';
+  document.getElementById('reader-fav-btn').style.display = 'none';   // no favouriting without read access
+  document.getElementById('reader-chapter-nav').style.display = 'none';
+  document.getElementById('reader-toc-panel').style.display = 'none';
+  const content = document.getElementById('reader-content');
+  content.innerHTML = `<div class="empty-shelf" style="margin-top:48px">${mqjGateBody()}</div>`;
+  content.scrollTop = 0;
+  // point the series nav at this locked part so 上一篇/下一篇 keep working
+  _seriesIdx = _seriesSibs.findIndex(n => n.id === target.id);
+  document.getElementById('prev-series-btn').disabled = !_seriesSibs[_seriesIdx - 1];
+  document.getElementById('next-series-btn').disabled = !_seriesSibs[_seriesIdx + 1];
+  document.getElementById('reader-series-label').textContent = `${_seriesIdx + 1} / ${_seriesSibs.length}`;
+  document.getElementById('reader-series-nav').style.display = '';
+  document.getElementById('reader-view').classList.add('open');
 }
 
 // Parse a forum-體 post into the original post (intro) + the running comments.
