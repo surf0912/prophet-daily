@@ -68,9 +68,9 @@ def validate_invite(token: str, sb: Client = Depends(get_supabase_admin)):
     rows = sb.table("invite_tokens").select("*").eq("token", token).limit(1).execute().data
     inv = rows[0] if rows else None
     if not inv:
-        raise HTTPException(410, "此邀請連結已用盡")   # not found = revoked (hard-deleted) or bad token → "used up", not "invalid". .single() raises on no row (→500), so use limit(1).
+        raise HTTPException(410, "此邀請連結已使用")   # not found = revoked (hard-deleted) or bad token → "used up", not "invalid". .single() raises on no row (→500), so use limit(1).
     if inv["used_at"] is not None:
-        raise HTTPException(410, "此邀請連結已用盡")
+        raise HTTPException(410, "此邀請連結已使用")
     # Check expiry
     from datetime import datetime, timezone
     expires = datetime.fromisoformat(inv["expires_at"].replace("Z", "+00:00"))
@@ -84,9 +84,9 @@ def register_with_invite(body: RegisterWithInvite, sb_admin: Client = Depends(ge
     rows = sb_admin.table("invite_tokens").select("*").eq("token", body.token).limit(1).execute().data
     inv = rows[0] if rows else None
     if not inv:
-        raise HTTPException(410, "此邀請連結已用盡")   # not found = revoked (hard-deleted) or bad token → "used up", not "invalid". .single() raises on no row (→500), so use limit(1).
+        raise HTTPException(410, "此邀請連結已使用")   # not found = revoked (hard-deleted) or bad token → "used up", not "invalid". .single() raises on no row (→500), so use limit(1).
     if inv["used_at"] is not None:
-        raise HTTPException(410, "此邀請連結已用盡")
+        raise HTTPException(410, "此邀請連結已使用")
     from datetime import datetime, timezone
     expires = datetime.fromisoformat(inv["expires_at"].replace("Z", "+00:00"))
     if datetime.now(timezone.utc) > expires:
