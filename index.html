@@ -1237,7 +1237,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.96';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.97';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2012,6 +2012,7 @@ async function toggleReaderFavorite() {
     const r = await api(`/novels/${currentNovelId}/favorite`, { method: 'POST' });
     if (r.favorited) favIds.add(currentNovelId); else favIds.delete(currentNovelId);
     updateReaderFavBtn();
+    if (r.favorited) likeBurst(document.getElementById('reader-fav-btn'));   // 同款發散火花
     toast(r.favorited ? '⭐ 已加入收藏夾' : '已從收藏夾移除');
   } catch (e) { toast(e.message); }
 }
@@ -2776,7 +2777,8 @@ let forumLikes = { counts: {}, mine: [] };
 // Celebratory burst when you 點讚: the star pops and scarlet/gold sparks radiate out. Only on
 // like (not unlike), and skipped under prefers-reduced-motion (via the .like-spark CSS).
 function likeBurst(btn) {
-  const star = btn.querySelector('.star');
+  if (!btn) return;
+  const star = btn.querySelector('.star') || btn.querySelector('svg') || btn;   // forum .star or reader-fav svg
   if (!star) return;
   if (star.animate) star.animate(
     [{ transform: 'scale(1)' }, { transform: 'scale(1.45)' }, { transform: 'scale(1)' }],
