@@ -31,8 +31,9 @@
       font-display: swap;
     }
     @font-face {
-      /* 站酷快樂體(ZCOOL KuaiLe, OFL) subset to just the simplified-only glyphs 粉圓 lacks, so
-         simplified content renders in a rounded style instead of falling to the system font. */
+      /* 貓啃網糖圓體(MaoKen TangYuan, OFL) — a simplified-Chinese rounded font built ON TOP of 粉圓
+         (open huninn), so the simplified-only glyphs 粉圓 lacks render in the SAME rounded style
+         (the old ZCOOL KuaiLe clashed). Subset to just those simplified-only glyphs (~2097). */
       font-family: 'SimpRound';
       src: url('./simpfont.woff2') format('woff2');
       font-display: swap;
@@ -1229,7 +1230,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.89';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.90';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
