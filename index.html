@@ -1221,7 +1221,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.77';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.78';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3538,6 +3538,12 @@ async function loadAdminUsers() {
 // yet (e.g. before this feature shipped) we estimate from 註冊日 so the report still works;
 // it becomes exact as people open the app.
 let userActivityFilter = '';   // '' | '15' | '30'  (≥N 天未上線)
+let userRoleFilter = '';       // '' | 'reader' | 'writer' | 'manage' (按身份篩選)
+function setUserRole(role) {
+  userRoleFilter = (userRoleFilter === role) ? '' : role;   // 再點同一個＝取消
+  renderUserStats();
+  renderUserRows(document.getElementById('user-search')?.value || '');
+}
 function _daysSince(ts) {
   if (!ts) return null;
   const t = new Date(ts).getTime();
@@ -3573,9 +3579,10 @@ function renderUserStats() {
   });
   const in15cum = in15 + in30;   // ≥15 天包含 ≥30 天
   const chip = (v, label, n) => `<button class="uf-chip${userActivityFilter === v ? ' on' : ''}" onclick="setUserFilter('${v}')">${label}${n != null ? `（${n}）` : ''}</button>`;
+  const roleLink = (key, label, n) => `<span onclick="setUserRole('${key}')" style="cursor:pointer;${userRoleFilter === key ? 'color:var(--accent);font-weight:bold' : 'border-bottom:1px dashed var(--gold-lt)'}">${label} ${n}</span>`;
   box.innerHTML =
-    `<div style="font-size:13px;color:var(--ink-light);line-height:1.7">共 <b style="color:var(--ink);font-size:15px">${total}</b> 位用戶`
-    + `<span style="opacity:.75"> · 讀者 ${rc.reader} · 作家 ${rc.writer} · 管理 ${rc.admin + rc.super_admin}</span></div>`
+    `<div style="font-size:13px;color:var(--ink-light);line-height:1.8">共 <b style="color:var(--ink);font-size:15px">${total}</b> 位用戶`
+    + ` · ${roleLink('reader', '讀者', rc.reader)} · ${roleLink('writer', '作家', rc.writer)} · ${roleLink('manage', '管理', rc.admin + rc.super_admin)}</div>`
     + `<div style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;margin-top:7px">`
     + chip('', '全部', total) + chip('15', '≥15天未上線', in15cum) + chip('30', '≥30天未上線', in30) + `</div>`
     + (noRec ? `<div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:6px">※ ${noRec} 位尚無上線紀錄，暫以註冊日估算（之後自動精準）</div>` : '');
@@ -3588,6 +3595,9 @@ function renderUserRows(q) {
   const isSuper = currentUser.role === 'super_admin';
   const needle = (q || '').trim().toLowerCase();
   let users = needle ? all.filter(u => (u.nickname || '').toLowerCase().includes(needle) || (u.username || '').toLowerCase().includes(needle)) : all;
+  if (userRoleFilter === 'reader') users = users.filter(u => u.role === 'reader');
+  else if (userRoleFilter === 'writer') users = users.filter(u => u.role === 'writer');
+  else if (userRoleFilter === 'manage') users = users.filter(u => u.role === 'admin' || u.role === 'super_admin');
   if (userActivityFilter) {
     const min = parseInt(userActivityFilter, 10);
     users = users.filter(u => { const d = userInactiveDays(u); return d != null && d >= min; });
@@ -3619,7 +3629,7 @@ function renderUserRows(q) {
           ${delBtn || picker}
         </div>
       </div>`;
-    }).join('') || `<p style="color:#888;padding:20px">${needle ? '找不到符合的用戶' : (userActivityFilter ? '沒有符合的不活躍用戶' : '尚無用戶')}</p>`;
+    }).join('') || `<p style="color:#888;padding:20px">${needle ? '找不到符合的用戶' : (userActivityFilter || userRoleFilter ? '沒有符合的用戶' : '尚無用戶')}</p>`;
 }
 
 // Admin taps a member's name → their detail (scoped 作品管理 + 迷情劑 toggle for readers).
