@@ -1318,7 +1318,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.17';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.18';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1947,15 +1947,10 @@ const CHAR_PROFILE = {
   Adrian: { bio: '', gallery: [] },
 };
 let _homeChar = null;   // 目前顯示在心動封面的角色(給封面愛心 → 角色頁用)
-function homeCoverPool() {
-  // beta：把心動封面限定在選定的男主；沒選或全選 = 對全部隨機。
-  if (!isBeta()) return CHARS;
-  const sel = (currentUser && currentUser.home_chars ? String(currentUser.home_chars).split(',') : [])
-    .map(s => s.trim()).filter(Boolean);
-  if (!sel.length) return CHARS;
-  const names = sel.map(code => (CHAR_LIST.find(x => x.code === code) || {}).name).filter(Boolean);
-  const filtered = CHARS.filter(c => names.includes(c.name));
-  return filtered.length ? filtered : CHARS;   // 安全：永不空池
+function excludedPhotos() {
+  // beta：使用者逐張隱藏的心動封面照片(存照片路徑，含桌機版一起排除)。空 = 全部顯示。
+  return new Set((currentUser && currentUser.home_chars ? String(currentUser.home_chars).split(',') : [])
+    .map(s => s.trim()).filter(Boolean));
 }
 
 // ── 角色設定頁 (beta) ───────────────────────────────────────
@@ -1971,18 +1966,18 @@ function renderCharProfile(name) {
   const prof = CHAR_PROFILE[name] || { bio: '', gallery: [] };
   const code = (CHAR_LIST.find(x => x.name === name) || {}).code;
   document.getElementById('cp-name').textContent = name;
-  const gallery = (prof.gallery && prof.gallery.length) ? prof.gallery : (charData.imgs || [charData.img]).filter(Boolean);
-  const shown = isHomeShown(code);   // 這位目前是否會出現在心動封面
+  const photos = (charData.imgs && charData.imgs.length) ? charData.imgs : [charData.img].filter(Boolean);
+  const excluded = excludedPhotos();
   const myWorks = (typeof novels !== 'undefined' ? novels : []).filter(n =>
     (n.owners || []).includes(currentUser && currentUser.id) && (n.characters || []).includes(code));
   let html = '';
-  if (gallery.length) {
-    // 第一張照片右上角放一個單選圈：勾 = 封面顯示這位，取消 = 不顯示
-    html += `<div class="cp-gallery">${gallery.map((u, i) =>
-      `<div class="cp-shot" style="background-image:url('${u}')">${i === 0
-        ? `<button class="cp-cover-toggle${shown ? ' on' : ''}" onclick="toggleHomeCover('${code}', this)" role="radio" aria-checked="${shown}" aria-label="心動封面顯示這位" title="心動封面顯示這位"></button>`
-        : ''}</div>`).join('')}</div>`;
-    html += `<p class="cp-hint">右上角勾選 = 這位會出現在心動封面；取消 = 封面不出現這位（都取消 = 全部隨機）。</p>`;
+  if (photos.length) {
+    // 每張照片右上角一個開關：勾 = 這張出現在心動封面，取消 = 隱藏這張(連同桌機同序版)
+    html += `<div class="cp-gallery">${photos.map((u, i) => {
+      const on = !excluded.has(u);
+      return `<div class="cp-shot" style="background-image:url('${u}')"><button class="cp-cover-toggle${on ? ' on' : ''}" onclick="toggleCoverPhoto('${name}', ${i}, this)" role="checkbox" aria-checked="${on}" aria-label="心動封面顯示這張" title="心動封面顯示這張"></button></div>`;
+    }).join('')}</div>`;
+    html += `<p class="cp-hint">每張右上角勾選 = 這張會出現在心動封面；取消 = 不出現（全部取消 = 全部隨機）。</p>`;
   }
   html += `<div class="cp-section"><h3>基本資料</h3><p class="cp-bio">${prof.bio ? escapeHtml(prof.bio) : '（基本資料待補充）'}</p></div>`;
   html += `<div class="cp-section"><h3>我為 ${escapeHtml(name)} 寫的文章</h3>`;
@@ -1992,25 +1987,22 @@ function renderCharProfile(name) {
   html += `</div>`;
   document.getElementById('cp-body').innerHTML = html;
 }
-function homeCharsSet() {
-  return (currentUser && currentUser.home_chars ? String(currentUser.home_chars).split(',') : []).map(s => s.trim()).filter(Boolean);
-}
-function isHomeShown(code) {
-  const sel = homeCharsSet();
-  return sel.length === 0 || sel.includes(code);   // 空 = 全部顯示
-}
-async function toggleHomeCover(code, btn) {
-  const all = CHAR_LIST.map(c => c.code);
-  let cur = homeCharsSet();
-  if (!cur.length) cur = all.slice();                                // 空代表「全顯示」→ 先具體化才好移除單一
-  let next = cur.includes(code) ? cur.filter(c => c !== code) : [...cur, code];
-  if (next.length === 0 || next.length === all.length) next = [];    // 全選 / 全不選 = 全部隨機(存空)
-  const wasOn = btn.classList.contains('on');
-  btn.classList.toggle('on', next.length === 0 || next.includes(code));
+// 逐張開關：勾 = 這張出現在心動封面，取消 = 隱藏。連同同一序的桌機版一起排除(照顧桌機讀者)。
+async function toggleCoverPhoto(charName, index, btn) {
+  const c = CHARS.find(x => x.name === charName) || {};
+  const ids = [(c.imgs || [c.img])[index], (c.imgsD || [])[index]].filter(Boolean);
+  const ex = excludedPhotos();
+  const nowShown = ex.has(ids[0]);          // 目前被隱藏 → 切換後變顯示
+  ids.forEach(id => { if (nowShown) ex.delete(id); else ex.add(id); });
+  btn.classList.toggle('on', nowShown);
   try {
-    const r = await api('/auth/me/home-chars', { method: 'PATCH', body: JSON.stringify({ chars: next }) });
+    const r = await api('/auth/me/home-chars', { method: 'PATCH', body: JSON.stringify({ chars: [...ex] }) });
     if (currentUser) currentUser.home_chars = (r && r.home_chars) || '';
-  } catch (e) { btn.classList.toggle('on', wasOn); toast(e.message || '儲存失敗'); }
+  } catch (e) {
+    ids.forEach(id => { if (nowShown) ex.add(id); else ex.delete(id); });   // 還原
+    btn.classList.toggle('on', !nowShown);
+    toast(e.message || '儲存失敗');
+  }
 }
 // 官方角色頭像：單擊 = 篩選(原行為);雙擊 = 開角色頁(beta)。onFilter(type,val) 是原本的篩選回呼。
 let _ocTapTimer = null, _ocTapCode = null;
@@ -2031,8 +2023,15 @@ function renderGreeting() {
   // 時段 index：0=早上(5-11) 1=中午(12-13) 2=下午(14-17) 3=晚上/深夜(18-4)
   const timeIdx = h >= 5 && h < 12 ? 0 : h >= 12 && h < 14 ? 1 : h >= 14 && h < 18 ? 2 : 3;
   const period = h < 5 ? '深夜好' : h < 12 ? '早安' : h < 18 ? '午安' : '晚安';
-  const pool = homeCoverPool();
-  const char = pool[Math.floor(Math.random() * pool.length)];
+  const isWide = window.matchMedia('(min-width: 600px)').matches;
+  const photosOf = c => ((isWide ? (c.imgsD || [c.imgD]) : (c.imgs || [c.img])) || []).filter(Boolean);
+  // 以「照片」為單位建池：每張未被隱藏的照片(連同它的角色)都是一個候選。全被隱藏 → 退回全部隨機。
+  const excluded = isBeta() ? excludedPhotos() : new Set();
+  let cands = [];
+  CHARS.forEach(c => photosOf(c).forEach(img => { if (!excluded.has(img)) cands.push({ char: c, img }); }));
+  if (!cands.length) CHARS.forEach(c => photosOf(c).forEach(img => cands.push({ char: c, img })));
+  const pick = cands[Math.floor(Math.random() * cands.length)] || { char: CHARS[0], img: CHARS[0].img };
+  const char = pick.char;
   _homeChar = char;
   const heart = document.getElementById('hero-heart');
   if (heart) heart.style.display = isBeta() ? 'flex' : 'none';
@@ -2044,11 +2043,6 @@ function renderGreeting() {
   hero.style.backgroundImage = GRAD;   // gradient base — never let parchment show through
   document.getElementById('greeting-line-text').innerHTML = `${period}，${escapeHtml(currentUser.nickname || currentUser.username || '你')} <svg width="17" height="17" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star"/></svg>`;
   document.getElementById('greeting-quote-text').textContent = char.quotes[timeIdx];
-  // Desktop and mobile use DIFFERENT image sets (never mixed): wide screens get char.imgD.
-  // A char may have several mobile shots in `imgs` → pick one at random each render.
-  const mobileImg = (char.imgs && char.imgs.length) ? char.imgs[Math.floor(Math.random() * char.imgs.length)] : char.img;
-  const desktopImg = (char.imgsD && char.imgsD.length) ? char.imgsD[Math.floor(Math.random() * char.imgsD.length)] : char.imgD;
-  const isWide = window.matchMedia('(min-width: 600px)').matches;
   const showHero = (url, pos) => {     // photo layered OVER the gradient (gradient stays as fallback)
     hero.style.backgroundImage = `url('${url}'), ${GRAD}`;
     hero.style.backgroundPosition = `${pos}, center`;
@@ -2056,18 +2050,9 @@ function renderGreeting() {
     hero.style.backgroundSize = `${char.bgSize || 'cover'}, cover`;
     emoji.style.display = 'none';
   };
-  // Ordered candidate images + position. Desktop stays within the desktop (landscape) set, phone
-  // within the phone (portrait) set — but we now try EVERY image in the set in turn, so one slow or
-  // failed shot (e.g. a phone photo on a flaky device) falls back to another instead of leaving the
-  // hero blank. Previously the phone path never retried, so a single failed image showed no photo.
-  let candidates, heroPos;
-  if (isWide && desktopImg) {
-    candidates = [desktopImg, ...(char.imgsD || []), char.imgD];
-    heroPos = char.bgPosD || 'center';
-  } else {
-    candidates = [mobileImg, ...(char.imgs || []), char.img];
-    heroPos = isWide ? (char.bgPosDesktop || char.bgPos || 'center') : (char.bgPos || 'center');
-  }
+  // 候選圖：先用挑中的那張，載入失敗時退回同角色其他「未隱藏」的照片，最後才是全部(避免空白)。
+  const heroPos = isWide ? (char.bgPosDesktop || char.bgPos || 'center') : (char.bgPos || 'center');
+  let candidates = [pick.img, ...photosOf(char).filter(u => !excluded.has(u)), ...photosOf(char)];
   candidates = [...new Set(candidates.filter(Boolean))];   // dedup, keep order
   (function tryLoad(i) {
     if (i >= candidates.length) return;   // all failed → keep the gradient + emoji

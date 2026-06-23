@@ -209,9 +209,9 @@ class HomeCharsBody(BaseModel):
 
 @router.patch("/me/home-chars")
 def set_home_chars(body: HomeCharsBody, user: dict = Depends(get_current_user), sb_admin: Client = Depends(get_supabase_admin)):
-    # Which official characters the user wants in the 心動 cover random pool. Empty = all (full random).
-    # Cross-device preference; requires a profiles.home_chars text column. Stored comma-joined codes.
-    codes = [c.strip()[:20] for c in (body.chars or []) if c and c.strip()][:8]
+    # Which 心動-cover photos the user has HIDDEN (per-photo opt-out). Empty = show all (full random).
+    # Stored comma-joined photo ids (image paths) in profiles.home_chars. Cross-device preference.
+    codes = [c.strip()[:120] for c in (body.chars or []) if c and c.strip()][:200]
     val = ",".join(dict.fromkeys(codes))   # dedupe, preserve order
     res = sb_admin.table("profiles").update({"home_chars": val}).eq("id", user["id"]).execute()
     if not res.data:
