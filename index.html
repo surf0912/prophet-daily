@@ -266,6 +266,11 @@
     }
     .char-chip.char-add:hover { opacity: 1; }
     .char-chip.char-add:hover .add-circle { border-color: var(--gold); color: var(--gold); }
+    .char-chip.char-custom { opacity: 1; }
+    .char-chip.char-custom .cc-ava {
+      width: 44px; height: 44px; border-radius: 50%; background-size: cover; background-position: center;
+      border: 2px solid var(--gold-lt); display: flex; align-items: center; justify-content: center; color: var(--ink-light);
+    }
     .char-and-btn { display: inline-flex; align-items: center; gap: 3px; padding: 2px 9px; border-radius: 14px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); font-size: 12px; letter-spacing: 0; cursor: pointer; white-space: nowrap; }
     .char-and-btn.on { background: var(--scarlet); color: var(--on-dark); border-color: var(--scarlet); }
     .uf-chip { font-size: 11px; padding: 4px 9px; border-radius: 14px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
@@ -1012,35 +1017,21 @@
   </div>
 </div>
 
-<!-- 個人書櫃 (beta, super_admin only) -->
-<div id="bookshelf-view" style="display:none;position:fixed;inset:0;z-index:55;background:#f4e8c1;overflow-y:auto;overscroll-behavior:none">
-  <div class="reader-header">
-    <button onclick="closeBookshelf()" style="font-size:15px;display:flex;align-items:center;gap:3px;white-space:nowrap">‹&nbsp;返回</button>
-    <h3 id="bookshelf-title" style="flex:1">我的書櫃 <span style="font-size:11px;background:var(--series);color:#fff;padding:1px 7px;border-radius:8px;vertical-align:1px">beta</span></h3>
-    <button onclick="openAddPiece()" style="background:rgba(201,168,76,.2);border:1px solid var(--gold);color:var(--gold);border-radius:6px;padding:4px 12px;font-size:13px;cursor:pointer">＋ 新增</button>
-  </div>
-  <div style="max-width:680px;margin:0 auto;padding:16px 18px 80px">
-    <div id="bookshelf-filters" style="margin-bottom:14px"></div>
-    <div id="bookshelf-list"></div>
-  </div>
-</div>
-
-<!-- 新增到書櫃 modal -->
-<div class="perm-modal" id="bookshelf-add-modal">
+<!-- 自創角色 modal (beta, super_admin only) -->
+<div class="perm-modal" id="custom-char-modal">
   <div class="perm-modal-inner">
-    <h3>＋ 新增到書櫃</h3>
-    <input id="bs-title" placeholder="標題" style="width:100%;box-sizing:border-box;padding:8px 10px;margin-bottom:8px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px" />
-    <input id="bs-tag" list="bs-tag-list" placeholder="角色標籤（自創，例如「我的Adrian」）" style="width:100%;box-sizing:border-box;padding:8px 10px;margin-bottom:8px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px" />
-    <datalist id="bs-tag-list"></datalist>
-    <select id="bs-cat" style="width:100%;box-sizing:border-box;padding:8px 10px;margin-bottom:8px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px">
-      <option value="迷情劑">迷情劑</option><option value="吐真劑">吐真劑</option><option value="儲思盆" selected>儲思盆</option>
-    </select>
-    <textarea id="bs-content" placeholder="貼上文字…" style="width:100%;box-sizing:border-box;height:160px;padding:8px 10px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px;line-height:1.6;resize:vertical"></textarea>
-    <label style="display:block;font-size:13px;color:var(--ink-light);margin:8px 0">或上傳 .txt：<input type="file" accept=".txt,text/plain" onchange="loadTxtFile(this)" style="font-size:12px" /></label>
-    <div style="display:flex;gap:8px;margin-top:6px">
-      <button class="btn-primary" style="flex:1;padding:10px;font-size:14px" onclick="savePiece()">儲存</button>
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:14px" onclick="document.getElementById('bookshelf-add-modal').classList.remove('open')">取消</button>
+    <h3 id="cc-modal-title">建立角色</h3>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin:12px 0">
+      <div id="cc-avatar-preview" onclick="document.getElementById('cc-avatar-input').click()" style="width:76px;height:76px;border-radius:50%;border:2px dashed var(--ink-light);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-light);background-size:cover;background-position:center"></div>
+      <input type="file" id="cc-avatar-input" accept="image/*" style="display:none" onchange="ccPickAvatar(this)" />
+      <small style="color:var(--ink-light)">點上方上傳頭像</small>
     </div>
+    <input id="cc-name" placeholder="角色名稱" maxlength="20" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px" />
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn-primary" style="flex:1;padding:10px;font-size:14px" onclick="saveCustomChar()">儲存</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:14px" onclick="document.getElementById('custom-char-modal').classList.remove('open')">取消</button>
+    </div>
+    <button id="cc-delete-btn" onclick="deleteCustomChar()" style="display:none;width:100%;margin-top:8px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:8px;font-size:13px;cursor:pointer">刪除這個角色</button>
   </div>
 </div>
 
@@ -1284,7 +1275,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.04';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.05';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1649,6 +1640,7 @@ async function initApp() {
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = adminish ? '' : 'none');  // writers: only 作品管理 + 上傳
   document.querySelectorAll('.super-only').forEach(el => el.style.display = currentUser.role === 'super_admin' ? '' : 'none');  // 監看面板 + 實驗功能開關：只給 SA
   { const _bt = document.getElementById('beta-toggle'); if (_bt) _bt.checked = localStorage.getItem('pd_beta') === '1'; }
+  loadCustomChars().then(() => { if (typeof renderShelf === 'function') renderShelf(); });   // beta 自創角色載入後刷新角色列
   adminNovelScope = null;
   loadOwnerNames();   // super_admin only: map owner uuid → 巫師全名 for the owner hint
   loadFavIds().then(renderFavUpdates);   // 意若思鏡 收藏夾 ids + 追蹤更新 alert
@@ -2295,9 +2287,10 @@ function renderFilterBar(catEl, chipEl, curCat, curChars, onChange) {
     `<div class="char-chip ${curChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}">
        <img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span>
      </div>`).join('') +
-    // beta「自創角色 / 我的書櫃」入口：只在意若思鏡篩選列、且 isBeta() 時,接在四個角色頭像後面
+    // beta 自創角色：只在意若思鏡篩選列、且 isBeta() 時,接在四個角色頭像後面顯示我的自創角色 + 一顆建立鈕
     (chipEl.id === 'shelf-char-chips' && isBeta()
-      ? `<div class="char-chip char-add" onclick="openBookshelf()" role="button" tabindex="0" aria-label="我的書櫃（自創角色）" title="我的書櫃（自創角色）"><div class="add-circle">＋</div></div>`
+      ? _customChars.map(c => `<div class="char-chip char-custom" onclick="editCustomChar('${c.id}')" title="編輯角色"><div class="cc-ava"${c.avatar ? ` style="background-image:url('${c.avatar}')"` : ''}>${c.avatar ? '' : ic('ic-wand', 20)}</div><span>${escapeHtml(c.name)}</span></div>`).join('')
+        + `<div class="char-chip char-add" onclick="openCreateChar()" role="button" tabindex="0" aria-label="建立角色" title="建立自創角色"><div class="add-circle">＋</div></div>`
       : '');
   chipEl.querySelectorAll('.char-chip[data-ch]').forEach(el => el.onclick = () => onChange('char', el.dataset.ch));
   mountCharAndBtn('shelf-char-and');
@@ -2373,58 +2366,68 @@ function isBeta() { return localStorage.getItem('pd_beta') === '1' && !!currentU
 function setBetaFlag(on) {
   if (on) localStorage.setItem('pd_beta', '1'); else localStorage.removeItem('pd_beta');
   toast(on ? '實驗功能已開啟' : '實驗功能已關閉');
-  if (typeof renderShelf === 'function') renderShelf();   // refresh 角色列 so the ＋ appears/hides
+  loadCustomChars().then(() => { if (typeof renderShelf === 'function') renderShelf(); });   // 角色列出現/隱藏自創角色 + ＋
 }
 
-// ── 個人書櫃 (beta) — private per-user text shelf under self-made 角色標籤 ────────
-let _bookshelf = [], _bsCat = '', _bsTag = '';
-async function openBookshelf() {
-  document.getElementById('bookshelf-view').style.display = '';
-  document.getElementById('bookshelf-filters').innerHTML = '';
-  document.getElementById('bookshelf-list').innerHTML = '<div class="spinner"></div>';
-  await loadBookshelf();
+// ── 自創角色 (beta) — private custom characters: name + avatar, edit/delete ────────
+let _customChars = [], _ccEditId = null, _ccAvatar = null;
+async function loadCustomChars() {
+  if (!isBeta()) { _customChars = []; return; }
+  try { _customChars = await api('/custom-chars/') || []; } catch (e) { _customChars = []; }
 }
-function closeBookshelf() { document.getElementById('bookshelf-view').style.display = 'none'; }
-async function loadBookshelf() {
-  try { _bookshelf = await api('/bookshelf/') || []; }
-  catch (e) { document.getElementById('bookshelf-list').innerHTML = `<div class="empty-shelf">載入失敗：${escapeHtml(e.message || '')}</div>`; return; }
-  renderBookshelf();
+function setCcAvatarPreview(url) {
+  const el = document.getElementById('cc-avatar-preview');
+  if (url) { el.style.backgroundImage = `url('${url}')`; el.innerHTML = ''; }
+  else { el.style.backgroundImage = 'none'; el.innerHTML = ic('ic-camera', 24); }
 }
-function setBsCat(c) { _bsCat = c; renderBookshelf(); }
-function setBsTag(t) { _bsTag = t; renderBookshelf(); }
-function toggleBsBody(id) { const el = document.getElementById('bsbody-' + id); if (el) el.hidden = !el.hidden; }
-function _bsPill(active, label, onclick) {
-  return `<button onclick="${onclick}" style="border:1px solid var(--gold);background:${active ? 'var(--gold)' : 'none'};color:${active ? '#fff' : 'var(--ink-light)'};border-radius:14px;padding:4px 12px;font-size:12px;cursor:pointer">${escapeHtml(label)}</button>`;
+function openCreateChar() {
+  _ccEditId = null; _ccAvatar = null;
+  document.getElementById('cc-modal-title').textContent = '建立角色';
+  document.getElementById('cc-name').value = '';
+  setCcAvatarPreview('');
+  document.getElementById('cc-delete-btn').style.display = 'none';
+  document.getElementById('custom-char-modal').classList.add('open');
 }
-function renderBookshelf() {
-  const tags = [...new Set(_bookshelf.map(p => p.char_tag).filter(Boolean))];
-  let f = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">` +
-    _bsPill(!_bsCat, '全部分類', "setBsCat('')") +
-    ['迷情劑', '吐真劑', '儲思盆'].map(c => _bsPill(_bsCat === c, c, `setBsCat('${c}')`)).join('') + `</div>`;
-  if (tags.length) f += `<div style="display:flex;flex-wrap:wrap;gap:6px">` +
-    _bsPill(!_bsTag, '全部角色', "setBsTag('')") +
-    tags.map(t => _bsPill(_bsTag === t, t, `setBsTag(${JSON.stringify(t)})`)).join('') + `</div>`;
-  document.getElementById('bookshelf-filters').innerHTML = f;
-  const list = _bookshelf.filter(p => (!_bsCat || p.category === _bsCat) && (!_bsTag || p.char_tag === _bsTag));
-  document.getElementById('bookshelf-list').innerHTML = list.map(p => `
-    <div style="border-bottom:1px solid rgba(26,10,0,.1);padding:10px 0">
-      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
-        <div style="flex:1;cursor:pointer" onclick="toggleBsBody('${p.id}')">
-          <div style="font-weight:bold;font-size:14px">${escapeHtml(p.title || '未命名')}</div>
-          <div style="font-size:12px;color:var(--ink-light);margin-top:2px">${p.char_tag ? '' + escapeHtml(p.char_tag) + ' · ' : ''}${escapeHtml(p.category || '')} · ${fmtUpdated(p.created_at)}</div>
-        </div>
-        <button onclick="deletePiece('${p.id}')" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:5px;padding:3px 8px;font-size:12px;cursor:pointer;flex-shrink:0">刪除</button>
-      </div>
-      <div id="bsbody-${p.id}" hidden style="white-space:pre-wrap;line-height:1.8;margin-top:8px;font-size:14px;color:var(--ink)">${escapeHtml(p.content || '')}</div>
-    </div>`).join('') || `<div class="empty-shelf">這個書櫃還是空的<br><small>點右上角「＋ 新增」上傳 txt 或貼上文字</small></div>`;
+function editCustomChar(id) {
+  const c = _customChars.find(x => x.id === id);
+  if (!c) return;
+  _ccEditId = id; _ccAvatar = c.avatar || null;
+  document.getElementById('cc-modal-title').textContent = '編輯角色';
+  document.getElementById('cc-name').value = c.name || '';
+  setCcAvatarPreview(c.avatar || '');
+  document.getElementById('cc-delete-btn').style.display = '';
+  document.getElementById('custom-char-modal').classList.add('open');
 }
-function openAddPiece() {
-  document.getElementById('bs-title').value = '';
-  document.getElementById('bs-tag').value = '';
-  document.getElementById('bs-content').value = '';
-  document.getElementById('bs-cat').value = _bsCat || '儲思盆';
-  document.getElementById('bs-tag-list').innerHTML = [...new Set(_bookshelf.map(p => p.char_tag).filter(Boolean))].map(t => `<option value="${escapeHtml(t)}">`).join('');
-  document.getElementById('bookshelf-add-modal').classList.add('open');
+function ccPickAvatar(input) {
+  const f = input.files && input.files[0];
+  if (!f) return;
+  if (!f.type.startsWith('image/')) { toast('請選擇圖片檔'); return; }
+  const r = new FileReader();
+  r.onload = () => { _ccAvatar = r.result; setCcAvatarPreview(r.result); };
+  r.readAsDataURL(f);
+  input.value = '';
+}
+async function saveCustomChar() {
+  const name = document.getElementById('cc-name').value.trim();
+  if (!name) { toast('請輸入角色名稱'); return; }
+  try {
+    const body = JSON.stringify({ name, avatar: _ccAvatar });
+    if (_ccEditId) await api('/custom-chars/' + _ccEditId, { method: 'PATCH', body });
+    else await api('/custom-chars/', { method: 'POST', body });
+    toast('已儲存');
+    document.getElementById('custom-char-modal').classList.remove('open');
+    await loadCustomChars();
+    renderShelf();
+  } catch (e) { toast(e.message || '儲存失敗'); }
+}
+async function deleteCustomChar() {
+  if (!_ccEditId || !confirm('刪除這個角色？')) return;
+  try {
+    await api('/custom-chars/' + _ccEditId, { method: 'DELETE' });
+    document.getElementById('custom-char-modal').classList.remove('open');
+    await loadCustomChars();
+    renderShelf();
+  } catch (e) { toast(e.message); }
 }
 // 後台上傳：讀一個 .txt 進內文框(取代原本暫不支持的圖片辨識）
 function loadTxtIntoUpload(input) {
@@ -2440,37 +2443,6 @@ function loadTxtIntoUpload(input) {
   input.value = '';
 }
 
-function loadTxtFile(input) {
-  const f = input.files && input.files[0];
-  if (!f) return;
-  const r = new FileReader();
-  r.onload = () => {
-    document.getElementById('bs-content').value = r.result || '';
-    const t = document.getElementById('bs-title');
-    if (!t.value.trim()) t.value = f.name.replace(/\.txt$/i, '');
-  };
-  r.readAsText(f);
-}
-async function savePiece() {
-  const content = document.getElementById('bs-content').value;
-  if (!content.trim()) { toast('內容不能空白'); return; }
-  try {
-    await api('/bookshelf/', { method: 'POST', body: JSON.stringify({
-      title: document.getElementById('bs-title').value.trim(),
-      content,
-      char_tag: document.getElementById('bs-tag').value.trim(),
-      category: document.getElementById('bs-cat').value,
-    }) });
-    toast('已加入書櫃');
-    document.getElementById('bookshelf-add-modal').classList.remove('open');
-    loadBookshelf();
-  } catch (e) { toast('' + (e.message || '儲存失敗')); }
-}
-async function deletePiece(id) {
-  if (!confirm('刪除這篇？此動作無法復原。')) return;
-  try { await api('/bookshelf/' + id, { method: 'DELETE' }); loadBookshelf(); }
-  catch (e) { toast(e.message); }
-}
 
 function renderShelf() {
   renderFilterBar(
