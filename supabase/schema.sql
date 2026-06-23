@@ -303,3 +303,49 @@ create table if not exists public.novel_views (
   created_at timestamptz default now()
 );
 alter table public.novel_views enable row level security;
+
+-- ============================================================
+-- COLUMNS / TABLES ADDED SINCE THE INITIAL SCHEMA
+-- Idempotent (add column / create table IF NOT EXISTS) so a fresh run of this file reproduces
+-- the full current production schema. Keep this in sync when the app starts using a new column.
+-- ============================================================
+
+-- profiles: settings + moderation + onboarding state the backend writes via the service role.
+alter table public.profiles add column if not exists nickname     text;
+alter table public.profiles add column if not exists banned       boolean default false;
+alter table public.profiles add column if not exists mqj_access   text;       -- 迷情劑 access: null / 'pending' / 'approved'
+alter table public.profiles add column if not exists auto_publish boolean default false;
+alter table public.profiles add column if not exists guide_seeded boolean default false;
+alter table public.profiles add column if not exists tour_seen    text;       -- onboarding-tour version completed
+alter table public.profiles add column if not exists last_seen_at timestamptz;-- activity for the 不活躍用戶 report
+alter table public.profiles add column if not exists home_chars   text;       -- hidden 心動-cover photos (comma-joined)
+
+-- novels: kind/category/characters/series/owners/status/locking the app relies on.
+alter table public.novels add column if not exists kind         text default 'novel';   -- 'novel' | 'forum'
+alter table public.novels add column if not exists status       text default 'pending'; -- 'pending' | 'approved'
+alter table public.novels add column if not exists is_guide     boolean default false;  -- seeded 作家入職指南
+alter table public.novels add column if not exists owners       uuid[] default '{}';    -- co-owners (authors)
+alter table public.novels add column if not exists category     text;                   -- 吐真劑 / 迷情劑 / 儲思盆
+alter table public.novels add column if not exists characters   text[] default '{}';    -- character codes
+alter table public.novels add column if not exists series       text;
+alter table public.novels add column if not exists series_order integer;
+alter table public.novels add column if not exists locked       boolean default false;  -- author-locked (hidden from others)
+
+-- 自創角色 (private custom characters) + their private work tags — EXPERIMENTAL.
+create table if not exists public.custom_characters (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid references public.profiles(id) on delete cascade not null,
+  name       text not null,
+  avatar     text,
+  created_at timestamptz not null default now()
+);
+create table if not exists public.custom_char_tags (
+  user_id    uuid references public.profiles(id) on delete cascade not null,
+  char_id    uuid not null,
+  novel_id   uuid references public.novels(id) on delete cascade not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, char_id, novel_id)
+);
+-- Both are written only by the FastAPI service role; keep them off-limits to anon/authenticated.
+alter table public.custom_characters enable row level security;
+alter table public.custom_char_tags  enable row level security;

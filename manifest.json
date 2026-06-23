@@ -1,8 +1,8 @@
 {
   "name": "預言家日報",
   "short_name": "預言家日報",
-  "description": "AI / OCR Protection Image Processor",
-  "start_url": "./index.html",
+  "description": "預言家日報 — 邀請制哈利波特同人閱讀平台",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

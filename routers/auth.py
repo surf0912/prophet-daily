@@ -47,6 +47,11 @@ def _record_fail(keys: list[str]):
     now = time.time()
     for k in keys:
         _FAILS.setdefault(k, []).append(now)
+    # Bound memory: a username-rotation flood could otherwise grow this dict without limit.
+    # When it gets large, drop every key whose failures have all aged out of the window.
+    if len(_FAILS) > 2000:
+        for k in [k for k, v in list(_FAILS.items()) if not any(now - t < _WINDOW for t in v)]:
+            _FAILS.pop(k, None)
 
 class SignInRequest(BaseModel):
     username: str
@@ -227,8 +232,8 @@ class ChangePwBody(BaseModel):
 def change_my_password(body: ChangePwBody, user: dict = Depends(get_current_user),
                        sb: Client = Depends(get_supabase), sb_admin: Client = Depends(get_supabase_admin)):
     new = (body.new or "").strip()
-    if len(new) < 6:
-        raise HTTPException(400, "新通關密語至少 6 字")
+    if len(new) < 8:
+        raise HTTPException(400, "新通關密語至少 8 字")
     # Verify the current password by attempting a sign-in (accounts use internal emails).
     email = username_to_email(user.get("username", ""))
     try:

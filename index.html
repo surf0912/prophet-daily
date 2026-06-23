@@ -632,7 +632,7 @@
         <input type="text" id="inv-nickname" placeholder="顯示用，可用中文" maxlength="7" />
         <small style="color:var(--gold-lt);font-size:13px">大家看到的名字，之後可自行更改</small>
       </div>
-      <div class="field"><label>通關密語</label><input type="password" id="inv-pass" placeholder="至少 6 位" autocomplete="new-password" /></div>
+      <div class="field"><label>通關密語</label><input type="password" id="inv-pass" placeholder="至少 8 位" autocomplete="new-password" /></div>
       <button class="btn-primary" onclick="doInviteRegister()">領取通行證</button>
       <button onclick="showLoginForm()" style="display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--gold-lt);font-size:12px;cursor:pointer">已有帳號？直接登入</button>
     </div>
@@ -815,7 +815,7 @@
               </div>
               <div id="pw-edit" style="display:none;flex-direction:column;gap:6px;width:100%;max-width:240px">
                 <input type="password" id="pw-current" placeholder="目前的通關密語" autocomplete="current-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
-                <input type="password" id="pw-new" placeholder="新通關密語（至少 6 字）" autocomplete="new-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
+                <input type="password" id="pw-new" placeholder="新通關密語（至少 8 字）" autocomplete="new-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
                 <input type="password" id="pw-new2" placeholder="再次輸入新通關密語" autocomplete="new-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
                 <div style="display:flex;gap:8px">
                   <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="togglePwEdit(false)">取消</button>
@@ -1318,7 +1318,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.21';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.22';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4097,9 +4097,9 @@ async function changeUserRole(userId, role) {
 
 async function resetPassword(id) {
   const name = adminUserName(id);
-  const pw = prompt(`為「${name}」設定新的通關密語(至少 6 字)。\n設定後請私下告訴對方,讓他用這組登入:`);
+  const pw = prompt(`為「${name}」設定新的通關密語(至少 8 字)。\n設定後請私下告訴對方,讓他用這組登入:`);
   if (pw === null) return;
-  if (pw.trim().length < 6) { toast('通關密語至少 6 字'); return; }
+  if (pw.trim().length < 8) { toast('通關密語至少 8 字'); return; }
   try {
     await api(`/permissions/users/${id}/password`, { method: 'PATCH', body: JSON.stringify({ password: pw.trim() }) });
     toast(`已重設 ${name} 的通關密語`);
@@ -4240,7 +4240,7 @@ async function saveMyPassword() {
   const nw = document.getElementById('pw-new').value.trim();
   const nw2 = document.getElementById('pw-new2').value.trim();
   if (!cur) { toast('請輸入目前的通關密語'); return; }
-  if (nw.length < 6) { toast('新通關密語至少 6 字'); return; }
+  if (nw.length < 8) { toast('新通關密語至少 8 字'); return; }
   if (nw !== nw2) { toast('兩次輸入的新通關密語不一致'); return; }
   try {
     await api('/auth/me/password', { method: 'PATCH', body: JSON.stringify({ current: cur, new: nw }) });

@@ -67,19 +67,24 @@ def _verify_jwt_local(token: str):
     verified against the project's public JWKS (cached); legacy/older tokens use the HS256 shared
     secret. Returns the user id (sub), or None when it can't decide so the caller falls back to
     sb.auth.get_user(). Signature + expiry are always enforced."""
+    iss = settings.supabase_url.rstrip("/") + "/auth/v1"   # Supabase issuer for this project
     # 1) Asymmetric (ES256/RS256) via the project's public JWKS — the default for migrated projects.
     try:
         alg = (jwt.get_unverified_header(token).get("alg") or "")
         if alg and alg.upper() != "HS256":
             key = _jwks().get_signing_key_from_jwt(token).key
-            return jwt.decode(token, key, algorithms=[alg], options={"verify_aud": False}).get("sub")
+            # Restrict to an explicit algorithm allowlist (never trust the token header's alg), and
+            # enforce audience + issuer on top of signature + expiry.
+            return jwt.decode(token, key, algorithms=["ES256", "RS256"],
+                              audience="authenticated", issuer=iss).get("sub")
     except Exception:
         pass
     # 2) Legacy HS256 shared secret (older tokens / projects not yet migrated).
     secret = getattr(settings, "jwt_secret", "") or ""
     if secret:
         try:
-            return jwt.decode(token, secret, algorithms=["HS256"], options={"verify_aud": False}).get("sub")
+            return jwt.decode(token, secret, algorithms=["HS256"],
+                              audience="authenticated", issuer=iss).get("sub")
         except Exception:
             pass
     return None

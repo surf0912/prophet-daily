@@ -92,9 +92,11 @@ def register_with_invite(body: RegisterWithInvite, sb_admin: Client = Depends(ge
     if datetime.now(timezone.utc) > expires:
         raise HTTPException(410, "此邀請連結已過期")
 
-    # 2) Validate username BEFORE claiming so a malformed request never consumes the token.
+    # 2) Validate username + password BEFORE claiming so a malformed request never consumes the token.
     if not re.match(r'^[a-zA-Z0-9_]{2,20}$', body.username):
         raise HTTPException(400, "用戶名只能包含英文、數字、底線，長度 2-20 字元")
+    if len(body.password or "") < 8:
+        raise HTTPException(400, "通關密語至少 8 字")
 
     email = username_to_email(body.username)
     nickname = (body.nickname or body.username).strip()[:20] or body.username

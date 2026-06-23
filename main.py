@@ -22,8 +22,15 @@ app.add_middleware(
 import time as _time
 from monitor import record_request
 
+_MAX_BODY = 5_000_000   # 5MB blanket cap (avatars are 1.5MB app-side; chapters are far smaller)
+
 @app.middleware("http")
 async def _monitor_requests(request, call_next):
+    # Reject oversized request bodies up front (backstop against memory-abuse on the 512MB instance).
+    cl = request.headers.get("content-length")
+    if cl and cl.isdigit() and int(cl) > _MAX_BODY:
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"detail": "請求內容過大"}, status_code=413)
     start = _time.perf_counter()
     response = await call_next(request)
     try:
@@ -33,6 +40,11 @@ async def _monitor_requests(request, call_next):
             record_request((_time.perf_counter() - start) * 1000, response.status_code)
     except Exception:
         pass
+    # Baseline security headers on every response (the mirror serves the app + API from here).
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
     return response
 
 @app.on_event("startup")

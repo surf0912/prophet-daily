@@ -116,8 +116,8 @@ class PasswordBody(BaseModel):
 @router.patch("/users/{user_id}/password", dependencies=[Depends(require_super_admin)])
 def reset_password(user_id: str, body: PasswordBody, sb: Client = Depends(get_supabase_admin)):
     pw = (body.password or "").strip()
-    if len(pw) < 6:
-        raise HTTPException(400, "通關密語至少 6 字")
+    if len(pw) < 8:
+        raise HTTPException(400, "通關密語至少 8 字")
     try:
         sb.auth.admin.update_user_by_id(user_id, {"password": pw})
     except Exception as e:
@@ -149,6 +149,10 @@ def delete_user(user_id: str, user: dict = Depends(require_super_admin), sb: Cli
         lambda: sb.table("comment_likes").delete().eq("user_id", user_id).execute(),
         lambda: sb.table("comments").delete().eq("user_id", user_id).execute(),
         lambda: sb.table("permissions").delete().eq("user_id", user_id).execute(),
+        lambda: sb.table("novel_favorites").delete().eq("user_id", user_id).execute(),
+        lambda: sb.table("novel_views").delete().eq("user_id", user_id).execute(),
+        lambda: sb.table("custom_char_tags").delete().eq("user_id", user_id).execute(),
+        lambda: sb.table("custom_characters").delete().eq("user_id", user_id).execute(),
         lambda: sb.table("invite_tokens").update({"used_by": None}).eq("used_by", user_id).execute(),
         lambda: sb.table("invite_tokens").update({"created_by": actor}).eq("created_by", user_id).execute(),
         lambda: sb.table("novels").update({"created_by": actor}).eq("created_by", user_id).execute(),
@@ -158,6 +162,13 @@ def delete_user(user_id: str, user: dict = Depends(require_super_admin), sb: Cli
             op()
         except Exception:
             pass
+    # Remove the deleted user from every work's co-owner array (read-modify-write — the REST API
+    # can't edit individual array elements), so no work keeps a dangling deleted-user UUID.
+    try:
+        for nv in (sb.table("novels").select("id, owners").contains("owners", [user_id]).execute().data or []):
+            sb.table("novels").update({"owners": [o for o in (nv.get("owners") or []) if o != user_id]}).eq("id", nv["id"]).execute()
+    except Exception:
+        pass
     # Now remove the profile + auth user; surface the real DB error if something still blocks.
     err = None
     try:
