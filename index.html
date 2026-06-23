@@ -1275,7 +1275,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.05';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.06';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1455,13 +1455,14 @@ function resizeImage(file, size) {
 }
 
 // ── Avatar crop (drag to move, slider to zoom, before saving) ──
-const _crop = { img: null, V: 260, scale: 1, minScale: 1, tx: 0, ty: 0, url: null };
+const _crop = { img: null, V: 260, scale: 1, minScale: 1, tx: 0, ty: 0, url: null, target: 'profile' };
 
 function handleAvatarUpload(e) {
   const f = e.target.files[0];
   e.target.value = '';
   if (!f) return;
   if (!f.type.startsWith('image/')) { toast('請選擇圖片檔'); return; }
+  _crop.target = 'profile';
   if (_crop.url) URL.revokeObjectURL(_crop.url);
   _crop.url = URL.createObjectURL(f);
   const img = new Image();
@@ -1528,14 +1529,19 @@ async function saveAvatarCrop() {
   const c = document.createElement('canvas'); c.width = c.height = 128;
   c.getContext('2d').drawImage(img, sx, sy, sSize, sSize, 0, 0, 128, 128);
   const dataUrl = c.toDataURL('image/jpeg', 0.82);
+  document.getElementById('avatar-crop-modal').classList.remove('open');
+  if (_crop.url) { URL.revokeObjectURL(_crop.url); _crop.url = null; }
+  if (_crop.target === 'customchar') {   // 自創角色頭像：存記憶體，等存角色時一起送
+    _ccAvatar = dataUrl;
+    setCcAvatarPreview(dataUrl);
+    return;
+  }
   try {
     const updated = await api('/auth/me/avatar', { method: 'PATCH', body: JSON.stringify({ avatar: dataUrl }) });
     currentUser.avatar_url = (updated && updated.avatar_url) || dataUrl;
     toast('頭像已更新');
-    document.getElementById('avatar-crop-modal').classList.remove('open');
-    if (_crop.url) { URL.revokeObjectURL(_crop.url); _crop.url = null; }
     renderSettings();
-  } catch (err) { toast('' + (err.message || '頭像更新失敗')); }
+  } catch (err) { toast(err.message || '頭像更新失敗'); }
 }
 
 // ── Auth ─────────────────────────────────────────────────────
@@ -2400,12 +2406,16 @@ function editCustomChar(id) {
 }
 function ccPickAvatar(input) {
   const f = input.files && input.files[0];
+  input.value = '';
   if (!f) return;
   if (!f.type.startsWith('image/')) { toast('請選擇圖片檔'); return; }
-  const r = new FileReader();
-  r.onload = () => { _ccAvatar = r.result; setCcAvatarPreview(r.result); };
-  r.readAsDataURL(f);
-  input.value = '';
+  if (_crop.url) URL.revokeObjectURL(_crop.url);
+  _crop.url = URL.createObjectURL(f);
+  _crop.target = 'customchar';   // 裁切結果存到自創角色，不是個人頭像
+  const img = new Image();
+  img.onload = () => openAvatarCrop(img);
+  img.onerror = () => toast('圖片讀取失敗');
+  img.src = _crop.url;
 }
 async function saveCustomChar() {
   const name = document.getElementById('cc-name').value.trim();
