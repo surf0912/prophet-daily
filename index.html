@@ -292,7 +292,10 @@
     .cp-header h2 { font-size: 18px; color: var(--ink); margin: 0; }
     .cp-body { flex: 1; overflow-y: auto; padding: 16px 18px calc(28px + var(--safe-bottom)); }
     .cp-gallery { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 18px; }
-    .cp-shot { flex: 0 0 auto; width: 150px; height: 200px; border-radius: 12px; background-size: cover; background-position: center; border: 1px solid var(--gold-lt); }
+    .cp-shot { position: relative; flex: 0 0 auto; width: 150px; height: 200px; border-radius: 12px; background-size: cover; background-position: center; border: 1px solid var(--gold-lt); }
+    .cp-cover-toggle { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; background: rgba(0,0,0,.35); cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.45); padding: 0; }
+    .cp-cover-toggle.on { background: var(--gold); }
+    .cp-cover-toggle.on::after { content: ''; position: absolute; inset: 6px; border-radius: 50%; background: #fff; }
     .cp-section { margin-bottom: 22px; }
     .cp-section h3 { font-size: 15px; color: var(--accent); margin-bottom: 8px; }
     .cp-bio { font-size: 14px; line-height: 1.7; color: var(--ink); white-space: pre-wrap; }
@@ -815,8 +818,8 @@
                 <input type="password" id="pw-new" placeholder="新通關密語（至少 6 字）" autocomplete="new-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
                 <input type="password" id="pw-new2" placeholder="再次輸入新通關密語" autocomplete="new-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
                 <div style="display:flex;gap:8px">
-                  <button class="btn-primary" style="flex:1;padding:8px;font-size:13px" onclick="saveMyPassword()">儲存</button>
                   <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="togglePwEdit(false)">取消</button>
+                  <button class="btn-primary" style="flex:1;padding:8px;font-size:13px" onclick="saveMyPassword()">儲存</button>
                 </div>
               </div>
             </div>
@@ -1067,8 +1070,8 @@
     </div>
     <input id="cc-name" placeholder="角色名稱" maxlength="20" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px" />
     <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="btn-primary" style="flex:1;padding:10px;font-size:14px" onclick="saveCustomChar()">儲存</button>
       <button class="btn-close-modal" style="flex:1;margin:0;font-size:14px" onclick="document.getElementById('custom-char-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:10px;font-size:14px" onclick="saveCustomChar()">儲存</button>
     </div>
     <button id="cc-delete-btn" onclick="deleteCustomChar()" style="display:none;width:100%;margin-top:8px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:8px;font-size:13px;cursor:pointer">刪除這個角色</button>
   </div>
@@ -1090,8 +1093,8 @@
     <p style="font-size:12px;color:var(--ink-light);margin:6px 0 10px">勾選擁有此作品的帳號（可多人共同擁有）：</p>
     <div id="transfer-user-list"></div>
     <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveOwners()">儲存</button>
       <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('transfer-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveOwners()">儲存</button>
     </div>
   </div>
 </div>
@@ -1104,8 +1107,8 @@
     <div class="form-group"><label>系列名（留空 = 單篇）</label><input type="text" id="series-name-input" list="series-name-list" placeholder="例：火焰杯后" /><datalist id="series-name-list"></datalist></div>
     <div class="form-group"><label>第幾部（順序，1=上、2=下…）</label><input type="number" id="series-order-input" min="0" value="0" /></div>
     <div style="display:flex;gap:8px;margin-top:6px">
-      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveSeries()">儲存</button>
       <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('series-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveSeries()">儲存</button>
     </div>
   </div>
 </div>
@@ -1116,8 +1119,8 @@
     <div class="form-group" id="editclass-cat-group"><label>故事類型</label><select id="editclass-category"></select></div>
     <div class="form-group"><label>角色（可多選）</label><div id="editclass-chars" class="char-picker"></div></div>
     <div style="display:flex;gap:8px;margin-top:6px">
-      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveEditClass()">儲存</button>
       <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('editclass-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveEditClass()">儲存</button>
     </div>
   </div>
 </div>
@@ -1134,8 +1137,8 @@
       <textarea id="editwork-comments" rows="10" placeholder="每樓用 1L／2L… 開頭，例：1L 暱稱｜內容"></textarea>
     </div>
     <div style="display:flex;gap:8px;margin-top:6px">
-      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveEditWork()">儲存</button>
       <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('editwork-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveEditWork()">儲存</button>
     </div>
   </div>
 </div>
@@ -1153,8 +1156,8 @@
     </div>
     <p style="font-size:12px;color:var(--ink-light);opacity:.8;margin-bottom:4px">拖曳移動、滑桿縮放，圓圈內就是你的頭像</p>
     <div style="display:flex;gap:8px;margin-top:6px">
-      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveAvatarCrop()">儲存</button>
       <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('avatar-crop-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" onclick="saveAvatarCrop()">儲存</button>
     </div>
   </div>
 </div>
@@ -1202,8 +1205,8 @@
       <span>我確認我已年滿 18 歲，並同意以上內容限制與管理規則</span>
     </label>
     <div style="display:flex;gap:8px">
-      <button class="btn-primary" id="mqj-confirm-btn" disabled style="flex:1;padding:12px;font-size:13px" onclick="requestMqj()">送出申請</button>
       <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="document.getElementById('mqj-disclaimer-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" id="mqj-confirm-btn" disabled style="flex:1;padding:12px;font-size:13px" onclick="requestMqj()">送出申請</button>
     </div>
   </div>
 </div>
@@ -1278,8 +1281,8 @@
     <label style="display:block;font-size:12px;color:var(--ink-light);margin-bottom:4px">答案（可直接貼上多行）</label>
     <textarea id="faq-edit-a" rows="6" placeholder="輸入答案…可換行、可整段貼上" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment2);color:var(--ink);font-size:14px;line-height:1.6;resize:vertical;white-space:pre-wrap"></textarea>
     <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn-primary" id="faq-edit-save" style="flex:1;padding:11px;font-size:14px" onclick="saveFaqEditor()">儲存</button>
       <button class="btn-close-modal" style="flex:1;margin:0;font-size:14px" onclick="document.getElementById('faq-edit-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" id="faq-edit-save" style="flex:1;padding:11px;font-size:14px" onclick="saveFaqEditor()">儲存</button>
     </div>
   </div>
 </div>
@@ -1315,7 +1318,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.16';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.17';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1969,15 +1972,19 @@ function renderCharProfile(name) {
   const code = (CHAR_LIST.find(x => x.name === name) || {}).code;
   document.getElementById('cp-name').textContent = name;
   const gallery = (prof.gallery && prof.gallery.length) ? prof.gallery : (charData.imgs || [charData.img]).filter(Boolean);
-  const sel = (currentUser && currentUser.home_chars ? String(currentUser.home_chars).split(',') : []).map(s => s.trim()).filter(Boolean);
+  const shown = isHomeShown(code);   // 這位目前是否會出現在心動封面
   const myWorks = (typeof novels !== 'undefined' ? novels : []).filter(n =>
     (n.owners || []).includes(currentUser && currentUser.id) && (n.characters || []).includes(code));
   let html = '';
-  if (gallery.length) html += `<div class="cp-gallery">${gallery.map(u => `<div class="cp-shot" style="background-image:url('${u}')"></div>`).join('')}</div>`;
+  if (gallery.length) {
+    // 第一張照片右上角放一個單選圈：勾 = 封面顯示這位，取消 = 不顯示
+    html += `<div class="cp-gallery">${gallery.map((u, i) =>
+      `<div class="cp-shot" style="background-image:url('${u}')">${i === 0
+        ? `<button class="cp-cover-toggle${shown ? ' on' : ''}" onclick="toggleHomeCover('${code}', this)" role="radio" aria-checked="${shown}" aria-label="心動封面顯示這位" title="心動封面顯示這位"></button>`
+        : ''}</div>`).join('')}</div>`;
+    html += `<p class="cp-hint">右上角勾選 = 這位會出現在心動封面；取消 = 封面不出現這位（都取消 = 全部隨機）。</p>`;
+  }
   html += `<div class="cp-section"><h3>基本資料</h3><p class="cp-bio">${prof.bio ? escapeHtml(prof.bio) : '（基本資料待補充）'}</p></div>`;
-  html += `<div class="cp-section"><h3>心動封面顯示</h3><p class="cp-hint">選中的角色才會出現在心動封面；都不選或全選 = 全部隨機。</p><div class="cp-pick">`
-    + CHAR_LIST.map(ch => `<button type="button" class="cc-pick${sel.includes(ch.code) ? ' on' : ''}" data-code="${ch.code}" onclick="toggleHomeChar(this)">${ch.name}</button>`).join('')
-    + `</div></div>`;
   html += `<div class="cp-section"><h3>我為 ${escapeHtml(name)} 寫的文章</h3>`;
   html += myWorks.length
     ? myWorks.map(n => `<a class="cp-work" href="#" onclick="closeCharProfile();openNovel('${n.id}');return false;">${ic('ic-book', 14)} ${escapeHtml(n.title)}</a>`).join('')
@@ -1985,13 +1992,25 @@ function renderCharProfile(name) {
   html += `</div>`;
   document.getElementById('cp-body').innerHTML = html;
 }
-async function toggleHomeChar(btn) {
-  btn.classList.toggle('on');
-  const codes = [...document.querySelectorAll('#cp-body .cc-pick.on')].map(b => b.dataset.code);
+function homeCharsSet() {
+  return (currentUser && currentUser.home_chars ? String(currentUser.home_chars).split(',') : []).map(s => s.trim()).filter(Boolean);
+}
+function isHomeShown(code) {
+  const sel = homeCharsSet();
+  return sel.length === 0 || sel.includes(code);   // 空 = 全部顯示
+}
+async function toggleHomeCover(code, btn) {
+  const all = CHAR_LIST.map(c => c.code);
+  let cur = homeCharsSet();
+  if (!cur.length) cur = all.slice();                                // 空代表「全顯示」→ 先具體化才好移除單一
+  let next = cur.includes(code) ? cur.filter(c => c !== code) : [...cur, code];
+  if (next.length === 0 || next.length === all.length) next = [];    // 全選 / 全不選 = 全部隨機(存空)
+  const wasOn = btn.classList.contains('on');
+  btn.classList.toggle('on', next.length === 0 || next.includes(code));
   try {
-    const r = await api('/auth/me/home-chars', { method: 'PATCH', body: JSON.stringify({ chars: codes }) });
+    const r = await api('/auth/me/home-chars', { method: 'PATCH', body: JSON.stringify({ chars: next }) });
     if (currentUser) currentUser.home_chars = (r && r.home_chars) || '';
-  } catch (e) { btn.classList.toggle('on'); toast(e.message || '儲存失敗'); }
+  } catch (e) { btn.classList.toggle('on', wasOn); toast(e.message || '儲存失敗'); }
 }
 // 官方角色頭像：單擊 = 篩選(原行為);雙擊 = 開角色頁(beta)。onFilter(type,val) 是原本的篩選回呼。
 let _ocTapTimer = null, _ocTapCode = null;
