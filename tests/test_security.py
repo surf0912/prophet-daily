@@ -114,5 +114,31 @@ class DatabaseBoundaryTests(unittest.TestCase):
         self.assertIn('.eq("used_at", now_iso).is_("used_by", "null")', self.invites)
 
 
+class DependencyLockTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        root = Path(__file__).parents[1]
+        cls.entry = (root / "requirements.txt").read_text(encoding="utf-8")
+        cls.lock = (root / "requirements.lock").read_text(encoding="utf-8")
+        cls.workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    def test_render_installs_the_committed_lock(self):
+        active = [line.strip() for line in self.entry.splitlines()
+                  if line.strip() and not line.lstrip().startswith("#")]
+        self.assertEqual(active, ["-r requirements.lock"])
+
+    def test_every_locked_requirement_is_exact(self):
+        requirements = [line.strip() for line in self.lock.splitlines()
+                        if line.strip() and not line.lstrip().startswith("#")]
+        self.assertGreater(len(requirements), 30)
+        for requirement in requirements:
+            with self.subTest(requirement=requirement):
+                self.assertRegex(requirement, r"^[A-Za-z0-9_.-]+==[^=]+$")
+
+    def test_ci_installs_and_audits_the_same_lock(self):
+        self.assertIn("pip install -r requirements.lock", self.workflow)
+        self.assertIn("pip-audit -r requirements.lock", self.workflow)
+
+
 if __name__ == "__main__":
     unittest.main()
