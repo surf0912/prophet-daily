@@ -603,7 +603,7 @@
 
     <!-- Invalid / used invite -->
     <div id="invite-invalid" style="display:none;text-align:center;padding:20px 0">
-      <div style="font-size:40px">🚫</div>
+      <div style="font-size:40px"></div>
       <p style="color:var(--gold);margin-top:12px;font-size:15px" id="invite-invalid-msg">此邀請連結已失效</p>
       <button onclick="showLoginForm()" style="margin-top:16px;background:none;border:1px solid var(--gold-lt);color:var(--gold-lt);padding:8px 20px;border-radius:3px;cursor:pointer;font-size:13px">返回登入</button>
     </div>
@@ -666,7 +666,7 @@
     <!-- HOME -->
     <div id="page-home" class="page active">
       <div class="greeting-hero" id="greeting-hero">
-        <div class="char-emoji" id="char-emoji">🧙‍♂️</div>
+        <div class="char-emoji" id="char-emoji"></div>
         <h2 id="greeting-line" style="display:none"></h2>
         <p id="greeting-quote" style="display:none"></p>
       </div>
@@ -685,9 +685,9 @@
       </a>
       <div id="fav-updates" class="home-section" style="display:none"></div>
       <div id="tour-banner" style="display:none;margin:14px 18px;padding:14px 16px;background:var(--parchment2);border:1.5px solid var(--gold);border-radius:12px">
-        <div style="font-size:14px;color:var(--ink);line-height:1.6">👋 歡迎來到《預言家日報》！要不要花 30 秒看一下新手導覽，快速上手？</div>
+        <div style="font-size:14px;color:var(--ink);line-height:1.6">歡迎來到《預言家日報》！要不要花 30 秒看一下新手導覽，快速上手？</div>
         <div style="display:flex;gap:8px;margin-top:12px">
-          <button class="btn-primary" style="flex:1;padding:10px;font-size:13px" onclick="startTour()">✨ 開始導覽</button>
+          <button class="btn-primary" style="flex:1;padding:10px;font-size:13px" onclick="startTour()">開始導覽</button>
           <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" onclick="dismissTourBanner()">先略過</button>
         </div>
       </div>
@@ -743,7 +743,7 @@
       <div class="settings-header"><h2><svg width="20" height="20" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-gear"/></svg> 個人檔案</h2></div>
       <div class="settings-body">
         <div class="profile-box">
-          <div class="avatar-lg" id="settings-avatar" onclick="document.getElementById('avatar-input').click()" style="cursor:pointer" title="點擊更換頭像">🧙</div>
+          <div class="avatar-lg" id="settings-avatar" onclick="document.getElementById('avatar-input').click()" style="cursor:pointer" title="點擊更換頭像"></div>
           <input type="file" id="avatar-input" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)" />
           <div><button onclick="document.getElementById('avatar-input').click()" style="background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;margin-bottom:6px"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-camera"/></svg> 更換頭像</button></div>
           <h3 id="settings-username">載入中</h3>
@@ -824,7 +824,7 @@
             <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="startTour()">重看導覽</button>
           </div>
           <div class="settings-row super-only" style="display:none">
-            <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-sparkles"/></svg> 🧪 實驗功能（beta）</label>
+            <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-sparkles"/></svg> 實驗功能（beta）</label>
             <label class="toggle">
               <input type="checkbox" id="beta-toggle" onchange="setBetaFlag(this.checked)" />
               <span class="slider"></span>
@@ -867,7 +867,7 @@
       </div>
       <div id="admin-upload" class="admin-pane active">
         <div id="upload-draft-banner" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:var(--parchment2);border:1px solid var(--gold-lt);border-radius:6px;padding:8px 12px;margin-bottom:14px">
-          <span style="font-size:13px;color:var(--ink-light)">📝 已還原上次未送出的草稿</span>
+          <span style="font-size:13px;color:var(--ink-light)">已還原上次未送出的草稿</span>
           <button onclick="discardUploadDraft()" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer;flex-shrink:0">清空</button>
         </div>
         <!-- 新增小說 vs 論壇貼文 -->
@@ -1056,7 +1056,7 @@
 <!-- Manage owners (co-authors) modal -->
 <div class="perm-modal" id="transfer-modal">
   <div class="perm-modal-inner">
-    <h3>👥 管理作者 — <span id="transfer-novel-title" style="font-size:14px"></span></h3>
+    <h3>管理作者 — <span id="transfer-novel-title" style="font-size:14px"></span></h3>
     <p style="font-size:12px;color:var(--ink-light);margin:6px 0 10px">勾選擁有此作品的帳號（可多人共同擁有）：</p>
     <div id="transfer-user-list"></div>
     <div style="display:flex;gap:8px;margin-top:14px">
@@ -1069,7 +1069,7 @@
 <!-- Series binding modal -->
 <div class="perm-modal" id="series-modal">
   <div class="perm-modal-inner">
-    <h3>🔗 綁定系列 — <span id="series-novel-title" style="font-size:14px"></span></h3>
+    <h3>綁定系列 — <span id="series-novel-title" style="font-size:14px"></span></h3>
     <p style="font-size:12px;color:var(--ink-light);margin:6px 0 10px">填一樣的「系列名」即可把上下部綁在一起；留空則為單篇。</p>
     <div class="form-group"><label>系列名（留空 = 單篇）</label><input type="text" id="series-name-input" list="series-name-list" placeholder="例：火焰杯后" /><datalist id="series-name-list"></datalist></div>
     <div class="form-group"><label>第幾部（順序，1=上、2=下…）</label><input type="number" id="series-order-input" min="0" value="0" /></div>
@@ -1082,7 +1082,7 @@
 
 <div class="perm-modal" id="editclass-modal">
   <div class="perm-modal-inner">
-    <h3>✏️ 編輯分類 — <span id="editclass-novel-title" style="font-size:14px"></span></h3>
+    <h3>編輯分類 — <span id="editclass-novel-title" style="font-size:14px"></span></h3>
     <div class="form-group" id="editclass-cat-group"><label>故事類型</label><select id="editclass-category"></select></div>
     <div class="form-group"><label>角色（可多選）</label><div id="editclass-chars" class="char-picker"></div></div>
     <div style="display:flex;gap:8px;margin-top:6px">
@@ -1141,7 +1141,7 @@
   <div class="perm-modal-inner" style="text-align:center;padding:28px 20px">
     <div style="margin-bottom:10px"><svg width="44" height="44" aria-hidden="true" style="vertical-align:0px"><use href="#ic-camera"/></svg></div>
     <h3 style="margin-bottom:6px">圖片辨識（OCR）</h3>
-    <p style="font-size:14px;color:var(--ink-light)">敬請期待 ✨</p>
+    <p style="font-size:14px;color:var(--ink-light)">敬請期待 </p>
     <button class="btn-close-modal" onclick="document.getElementById('soon-modal').classList.remove('open')">知道了</button>
   </div>
 </div>
@@ -1284,7 +1284,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.02';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.03';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1540,11 +1540,11 @@ async function saveAvatarCrop() {
   try {
     const updated = await api('/auth/me/avatar', { method: 'PATCH', body: JSON.stringify({ avatar: dataUrl }) });
     currentUser.avatar_url = (updated && updated.avatar_url) || dataUrl;
-    toast('✅ 頭像已更新');
+    toast('頭像已更新');
     document.getElementById('avatar-crop-modal').classList.remove('open');
     if (_crop.url) { URL.revokeObjectURL(_crop.url); _crop.url = null; }
     renderSettings();
-  } catch (err) { toast('⚠️ ' + (err.message || '頭像更新失敗')); }
+  } catch (err) { toast('' + (err.message || '頭像更新失敗')); }
 }
 
 // ── Auth ─────────────────────────────────────────────────────
@@ -1583,7 +1583,7 @@ async function doSignIn() {
     url.searchParams.delete('invite');
     history.replaceState({}, '', url);
     await initApp();
-  } catch (e) { shakeMsg('⚠️ ' + e.message); }
+  } catch (e) { shakeMsg('' + e.message); }
 }
 
 async function doInviteRegister() {
@@ -1593,8 +1593,8 @@ async function doInviteRegister() {
   const pass = document.getElementById('inv-pass').value;
   const invToken = new URLSearchParams(window.location.search).get('invite');
   if (!username) { shakeMsg('請輸入巫師入學全名'); return; }
-  if (/\s/.test(username)) { shakeMsg('⚠️ 入學全名不能有空格'); return; }
-  if (!/^[a-zA-Z0-9_]{2,20}$/.test(username)) { shakeMsg('⚠️ 入學全名只能用英文、數字、底線，2-20字'); return; }
+  if (/\s/.test(username)) { shakeMsg('入學全名不能有空格'); return; }
+  if (!/^[a-zA-Z0-9_]{2,20}$/.test(username)) { shakeMsg('入學全名只能用英文、數字、底線，2-20字'); return; }
   if (!nickname) { shakeMsg('請輸入巫師姓名（暱稱）'); return; }
   if (!invToken) { shakeMsg('找不到邀請令牌'); return; }
   msg.classList.remove('shake');
@@ -1621,8 +1621,8 @@ async function doInviteRegister() {
     } catch (_) { /* fall through to manual login */ }
     document.getElementById('si-username').value = username;
     showLoginForm();
-    msg.textContent = '✅ 帳號建立成功，請登入';
-  } catch (e) { shakeMsg('⚠️ ' + e.message); }
+    msg.textContent = '帳號建立成功，請登入';
+  } catch (e) { shakeMsg('' + e.message); }
 }
 
 function doLogout() {
@@ -1861,7 +1861,7 @@ function dismissTourBanner() { markTourSeen(); renderTourBanner(); }
 // quotes[0]=早上  quotes[1]=中午  quotes[2]=下午  quotes[3]=晚上
 const CHARS = [
   {
-    name: 'Sean', emoji: '🦁', img: './chars/sean_phone_1.jpg', imgs: ['./chars/sean_phone_1.jpg', './chars/sean_phone_2.JPG'], imgD: './chars/Sean_desktop_1.JPG', imgsD: ['./chars/Sean_desktop_1.JPG', './chars/sean_desktop_2.JPG'], bgPos: 'center 20%',
+    name: 'Sean', emoji: '', img: './chars/sean_phone_1.jpg', imgs: ['./chars/sean_phone_1.jpg', './chars/sean_phone_2.JPG'], imgD: './chars/Sean_desktop_1.JPG', imgsD: ['./chars/Sean_desktop_1.JPG', './chars/sean_desktop_2.JPG'], bgPos: 'center 20%',
     quotes: [
       '早上好，今天也很漂亮。別懷疑，我說的是事實。',
       '中午好。終於下課了？我可以把你借走一會兒嗎？',
@@ -1870,7 +1870,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Silas', emoji: '🦅', img: './chars/silas_phone_1.jpg', imgs: ['./chars/silas_phone_1.jpg', './chars/silas_phone_2.JPG'], imgD: './chars/Silas_desktop_1.JPG', imgsD: ['./chars/Silas_desktop_1.JPG', './chars/silas_desktop_2.JPG'], bgPos: 'center top', bgPosDesktop: 'center 30%',
+    name: 'Silas', emoji: '', img: './chars/silas_phone_1.jpg', imgs: ['./chars/silas_phone_1.jpg', './chars/silas_phone_2.JPG'], imgD: './chars/Silas_desktop_1.JPG', imgsD: ['./chars/Silas_desktop_1.JPG', './chars/silas_desktop_2.JPG'], bgPos: 'center top', bgPosDesktop: 'center 30%',
     quotes: [
       '早上好。你的座位在這裡。',
       '中午好。先吃飯，你上午已經喝了兩杯咖啡了。',
@@ -1879,7 +1879,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Eli', emoji: '🦡', img: './chars/eli_phone_1.jpg', imgs: ['./chars/eli_phone_1.jpg', './chars/eli_phone_2.JPG'], imgD: './chars/Eli_desktop_1.JPG', imgsD: ['./chars/Eli_desktop_1.JPG', './chars/eli_desktop_2.JPG'], bgPos: 'center 20%',
+    name: 'Eli', emoji: '', img: './chars/eli_phone_1.jpg', imgs: ['./chars/eli_phone_1.jpg', './chars/eli_phone_2.JPG'], imgD: './chars/Eli_desktop_1.JPG', imgsD: ['./chars/Eli_desktop_1.JPG', './chars/eli_desktop_2.JPG'], bgPos: 'center 20%',
     quotes: [
       '啊，早上好。你吃早飯了嗎？我這裡還有一塊餅乾。',
       '啊，中午好。剛剛有一隻蒲絨絨一直跟著我……我想它可能比較喜歡你。',
@@ -1888,7 +1888,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Adrian', emoji: '🐍', img: './chars/adrian_phone_1.jpg', imgs: ['./chars/adrian_phone_1.jpg', './chars/adrian_phone_2.JPG'], imgD: './chars/Adrian_desktop_1.JPG', imgsD: ['./chars/Adrian_desktop_1.JPG', './chars/adrian_desktop_2.JPG'], bgPos: 'center top', bgPosDesktop: 'center 20%',
+    name: 'Adrian', emoji: '', img: './chars/adrian_phone_1.jpg', imgs: ['./chars/adrian_phone_1.jpg', './chars/adrian_phone_2.JPG'], imgD: './chars/Adrian_desktop_1.JPG', imgsD: ['./chars/Adrian_desktop_1.JPG', './chars/adrian_desktop_2.JPG'], bgPos: 'center top', bgPosDesktop: 'center 20%',
     quotes: [
       '早上好。你今天沒繞遠路，看來心情不錯。',
       '中午好。當心，西側長廊今天別去。',
@@ -1946,7 +1946,7 @@ function renderGreeting() {
   })(0);
   const now = new Date();
   const db = document.getElementById('date-banner');   // element was removed; guard so renderGreeting can't throw
-  if (db) db.textContent = `📰 ${now.getFullYear()} 年 ${now.getMonth()+1} 月 ${now.getDate()} 日 · 巫師界頭條`;
+  if (db) db.textContent = `${now.getFullYear()} 年 ${now.getMonth()+1} 月 ${now.getDate()} 日 · 巫師界頭條`;
 }
 
 // ── Novels ───────────────────────────────────────────────────
@@ -1994,7 +1994,7 @@ async function loadFavIds() {
 // is several separate works sharing a `series` name. Favouriting any part = following
 // that series; the 心動 home then flags when a NEW installment is published. Per-series
 // we remember the newest installment's created_at seen; existing parts are baselined
-// silently, so only future installments raise a 🔴.
+// silently, so only future installments raise a .
 function _seriesSeen() { try { return JSON.parse(localStorage.getItem('pd_series_seen') || '{}'); } catch { return {}; } }
 function _saveSeriesSeen(m) { localStorage.setItem('pd_series_seen', JSON.stringify(m)); }
 function markSeriesSeenForWork(novel) {   // opening a new installment clears its series flag
@@ -2031,7 +2031,7 @@ async function renderFavUpdates() {
     const extra = u.count > 1 ? `（${u.count} 篇新作）` : '';
     return `
     <a href="#" onclick="openNovel('${u.work.id}');return false;" style="display:flex;align-items:center;gap:10px;text-decoration:none;padding:9px 0;border-bottom:1px solid rgba(26,10,0,.07)">
-      <span style="font-size:9px;color:var(--scarlet);flex-shrink:0">🔴</span>
+      <span style="font-size:9px;color:var(--scarlet);flex-shrink:0"></span>
       <span style="flex:1;min-width:0">
         <span style="font-size:14px;color:var(--ink);font-weight:bold;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">系列《${escapeHtml(u.series)}》有新作品${extra}</span>
         <span style="font-size:12px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block">${escapeHtml(u.work.title)}・${fmtUpdated(u.work.created_at)}</span>
@@ -2061,7 +2061,7 @@ async function toggleReaderFavorite() {
     if (r.favorited) favIds.add(currentNovelId); else favIds.delete(currentNovelId);
     updateReaderFavBtn();
     if (r.favorited) likeBurst(document.getElementById('reader-fav-btn'));   // 同款發散火花
-    toast(r.favorited ? '⭐ 已加入收藏夾' : '已從收藏夾移除');
+    toast(r.favorited ? '已加入收藏夾' : '已從收藏夾移除');
   } catch (e) { toast(e.message); }
 }
 
@@ -2164,9 +2164,9 @@ async function submitFeedback(kind) {
   try {
     await api('/feedback/', { method: 'POST', body: JSON.stringify({ kind, content, tz_offset: new Date().getTimezoneOffset() }) });
     inp.value = ''; (kind === 'wish' ? updateWishCount : updateBugCount)();
-    toast(kind === 'wish' ? '✨ 願望已送出' : '✅ 已送出回報,謝謝!');
+    toast(kind === 'wish' ? '願望已送出' : '已送出回報,謝謝!');
     loadFeedback(kind);
-  } catch (e) { toast('⚠️ ' + e.message); }
+  } catch (e) { toast('' + e.message); }
 }
 
 async function setFeedbackStatus(id, kind, status) {
@@ -2330,7 +2330,7 @@ async function refreshMqjStatus() {
     if (me && me.mqj_access !== currentUser.mqj_access) {
       const becameApproved = me.mqj_access === 'approved';
       currentUser.mqj_access = me.mqj_access;
-      if (becameApproved) { toast('✅ 你的迷情劑權限已開放'); loadNovels(); }
+      if (becameApproved) { toast('你的迷情劑權限已開放'); loadNovels(); }
       else renderShelf();
     }
   } catch (e) { /* ignore */ }
@@ -2342,7 +2342,7 @@ async function requestMqj() {
   try {
     const res = await api('/permissions/me/request-mqj', { method: 'POST' });
     currentUser.mqj_access = res.mqj_access;
-    toast(res.mqj_access === 'approved' ? '✅ 你已可閱讀迷情劑' : '✅ 已送出申請，等管理員開放');
+    toast(res.mqj_access === 'approved' ? '你已可閱讀迷情劑' : '已送出申請，等管理員開放');
     renderShelf();
   } catch (e) { toast(e.message); }
 }
@@ -2372,7 +2372,7 @@ function mqjGateBody() {
 function isBeta() { return localStorage.getItem('pd_beta') === '1' && !!currentUser && currentUser.role === 'super_admin'; }
 function setBetaFlag(on) {
   if (on) localStorage.setItem('pd_beta', '1'); else localStorage.removeItem('pd_beta');
-  toast(on ? '🧪 實驗功能已開啟' : '實驗功能已關閉');
+  toast(on ? '實驗功能已開啟' : '實驗功能已關閉');
   if (typeof renderShelf === 'function') renderShelf();   // refresh 角色列 so the ＋ appears/hides
 }
 
@@ -2411,7 +2411,7 @@ function renderBookshelf() {
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
         <div style="flex:1;cursor:pointer" onclick="toggleBsBody('${p.id}')">
           <div style="font-weight:bold;font-size:14px">${escapeHtml(p.title || '未命名')}</div>
-          <div style="font-size:12px;color:var(--ink-light);margin-top:2px">${p.char_tag ? '🏷 ' + escapeHtml(p.char_tag) + ' · ' : ''}${escapeHtml(p.category || '')} · ${fmtUpdated(p.created_at)}</div>
+          <div style="font-size:12px;color:var(--ink-light);margin-top:2px">${p.char_tag ? '' + escapeHtml(p.char_tag) + ' · ' : ''}${escapeHtml(p.category || '')} · ${fmtUpdated(p.created_at)}</div>
         </div>
         <button onclick="deletePiece('${p.id}')" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:5px;padding:3px 8px;font-size:12px;cursor:pointer;flex-shrink:0">刪除</button>
       </div>
@@ -2447,10 +2447,10 @@ async function savePiece() {
       char_tag: document.getElementById('bs-tag').value.trim(),
       category: document.getElementById('bs-cat').value,
     }) });
-    toast('✅ 已加入書櫃');
+    toast('已加入書櫃');
     document.getElementById('bookshelf-add-modal').classList.remove('open');
     loadBookshelf();
-  } catch (e) { toast('⚠️ ' + (e.message || '儲存失敗')); }
+  } catch (e) { toast('' + (e.message || '儲存失敗')); }
 }
 async function deletePiece(id) {
   if (!confirm('刪除這篇？此動作無法復原。')) return;
@@ -2464,7 +2464,7 @@ function renderShelf() {
     shelfCat, shelfChars, onShelfFilter);
   const grid = document.getElementById('novel-grid');
   if (novelsError && !novels.length) {
-    grid.innerHTML = '<div class="empty-shelf" style="color:var(--accent);cursor:pointer" onclick="loadNovels()">⚠️ 載入失敗，點此重試</div>';
+    grid.innerHTML = '<div class="empty-shelf" style="color:var(--accent);cursor:pointer" onclick="loadNovels()">載入失敗，點此重試</div>';
     return;
   }
   // 收藏夾 view: only favorited works (skip the 迷情劑 gate — favorites are already accessible).
@@ -2501,7 +2501,7 @@ function renderShelf() {
   renderNovelBlocks(list, grid, `<span style="display:block;margin-bottom:8px">${ic('ic-mirror', 30)}</span>沒有符合的作品`);
 }
 
-// Render a list of novels into the grid, grouping series members under a 📚 header.
+// Render a list of novels into the grid, grouping series members under a header.
 function renderNovelBlocks(list, grid, emptyMsg) {
   if (!list.length) { grid.innerHTML = `<div class="empty-shelf">${emptyMsg}</div>`; return; }
   const seen = new Set();
@@ -2593,7 +2593,7 @@ async function openNovel(novelId) {
   currentNovelTitle = (novel && novel.title) || '';
   applyMqjGuard(true);   // personalized watermark + copy guard on EVERY work now (was 迷情劑-only)
   updateReaderFavBtn();   // show ☆/★ for 意若思鏡 works
-  updateReaderDarkBtn();  // 🌙/☀️ reflects current 夜間模式
+  updateReaderDarkBtn();  // /reflects current 夜間模式
   try { currentChapters = await api(`/chapters/novel/${novelId}`) || []; }
   catch { toast('無法載入內容'); return; }
   if (!currentChapters.length) { toast('此作品尚無內容'); return; }
@@ -2899,7 +2899,7 @@ async function resumeReading() {
   if (_cat === undefined) { try { _nv = await api(`/novels/${p.novelId}`); _cat = _nv && _nv.category; } catch {} }
   applyMqjGuard(true);   // watermark + copy guard on every work (was 迷情劑-only)
   updateReaderFavBtn();   // show ☆/★ for 意若思鏡 works
-  updateReaderDarkBtn();  // 🌙/☀️ reflects current 夜間模式
+  updateReaderDarkBtn();  // /reflects current 夜間模式
   try { currentChapters = await api(`/chapters/novel/${p.novelId}`) || []; }
   catch { toast('無法載入章節'); return; }
   const single = currentNovelKind === 'forum' || currentChapters.length <= 1;
@@ -2986,7 +2986,7 @@ async function loadForumPosts() {
     renderForumList();
   } catch {
     // Don't fake an empty list on a fetch error (e.g. server cold-start) — offer a retry.
-    el.innerHTML = '<p style="padding:40px 8px;color:var(--accent);text-align:center;cursor:pointer" onclick="loadForumPosts()">⚠️ 載入失敗，點此重試</p>';
+    el.innerHTML = '<p style="padding:40px 8px;color:var(--accent);text-align:center;cursor:pointer" onclick="loadForumPosts()">載入失敗，點此重試</p>';
   }
 }
 
@@ -3168,9 +3168,9 @@ async function exportBackup() {
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
     const n = data && data.tables ? Object.values(data.tables).reduce((s, v) => s + (Array.isArray(v) ? v.length : 0), 0) : 0;
-    toast(`✅ 備份已下載（${n} 筆）`);
+    toast(`備份已下載（${n} 筆）`);
   } catch (e) {
-    toast('⚠️ ' + (e.message || '匯出失敗'));
+    toast('' + (e.message || '匯出失敗'));
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = label; }
   }
@@ -3218,13 +3218,13 @@ async function loadMonitor() {
       ? `<span style="color:${health[0]};font-weight:bold">● 暖機中</span>　剛啟動，數據穩定前先不評級`
       : insufficient
       ? `<span style="color:${health[0]};font-weight:bold">● 閒置</span>　近 2 分鐘流量太少，暫不評級`
-      : `<span style="color:${health[0]};font-weight:bold">● ${health[1]}</span>（中位數）　｜　最慢5% (p95)：<span style="color:${p95High ? 'var(--scarlet)' : 'inherit'}">${p95} ms${p95High ? ' ⚠️' : ''}</span>`;
+      : `<span style="color:${health[0]};font-weight:bold">● ${health[1]}</span>（中位數）　｜　最慢5% (p95)：<span style="color:${p95High ? 'var(--scarlet)' : 'inherit'}">${p95} ms${p95High ? ' ' : ''}</span>`;
     const rtVal = insufficient ? '—' : ms + ' ms';
     const memMb = s.mem_mb, memLimit = s.mem_limit_mb || 512;
     const memPct = memMb != null ? Math.round(memMb / memLimit * 100) : null;
     const memColor = memPct == null ? 'var(--ink-light)' : memPct < 70 ? '#2d4a1e' : memPct < 88 ? '#a8761f' : 'var(--scarlet)';
     const memSub = memMb != null
-      ? `<span style="color:${memColor};font-weight:bold">${memPct}%</span> / ${memLimit} MB${memPct >= 88 ? ' ⚠️ 接近上限' : ''}`
+      ? `<span style="color:${memColor};font-weight:bold">${memPct}%</span> / ${memLimit} MB${memPct >= 88 ? ' 接近上限' : ''}`
       : '無法取得';
     el.innerHTML = `
       <div style="display:flex;flex-wrap:wrap;gap:8px">
@@ -3286,7 +3286,7 @@ function setUploadKind(kind) {
   const na = document.getElementById('new-novel-author');
   if (isNovel && na && !na.value) na.value = currentUser.nickname || currentUser.username || '';
   const writerNote = (currentUser.role === 'writer')
-    ? (currentUser.auto_publish ? '✅ 你已獲得自動審核，作品送出後直接公開、免等待' : '⏳ 作品需經管理員審核通過才公開')
+    ? (currentUser.auto_publish ? '你已獲得自動審核，作品送出後直接公開、免等待' : '作品需經管理員審核通過才公開')
     : '';
   const fh = document.getElementById('forum-post-hint'); if (fh) fh.textContent = writerNote;
   const nh = document.getElementById('new-novel-hint'); if (nh) nh.textContent = writerNote;
@@ -3378,7 +3378,7 @@ async function submitForumPost() {
   if (!main) { toast('請輸入主文'); return; }
   try {
     const res = await api('/novels/forum', { method: 'POST', body: JSON.stringify({ title, author, content, published_at, characters }) });
-    toast(res.status === 'pending' ? '✅ 已送出，待管理員審核' : '✅ 貼文已發佈');
+    toast(res.status === 'pending' ? '已送出，待管理員審核' : '貼文已發佈');
     document.getElementById('forum-post-title').value = '';
     document.getElementById('forum-post-author').value = '';
     document.getElementById('forum-post-date').value = '';
@@ -3435,13 +3435,13 @@ async function loadReviewList() {
 async function reviewMqj(userId, approve) {
   try {
     await api(`/permissions/users/${userId}/mqj`, { method: 'PATCH', body: JSON.stringify({ access: approve ? 'approved' : 'rejected' }) });
-    toast(approve ? '✅ 已通過迷情劑申請' : '已標記為不通過');
+    toast(approve ? '已通過迷情劑申請' : '已標記為不通過');
     loadReviewList();
   } catch (e) { toast(e.message); }
 }
 
 async function approveNovel(id) {
-  try { await api(`/novels/${id}/approve`, { method: 'PATCH' }); toast('✅ 已通過審核'); loadReviewList(); }
+  try { await api(`/novels/${id}/approve`, { method: 'PATCH' }); toast('已通過審核'); loadReviewList(); }
   catch (e) { toast(e.message); }
 }
 
@@ -3462,7 +3462,7 @@ async function submitNewNovel() {
       characters: readChars('new-novel-chars'),
     }) });
     await api(`/chapters/novel/${novel.id}/text`, { method: 'POST', body: JSON.stringify({ chapter_num: 1, title: null, content }) });
-    toast(novel.status === 'pending' ? '✅ 已送出，待管理員審核' : '✅ 小說已建立');
+    toast(novel.status === 'pending' ? '已送出，待管理員審核' : '小說已建立');
     ['new-novel-title', 'new-novel-author', 'new-novel-date', 'new-novel-content'].forEach(id => document.getElementById(id).value = '');
     resetClassPicker('new-novel-category', 'new-novel-chars');
     clearUploadDraft();
@@ -3484,7 +3484,7 @@ async function loadAdminNovelList() {
       const all = await api('/novels/') || [];
       ns = all.filter(n => (n.owners || []).includes(adminNovelScope.id));
       const sc = adminNovelScope;
-      let head = `📂 <b>${escapeHtml(sc.name)}</b> 的作品　<a onclick="adminNovelScope=null;switchAdminTab('users')" style="color:var(--accent);cursor:pointer">← 返回成員名單</a>`;
+      let head = `<b>${escapeHtml(sc.name)}</b> 的作品　<a onclick="adminNovelScope=null;switchAdminTab('users')" style="color:var(--accent);cursor:pointer">← 返回成員名單</a>`;
       if (sc.role === 'reader' || sc.role === 'writer') {
         const approved = sc.mqj === 'approved';
         const statusLabel = sc.mqj === 'pending' ? '（' + ic('ic-clock',11) + ' 申請中）' : sc.mqj === 'rejected' ? '（' + ic('ic-ban',11) + ' 未通過）' : '';
@@ -3583,15 +3583,15 @@ function renderAdminNovels() {
           <button onclick="deleteNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-trash',12)} 刪除</button>` : '';
       // 鎖上：作者本人(owner)或超管才有；鎖住後其他人完全看不到這篇存在。
       const canLock = !adminNovelScope || currentUser.role === 'super_admin';
-      const lockBtn = canLock ? `<button onclick='toggleLock(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${!n.locked})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid ${n.locked ? 'var(--series)' : 'var(--accent)'};color:${n.locked ? 'var(--series)' : 'var(--accent)'};border-radius:3px;cursor:pointer">${n.locked ? '🔓 解鎖' : '🔒 鎖上'}</button>` : '';
+      const lockBtn = canLock ? `<button onclick='toggleLock(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${!n.locked})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid ${n.locked ? 'var(--series)' : 'var(--accent)'};color:${n.locked ? 'var(--series)' : 'var(--accent)'};border-radius:3px;cursor:pointer">${n.locked ? '解鎖' : '鎖上'}</button>` : '';
       return `
       <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
         <div style="margin-bottom:3px;display:flex;gap:5px;flex-wrap:wrap">${n.kind === 'forum'
           ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-scroll', 12) + ' 論壇體</span>'
-          : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-book', 12) + ' 小說</span>'}${statusTag}${n.is_guide ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-book', 12) + ' 範例·可刪除</span>' : ''}${n.locked ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.2);color:var(--accent)">🔒 已鎖·只你和超管可見</span>' : ''}</div>
+          : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-book', 12) + ' 小說</span>'}${statusTag}${n.is_guide ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-book', 12) + ' 範例·可刪除</span>' : ''}${n.locked ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.2);color:var(--accent)">已鎖·只你和超管可見</span>' : ''}</div>
         <div onclick="openNovel('${n.id}')" style="font-size:14px;font-weight:bold;cursor:pointer">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
-          ${n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">🔗 ${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : ''}
+          ${n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : ''}
           ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${n.category}</span>` : ''}
           ${(n.characters || []).map(c => `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.18);color:var(--ink-light)">${charNames([c])}</span>`).join('')}
         </div>
@@ -3610,9 +3610,9 @@ async function toggleLock(id, title, locked) {
   if (!confirm(msg)) return;
   try {
     await api(`/novels/${id}/lock`, { method: 'PATCH', body: JSON.stringify({ locked }) });
-    toast(locked ? '🔒 已鎖上' : '🔓 已解鎖');
+    toast(locked ? '已鎖上' : '已解鎖');
     loadAdminNovelList();
-  } catch (e) { toast('⚠️ ' + e.message); }
+  } catch (e) { toast('' + e.message); }
 }
 
 let ownersNovelId = null;
@@ -3643,7 +3643,7 @@ async function saveOwners() {
   if (!owner_ids.length) { toast('至少要保留一位作者'); return; }
   try {
     await api(`/novels/${ownersNovelId}/owners`, { method: 'PATCH', body: JSON.stringify({ owner_ids }) });
-    toast(`✅ 作者已更新（${owner_ids.length} 人）`);
+    toast(`作者已更新（${owner_ids.length} 人）`);
     document.getElementById('transfer-modal').classList.remove('open');
     loadAdminNovelList();
   } catch (e) { toast(e.message); }
@@ -3667,7 +3667,7 @@ async function saveSeries() {
   const series_order = parseInt(document.getElementById('series-order-input').value) || 0;
   try {
     await api(`/novels/${seriesNovelId}/series`, { method: 'PATCH', body: JSON.stringify({ series: series || null, series_order }) });
-    toast(series ? `✅ 已綁定系列「${series}」` : '✅ 已設為單篇');
+    toast(series ? `已綁定系列「${series}」` : '已設為單篇');
     document.getElementById('series-modal').classList.remove('open');
     loadAdminNovelList(); loadNovels();
   } catch (e) { toast(e.message); }
@@ -3704,7 +3704,7 @@ async function saveEditClass() {
   if (category) body.category = category;
   try {
     await api(`/novels/${editClassNovelId}`, { method: 'PATCH', body: JSON.stringify(body) });
-    toast('✅ 分類已更新');
+    toast('分類已更新');
     document.getElementById('editclass-modal').classList.remove('open');
     loadAdminNovelList(); loadNovels();
   } catch (e) { toast(e.message); }
@@ -3768,10 +3768,10 @@ async function saveEditWork() {
     if (editWork.chapterId) {
       await api(`/chapters/${editWork.chapterId}/text`, { method: 'PUT', body: JSON.stringify({ chapter_num: editWork.chapterNum, title: editWork.chapterTitle, content }) });
     }
-    toast('✅ 作品已更新');
+    toast('作品已更新');
     document.getElementById('editwork-modal').classList.remove('open');
     loadAdminNovelList(); loadNovels();
-  } catch (e) { toast('⚠️ ' + e.message); }
+  } catch (e) { toast('' + e.message); }
 }
 
 async function deleteNovel(id, isReject) {
@@ -3907,7 +3907,7 @@ async function changeUserRole(userId, username, role) {
   if (!confirm(`確定把「${username}」的角色改成 ${role}？`)) { loadAdminUsers(); return; }
   try {
     await api(`/permissions/users/${userId}/role`, { method: 'PATCH', body: JSON.stringify({ role }) });
-    toast(`✅ ${username} 已設為 ${role}`);
+    toast(`${username} 已設為 ${role}`);
     loadAdminUsers();
   } catch (e) { toast(e.message); loadAdminUsers(); }
 }
@@ -3918,8 +3918,8 @@ async function resetPassword(id, name) {
   if (pw.trim().length < 6) { toast('通關密語至少 6 字'); return; }
   try {
     await api(`/permissions/users/${id}/password`, { method: 'PATCH', body: JSON.stringify({ password: pw.trim() }) });
-    toast(`✅ 已重設 ${name} 的通關密語`);
-  } catch (e) { toast('⚠️ ' + e.message); }
+    toast(`已重設 ${name} 的通關密語`);
+  } catch (e) { toast('' + e.message); }
 }
 
 async function banUser(id, name, isBanned) {
@@ -3927,18 +3927,18 @@ async function banUser(id, name, isBanned) {
   if (!confirm(ban ? `確定封禁「${name}」？\n對方將無法登入或使用本站，可隨時解除。` : `解除「${name}」的封禁？`)) return;
   try {
     await api(`/permissions/users/${id}/ban`, { method: 'PATCH', body: JSON.stringify({ banned: ban }) });
-    toast(ban ? `🚫 已封禁 ${name}` : `✅ 已解除 ${name} 的封禁`);
+    toast(ban ? `已封禁 ${name}` : `已解除 ${name} 的封禁`);
     if (adminNovelScope && adminNovelScope.id === id) { adminNovelScope.banned = ban; loadAdminNovelList(); }
     else loadAdminUsers();
   } catch (e) { toast(e.message); }
 }
 
 async function deleteUser(id, name) {
-  if (!confirm(`⚠️ 永久刪除「${name}」的帳號？\n此操作無法復原（帳號會被移除，作品內容會保留）。`)) return;
+  if (!confirm(`永久刪除「${name}」的帳號？\n此操作無法復原（帳號會被移除，作品內容會保留）。`)) return;
   if (!confirm(`再次確認：真的要刪除「${name}」嗎？`)) return;
   try {
     await api(`/permissions/users/${id}`, { method: 'DELETE' });
-    toast(`🗑 已刪除 ${name}`);
+    toast(`已刪除 ${name}`);
     adminNovelScope = null;            // they're gone — return to the member list
     switchAdminTab('users');
   } catch (e) { toast(e.message); }
@@ -3950,7 +3950,7 @@ async function setMqjAccess(userId, username, on) {
   const refresh = () => { if (adminNovelScope) { adminNovelScope.mqj = access; loadAdminNovelList(); } else loadAdminUsers(); };
   try {
     await api(`/permissions/users/${userId}/mqj`, { method: 'PATCH', body: JSON.stringify({ access }) });
-    toast(on ? `✅ 已開放 ${username} 的迷情劑閱讀權` : `已關閉 ${username} 的迷情劑閱讀權`);
+    toast(on ? `已開放 ${username} 的迷情劑閱讀權` : `已關閉 ${username} 的迷情劑閱讀權`);
     refresh();
   } catch (e) { toast(e.message); refresh(); }
 }
@@ -3959,7 +3959,7 @@ async function setAutoPublish(userId, username, on) {
   const refresh = () => { if (adminNovelScope) { adminNovelScope.auto = on; loadAdminNovelList(); } else loadAdminUsers(); };
   try {
     await api(`/permissions/users/${userId}/auto-publish`, { method: 'PATCH', body: JSON.stringify({ auto_publish: on }) });
-    toast(on ? `✅ 已開啟 ${username} 的自動審核（發文免審）` : `已關閉 ${username} 的自動審核`);
+    toast(on ? `已開啟 ${username} 的自動審核（發文免審）` : `已關閉 ${username} 的自動審核`);
     refresh();
   } catch (e) { toast(e.message); refresh(); }
 }
@@ -3990,14 +3990,14 @@ async function togglePerm(userId, novelId, grant) {
   try {
     if (grant) await api('/permissions/grant', { method: 'POST', body: JSON.stringify({ user_id: userId, novel_id: novelId }) });
     else await api('/permissions/revoke', { method: 'DELETE', body: JSON.stringify({ user_id: userId, novel_id: novelId }) });
-    toast(grant ? '✅ 已授權' : '已撤銷');
+    toast(grant ? '已授權' : '已撤銷');
   } catch (e) { toast(e.message); }
 }
 
 function closePerm() { document.getElementById('perm-modal').classList.remove('open'); }
 
 // ── Admin: role badge helper ──────────────────────────────────
-const ROLE_LABEL = { super_admin: '👑 最高管理員', admin: '🏰 管理員', writer: '✍️ 作家', reader: '📚 讀者' };
+const ROLE_LABEL = { super_admin: '最高管理員', admin: '管理員', writer: '作家', reader: '讀者' };
 
 function renderSettings() {
   const nick = currentUser.nickname || currentUser.username || '巫師';
@@ -4035,10 +4035,10 @@ async function saveNickname() {
   try {
     const updated = await api('/auth/me/nickname', { method: 'PATCH', body: JSON.stringify({ nickname }) });
     currentUser.nickname = updated.nickname || nickname;
-    toast('✅ 巫師暱稱已更新');
+    toast('巫師暱稱已更新');
     renderSettings();
     renderGreeting();
-  } catch (e) { toast('⚠️ ' + e.message); }
+  } catch (e) { toast('' + e.message); }
 }
 
 function togglePwEdit(on) {
@@ -4055,16 +4055,16 @@ async function saveMyPassword() {
   if (nw !== nw2) { toast('兩次輸入的新通關密語不一致'); return; }
   try {
     await api('/auth/me/password', { method: 'PATCH', body: JSON.stringify({ current: cur, new: nw }) });
-    toast('✅ 通關密語已更新');
+    toast('通關密語已更新');
     togglePwEdit(false);
-  } catch (e) { toast('⚠️ ' + e.message); }
+  } catch (e) { toast('' + e.message); }
 }
 
 // ── Admin: invites ────────────────────────────────────────────
 function inviteLink(token) { return `${window.location.origin}${window.location.pathname}?invite=${token}`; }
-function copyText(text, label) { navigator.clipboard.writeText(text).then(() => toast(label || '✅ 已複製')); }
+function copyText(text, label) { navigator.clipboard.writeText(text).then(() => toast(label || '已複製')); }
 let _lastInviteLinks = [];
-function copyAllInvites() { copyText(_lastInviteLinks.join('\n'), `✅ 已複製全部 ${_lastInviteLinks.length} 條連結`); }
+function copyAllInvites() { copyText(_lastInviteLinks.join('\n'), `已複製全部 ${_lastInviteLinks.length} 條連結`); }
 const ROLE_NAME_INV = { reader: '讀者', writer: '作家', admin: '管理員' };
 
 async function generateInvite(role) {
@@ -4078,12 +4078,12 @@ async function generateInvite(role) {
     const rows = tokens.map(t => `
       <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
         <code style="flex:1;font-size:13px;color:var(--ink);background:var(--parchment);border:1px solid var(--gold-lt);border-radius:4px;padding:6px 8px;word-break:break-all">${t}</code>
-        <button onclick="copyText('${inviteLink(t)}', '✅ 已複製（${t}）')" style="padding:6px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;white-space:nowrap">複製</button>
+        <button onclick="copyText('${inviteLink(t)}', '已複製（${t}）')" style="padding:6px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;white-space:nowrap">複製</button>
       </div>`).join('');
     const all = tokens.length > 1 ? `<button onclick="copyAllInvites()" style="margin-top:10px;width:100%;padding:9px;background:var(--scarlet);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px">複製全部 ${tokens.length} 條</button>` : '';
     box.innerHTML = `<div style="font-size:12px;color:var(--accent);margin-bottom:2px">已產生 ${tokens.length} 個${ROLE_NAME_INV[role] || ''}邀請（3 天有效、各用一次）</div>${rows}${all}`;
     loadInviteList();
-  } catch (e) { toast('⚠️ ' + e.message); }
+  } catch (e) { toast('' + e.message); }
 }
 
 async function loadInviteList() {
@@ -4106,7 +4106,7 @@ async function loadInviteList() {
         </div>
         <div style="display:flex;align-items:center;gap:6px">
           <code style="font-size:13px;color:${dim ? '#aaa' : 'var(--ink)'};word-break:break-all;flex:1">${inv.token}</code>
-          ${!used && !expired ? `<button onclick="copyText('${inviteLink(inv.token)}', '✅ 已複製（${inv.token}）')" style="font-size:12px;padding:3px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap">複製</button>` : ''}
+          ${!used && !expired ? `<button onclick="copyText('${inviteLink(inv.token)}', '已複製（${inv.token}）')" style="font-size:12px;padding:3px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap">複製</button>` : ''}
           ${!used ? `<button onclick="revokeInvite('${inv.id}')" style="font-size:12px;padding:3px 8px;background:none;border:1px solid #ccc;border-radius:3px;cursor:pointer;white-space:nowrap">撤銷</button>` : ''}
         </div>
       </div>`;
@@ -4175,7 +4175,7 @@ document.addEventListener('click', (e) => {
       .then(async r => {
         if (r.ok) {
           const res = await r.json();
-          const roleLabels = { reader: '📚 讀者', writer: '✍️ 作家+讀者', admin: '🏰 管理員' };
+          const roleLabels = { reader: '讀者', writer: '作家+讀者', admin: '管理員' };
           document.getElementById('invite-role-badge').innerHTML = `身份：${roleBadge(res.role, 13)}`;
         } else {
           // server explicitly rejected the token (used/expired/unknown) → show invalid
