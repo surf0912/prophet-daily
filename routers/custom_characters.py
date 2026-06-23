@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
-from deps import get_supabase_admin, require_super_admin
+from deps import get_supabase_admin, require_super_admin, validate_image_data_url
 from supabase import Client
 
 # ── 自創角色 (private custom characters) — EXPERIMENTAL ─────────────────────────
@@ -24,8 +24,7 @@ class CharBody(BaseModel):
     avatar: Optional[str] = None      # base64 data URL, like profile avatars
 
 def _check_avatar(av):
-    if av and len(av) > MAX_AVATAR:
-        raise HTTPException(400, "頭像檔案太大，請換小一點的圖")
+    return validate_image_data_url(av, MAX_AVATAR)
 
 @router.get("/")
 def my_chars(user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
@@ -37,9 +36,9 @@ def add_char(body: CharBody, user: dict = Depends(require_super_admin), sb: Clie
     name = (body.name or "").strip()[:20]
     if not name:
         raise HTTPException(400, "角色名稱不能空白")
-    _check_avatar(body.avatar)
+    avatar = _check_avatar(body.avatar)
     rows = sb.table("custom_characters").insert({
-        "user_id": user["id"], "name": name, "avatar": body.avatar or None,
+        "user_id": user["id"], "name": name, "avatar": avatar or None,
     }).execute().data
     return rows[0] if rows else {}
 
@@ -49,8 +48,7 @@ def edit_char(char_id: str, body: CharBody, user: dict = Depends(require_super_a
     if body.name is not None and body.name.strip():
         upd["name"] = body.name.strip()[:20]
     if body.avatar is not None:
-        _check_avatar(body.avatar)
-        upd["avatar"] = body.avatar or None
+        upd["avatar"] = _check_avatar(body.avatar) or None
     if not upd:
         raise HTTPException(400, "沒有要更新的內容")
     # user_id filter keeps it own-only even though the route is super_admin-gated.

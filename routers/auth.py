@@ -4,7 +4,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from config import settings
-from deps import get_supabase, get_supabase_admin, get_current_user, ROLE_RANK, invalidate_profile
+from deps import get_supabase, get_supabase_admin, get_current_user, ROLE_RANK, invalidate_profile, validate_image_data_url
 from supabase import Client
 from guide_content import GUIDE_TITLE, GUIDE_AUTHOR, GUIDE_BODY
 
@@ -246,11 +246,7 @@ class AvatarBody(BaseModel):
 
 @router.patch("/me/avatar")
 def update_avatar(body: AvatarBody, user: dict = Depends(get_current_user), sb_admin: Client = Depends(get_supabase_admin)):
-    av = (body.avatar or "").strip()
-    if av and not av.startswith("data:image/"):
-        raise HTTPException(400, "頭像格式不正確")
-    if len(av) > 200_000:  # ~200KB ceiling; the client resizes to ~15KB
-        raise HTTPException(400, "頭像檔案太大，請換小一點的圖")
+    av = validate_image_data_url(body.avatar, 200_000)  # client normally sends ~15KB JPEG
     res = sb_admin.table("profiles").update({"avatar_url": av or None}).eq("id", user["id"]).execute()
     if not res.data:
         raise HTTPException(404, "User not found")

@@ -2,12 +2,44 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from config import settings
 from supabase import create_client, Client
-import jwt, time
+import base64, binascii, jwt, re, time
 from jwt import PyJWKClient
 
 bearer = HTTPBearer()
 
 ROLE_RANK = {'super_admin': 4, 'admin': 3, 'writer': 2, 'reader': 1}
+
+_IMAGE_DATA_RE = re.compile(r"^data:image/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$")
+
+def validate_image_data_url(value: str, max_chars: int) -> str:
+    """Accept only real base64 JPEG/PNG/WebP data URLs.
+
+    A prefix-only `data:image/` check is unsafe because the value is later rendered inside
+    HTML/CSS. Restricting the MIME type, alphabet, padding, and file signature prevents a
+    crafted avatar from breaking out of an attribute and becoming stored XSS. SVG is
+    deliberately excluded because it can contain active content.
+    """
+    value = (value or "").strip()
+    if not value:
+        return ""
+    if len(value) > max_chars:
+        raise HTTPException(400, "頭像檔案太大，請換小一點的圖")
+    match = _IMAGE_DATA_RE.fullmatch(value)
+    if not match:
+        raise HTTPException(400, "頭像格式不正確，請使用 JPEG、PNG 或 WebP")
+    kind, payload = match.groups()
+    try:
+        raw = base64.b64decode(payload, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(400, "頭像資料損毀")
+    valid_signature = (
+        (kind == "jpeg" and raw.startswith(b"\xff\xd8\xff"))
+        or (kind == "png" and raw.startswith(b"\x89PNG\r\n\x1a\n"))
+        or (kind == "webp" and len(raw) >= 12 and raw[:4] == b"RIFF" and raw[8:12] == b"WEBP")
+    )
+    if not valid_signature:
+        raise HTTPException(400, "頭像內容與圖片格式不符")
+    return value
 
 # Short-lived in-process cache of the profile row, so every authenticated request doesn't re-fetch
 # it from Supabase. Every endpoint that mutates a profile (role/ban/mqj/nickname/avatar/…) calls

@@ -1318,7 +1318,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.19';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.20';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1467,12 +1467,20 @@ function fmtDate(iso) {
 
 function initials(name) { return name ? name[0].toUpperCase() : '?'; }
 
+// Only image data URLs produced by our cropper are allowed into CSS/HTML. The backend enforces
+// the same rule; this also protects the UI if an old or manually-edited database row is unsafe.
+function safeAvatarDataUrl(value) {
+  return typeof value === 'string' && /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(value)
+    ? value : '';
+}
+
 // Round avatar: the user's uploaded photo if any, else an initial on a scarlet circle.
 function avatarHTML(u, px, extra) {
   const base = `width:${px}px;height:${px}px;border-radius:50%;flex-shrink:0;${extra || ''}`;
-  if (u && u.avatar_url) return `<div style="${base}background:url('${u.avatar_url}') center/cover no-repeat"></div>`;
+  const avatar = safeAvatarDataUrl(u && u.avatar_url);
+  if (avatar) return `<div style="${base}background-image:url(&quot;${avatar}&quot;);background-position:center;background-size:cover;background-repeat:no-repeat"></div>`;
   const name = (u && (u.nickname || u.username)) || '?';
-  return `<div style="${base}background:var(--scarlet);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:${Math.round(px * 0.44)}px">${initials(name)}</div>`;
+  return `<div style="${base}background:var(--scarlet);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:${Math.round(px * 0.44)}px">${escapeHtml(initials(name))}</div>`;
 }
 
 // Resize/center-crop an image file to a square data URL (keeps avatars tiny ~10-20KB).
@@ -2226,7 +2234,7 @@ async function loadFeedback(kind) {
   listEl.innerHTML = '<div class="spinner" style="margin:10px auto"></div>';
   let items = [];
   try { items = await api(`/feedback/?kind=${kind}`) || []; }
-  catch (e) { listEl.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${e.message}</p>`; return; }
+  catch (e) { listEl.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${escapeHtml(e.message || '')}</p>`; return; }
   // daily quota — counted on the viewer's OWN local calendar day (resets at their midnight).
   const localDay = ts => { const d = ts ? new Date(ts) : new Date(); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
   const today = localDay();
@@ -2313,7 +2321,7 @@ async function loadFaqs() {
   if (admin) addEl.innerHTML = `<button class="btn-primary" style="width:auto;padding:7px 14px;font-size:13px" onclick="addFaq()">＋ 新增問答</button>`;
   let faqs = [];
   try { faqs = await api('/feedback/faqs') || []; }
-  catch (e) { listEl.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${e.message}</p>`; return; }
+  catch (e) { listEl.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${escapeHtml(e.message || '')}</p>`; return; }
   if (!faqs.length) { listEl.innerHTML = '<p style="color:var(--ink-light);font-size:13px;text-align:center;padding:14px">尚無常見問題</p>'; return; }
   listEl.innerHTML = faqs.map(f => `
     <details style="border-bottom:1px solid rgba(26,10,0,.08);padding:8px 0">
@@ -2414,7 +2422,7 @@ function renderFilterBar(catEl, chipEl, curCat, curChars, onChange) {
      </div>`).join('') +
     // beta 自創角色：只在意若思鏡篩選列、且 isBeta() 時,接在四個角色頭像後面顯示我的自創角色 + 一顆建立鈕
     (chipEl.id === 'shelf-char-chips' && isBeta()
-      ? _customChars.map(c => `<div class="char-chip char-custom${_ccFilter === c.id ? ' cc-on' : ''}" onclick="ccTap('${c.id}')" title="單擊篩選・雙擊編輯"><div class="cc-ava"${c.avatar ? ` style="background-image:url('${c.avatar}')"` : ''}>${c.avatar ? '' : ic('ic-wand', 20)}</div><span>${escapeHtml(c.name)}</span></div>`).join('')
+      ? _customChars.map(c => { const av = safeAvatarDataUrl(c.avatar); return `<div class="char-chip char-custom${_ccFilter === c.id ? ' cc-on' : ''}" onclick="ccTap('${c.id}')" title="單擊篩選・雙擊編輯"><div class="cc-ava"${av ? ` style="background-image:url(&quot;${av}&quot;)"` : ''}>${av ? '' : ic('ic-wand', 20)}</div><span>${escapeHtml(c.name)}</span></div>`; }).join('')
         + `<div class="char-chip char-add" onclick="openCreateChar()" role="button" tabindex="0" aria-label="建立角色" title="建立自創角色"><div class="add-circle">＋</div></div>`
       : '');
   chipEl.querySelectorAll('.char-chip[data-ch]').forEach(el => el.onclick = () => officialCharTap(el.dataset.ch, onChange));
@@ -2517,7 +2525,8 @@ function ccTap(id, rerender) {
 }
 function setCcAvatarPreview(url) {
   const el = document.getElementById('cc-avatar-preview');
-  if (url) { el.style.backgroundImage = `url('${url}')`; el.innerHTML = ''; }
+  const safe = safeAvatarDataUrl(url);
+  if (safe) { el.style.backgroundImage = `url("${safe}")`; el.innerHTML = ''; }
   else { el.style.backgroundImage = 'none'; el.innerHTML = ic('ic-camera', 24); }
 }
 function openCreateChar() {
@@ -2671,10 +2680,10 @@ function shelfRow(n, inSeries) {
   return `
     <div class="novel-row${inSeries ? ' series-member' : ''}" onclick="openNovel('${n.id}')">
       <h4>${inSeries && n.series_order ? `<span style="color:var(--ink-light);font-weight:normal">#${n.series_order}　</span>` : ''}${escapeHtml(n.title)}</h4>
-      <div class="row-meta">${n.author || '佚名'}${ownerTag(n)}${n.created_at ? ` · ${ic('ic-calendar',11)} ${fmtUpdated(n.created_at)}` : ''}</div>
+      <div class="row-meta">${escapeHtml(n.author || '佚名')}${ownerTag(n)}${n.created_at ? ` · ${ic('ic-calendar',11)} ${fmtUpdated(n.created_at)}` : ''}</div>
       <div class="row-tags">
-        ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${n.category}</span>` : ''}
-        ${(n.characters || []).map(c => `<span class="t-chr">${charNames([c])}</span>`).join('')}
+        ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${escapeHtml(n.category)}</span>` : ''}
+        ${(n.characters || []).map(c => `<span class="t-chr">${escapeHtml(charNames([c]))}</span>`).join('')}
       </div>
     </div>`;
 }
@@ -2685,7 +2694,7 @@ function renderHomeNovels() {
   el.innerHTML = novels.slice(0, 3).map(n => `
     <div class="novel-card-sm" onclick="openNovel('${n.id}')">
       <div class="cover">${ic('ic-book', 40)}</div>
-      <div class="info"><h4>${n.title}</h4><p>${n.author || '佚名'}</p></div>
+      <div class="info"><h4>${escapeHtml(n.title)}</h4><p>${escapeHtml(n.author || '佚名')}</p></div>
     </div>`).join('');
 }
 
@@ -2909,7 +2918,7 @@ function renderForumContent(content) {
 
 function renderToc() {
   document.getElementById('reader-toc').innerHTML = currentChapters.map((c, i) =>
-    `<li class="${i === currentChapterIdx ? 'current' : ''}" onclick="loadChapter(${i});document.querySelector('#reader-view details').removeAttribute('open')">${c.chapter_num}. ${c.title || '章節 ' + c.chapter_num}</li>`
+    `<li class="${i === currentChapterIdx ? 'current' : ''}" onclick="loadChapter(${i});document.querySelector('#reader-view details').removeAttribute('open')">${escapeHtml(String(c.chapter_num))}. ${escapeHtml(c.title || '章節 ' + c.chapter_num)}</li>`
   ).join('');
 }
 
@@ -3183,12 +3192,12 @@ function renderForumList() {
     <div class="forum-post-row" onclick="openNovel('${p.id}')">
       <h4>${escapeHtml(p.title)}</h4>
       <div class="meta">
-        <span>${p.author || '匿名'}${ownerTag(p)}</span>
+        <span>${escapeHtml(p.author || '匿名')}${ownerTag(p)}</span>
         <span>${ic('ic-calendar',11)} ${fmtUpdated(p.created_at)}</span>
         ${p.liked_count ? `<span style="color:var(--accent)">${ic('ic-feather', 11)} 收藏了 ${p.liked_count} 則</span>` : ''}
         ${p.status === 'pending' ? '<span class="pending-tag">' + ic('ic-clock',11) + ' 待審核</span>' : ''}
       </div>
-      ${(p.characters || []).length ? `<div class="row-tags" style="margin-top:7px">${(p.characters || []).map(c => `<span class="t-chr">${charNames([c])}</span>`).join('')}</div>` : ''}
+      ${(p.characters || []).length ? `<div class="row-tags" style="margin-top:7px">${(p.characters || []).map(c => `<span class="t-chr">${escapeHtml(charNames([c]))}</span>`).join('')}</div>` : ''}
     </div>`).join('');
 }
 
@@ -3562,7 +3571,7 @@ async function loadReviewList() {
     const novelBody = novelsPending.map(n => `
         <div style="padding:12px 0;border-bottom:1px solid rgba(26,10,0,.1)">
           <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)}</div>
-          <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${n.kind === 'forum' ? ic('ic-scroll', 12) + ' 論壇貼文' : ic('ic-book', 12) + ' 小說'}・${n.author || '匿名'}・${fmtUpdated(n.created_at)}</div>
+          <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${n.kind === 'forum' ? ic('ic-scroll', 12) + ' 論壇貼文' : ic('ic-book', 12) + ' 小說'}・${escapeHtml(n.author || '匿名')}・${fmtUpdated(n.created_at)}</div>
           <div style="display:flex;gap:8px;margin-top:8px">
             <button onclick="openNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">預覽</button>
             <button onclick="approveNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:#2d4a1e;border:none;color:#fff;border-radius:3px;cursor:pointer">${ic('ic-check',12)} 通過</button>
@@ -3637,7 +3646,7 @@ async function loadAdminNovelList() {
         head += `<div style="display:flex;align-items:center;gap:10px;margin-top:8px;padding:8px 0;border-top:1px solid rgba(26,10,0,.08)">
           <span style="font-size:13px;color:var(--ink-light)">${ic('ic-wine',13)} 迷情劑閱讀權${statusLabel}</span>
           <label class="toggle green" style="flex-shrink:0">
-            <input type="checkbox" ${approved ? 'checked' : ''} onchange="setMqjAccess('${sc.id}','${escapeHtml(sc.name)}',this.checked)" />
+            <input type="checkbox" ${approved ? 'checked' : ''} onchange="setMqjAccess('${sc.id}',this.checked)" />
             <span class="slider"></span>
           </label>
         </div>`;
@@ -3646,16 +3655,16 @@ async function loadAdminNovelList() {
         head += `<div style="display:flex;align-items:center;gap:10px;margin-top:8px;padding:8px 0;border-top:1px solid rgba(26,10,0,.08)">
           <span style="font-size:13px;color:var(--ink-light)">${ic('ic-check',13)} 自動審核<span style="opacity:.7">（開啟後此作家發文免審核、直接公開）</span></span>
           <label class="toggle green" style="flex-shrink:0">
-            <input type="checkbox" ${sc.auto ? 'checked' : ''} onchange="setAutoPublish('${sc.id}','${escapeHtml(sc.name)}',this.checked)" />
+            <input type="checkbox" ${sc.auto ? 'checked' : ''} onchange="setAutoPublish('${sc.id}',this.checked)" />
             <span class="slider"></span>
           </label>
         </div>`;
       }
       if (currentUser.role === 'super_admin' && sc.id !== currentUser.id) {
         head += `<div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(26,10,0,.08);flex-wrap:wrap">
-          <button onclick='resetPassword(${JSON.stringify(sc.id)}, ${JSON.stringify(sc.name)})' style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-key',12)} 重設密碼</button>
-          <button onclick='banUser(${JSON.stringify(sc.id)}, ${JSON.stringify(sc.name)}, ${sc.banned ? 1 : 0})' style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${sc.banned ? ic('ic-check',12)+' 解除封禁' : ic('ic-ban',12)+' 封禁'}</button>
-          <button onclick='deleteUser(${JSON.stringify(sc.id)}, ${JSON.stringify(sc.name)})' style="font-size:12px;padding:4px 12px;background:var(--scarlet);border:none;color:var(--on-dark);border-radius:3px;cursor:pointer">${ic('ic-trash',12)} 刪除帳號</button>
+          <button onclick="resetPassword('${sc.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-key',12)} 重設密碼</button>
+          <button onclick="banUser('${sc.id}', ${sc.banned ? 1 : 0})" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${sc.banned ? ic('ic-check',12)+' 解除封禁' : ic('ic-ban',12)+' 封禁'}</button>
+          <button onclick="deleteUser('${sc.id}')" style="font-size:12px;padding:4px 12px;background:var(--scarlet);border:none;color:var(--on-dark);border-radius:3px;cursor:pointer">${ic('ic-trash',12)} 刪除帳號</button>
         </div>
         <div style="font-size:12px;color:var(--ink-light);margin-top:8px">${ic('ic-shield',12)} 水印碼 <code style="font-size:12px;color:var(--ink)">${wmCode(sc.id)}</code><span style="opacity:.7"> — 迷情劑外流截圖上的代碼對得上此人</span></div>`;
       }
@@ -3699,7 +3708,7 @@ function renderAdminFilterBar(ns) {
   chipEl.innerHTML = CHAR_LIST.map(ch =>
     `<div class="char-chip ${adminChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}"><img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span></div>`).join('')
     // beta：官方角色之後接自創角色(單擊篩選・雙擊編輯)，與意若思鏡一致
-    + (isBeta() ? _customChars.map(c => `<div class="char-chip char-custom${_ccFilter === c.id ? ' cc-on' : ''}" onclick="ccTap('${c.id}', renderAdminNovels)" title="單擊篩選・雙擊編輯"><div class="cc-ava"${c.avatar ? ` style="background-image:url('${c.avatar}')"` : ''}>${c.avatar ? '' : ic('ic-wand', 20)}</div><span>${escapeHtml(c.name)}</span></div>`).join('') : '');
+    + (isBeta() ? _customChars.map(c => { const av = safeAvatarDataUrl(c.avatar); return `<div class="char-chip char-custom${_ccFilter === c.id ? ' cc-on' : ''}" onclick="ccTap('${c.id}', renderAdminNovels)" title="單擊篩選・雙擊編輯"><div class="cc-ava"${av ? ` style="background-image:url(&quot;${av}&quot;)"` : ''}>${av ? '' : ic('ic-wand', 20)}</div><span>${escapeHtml(c.name)}</span></div>`; }).join('') : '');
   chipEl.querySelectorAll('.char-chip[data-ch]').forEach(el => el.onclick = () => {
     adminChars = adminChars.includes(el.dataset.ch) ? adminChars.filter(c => c !== el.dataset.ch) : [...adminChars, el.dataset.ch];
     renderAdminNovels();
@@ -3724,15 +3733,15 @@ function renderAdminNovels() {
       // Owners manage their own works (mine view) — admins also in the scoped member view.
       const canManage = isAdmin || !adminNovelScope;
       const manageBtns = canManage ? `
-          <button onclick='openEditClass(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.kind)}, ${JSON.stringify(n.category || "")}, ${JSON.stringify(n.characters || [])})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-tag',12)} 分類</button>
-          <button onclick='openSeries(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.series || "")}, ${n.series_order || 0})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--series);color:var(--series);border-radius:3px;cursor:pointer">${ic('ic-link',12)} 系列</button>` : '';
+          <button onclick="openEditClass('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-tag',12)} 分類</button>
+          <button onclick="openSeries('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--series);color:var(--series);border-radius:3px;cursor:pointer">${ic('ic-link',12)} 系列</button>` : '';
       const ownerAssignBtn = isAdmin ? `
-          <button onclick='openOwners(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.owners || [])})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-users',12)} 作者</button>` : '';
+          <button onclick="openOwners('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-users',12)} 作者</button>` : '';
       const delBtn = canManage ? `
           <button onclick="deleteNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-trash',12)} 刪除</button>` : '';
       // 鎖上：作者本人(owner)或超管才有；鎖住後其他人完全看不到這篇存在。
       const canLock = !adminNovelScope || currentUser.role === 'super_admin';
-      const lockBtn = canLock ? `<button onclick='toggleLock(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${!n.locked})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid ${n.locked ? 'var(--series)' : 'var(--accent)'};color:${n.locked ? 'var(--series)' : 'var(--accent)'};border-radius:3px;cursor:pointer">${ic('ic-key',12)} ${n.locked ? '解鎖' : '鎖上'}</button>` : '';
+      const lockBtn = canLock ? `<button onclick="toggleLock('${n.id}', ${!n.locked})" style="font-size:12px;padding:3px 10px;background:none;border:1px solid ${n.locked ? 'var(--series)' : 'var(--accent)'};color:${n.locked ? 'var(--series)' : 'var(--accent)'};border-radius:3px;cursor:pointer">${ic('ic-key',12)} ${n.locked ? '解鎖' : '鎖上'}</button>` : '';
       return `
       <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
         <div style="margin-bottom:3px;display:flex;gap:5px;flex-wrap:wrap">${n.kind === 'forum'
@@ -3741,10 +3750,10 @@ function renderAdminNovels() {
         <div onclick="openNovel('${n.id}')" style="font-size:14px;font-weight:bold;cursor:pointer">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
           ${n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : ''}
-          ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${n.category}</span>` : ''}
-          ${(n.characters || []).map(c => `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.18);color:var(--ink-light)">${charNames([c])}</span>`).join('')}
+          ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${escapeHtml(n.category)}</span>` : ''}
+          ${(n.characters || []).map(c => `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.18);color:var(--ink-light)">${escapeHtml(charNames([c]))}</span>`).join('')}
         </div>
-        <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${n.author || '佚名'}${ownerTag(n)}</div>
+        <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${escapeHtml(n.author || '佚名')}${ownerTag(n)}</div>
         ${n.created_at ? `<div style="font-size:12px;color:var(--ink-light);margin-top:2px">${ic('ic-calendar',11)} 發佈日期 ${fmtUpdated(n.created_at)}</div>` : ''}
         <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${editBtn}${manageBtns}${ownerAssignBtn}${lockBtn}${delBtn}</div>
       </div>`;
@@ -3752,7 +3761,10 @@ function renderAdminNovels() {
 }
 
 // 作者把自己的作品鎖上：鎖住後除了作者本人和超管,其他人完全看不到這篇存在。
-async function toggleLock(id, title, locked) {
+function adminWorkById(id) { return (window._adminNovels || []).find(n => n.id === id) || {}; }
+
+async function toggleLock(id, locked) {
+  const title = adminWorkById(id).title || '這篇作品';
   const msg = locked
     ? `把《${title}》鎖上？\n\n鎖住後,除了你和超級管理員,其他人都看不到這篇存在（書架、搜尋、連結全都不顯示）。`
     : `解鎖《${title}》？解鎖後恢復原本的公開狀態。`;
@@ -3766,7 +3778,10 @@ async function toggleLock(id, title, locked) {
 
 let ownersNovelId = null;
 
-async function openOwners(novelId, title, owners) {
+async function openOwners(novelId) {
+  const work = adminWorkById(novelId);
+  const title = work.title || '';
+  const owners = work.owners || [];
   ownersNovelId = novelId;
   document.getElementById('transfer-novel-title').textContent = title || '';
   document.getElementById('transfer-modal').classList.add('open');
@@ -3800,7 +3815,11 @@ async function saveOwners() {
 
 let seriesNovelId = null;
 
-function openSeries(novelId, title, series, order) {
+function openSeries(novelId) {
+  const work = adminWorkById(novelId);
+  const title = work.title || '';
+  const series = work.series || '';
+  const order = work.series_order || 0;
   seriesNovelId = novelId;
   document.getElementById('series-novel-title').textContent = title || '';
   document.getElementById('series-name-input').value = series || '';
@@ -3824,7 +3843,12 @@ async function saveSeries() {
 
 let editClassNovelId = null;
 
-function openEditClass(id, title, kind, category, characters) {
+function openEditClass(id) {
+  const work = adminWorkById(id);
+  const title = work.title || '';
+  const kind = work.kind || 'novel';
+  const category = work.category || '';
+  const characters = work.characters || [];
   editClassNovelId = id;
   document.getElementById('editclass-novel-title').textContent = title || '';
   const sel = document.getElementById('editclass-category');
@@ -4020,7 +4044,7 @@ function renderUserRows(q) {
       const display = u.nickname || u.username;
       const isSelf = u.id === currentUser.id;
       const picker = (isSuper && !isSelf)
-        ? `<select onchange="changeUserRole('${u.id}','${u.username}',this.value)" style="font-size:12px;padding:4px 6px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink)">
+        ? `<select onchange="changeUserRole('${u.id}',this.value)" style="font-size:12px;padding:4px 6px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink)">
              ${ROLES.map(([v,l]) => `<option value="${v}" ${u.role===v?'selected':''}>${l}</option>`).join('')}
            </select>`
         : `<div class="u-role">${u.role}${isSelf ? '（你）' : ''}</div>`;
@@ -4030,7 +4054,7 @@ function renderUserRows(q) {
       const seen = `<div style="font-size:11px;color:var(--ink-light);font-weight:normal;opacity:.8">${lastSeenLabel(u)}</div>`;
       // In an inactivity view, super_admin gets an inline 刪除 for quick manual cleanup (never automatic).
       const delBtn = (isSuper && !isSelf && userActivityFilter)
-        ? `<button class="uf-del" onclick='deleteUser(${JSON.stringify(u.id)}, ${JSON.stringify(display)})'>${ic('ic-trash', 11)} 刪除</button>`
+        ? `<button class="uf-del" onclick="deleteUser('${u.id}')">${ic('ic-trash', 11)} 刪除</button>`
         : '';
       // Destructive actions (重設密碼/封禁/刪除) live inside the member's detail page too —
       // tap the row to enter — so scrolling the list can't mis-fire them.
@@ -4052,7 +4076,17 @@ function viewUserNovels(id) {
   switchAdminTab('novels');
 }
 
-async function changeUserRole(userId, username, role) {
+function adminUserById(id) {
+  return (window._adminUsers || []).find(u => u.id === id)
+    || (adminNovelScope && adminNovelScope.id === id ? adminNovelScope : {}) || {};
+}
+function adminUserName(id) {
+  const u = adminUserById(id);
+  return u.nickname || u.name || u.username || '此成員';
+}
+
+async function changeUserRole(userId, role) {
+  const username = adminUserName(userId);
   if (!confirm(`確定把「${username}」的角色改成 ${role}？`)) { loadAdminUsers(); return; }
   try {
     await api(`/permissions/users/${userId}/role`, { method: 'PATCH', body: JSON.stringify({ role }) });
@@ -4061,7 +4095,8 @@ async function changeUserRole(userId, username, role) {
   } catch (e) { toast(e.message); loadAdminUsers(); }
 }
 
-async function resetPassword(id, name) {
+async function resetPassword(id) {
+  const name = adminUserName(id);
   const pw = prompt(`為「${name}」設定新的通關密語(至少 6 字)。\n設定後請私下告訴對方,讓他用這組登入:`);
   if (pw === null) return;
   if (pw.trim().length < 6) { toast('通關密語至少 6 字'); return; }
@@ -4071,7 +4106,8 @@ async function resetPassword(id, name) {
   } catch (e) { toast('' + e.message); }
 }
 
-async function banUser(id, name, isBanned) {
+async function banUser(id, isBanned) {
+  const name = adminUserName(id);
   const ban = !isBanned;
   if (!confirm(ban ? `確定封禁「${name}」？\n對方將無法登入或使用本站，可隨時解除。` : `解除「${name}」的封禁？`)) return;
   try {
@@ -4082,7 +4118,8 @@ async function banUser(id, name, isBanned) {
   } catch (e) { toast(e.message); }
 }
 
-async function deleteUser(id, name) {
+async function deleteUser(id) {
+  const name = adminUserName(id);
   if (!confirm(`永久刪除「${name}」的帳號？\n此操作無法復原（帳號會被移除，作品內容會保留）。`)) return;
   if (!confirm(`再次確認：真的要刪除「${name}」嗎？`)) return;
   try {
@@ -4093,7 +4130,8 @@ async function deleteUser(id, name) {
   } catch (e) { toast(e.message); }
 }
 
-async function setMqjAccess(userId, username, on) {
+async function setMqjAccess(userId, on) {
+  const username = adminUserName(userId);
   const access = on ? 'approved' : 'none';
   // The toggle now lives inside the member-detail view (scoped 作品管理).
   const refresh = () => { if (adminNovelScope) { adminNovelScope.mqj = access; loadAdminNovelList(); } else loadAdminUsers(); };
@@ -4104,7 +4142,8 @@ async function setMqjAccess(userId, username, on) {
   } catch (e) { toast(e.message); refresh(); }
 }
 
-async function setAutoPublish(userId, username, on) {
+async function setAutoPublish(userId, on) {
+  const username = adminUserName(userId);
   const refresh = () => { if (adminNovelScope) { adminNovelScope.auto = on; loadAdminNovelList(); } else loadAdminUsers(); };
   try {
     await api(`/permissions/users/${userId}/auto-publish`, { method: 'PATCH', body: JSON.stringify({ auto_publish: on }) });
@@ -4126,7 +4165,7 @@ async function openPerm(userId, username) {
     const grantedIds = new Set((userPerms || []).map(p => p.novel_id));
     el.innerHTML = (allNovels || []).map(n => `
       <div class="perm-novel-row">
-        <label>${n.title}</label>
+        <label>${escapeHtml(n.title)}</label>
         <label class="toggle">
           <input type="checkbox" ${grantedIds.has(n.id) ? 'checked' : ''} onchange="togglePerm('${userId}','${n.id}',this.checked)" />
           <span class="slider"></span>
@@ -4151,9 +4190,10 @@ const ROLE_LABEL = { super_admin: '最高管理員', admin: '管理員', writer:
 function renderSettings() {
   const nick = currentUser.nickname || currentUser.username || '巫師';
   const av = document.getElementById('settings-avatar');
-  if (currentUser.avatar_url) {
+  const avatar = safeAvatarDataUrl(currentUser.avatar_url);
+  if (avatar) {
     av.textContent = '';
-    av.style.background = `url('${currentUser.avatar_url}') center/cover no-repeat`;
+    av.style.background = `url("${avatar}") center/cover no-repeat`;
   } else {
     av.style.background = 'var(--scarlet)';
     av.textContent = nick[0].toUpperCase();
