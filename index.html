@@ -1270,7 +1270,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.98';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v1.99';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3553,9 +3553,9 @@ function renderAdminNovels() {
           <button onclick='openOwners(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${JSON.stringify(n.owners || [])})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-users',12)} 作者</button>` : '';
       const delBtn = canManage ? `
           <button onclick="deleteNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-trash',12)} 刪除</button>` : '';
-      // 鎖起來：作者本人(owner)或超管才有；鎖住後其他人完全看不到這篇存在。
+      // 鎖上：作者本人(owner)或超管才有；鎖住後其他人完全看不到這篇存在。
       const canLock = !adminNovelScope || currentUser.role === 'super_admin';
-      const lockBtn = canLock ? `<button onclick='toggleLock(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${!n.locked})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid ${n.locked ? 'var(--series)' : 'var(--accent)'};color:${n.locked ? 'var(--series)' : 'var(--accent)'};border-radius:3px;cursor:pointer">${n.locked ? '🔓 解鎖' : '🔒 鎖起來'}</button>` : '';
+      const lockBtn = canLock ? `<button onclick='toggleLock(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${!n.locked})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid ${n.locked ? 'var(--series)' : 'var(--accent)'};color:${n.locked ? 'var(--series)' : 'var(--accent)'};border-radius:3px;cursor:pointer">${n.locked ? '🔓 解鎖' : '🔒 鎖上'}</button>` : '';
       return `
       <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
         <div style="margin-bottom:3px;display:flex;gap:5px;flex-wrap:wrap">${n.kind === 'forum'
@@ -3574,15 +3574,15 @@ function renderAdminNovels() {
     }).join('') || `<p style="color:#888;padding:14px;text-align:center">${ns.length ? '此篩選沒有作品' : '尚無作品'}</p>`;
 }
 
-// 作者把自己的作品鎖起來：鎖住後除了作者本人和超管,其他人完全看不到這篇存在。
+// 作者把自己的作品鎖上：鎖住後除了作者本人和超管,其他人完全看不到這篇存在。
 async function toggleLock(id, title, locked) {
   const msg = locked
-    ? `把《${title}》鎖起來？\n\n鎖住後,除了你和超級管理員,其他人都看不到這篇存在（書架、搜尋、連結全都不顯示）。`
+    ? `把《${title}》鎖上？\n\n鎖住後,除了你和超級管理員,其他人都看不到這篇存在（書架、搜尋、連結全都不顯示）。`
     : `解鎖《${title}》？解鎖後恢復原本的公開狀態。`;
   if (!confirm(msg)) return;
   try {
     await api(`/novels/${id}/lock`, { method: 'PATCH', body: JSON.stringify({ locked }) });
-    toast(locked ? '🔒 已鎖起來' : '🔓 已解鎖');
+    toast(locked ? '🔒 已鎖上' : '🔓 已解鎖');
     loadAdminNovelList();
   } catch (e) { toast('⚠️ ' + e.message); }
 }
