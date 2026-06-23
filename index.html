@@ -271,6 +271,9 @@
       width: 44px; height: 44px; border-radius: 50%; background-size: cover; background-position: center;
       border: 2px solid var(--gold-lt); display: flex; align-items: center; justify-content: center; color: var(--ink-light);
     }
+    .char-chip.char-custom.cc-on .cc-ava { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,168,76,.35); }
+    .cc-pick { border: 1px solid var(--gold-lt); background: none; color: var(--ink-light); border-radius: 14px; padding: 5px 12px; font-size: 13px; cursor: pointer; }
+    .cc-pick.on { background: var(--gold); color: #fff; border-color: var(--gold); }
     .char-and-btn { display: inline-flex; align-items: center; gap: 3px; padding: 2px 9px; border-radius: 14px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); font-size: 12px; letter-spacing: 0; cursor: pointer; white-space: nowrap; }
     .char-and-btn.on { background: var(--scarlet); color: var(--on-dark); border-color: var(--scarlet); }
     .uf-chip { font-size: 11px; padding: 4px 9px; border-radius: 14px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
@@ -888,6 +891,7 @@
           <div class="form-group"><label>發佈日期（選填；填未來日期＝排程，到當天才自動公開）</label><input type="date" id="new-novel-date" /></div>
           <div class="form-group"><label>故事類型</label><select id="new-novel-category"></select></div>
           <div class="form-group"><label>角色（可多選）</label><div id="new-novel-chars" class="char-picker"></div></div>
+          <div class="form-group" id="new-novel-cc-group" style="display:none"><label>自創角色（私人，只有你看得到）</label><div id="new-novel-cc" class="char-picker"></div></div>
           <div class="form-group">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
               <label style="margin:0">內文</label>
@@ -1275,7 +1279,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.07';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.08';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2295,7 +2299,7 @@ function renderFilterBar(catEl, chipEl, curCat, curChars, onChange) {
      </div>`).join('') +
     // beta 自創角色：只在意若思鏡篩選列、且 isBeta() 時,接在四個角色頭像後面顯示我的自創角色 + 一顆建立鈕
     (chipEl.id === 'shelf-char-chips' && isBeta()
-      ? _customChars.map(c => `<div class="char-chip char-custom" onclick="editCustomChar('${c.id}')" title="編輯角色"><div class="cc-ava"${c.avatar ? ` style="background-image:url('${c.avatar}')"` : ''}>${c.avatar ? '' : ic('ic-wand', 20)}</div><span>${escapeHtml(c.name)}</span></div>`).join('')
+      ? _customChars.map(c => `<div class="char-chip char-custom${_ccFilter === c.id ? ' cc-on' : ''}" onclick="ccTap('${c.id}')" title="單擊篩選・雙擊編輯"><div class="cc-ava"${c.avatar ? ` style="background-image:url('${c.avatar}')"` : ''}>${c.avatar ? '' : ic('ic-wand', 20)}</div><span>${escapeHtml(c.name)}</span></div>`).join('')
         + `<div class="char-chip char-add" onclick="openCreateChar()" role="button" tabindex="0" aria-label="建立角色" title="建立自創角色"><div class="add-circle">＋</div></div>`
       : '');
   chipEl.querySelectorAll('.char-chip[data-ch]').forEach(el => el.onclick = () => onChange('char', el.dataset.ch));
@@ -2376,10 +2380,21 @@ function setBetaFlag(on) {
 }
 
 // ── 自創角色 (beta) — private custom characters: name + avatar, edit/delete ────────
-let _customChars = [], _ccEditId = null, _ccAvatar = null;
+let _customChars = [], _ccEditId = null, _ccAvatar = null, _ccTags = {}, _ccFilter = '', _ccTapTimer = null;
 async function loadCustomChars() {
-  if (!isBeta()) { _customChars = []; return; }
-  try { _customChars = await api('/custom-chars/') || []; } catch (e) { _customChars = []; }
+  if (!isBeta()) { _customChars = []; _ccTags = {}; _ccFilter = ''; return; }
+  try {
+    _customChars = await api('/custom-chars/') || [];
+    const tags = await api('/custom-chars/tags') || [];
+    _ccTags = {};   // char_id -> Set(novel_id)
+    tags.forEach(t => { (_ccTags[t.char_id] = _ccTags[t.char_id] || new Set()).add(t.novel_id); });
+  } catch (e) { _customChars = []; _ccTags = {}; }
+  renderUploadCcPicker();
+}
+// 單擊 = 選取(篩選作品)；雙擊 = 打開編輯
+function ccTap(id) {
+  if (_ccTapTimer) { clearTimeout(_ccTapTimer); _ccTapTimer = null; editCustomChar(id); }
+  else { _ccTapTimer = setTimeout(() => { _ccTapTimer = null; _ccFilter = (_ccFilter === id) ? '' : id; renderShelf(); }, 260); }
 }
 function setCcAvatarPreview(url) {
   const el = document.getElementById('cc-avatar-preview');
@@ -2439,6 +2454,18 @@ async function deleteCustomChar() {
     renderShelf();
   } catch (e) { toast(e.message); }
 }
+// 後台上傳：自創角色選擇器(只在 beta 顯示),上傳時把作品歸到選中的自創角色底下
+function renderUploadCcPicker() {
+  const group = document.getElementById('new-novel-cc-group');
+  if (!group) return;
+  if (!isBeta() || !_customChars.length) { group.style.display = 'none'; return; }
+  group.style.display = '';
+  document.getElementById('new-novel-cc').innerHTML = _customChars.map(c =>
+    `<button type="button" class="cc-pick" data-cc="${c.id}" onclick="this.classList.toggle('on')">${escapeHtml(c.name)}</button>`).join('');
+}
+function readUploadCc() {
+  return [...document.querySelectorAll('#new-novel-cc .cc-pick.on')].map(b => b.dataset.cc);
+}
 // 後台上傳：讀一個 .txt 進內文框(取代原本暫不支持的圖片辨識）
 function loadTxtIntoUpload(input) {
   const f = input.files && input.files[0];
@@ -2482,6 +2509,7 @@ function renderShelf() {
     return;
   }
   let list = applyClassFilter(novels, shelfCat, shelfChars);
+  if (_ccFilter) { const s = _ccTags[_ccFilter]; list = s ? list.filter(n => s.has(n.id)) : []; }   // 自創角色篩選(私人)
   const q = (document.getElementById('shelf-search-input')?.value || '').trim().toLowerCase();
   if (q) list = list.filter(n => matchesQuery(n, q));
   // Only on the plain default view (no search, 全部, no character filter), float the 24h hot
@@ -3458,8 +3486,11 @@ async function submitNewNovel() {
       characters: readChars('new-novel-chars'),
     }) });
     await api(`/chapters/novel/${novel.id}/text`, { method: 'POST', body: JSON.stringify({ chapter_num: 1, title: null, content }) });
+    const _ccIds = readUploadCc();   // 把作品歸到選中的自創角色底下(私人)
+    if (_ccIds.length) { try { await api('/custom-chars/tag', { method: 'POST', body: JSON.stringify({ novel_id: novel.id, char_ids: _ccIds }) }); await loadCustomChars(); } catch (e) {} }
     toast(novel.status === 'pending' ? '已送出，待管理員審核' : '小說已建立');
     ['new-novel-title', 'new-novel-author', 'new-novel-date', 'new-novel-content'].forEach(id => document.getElementById(id).value = '');
+    document.querySelectorAll('#new-novel-cc .cc-pick.on').forEach(b => b.classList.remove('on'));
     resetClassPicker('new-novel-category', 'new-novel-chars');
     clearUploadDraft();
     loadNovels();

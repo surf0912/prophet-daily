@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from deps import get_supabase_admin, require_super_admin
 from supabase import Client
 
@@ -59,7 +59,34 @@ def edit_char(char_id: str, body: CharBody, user: dict = Depends(require_super_a
         raise HTTPException(404, "找不到角色")
     return rows[0]
 
+# ── work tagging: which works the user filed under each custom character (private) ─────────────
+# Stored in its OWN table custom_char_tags(user_id, char_id, novel_id) — the public novels record is
+# never touched, so no one can see another person's tags even via the raw API/DB.
+#   create table if not exists custom_char_tags (
+#     user_id uuid not null, char_id uuid not null, novel_id uuid not null,
+#     created_at timestamptz not null default now(), primary key (user_id, char_id, novel_id));
+
+class TagBody(BaseModel):
+    novel_id: str
+    char_ids: List[str] = []
+
+@router.get("/tags")
+def my_tags(user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
+    return (sb.table("custom_char_tags").select("char_id, novel_id")
+            .eq("user_id", user["id"]).execute().data or [])
+
+@router.post("/tag")
+def set_tags(body: TagBody, user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
+    """Replace which custom characters a single work is filed under (for this user)."""
+    sb.table("custom_char_tags").delete().eq("user_id", user["id"]).eq("novel_id", body.novel_id).execute()
+    ids = [c for c in dict.fromkeys(body.char_ids) if c]   # dedupe, drop blanks
+    if ids:
+        sb.table("custom_char_tags").insert(
+            [{"user_id": user["id"], "novel_id": body.novel_id, "char_id": c} for c in ids]).execute()
+    return {"ok": True}
+
 @router.delete("/{char_id}")
 def del_char(char_id: str, user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
+    sb.table("custom_char_tags").delete().eq("user_id", user["id"]).eq("char_id", char_id).execute()  # cascade its tags
     sb.table("custom_characters").delete().eq("id", char_id).eq("user_id", user["id"]).execute()
     return {"message": "deleted"}
