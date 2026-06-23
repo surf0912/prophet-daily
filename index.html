@@ -258,6 +258,14 @@
     }
     .char-chip.active img { border-color: var(--gold); }
     .char-chip span { font-size: 12px; color: var(--ink-light); }
+    .char-chip.char-add { opacity: .7; }
+    .char-chip.char-add .add-circle {
+      width: 44px; height: 44px; border-radius: 50%; border: 2px dashed var(--ink-light);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--ink-light); font-size: 26px; line-height: 1;
+    }
+    .char-chip.char-add:hover { opacity: 1; }
+    .char-chip.char-add:hover .add-circle { border-color: var(--gold); color: var(--gold); }
     .char-and-btn { display: inline-flex; align-items: center; gap: 3px; padding: 2px 9px; border-radius: 14px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); font-size: 12px; letter-spacing: 0; cursor: pointer; white-space: nowrap; }
     .char-and-btn.on { background: var(--scarlet); color: var(--on-dark); border-color: var(--scarlet); }
     .uf-chip { font-size: 11px; padding: 4px 9px; border-radius: 14px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
@@ -692,7 +700,6 @@
         <div style="display:flex;gap:6px;flex-shrink:0">
           <button id="shelf-wish-btn" onclick="openWishPool()" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-shine"/></svg> 許願池</button>
           <button id="shelf-fav-btn" onclick="toggleShelfFav()" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-circle"/></svg> 收藏夾</button>
-          <button id="shelf-bookshelf-btn" onclick="openBookshelf()" style="display:none;background:none;border:1px solid var(--series);color:var(--series);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-books"/></svg> 我的書櫃</button>
         </div>
       </div>
       <div class="forum-search">
@@ -1270,7 +1277,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v1.99';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.00';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2279,8 +2286,12 @@ function renderFilterBar(catEl, chipEl, curCat, curChars, onChange) {
   chipEl.innerHTML = CHAR_LIST.map(ch =>
     `<div class="char-chip ${curChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}">
        <img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span>
-     </div>`).join('');
-  chipEl.querySelectorAll('.char-chip').forEach(el => el.onclick = () => onChange('char', el.dataset.ch));
+     </div>`).join('') +
+    // beta「自創角色 / 我的書櫃」入口：只在意若思鏡篩選列、且 isBeta() 時,接在四個角色頭像後面
+    (chipEl.id === 'shelf-char-chips' && isBeta()
+      ? `<div class="char-chip char-add" onclick="openBookshelf()" role="button" tabindex="0" aria-label="我的書櫃（自創角色）" title="我的書櫃（自創角色）"><div class="add-circle">＋</div></div>`
+      : '');
+  chipEl.querySelectorAll('.char-chip[data-ch]').forEach(el => el.onclick = () => onChange('char', el.dataset.ch));
   mountCharAndBtn('shelf-char-and');
 }
 
@@ -2430,7 +2441,6 @@ async function deletePiece(id) {
 }
 
 function renderShelf() {
-  { const _bb = document.getElementById('shelf-bookshelf-btn'); if (_bb) _bb.style.display = isBeta() ? '' : 'none'; }
   renderFilterBar(
     document.getElementById('shelf-cat-pills'), document.getElementById('shelf-char-chips'),
     shelfCat, shelfChars, onShelfFilter);
