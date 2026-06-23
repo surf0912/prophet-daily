@@ -87,7 +87,7 @@
 
     /* ── Layout ── */
     #app { display: flex; flex-direction: column; height: 100%; overflow: hidden; width: 100%; max-width: 100%; }
-    #page-area { flex: 1; overflow-y: auto; overflow-x: hidden; overscroll-behavior-x: none; background: var(--parchment); color: var(--ink); padding-top: var(--safe-top); }
+    #page-area { flex: 1; overflow-y: auto; overflow-x: hidden; overscroll-behavior-x: none; background: var(--parchment); color: var(--ink); }
     /* 卷軸/論壇有 sticky 標題列，改由標題列自己吃掉安全區（覆蓋瀏海），容器就不再留上方留白，避免捲動內容露在標題上方 */
     #page-area:has(#page-scroll.active), #page-area:has(#page-forum.active) { padding-top: 0; }
     /* Home page is fixed-height: lock scrolling entirely (no scroll, no scrollbar) */
@@ -122,7 +122,7 @@
     .page:not(#page-home) { zoom: var(--app-zoom, 1); }
     /* No horizontal swipe on any of our own pages (the 防窺 iframe keeps its own gestures). */
     .page:not(#page-protect), .page:not(#page-protect) * { touch-action: pan-y; }
-    #page-home { display: none; flex-direction: column; padding: 0; min-height: unset; height: 100%; overflow: hidden; }
+    #page-home { display: none; flex-direction: column; padding: var(--safe-top) 0 0; min-height: unset; height: 100%; overflow: hidden; }
     #page-home.active { display: flex; }
     #page-home .greeting-hero { flex: 1; max-height: unset; aspect-ratio: unset; }
 
@@ -226,7 +226,7 @@
     .novel-card-sm .info p { font-size: 13px; color: var(--ink-light); margin-top: 2px; }
 
     /* ── Scroll (卷軸) page ── */
-    .shelf-header { position: sticky; top: 0; z-index: 6; margin-top: calc(-1 * var(--safe-top)); padding: calc(20px + var(--safe-top)) 18px 8px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
+    .shelf-header { position: sticky; top: 0; z-index: 6; padding: calc(20px + var(--safe-top)) 18px 8px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
     .shelf-header h2 { font-size: 18px; color: var(--ink); }
     /* novel list as rows (title / author / category / characters) */
     .novel-list { padding: 0; }
@@ -438,7 +438,7 @@
     .chapter-list-panel ol li.current { color: var(--accent); font-weight: bold; }
 
     /* ── Forum page ── */
-    .forum-header { position: sticky; top: 0; z-index: 6; margin-top: calc(-1 * var(--safe-top)); padding: calc(20px + var(--safe-top)) 18px 8px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
+    .forum-header { position: sticky; top: 0; z-index: 6; padding: calc(20px + var(--safe-top)) 18px 8px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
     .forum-tabs { display: flex; gap: 8px; padding: 10px 18px 0; }
     .forum-tab { padding: 5px 14px; border-radius: 16px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); font-size: 13px; cursor: pointer; }
     .forum-tab.active { background: var(--scarlet); color: var(--on-dark); border-color: var(--scarlet); }
@@ -483,11 +483,11 @@
     .btn-post { background: var(--scarlet); color: var(--on-dark); }
 
     /* ── Protect page (embeds the standalone 防窺工坊 Streamlit app) ── */
-    #page-protect { padding: 0; }
-    #protect-frame { display: block; width: 100%; height: calc(100dvh - var(--nav-h) - var(--safe-bottom)); border: 0; background: #EFE2C4; }
+    #page-protect { padding: var(--safe-top) 0 0; }
+    #protect-frame { display: block; width: 100%; height: calc(100dvh - var(--nav-h) - var(--safe-bottom) - var(--safe-top)); border: 0; background: #EFE2C4; }
 
     /* ── Settings page ── */
-    .settings-header { position: sticky; top: 0; z-index: 6; margin-top: calc(-1 * var(--safe-top)); padding: calc(20px + var(--safe-top)) 18px 8px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
+    .settings-header { position: sticky; top: 0; z-index: 6; padding: calc(20px + var(--safe-top)) 18px 8px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
     .settings-header h2 { font-size: 18px; }
     .settings-body { padding: 20px 18px; }
     .settings-section { margin-bottom: 28px; }
@@ -522,7 +522,7 @@
     .btn-logout { display: block; width: 100%; padding: 12px; background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: 3px; font-size: 14px; cursor: pointer; margin-top: 20px; }
 
     /* ── Admin page ── */
-    .admin-header { position: sticky; top: 0; z-index: 6; margin-top: calc(-1 * var(--safe-top)); padding: calc(20px + var(--safe-top)) 18px 8px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
+    .admin-header { position: sticky; top: 0; z-index: 6; padding: calc(20px + var(--safe-top)) 18px 8px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
     .admin-header h2 { font-size: 18px; }
     .admin-tabs { display: flex; border-bottom: 1px solid var(--gold-lt); background: var(--parchment2); padding: 0 5px; }
     .admin-tab { flex: 1; padding: 10px 3px; text-align: center; font-size: 12px; white-space: nowrap; cursor: pointer; border: none; background: none; color: var(--ink-light); border-bottom: 2px solid transparent; }
@@ -1315,7 +1315,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.15';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.16';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
