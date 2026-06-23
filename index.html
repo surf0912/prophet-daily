@@ -1277,7 +1277,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.00';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.01';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2353,10 +2353,10 @@ function mqjGateBody() {
 }
 
 // ── EXPERIMENTAL feature gate ──────────────────────────────────────────────
-// isBeta() = super_admin AND ?beta=1 in the URL. Frontend convenience to hide experiments;
-// the real safety line is the backend (experimental endpoints use require_super_admin).
-const _betaOn = new URLSearchParams(location.search).has('beta');
-function isBeta() { return _betaOn && !!currentUser && currentUser.role === 'super_admin'; }
+// Show experimental features to super_admin only — you're the sole super_admin, so they're
+// effectively private to you. (A ?beta=1 URL gate was too easy to forget, esp. from the PWA.)
+// The real safety line is still the backend (experimental endpoints use require_super_admin).
+function isBeta() { return !!currentUser && currentUser.role === 'super_admin'; }
 
 // ── 個人書櫃 (beta) — private per-user text shelf under self-made 角色標籤 ────────
 let _bookshelf = [], _bsCat = '', _bsTag = '';
