@@ -48,7 +48,11 @@ class AvatarValidationTests(unittest.TestCase):
 class FrontendOutputSafetyTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.html = (Path(__file__).parents[1] / "index.html").read_text(encoding="utf-8")
+        root = Path(__file__).parents[1]
+        cls.html = (root / "index.html").read_text(encoding="utf-8")
+        cls.app = (root / "app.js").read_text(encoding="utf-8")
+        cls.events = (root / "safe-events.js").read_text(encoding="utf-8")
+        cls.frontend = cls.html + "\n" + cls.app
 
     def test_known_stored_xss_sinks_stay_encoded(self):
         required = [
@@ -60,12 +64,12 @@ class FrontendOutputSafetyTests(unittest.TestCase):
         ]
         for expression in required:
             with self.subTest(expression=expression):
-                self.assertIn(expression, self.html)
+                self.assertIn(expression, self.frontend)
 
     def test_avatar_values_are_filtered_before_html_or_css(self):
-        self.assertIn("function safeAvatarDataUrl(value)", self.html)
-        self.assertNotIn("background:url('${u.avatar_url}')", self.html)
-        self.assertNotIn("background-image:url('${c.avatar}')", self.html)
+        self.assertIn("function safeAvatarDataUrl(value)", self.frontend)
+        self.assertNotIn("background:url('${u.avatar_url}')", self.frontend)
+        self.assertNotIn("background-image:url('${c.avatar}')", self.frontend)
 
     def test_user_strings_are_not_embedded_in_inline_handlers(self):
         dangerous = [
@@ -75,11 +79,43 @@ class FrontendOutputSafetyTests(unittest.TestCase):
         ]
         for expression in dangerous:
             with self.subTest(expression=expression):
-                self.assertNotIn(expression, self.html)
+                self.assertNotIn(expression, self.frontend)
+
+    def test_script_csp_has_no_inline_or_eval_escape_hatch(self):
+        csp = re.search(r'Content-Security-Policy" content="([^"]+)', self.html).group(1)
+        script_policy = next(part.strip() for part in csp.split(';')
+                             if part.strip().startswith('script-src'))
+        self.assertEqual(script_policy, "script-src 'self'")
+        self.assertNotRegex(self.frontend, r"\son(?:click|change|input|pointerdown|touchstart)=")
+        self.assertNotRegex(self.events, r"\beval\s*\(")
+        self.assertNotIn("new Function", self.events)
+
+    def test_javascript_and_styles_are_external_files(self):
+        self.assertIn('<script src="./app.js" defer></script>', self.html)
+        self.assertIn('<script src="./safe-events.js" defer></script>', self.html)
+        self.assertNotRegex(self.html, r"<script(?:\s[^>]*)?>\s*(?!</script>)")
+        self.assertIn('<link rel="stylesheet" href="./styles.css" />', self.html)
+
+    def test_every_declarative_handler_calls_an_allowlisted_action(self):
+        handlers = re.findall(
+            r'data-on(?:click|change|input|pointerdown|touchstart)="([^"]*)"',
+            self.frontend,
+        )
+        self.assertGreater(len(handlers), 100)
+        for handler in handlers:
+            if handler == "${open}":  # runtime value is viewUserNovels('<uuid>')
+                continue
+            for statement in filter(None, (part.strip() for part in handler.split(';'))):
+                if (statement == "return false" or statement.startswith("event.") or
+                        statement.startswith("this.") or statement.startswith("document.")):
+                    continue
+                call = re.match(r"^([A-Za-z_$][\w$]*)\(", statement)
+                self.assertIsNotNone(call, f"Unsupported handler statement: {statement}")
+                self.assertIn(f"'{call.group(1)}'", self.events)
 
     def test_app_and_service_worker_versions_match(self):
         worker = (Path(__file__).parents[1] / "service-worker.js").read_text(encoding="utf-8")
-        app_version = re.search(r"APP_VERSION = '(v[\d.]+)'", self.html).group(1)
+        app_version = re.search(r"APP_VERSION = '(v[\d.]+)'", self.app).group(1)
         cache_version = re.search(r"prophet-daily-(v[\d.]+)", worker).group(1)
         self.assertEqual(app_version, cache_version)
 

@@ -1,5 +1,8 @@
-const CACHE_NAME = 'prophet-daily-v2.23';
+const CACHE_NAME = 'prophet-daily-v2.24';
 const ASSETS = [
+  './styles.css',
+  './app.js',
+  './safe-events.js',
   './manifest.json',
   './favicon.png',
   './apple-touch-icon.png',
