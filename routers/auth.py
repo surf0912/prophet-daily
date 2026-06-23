@@ -1,5 +1,6 @@
 import time
 import httpx
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from config import settings
@@ -202,6 +203,21 @@ def set_tour_seen(body: TourSeenBody, user: dict = Depends(get_current_user), sb
         raise HTTPException(404, "User not found")
     invalidate_profile(user["id"])
     return {"tour_seen": body.version}
+
+class HomeCharsBody(BaseModel):
+    chars: List[str] = []
+
+@router.patch("/me/home-chars")
+def set_home_chars(body: HomeCharsBody, user: dict = Depends(get_current_user), sb_admin: Client = Depends(get_supabase_admin)):
+    # Which official characters the user wants in the 心動 cover random pool. Empty = all (full random).
+    # Cross-device preference; requires a profiles.home_chars text column. Stored comma-joined codes.
+    codes = [c.strip()[:20] for c in (body.chars or []) if c and c.strip()][:8]
+    val = ",".join(dict.fromkeys(codes))   # dedupe, preserve order
+    res = sb_admin.table("profiles").update({"home_chars": val}).eq("id", user["id"]).execute()
+    if not res.data:
+        raise HTTPException(404, "User not found")
+    invalidate_profile(user["id"])
+    return {"home_chars": val}
 
 class ChangePwBody(BaseModel):
     current: str

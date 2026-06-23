@@ -280,6 +280,25 @@
     .char-chip.char-custom.cc-on .cc-ava { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,168,76,.35); }
     .cc-pick { border: 1px solid var(--gold-lt); background: none; color: var(--ink-light); border-radius: 14px; padding: 5px 12px; font-size: 13px; cursor: pointer; }
     .cc-pick.on { background: var(--gold); color: #fff; border-color: var(--gold); }
+    /* 心動封面愛心 + 角色設定頁 (beta) */
+    .hero-heart { position: absolute; right: 16px; bottom: 16px; z-index: 4; width: 48px; height: 48px; border: none; border-radius: 50%; background: rgba(20,8,0,.32); color: #ff5d72; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); animation: heartbeat 1.5s ease-in-out infinite; }
+    .hero-heart:active { transform: scale(.92); }
+    @keyframes heartbeat { 0%,100% { transform: scale(1); } 12% { transform: scale(1.22); } 26% { transform: scale(1); } 40% { transform: scale(1.12); } 54% { transform: scale(1); } }
+    @media (prefers-reduced-motion: reduce) { .hero-heart { animation: none; } }
+    .char-profile-overlay { position: fixed; inset: 0; z-index: 60; background: var(--parchment); color: var(--ink); display: flex; flex-direction: column; transform: translateX(100%); transition: transform .25s ease; visibility: hidden; }
+    .char-profile-overlay.open { transform: translateX(0); visibility: visible; }
+    .cp-header { display: flex; align-items: center; gap: 10px; padding: calc(12px + var(--safe-top)) 16px 12px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); flex-shrink: 0; }
+    .cp-back { background: none; border: none; color: var(--accent); font-size: 24px; line-height: 1; cursor: pointer; padding: 0 4px; }
+    .cp-header h2 { font-size: 18px; color: var(--ink); margin: 0; }
+    .cp-body { flex: 1; overflow-y: auto; padding: 16px 18px calc(28px + var(--safe-bottom)); }
+    .cp-gallery { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 18px; }
+    .cp-shot { flex: 0 0 auto; width: 150px; height: 200px; border-radius: 12px; background-size: cover; background-position: center; border: 1px solid var(--gold-lt); }
+    .cp-section { margin-bottom: 22px; }
+    .cp-section h3 { font-size: 15px; color: var(--accent); margin-bottom: 8px; }
+    .cp-bio { font-size: 14px; line-height: 1.7; color: var(--ink); white-space: pre-wrap; }
+    .cp-hint { font-size: 12px; color: var(--ink-light); margin-bottom: 8px; }
+    .cp-pick { display: flex; flex-wrap: wrap; gap: 8px; }
+    .cp-work { display: block; padding: 11px 14px; margin-bottom: 8px; background: var(--parchment2); border: 1px solid var(--gold-lt); border-radius: 10px; color: var(--ink); font-size: 14px; text-decoration: none; }
     .char-and-btn { display: inline-flex; align-items: center; gap: 3px; padding: 2px 9px; border-radius: 14px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); font-size: 12px; letter-spacing: 0; cursor: pointer; white-space: nowrap; }
     .char-and-btn.on { background: var(--scarlet); color: var(--on-dark); border-color: var(--scarlet); }
     .uf-chip { font-size: 11px; padding: 4px 9px; border-radius: 14px; border: 1px solid var(--gold-lt); background: var(--parchment); color: var(--ink-light); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
@@ -683,6 +702,7 @@
         <div class="char-emoji" id="char-emoji"></div>
         <h2 id="greeting-line" style="display:none"></h2>
         <p id="greeting-quote" style="display:none"></p>
+        <button id="hero-heart" class="hero-heart" onclick="openCharProfileFromHome()" aria-label="角色設定" style="display:none"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M12 20.7l-1.45-1.32C5.4 14.74 2 11.66 2 7.9 2 5.1 4.2 3 7 3c1.6 0 3.14.74 4.13 1.9L12 5.9l.87-1C13.86 3.74 15.4 3 17 3c2.8 0 5 2.1 5 4.9 0 3.76-3.4 6.84-8.55 11.49L12 20.7z" fill="currentColor"/></svg></button>
       </div>
       <div class="greeting-text">
         <h2 id="greeting-line-text">歡迎回來，巫師</h2>
@@ -1027,6 +1047,15 @@
   </div>
 </div>
 
+<!-- 角色設定頁 (beta) — 官方角色頭像雙擊 / 封面愛心進入 -->
+<div id="char-profile" class="char-profile-overlay">
+  <div class="cp-header">
+    <button class="cp-back" onclick="closeCharProfile()" aria-label="返回">&#8592;</button>
+    <h2 id="cp-name"></h2>
+  </div>
+  <div class="cp-body" id="cp-body"></div>
+</div>
+
 <!-- 自創角色 modal (beta, super_admin only) -->
 <div class="perm-modal" id="custom-char-modal">
   <div class="perm-modal-inner">
@@ -1267,7 +1296,7 @@
   document.addEventListener('touchend', function (e) {
     const t = e.target;
     // .char-custom needs its real double-tap (= edit character); don't swallow the 2nd tap there.
-    if (t && (t.closest('input, textarea, select, [contenteditable], .char-custom'))) { lastTap = 0; return; }
+    if (t && (t.closest('input, textarea, select, [contenteditable], .char-custom, .char-chip'))) { lastTap = 0; return; }
     const now = Date.now();
     if (now - lastTap <= 350) e.preventDefault();   // cancels the zoom gesture on the 2nd tap
     lastTap = now;
@@ -1286,7 +1315,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.14';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.15';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1907,12 +1936,87 @@ const CHARS = [
   },
 ];
 
+// ── 角色設定頁 (beta) — 基本資料 + GitHub 圖庫。bio / gallery 由站長填寫；gallery 留空時自動用封面圖。
+const CHAR_PROFILE = {
+  Sean:   { bio: '', gallery: [] },
+  Silas:  { bio: '', gallery: [] },
+  Eli:    { bio: '', gallery: [] },
+  Adrian: { bio: '', gallery: [] },
+};
+let _homeChar = null;   // 目前顯示在心動封面的角色(給封面愛心 → 角色頁用)
+function homeCoverPool() {
+  // beta：把心動封面限定在選定的男主；沒選或全選 = 對全部隨機。
+  if (!isBeta()) return CHARS;
+  const sel = (currentUser && currentUser.home_chars ? String(currentUser.home_chars).split(',') : [])
+    .map(s => s.trim()).filter(Boolean);
+  if (!sel.length) return CHARS;
+  const names = sel.map(code => (CHAR_LIST.find(x => x.code === code) || {}).name).filter(Boolean);
+  const filtered = CHARS.filter(c => names.includes(c.name));
+  return filtered.length ? filtered : CHARS;   // 安全：永不空池
+}
+
+// ── 角色設定頁 (beta) ───────────────────────────────────────
+function openCharProfile(name) {
+  if (!isBeta() || !name) return;
+  renderCharProfile(name);
+  document.getElementById('char-profile').classList.add('open');
+}
+function openCharProfileFromHome() { if (_homeChar) openCharProfile(_homeChar.name); }
+function closeCharProfile() { document.getElementById('char-profile').classList.remove('open'); }
+function renderCharProfile(name) {
+  const charData = CHARS.find(c => c.name === name) || {};
+  const prof = CHAR_PROFILE[name] || { bio: '', gallery: [] };
+  const code = (CHAR_LIST.find(x => x.name === name) || {}).code;
+  document.getElementById('cp-name').textContent = name;
+  const gallery = (prof.gallery && prof.gallery.length) ? prof.gallery : (charData.imgs || [charData.img]).filter(Boolean);
+  const sel = (currentUser && currentUser.home_chars ? String(currentUser.home_chars).split(',') : []).map(s => s.trim()).filter(Boolean);
+  const myWorks = (typeof novels !== 'undefined' ? novels : []).filter(n =>
+    (n.owners || []).includes(currentUser && currentUser.id) && (n.characters || []).includes(code));
+  let html = '';
+  if (gallery.length) html += `<div class="cp-gallery">${gallery.map(u => `<div class="cp-shot" style="background-image:url('${u}')"></div>`).join('')}</div>`;
+  html += `<div class="cp-section"><h3>基本資料</h3><p class="cp-bio">${prof.bio ? escapeHtml(prof.bio) : '（基本資料待補充）'}</p></div>`;
+  html += `<div class="cp-section"><h3>心動封面顯示</h3><p class="cp-hint">選中的角色才會出現在心動封面；都不選或全選 = 全部隨機。</p><div class="cp-pick">`
+    + CHAR_LIST.map(ch => `<button type="button" class="cc-pick${sel.includes(ch.code) ? ' on' : ''}" data-code="${ch.code}" onclick="toggleHomeChar(this)">${ch.name}</button>`).join('')
+    + `</div></div>`;
+  html += `<div class="cp-section"><h3>我為 ${escapeHtml(name)} 寫的文章</h3>`;
+  html += myWorks.length
+    ? myWorks.map(n => `<a class="cp-work" href="#" onclick="closeCharProfile();openNovel('${n.id}');return false;">${ic('ic-book', 14)} ${escapeHtml(n.title)}</a>`).join('')
+    : `<p class="cp-hint">還沒有你為這個角色寫的文章。</p>`;
+  html += `</div>`;
+  document.getElementById('cp-body').innerHTML = html;
+}
+async function toggleHomeChar(btn) {
+  btn.classList.toggle('on');
+  const codes = [...document.querySelectorAll('#cp-body .cc-pick.on')].map(b => b.dataset.code);
+  try {
+    const r = await api('/auth/me/home-chars', { method: 'PATCH', body: JSON.stringify({ chars: codes }) });
+    if (currentUser) currentUser.home_chars = (r && r.home_chars) || '';
+  } catch (e) { btn.classList.toggle('on'); toast(e.message || '儲存失敗'); }
+}
+// 官方角色頭像：單擊 = 篩選(原行為);雙擊 = 開角色頁(beta)。onFilter(type,val) 是原本的篩選回呼。
+let _ocTapTimer = null, _ocTapCode = null;
+function officialCharTap(code, onFilter) {
+  if (!isBeta()) { onFilter('char', code); return; }
+  if (_ocTapTimer && _ocTapCode === code) {
+    clearTimeout(_ocTapTimer); _ocTapTimer = null; _ocTapCode = null;
+    openCharProfile((CHAR_LIST.find(x => x.code === code) || {}).name);
+  } else {
+    if (_ocTapTimer) clearTimeout(_ocTapTimer);
+    _ocTapCode = code;
+    _ocTapTimer = setTimeout(() => { _ocTapTimer = null; _ocTapCode = null; onFilter('char', code); }, 320);
+  }
+}
+
 function renderGreeting() {
   const h = new Date().getHours();
   // 時段 index：0=早上(5-11) 1=中午(12-13) 2=下午(14-17) 3=晚上/深夜(18-4)
   const timeIdx = h >= 5 && h < 12 ? 0 : h >= 12 && h < 14 ? 1 : h >= 14 && h < 18 ? 2 : 3;
   const period = h < 5 ? '深夜好' : h < 12 ? '早安' : h < 18 ? '午安' : '晚安';
-  const char = CHARS[Math.floor(Math.random() * CHARS.length)];
+  const pool = homeCoverPool();
+  const char = pool[Math.floor(Math.random() * pool.length)];
+  _homeChar = char;
+  const heart = document.getElementById('hero-heart');
+  if (heart) heart.style.display = isBeta() ? 'flex' : 'none';
   const hero = document.getElementById('greeting-hero');
   const emoji = document.getElementById('char-emoji');
   const GRAD = 'linear-gradient(160deg, #4a1d1d 0%, #2a1408 100%)';
@@ -2309,7 +2413,7 @@ function renderFilterBar(catEl, chipEl, curCat, curChars, onChange) {
       ? _customChars.map(c => `<div class="char-chip char-custom${_ccFilter === c.id ? ' cc-on' : ''}" onclick="ccTap('${c.id}')" title="單擊篩選・雙擊編輯"><div class="cc-ava"${c.avatar ? ` style="background-image:url('${c.avatar}')"` : ''}>${c.avatar ? '' : ic('ic-wand', 20)}</div><span>${escapeHtml(c.name)}</span></div>`).join('')
         + `<div class="char-chip char-add" onclick="openCreateChar()" role="button" tabindex="0" aria-label="建立角色" title="建立自創角色"><div class="add-circle">＋</div></div>`
       : '');
-  chipEl.querySelectorAll('.char-chip[data-ch]').forEach(el => el.onclick = () => onChange('char', el.dataset.ch));
+  chipEl.querySelectorAll('.char-chip[data-ch]').forEach(el => el.onclick = () => officialCharTap(el.dataset.ch, onChange));
   mountCharAndBtn('shelf-char-and');
 }
 
@@ -3051,7 +3155,7 @@ function renderForumList() {
       `<div class="char-chip ${forumChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}">
          <img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span>
        </div>`).join('');
-    chipEl.querySelectorAll('.char-chip').forEach(el => el.onclick = () => onForumFilter('char', el.dataset.ch));
+    chipEl.querySelectorAll('.char-chip').forEach(el => el.onclick = () => officialCharTap(el.dataset.ch, onForumFilter));
     mountCharAndBtn('forum-char-and');
   }
   const q = (document.getElementById('forum-search-input').value || '').trim().toLowerCase();
