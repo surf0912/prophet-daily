@@ -823,6 +823,13 @@
             <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-compass"/></svg> 新手導覽</label>
             <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="startTour()">重看導覽</button>
           </div>
+          <div class="settings-row super-only" style="display:none">
+            <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-sparkles"/></svg> 🧪 實驗功能（beta）</label>
+            <label class="toggle">
+              <input type="checkbox" id="beta-toggle" onchange="setBetaFlag(this.checked)" />
+              <span class="slider"></span>
+            </label>
+          </div>
           <div class="settings-row staff-only" style="display:none">
             <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-shield"/></svg> 防窺工坊</label>
             <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" onclick="showPage('protect')">進入</button>
@@ -1277,7 +1284,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.01';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.02';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1640,7 +1647,8 @@ async function initApp() {
   document.getElementById('admin-nav-btn').style.display = staff ? '' : 'none';  // readers: no 後台
   document.querySelectorAll('.staff-only').forEach(el => el.style.display = staff ? '' : 'none');  // readers: no 防窺工坊
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = adminish ? '' : 'none');  // writers: only 作品管理 + 上傳
-  document.querySelectorAll('.super-only').forEach(el => el.style.display = currentUser.role === 'super_admin' ? '' : 'none');  // 監看面板：只給 SA
+  document.querySelectorAll('.super-only').forEach(el => el.style.display = currentUser.role === 'super_admin' ? '' : 'none');  // 監看面板 + 實驗功能開關：只給 SA
+  { const _bt = document.getElementById('beta-toggle'); if (_bt) _bt.checked = localStorage.getItem('pd_beta') === '1'; }
   adminNovelScope = null;
   loadOwnerNames();   // super_admin only: map owner uuid → 巫師全名 for the owner hint
   loadFavIds().then(renderFavUpdates);   // 意若思鏡 收藏夾 ids + 追蹤更新 alert
@@ -2353,10 +2361,20 @@ function mqjGateBody() {
 }
 
 // ── EXPERIMENTAL feature gate ──────────────────────────────────────────────
-// Show experimental features to super_admin only — you're the sole super_admin, so they're
-// effectively private to you. (A ?beta=1 URL gate was too easy to forget, esp. from the PWA.)
-// The real safety line is still the backend (experimental endpoints use require_super_admin).
-function isBeta() { return !!currentUser && currentUser.role === 'super_admin'; }
+// isBeta() = super_admin AND the beta flag. The flag lives in localStorage so it survives PWA
+// launches (a ?beta URL can't — the home-screen app carries no query). Toggle it in
+// 檔案 → 小工具 → 實驗功能, or via ?beta=1 / ?beta=0. Backend stays the real gate (require_super_admin).
+(function () {
+  const b = new URLSearchParams(location.search).get('beta');
+  if (b === '1' || b === '') localStorage.setItem('pd_beta', '1');
+  else if (b === '0') localStorage.removeItem('pd_beta');
+})();
+function isBeta() { return localStorage.getItem('pd_beta') === '1' && !!currentUser && currentUser.role === 'super_admin'; }
+function setBetaFlag(on) {
+  if (on) localStorage.setItem('pd_beta', '1'); else localStorage.removeItem('pd_beta');
+  toast(on ? '🧪 實驗功能已開啟' : '實驗功能已關閉');
+  if (typeof renderShelf === 'function') renderShelf();   // refresh 角色列 so the ＋ appears/hides
+}
 
 // ── 個人書櫃 (beta) — private per-user text shelf under self-made 角色標籤 ────────
 let _bookshelf = [], _bsCat = '', _bsTag = '';
