@@ -253,13 +253,18 @@ def create_forum_post(body: ForumPostCreate, user: dict = Depends(require_writer
         record["created_at"] = body.published_at
         record["updated_at"] = body.published_at
     novel = sb.table("novels").insert(record).execute().data[0]
-    sb.table("chapters").insert({
-        "novel_id": novel["id"],
-        "chapter_num": 1,
-        "title": body.title,
-        "content": body.content.strip(),
-        "created_by": user["id"],
-    }).execute()
+    try:
+        sb.table("chapters").insert({
+            "novel_id": novel["id"],
+            "chapter_num": 1,
+            "title": body.title,
+            "content": body.content.strip(),
+            "created_by": user["id"],
+        }).execute()
+    except Exception:
+        # Compensate: never leave a chapterless (bodyless) forum post if the second write fails.
+        sb.table("novels").delete().eq("id", novel["id"]).execute()
+        raise HTTPException(500, "發表失敗，請重試")
     return novel
 
 @router.patch("/{novel_id}/approve", dependencies=[Depends(require_admin)])
