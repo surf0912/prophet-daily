@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.28';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.29';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1636,6 +1636,23 @@ function renderToc() {
   ).join('');
 }
 
+// EXPERIMENTAL (beta only): wrap each glyph in a span nudged by a small random offset/rotation so a
+// screenshot's OCR (iOS Live Text) can't lock onto a consistent baseline/spacing. Sacrifices clean
+// text selection and machine-readability on purpose; a human still reads it. Whitespace/newlines are
+// kept as plain text so pre-wrap layout (blank lines, indents) is preserved.
+function jitterReader(el) {
+  const text = el.textContent;
+  let html = '';
+  for (const ch of text) {
+    if (ch === '\n' || ch === '\t' || ch === ' ' || ch === '　') { html += ch; continue; }
+    const tx = (Math.random() * 2 - 1).toFixed(2);
+    const ty = (Math.random() * 5 - 2.5).toFixed(2);
+    const r = (Math.random() * 7 - 3.5).toFixed(1);
+    html += `<span class="jit" style="transform:translate(${tx}px,${ty}px) rotate(${r}deg)">${escapeHtml(ch)}</span>`;
+  }
+  el.innerHTML = html;
+}
+
 async function loadChapter(idx) {
   currentChapterIdx = idx;
   const ch = currentChapters[idx];
@@ -1662,6 +1679,7 @@ async function loadChapter(idx) {
       // Render exactly as the author typed it — preserve blank lines & spacing (WYSIWYG with the editor).
       el.style.whiteSpace = 'pre-wrap';
       el.textContent = full.content;
+      if (typeof isBeta === 'function' && isBeta()) jitterReader(el);   // EXPERIMENTAL anti-OCR (beta/super_admin only)
     }
   } catch { document.getElementById('reader-content').textContent = '載入失敗'; }
   const rv = document.getElementById('reader-view');
