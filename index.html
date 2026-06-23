@@ -1260,7 +1260,8 @@
   let lastTap = 0;
   document.addEventListener('touchend', function (e) {
     const t = e.target;
-    if (t && (t.closest('input, textarea, select, [contenteditable]'))) { lastTap = 0; return; }
+    // .char-custom needs its real double-tap (= edit character); don't swallow the 2nd tap there.
+    if (t && (t.closest('input, textarea, select, [contenteditable], .char-custom'))) { lastTap = 0; return; }
     const now = Date.now();
     if (now - lastTap <= 350) e.preventDefault();   // cancels the zoom gesture on the 2nd tap
     lastTap = now;
@@ -1279,7 +1280,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.09';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.10';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2394,7 +2395,7 @@ async function loadCustomChars() {
 // 單擊 = 選取(篩選作品)；雙擊 = 打開編輯
 function ccTap(id) {
   if (_ccTapTimer) { clearTimeout(_ccTapTimer); _ccTapTimer = null; editCustomChar(id); }
-  else { _ccTapTimer = setTimeout(() => { _ccTapTimer = null; _ccFilter = (_ccFilter === id) ? '' : id; renderShelf(); }, 260); }
+  else { _ccTapTimer = setTimeout(() => { _ccTapTimer = null; _ccFilter = (_ccFilter === id) ? '' : id; renderShelf(); }, 320); }
 }
 function setCcAvatarPreview(url) {
   const el = document.getElementById('cc-avatar-preview');
