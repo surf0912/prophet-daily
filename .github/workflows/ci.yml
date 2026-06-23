@@ -18,20 +18,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Capture resolved dependency lockfile
-        # The exact versions pip resolved from the >= ranges, so prod deps are auditable / CVE-checkable
-        # (downloadable as the requirements-lock artifact below). Promote into requirements.txt to pin.
+      - name: Install locked production dependencies
+        run: pip install -r requirements.lock
+      - name: Audit locked dependencies
         run: |
-          python -m pip freeze --exclude-editable > requirements.lock
-          echo "===== resolved versions ($(python -V)) ====="
-          cat requirements.lock
-      - name: Upload lockfile artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: requirements-lock
-          path: requirements.lock
+          python -m venv /tmp/pip-audit
+          /tmp/pip-audit/bin/pip install pip-audit==2.10.1
+          /tmp/pip-audit/bin/pip-audit -r requirements.lock --no-deps --disable-pip
       - name: Compile all backend Python
         run: python -m py_compile main.py deps.py monitor.py config.py routers/*.py
       - name: Security + output-safety tests
