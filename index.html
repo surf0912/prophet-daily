@@ -1286,7 +1286,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.11';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.12';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2396,6 +2396,9 @@ async function loadCustomChars() {
     _ccTags = {};   // char_id -> Set(novel_id)
     tags.forEach(t => { (_ccTags[t.char_id] = _ccTags[t.char_id] || new Set()).add(t.novel_id); });
   } catch (e) { _customChars = []; _ccTags = {}; }
+  // if the active filter points at a character that no longer exists (e.g. just deleted),
+  // drop it — otherwise renderShelf keeps filtering to an empty set and "沒有符合的作品" sticks.
+  if (_ccFilter && !_customChars.some(c => c.id === _ccFilter)) _ccFilter = '';
   renderUploadCcPicker();
 }
 // 單擊 = 選取(篩選作品)；雙擊 = 打開編輯
