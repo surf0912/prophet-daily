@@ -1275,7 +1275,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.06';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.07';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2029,7 +2029,7 @@ async function renderFavUpdates() {
     const extra = u.count > 1 ? `（${u.count} 篇新作）` : '';
     return `
     <a href="#" onclick="openNovel('${u.work.id}');return false;" style="display:flex;align-items:center;gap:10px;text-decoration:none;padding:9px 0;border-bottom:1px solid rgba(26,10,0,.07)">
-      <span style="font-size:9px;color:var(--scarlet);flex-shrink:0"></span>
+      <span style="width:8px;height:8px;border-radius:50%;background:var(--scarlet);flex-shrink:0;display:inline-block"></span>
       <span style="flex:1;min-width:0">
         <span style="font-size:14px;color:var(--ink);font-weight:bold;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">系列《${escapeHtml(u.series)}》有新作品${extra}</span>
         <span style="font-size:12px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block">${escapeHtml(u.work.title)}・${fmtUpdated(u.work.created_at)}</span>
@@ -3480,7 +3480,7 @@ async function loadAdminNovelList() {
       const all = await api('/novels/') || [];
       ns = all.filter(n => (n.owners || []).includes(adminNovelScope.id));
       const sc = adminNovelScope;
-      let head = `<b>${escapeHtml(sc.name)}</b> 的作品　<a onclick="adminNovelScope=null;switchAdminTab('users')" style="color:var(--accent);cursor:pointer">← 返回成員名單</a>`;
+      let head = `${ic('ic-books', 16)} <b>${escapeHtml(sc.name)}</b> 的作品　<a onclick="adminNovelScope=null;switchAdminTab('users')" style="color:var(--accent);cursor:pointer">← 返回成員名單</a>`;
       if (sc.role === 'reader' || sc.role === 'writer') {
         const approved = sc.mqj === 'approved';
         const statusLabel = sc.mqj === 'pending' ? '（' + ic('ic-clock',11) + ' 申請中）' : sc.mqj === 'rejected' ? '（' + ic('ic-ban',11) + ' 未通過）' : '';
