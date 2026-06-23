@@ -10,7 +10,7 @@
   <!-- Strict script CSP: all JavaScript is external and event attributes are inert data-* actions
        handled by an allowlisted, eval-free dispatcher. `unsafe-inline` remains style-only because
        the UI has many dynamic style attributes; CSS cannot execute application JavaScript. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://prophet-daily.onrender.com; frame-src https://ai-ocr-protector.streamlit.app; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://prophet-daily.onrender.com; frame-src https://ai-ocr-protector.streamlit.app; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <title>預言家日報</title>
   <link rel="manifest" href="./manifest.json" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
