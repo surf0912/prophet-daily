@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from config import settings
-from routers import auth, novels, chapters, permissions, invites, feedback
+from routers import auth, novels, chapters, permissions, invites, feedback, bookshelf
 
 # docs_url/redoc_url/openapi_url=None: don't publicly expose the interactive API explorer or the
 # OpenAPI blueprint (every endpoint + field). Not a vuln (routes stay auth-guarded) but a closed
@@ -69,6 +69,7 @@ app.include_router(chapters.router,    prefix="/chapters",    tags=["chapters"])
 app.include_router(permissions.router, prefix="/permissions", tags=["permissions"])
 app.include_router(invites.router,     prefix="/invites",     tags=["invites"])
 app.include_router(feedback.router,    prefix="/feedback",    tags=["feedback"])
+app.include_router(bookshelf.router,   prefix="/bookshelf",   tags=["bookshelf"])   # EXPERIMENTAL (beta)
 
 # GET + HEAD so uptime monitors (e.g. UptimeRobot, which probes with HEAD) get 200.
 @app.api_route("/health", methods=["GET", "HEAD"])

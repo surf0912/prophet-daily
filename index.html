@@ -692,6 +692,7 @@
         <div style="display:flex;gap:6px;flex-shrink:0">
           <button id="shelf-wish-btn" onclick="openWishPool()" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-shine"/></svg> 許願池</button>
           <button id="shelf-fav-btn" onclick="toggleShelfFav()" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-circle"/></svg> 收藏夾</button>
+          <button id="shelf-bookshelf-btn" onclick="openBookshelf()" style="display:none;background:none;border:1px solid var(--series);color:var(--series);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-books"/></svg> 我的書櫃</button>
         </div>
       </div>
       <div class="forum-search">
@@ -994,6 +995,38 @@
     <button id="prev-series-btn" onclick="navigateSeries(-1)">← 上一篇</button>
     <span id="reader-series-label" style="font-size:12px;color:var(--ink-light);align-self:center">—</span>
     <button id="next-series-btn" onclick="navigateSeries(1)">下一篇 →</button>
+  </div>
+</div>
+
+<!-- 個人書櫃 (beta, super_admin only) -->
+<div id="bookshelf-view" style="display:none;position:fixed;inset:0;z-index:55;background:#f4e8c1;overflow-y:auto;overscroll-behavior:none">
+  <div class="reader-header">
+    <button onclick="closeBookshelf()" style="font-size:15px;display:flex;align-items:center;gap:3px;white-space:nowrap">‹&nbsp;返回</button>
+    <h3 id="bookshelf-title" style="flex:1">我的書櫃 <span style="font-size:11px;background:var(--series);color:#fff;padding:1px 7px;border-radius:8px;vertical-align:1px">beta</span></h3>
+    <button onclick="openAddPiece()" style="background:rgba(201,168,76,.2);border:1px solid var(--gold);color:var(--gold);border-radius:6px;padding:4px 12px;font-size:13px;cursor:pointer">＋ 新增</button>
+  </div>
+  <div style="max-width:680px;margin:0 auto;padding:16px 18px 80px">
+    <div id="bookshelf-filters" style="margin-bottom:14px"></div>
+    <div id="bookshelf-list"></div>
+  </div>
+</div>
+
+<!-- 新增到書櫃 modal -->
+<div class="perm-modal" id="bookshelf-add-modal">
+  <div class="perm-modal-inner">
+    <h3>＋ 新增到書櫃</h3>
+    <input id="bs-title" placeholder="標題" style="width:100%;box-sizing:border-box;padding:8px 10px;margin-bottom:8px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px" />
+    <input id="bs-tag" list="bs-tag-list" placeholder="角色標籤（自創，例如「我的Adrian」）" style="width:100%;box-sizing:border-box;padding:8px 10px;margin-bottom:8px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px" />
+    <datalist id="bs-tag-list"></datalist>
+    <select id="bs-cat" style="width:100%;box-sizing:border-box;padding:8px 10px;margin-bottom:8px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px">
+      <option value="迷情劑">迷情劑</option><option value="吐真劑">吐真劑</option><option value="儲思盆" selected>儲思盆</option>
+    </select>
+    <textarea id="bs-content" placeholder="貼上文字…" style="width:100%;box-sizing:border-box;height:160px;padding:8px 10px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px;line-height:1.6;resize:vertical"></textarea>
+    <label style="display:block;font-size:13px;color:var(--ink-light);margin:8px 0">或上傳 .txt：<input type="file" accept=".txt,text/plain" onchange="loadTxtFile(this)" style="font-size:12px" /></label>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn-primary" style="flex:1;padding:10px;font-size:14px" onclick="savePiece()">儲存</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:14px" onclick="document.getElementById('bookshelf-add-modal').classList.remove('open')">取消</button>
+    </div>
   </div>
 </div>
 
@@ -2308,7 +2341,96 @@ function mqjGateBody() {
   return `${eIc('ic-key')}「迷情劑」分類需開放才能閱讀<br><small style="display:block;margin-bottom:14px">點下方按鈕向管理員申請</small>${applyBtn('要求管理員開放')}`;
 }
 
+// ── EXPERIMENTAL feature gate ──────────────────────────────────────────────
+// isBeta() = super_admin AND ?beta=1 in the URL. Frontend convenience to hide experiments;
+// the real safety line is the backend (experimental endpoints use require_super_admin).
+const _betaOn = new URLSearchParams(location.search).has('beta');
+function isBeta() { return _betaOn && !!currentUser && currentUser.role === 'super_admin'; }
+
+// ── 個人書櫃 (beta) — private per-user text shelf under self-made 角色標籤 ────────
+let _bookshelf = [], _bsCat = '', _bsTag = '';
+async function openBookshelf() {
+  document.getElementById('bookshelf-view').style.display = '';
+  document.getElementById('bookshelf-filters').innerHTML = '';
+  document.getElementById('bookshelf-list').innerHTML = '<div class="spinner"></div>';
+  await loadBookshelf();
+}
+function closeBookshelf() { document.getElementById('bookshelf-view').style.display = 'none'; }
+async function loadBookshelf() {
+  try { _bookshelf = await api('/bookshelf/') || []; }
+  catch (e) { document.getElementById('bookshelf-list').innerHTML = `<div class="empty-shelf">載入失敗：${escapeHtml(e.message || '')}</div>`; return; }
+  renderBookshelf();
+}
+function setBsCat(c) { _bsCat = c; renderBookshelf(); }
+function setBsTag(t) { _bsTag = t; renderBookshelf(); }
+function toggleBsBody(id) { const el = document.getElementById('bsbody-' + id); if (el) el.hidden = !el.hidden; }
+function _bsPill(active, label, onclick) {
+  return `<button onclick="${onclick}" style="border:1px solid var(--gold);background:${active ? 'var(--gold)' : 'none'};color:${active ? '#fff' : 'var(--ink-light)'};border-radius:14px;padding:4px 12px;font-size:12px;cursor:pointer">${escapeHtml(label)}</button>`;
+}
+function renderBookshelf() {
+  const tags = [...new Set(_bookshelf.map(p => p.char_tag).filter(Boolean))];
+  let f = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">` +
+    _bsPill(!_bsCat, '全部分類', "setBsCat('')") +
+    ['迷情劑', '吐真劑', '儲思盆'].map(c => _bsPill(_bsCat === c, c, `setBsCat('${c}')`)).join('') + `</div>`;
+  if (tags.length) f += `<div style="display:flex;flex-wrap:wrap;gap:6px">` +
+    _bsPill(!_bsTag, '全部角色', "setBsTag('')") +
+    tags.map(t => _bsPill(_bsTag === t, t, `setBsTag(${JSON.stringify(t)})`)).join('') + `</div>`;
+  document.getElementById('bookshelf-filters').innerHTML = f;
+  const list = _bookshelf.filter(p => (!_bsCat || p.category === _bsCat) && (!_bsTag || p.char_tag === _bsTag));
+  document.getElementById('bookshelf-list').innerHTML = list.map(p => `
+    <div style="border-bottom:1px solid rgba(26,10,0,.1);padding:10px 0">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+        <div style="flex:1;cursor:pointer" onclick="toggleBsBody('${p.id}')">
+          <div style="font-weight:bold;font-size:14px">${escapeHtml(p.title || '未命名')}</div>
+          <div style="font-size:12px;color:var(--ink-light);margin-top:2px">${p.char_tag ? '🏷 ' + escapeHtml(p.char_tag) + ' · ' : ''}${escapeHtml(p.category || '')} · ${fmtUpdated(p.created_at)}</div>
+        </div>
+        <button onclick="deletePiece('${p.id}')" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:5px;padding:3px 8px;font-size:12px;cursor:pointer;flex-shrink:0">刪除</button>
+      </div>
+      <div id="bsbody-${p.id}" hidden style="white-space:pre-wrap;line-height:1.8;margin-top:8px;font-size:14px;color:var(--ink)">${escapeHtml(p.content || '')}</div>
+    </div>`).join('') || `<div class="empty-shelf">這個書櫃還是空的<br><small>點右上角「＋ 新增」上傳 txt 或貼上文字</small></div>`;
+}
+function openAddPiece() {
+  document.getElementById('bs-title').value = '';
+  document.getElementById('bs-tag').value = '';
+  document.getElementById('bs-content').value = '';
+  document.getElementById('bs-cat').value = _bsCat || '儲思盆';
+  document.getElementById('bs-tag-list').innerHTML = [...new Set(_bookshelf.map(p => p.char_tag).filter(Boolean))].map(t => `<option value="${escapeHtml(t)}">`).join('');
+  document.getElementById('bookshelf-add-modal').classList.add('open');
+}
+function loadTxtFile(input) {
+  const f = input.files && input.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    document.getElementById('bs-content').value = r.result || '';
+    const t = document.getElementById('bs-title');
+    if (!t.value.trim()) t.value = f.name.replace(/\.txt$/i, '');
+  };
+  r.readAsText(f);
+}
+async function savePiece() {
+  const content = document.getElementById('bs-content').value;
+  if (!content.trim()) { toast('內容不能空白'); return; }
+  try {
+    await api('/bookshelf/', { method: 'POST', body: JSON.stringify({
+      title: document.getElementById('bs-title').value.trim(),
+      content,
+      char_tag: document.getElementById('bs-tag').value.trim(),
+      category: document.getElementById('bs-cat').value,
+    }) });
+    toast('✅ 已加入書櫃');
+    document.getElementById('bookshelf-add-modal').classList.remove('open');
+    loadBookshelf();
+  } catch (e) { toast('⚠️ ' + (e.message || '儲存失敗')); }
+}
+async function deletePiece(id) {
+  if (!confirm('刪除這篇？此動作無法復原。')) return;
+  try { await api('/bookshelf/' + id, { method: 'DELETE' }); loadBookshelf(); }
+  catch (e) { toast(e.message); }
+}
+
 function renderShelf() {
+  { const _bb = document.getElementById('shelf-bookshelf-btn'); if (_bb) _bb.style.display = isBeta() ? '' : 'none'; }
   renderFilterBar(
     document.getElementById('shelf-cat-pills'), document.getElementById('shelf-char-chips'),
     shelfCat, shelfChars, onShelfFilter);
