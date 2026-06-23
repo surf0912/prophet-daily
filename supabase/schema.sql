@@ -25,11 +25,11 @@ begin
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
-    coalesce(new.raw_user_meta_data->>'role', 'reader')
+    'reader'
   );
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = '';
 
 create trigger on_auth_user_created
   after insert on auth.users
@@ -349,3 +349,15 @@ create table if not exists public.custom_char_tags (
 -- Both are written only by the FastAPI service role; keep them off-limits to anon/authenticated.
 alter table public.custom_characters enable row level security;
 alter table public.custom_char_tags  enable row level security;
+
+-- ============================================================
+-- API BOUNDARY LOCKDOWN
+-- The browser talks only to FastAPI. Its service-role client is the sole database gateway, so
+-- anon/authenticated must not be able to bypass application visibility/ownership checks by
+-- calling Supabase's generated REST API directly. RLS remains enabled as defense in depth.
+-- ============================================================
+revoke all privileges on all tables in schema public from anon, authenticated;
+revoke all privileges on all sequences in schema public from anon, authenticated;
+alter default privileges in schema public revoke all on tables from anon, authenticated;
+alter default privileges in schema public revoke all on sequences from anon, authenticated;
+revoke execute on function public.handle_new_user() from public, anon, authenticated;

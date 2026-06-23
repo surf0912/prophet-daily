@@ -123,13 +123,36 @@ def register_with_invite(body: RegisterWithInvite, sb_admin: Client = Depends(ge
         if not auth_res.user:
             raise HTTPException(400, "註冊失敗，請稍後再試")
     except Exception as e:
-        sb_admin.table("invite_tokens").update({"used_at": None, "used_by": None}).eq("token", body.token).execute()
+        # Release only the claim made by THIS request. Matching used_at prevents a delayed
+        # failure from clearing a token that was subsequently claimed by somebody else.
+        (sb_admin.table("invite_tokens").update({"used_at": None, "used_by": None})
+         .eq("token", body.token).eq("used_at", now_iso).is_("used_by", "null").execute())
         raise e if isinstance(e, HTTPException) else HTTPException(400, "註冊失敗，請稍後再試")
 
     new_user_id = auth_res.user.id
-    # Profile row is created by a trigger from metadata; ensure nickname + record who used the token.
-    sb_admin.table("profiles").update({"nickname": nickname}).eq("id", new_user_id).execute()
-    sb_admin.table("invite_tokens").update({"used_by": new_user_id}).eq("token", body.token).execute()
+    # The DB trigger deliberately creates every profile as a reader: user_metadata is controlled
+    # by the person signing up and must never grant authorization. Only this service-role path may
+    # promote the new account to the role encoded in the already-claimed invite.
+    try:
+        profile = (sb_admin.table("profiles")
+                   .update({"nickname": nickname, "role": inv["role"]})
+                   .eq("id", new_user_id).execute().data)
+        if not profile:
+            raise RuntimeError("profile was not created")
+        finalized = (sb_admin.table("invite_tokens").update({"used_by": new_user_id})
+                     .eq("token", body.token).eq("used_at", now_iso).is_("used_by", "null")
+                     .execute().data)
+        if not finalized:
+            raise RuntimeError("invite claim was lost")
+    except Exception:
+        # Auth and Postgres cannot share one transaction. Compensate on a partial failure so an
+        # account is never left behind with an unfinalized invite (profile cascades with auth user).
+        try:
+            sb_admin.auth.admin.delete_user(new_user_id)
+        finally:
+            (sb_admin.table("invite_tokens").update({"used_at": None, "used_by": None})
+             .eq("token", body.token).eq("used_at", now_iso).is_("used_by", "null").execute())
+        raise HTTPException(500, "註冊未完成，邀請碼已保留，請重試")
     return {"message": "註冊成功，請使用你的帳號登入"}
 
 @router.get("/list")

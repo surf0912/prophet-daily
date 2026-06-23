@@ -84,5 +84,35 @@ class FrontendOutputSafetyTests(unittest.TestCase):
         self.assertEqual(app_version, cache_version)
 
 
+class DatabaseBoundaryTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        root = Path(__file__).parents[1]
+        cls.schema = (root / "supabase" / "schema.sql").read_text(encoding="utf-8")
+        cls.migration = (root / "supabase" / "migrations" /
+                         "20260623_lock_down_database_boundary.sql").read_text(encoding="utf-8")
+        cls.invites = (root / "routers" / "invites.py").read_text(encoding="utf-8")
+
+    def test_signup_trigger_never_trusts_metadata_role(self):
+        for sql in (self.schema, self.migration):
+            with self.subTest(sql=sql[:40]):
+                self.assertNotIn("new.raw_user_meta_data->>'role'", sql)
+                self.assertRegex(sql, r"split_part\(new\.email, '@', 1\)\),\s*'reader'")
+
+    def test_direct_client_table_privileges_are_revoked(self):
+        required = [
+            "revoke all privileges on all tables in schema public from anon, authenticated",
+            "revoke all privileges on all sequences in schema public from anon, authenticated",
+        ]
+        for statement in required:
+            with self.subTest(statement=statement):
+                self.assertIn(statement, self.schema.lower())
+                self.assertIn(statement, self.migration.lower())
+
+    def test_invite_backend_explicitly_grants_claimed_role(self):
+        self.assertIn('{"nickname": nickname, "role": inv["role"]}', self.invites)
+        self.assertIn('.eq("used_at", now_iso).is_("used_by", "null")', self.invites)
+
+
 if __name__ == "__main__":
     unittest.main()
