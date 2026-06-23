@@ -585,6 +585,3 @@
     .audit-act { font-size: 14px; color: var(--ink); }
     .audit-tgt { color: var(--accent); }
     .audit-meta { font-size: 12px; color: var(--ink-light); margin-top: 2px; }
-
-    /* EXPERIMENTAL anti-OCR per-glyph jitter (beta only) — needs inline-block for transform to apply. */
-    .jit { display: inline-block; }
