@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from deps import get_supabase_admin, get_current_user, require_admin, require_super_admin, invalidate_profile
+from deps import get_supabase_admin, get_current_user, require_admin, require_super_admin, invalidate_profile, record_audit
 from supabase import Client
 
 router = APIRouter()
@@ -63,14 +63,15 @@ def list_users(user: dict = Depends(require_admin), sb: Client = Depends(get_sup
     my_rank = ROLE_RANK.get(user.get("role"), 0)
     return [u for u in res.data if ROLE_RANK.get(u.get("role"), 0) <= my_rank]
 
-@router.patch("/users/{user_id}/role", dependencies=[Depends(require_super_admin)])
-def change_role(user_id: str, body: RoleRequest, sb: Client = Depends(get_supabase_admin)):
+@router.patch("/users/{user_id}/role")
+def change_role(user_id: str, body: RoleRequest, user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
     if body.role not in VALID_ROLES:
         raise HTTPException(400, "Invalid role")
     res = sb.table("profiles").update({"role": body.role}).eq("id", user_id).execute()
     if not res.data:
         raise HTTPException(404, "User not found")
     invalidate_profile(user_id)
+    record_audit(sb, user, "change_role", "user", user_id, f"role={body.role}")
     return res.data[0]
 
 # ── Reset a member's 通關密語 (super_admin only) ──────────────
@@ -79,8 +80,8 @@ def change_role(user_id: str, body: RoleRequest, sb: Client = Depends(get_supaba
 class PasswordBody(BaseModel):
     password: str
 
-@router.patch("/users/{user_id}/password", dependencies=[Depends(require_super_admin)])
-def reset_password(user_id: str, body: PasswordBody, sb: Client = Depends(get_supabase_admin)):
+@router.patch("/users/{user_id}/password")
+def reset_password(user_id: str, body: PasswordBody, user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
     pw = (body.password or "").strip()
     if len(pw) < 8:
         raise HTTPException(400, "通關密語至少 8 字")
@@ -88,6 +89,7 @@ def reset_password(user_id: str, body: PasswordBody, sb: Client = Depends(get_su
         sb.auth.admin.update_user_by_id(user_id, {"password": pw})
     except Exception as e:
         raise HTTPException(500, f"重設失敗：{e}")
+    record_audit(sb, user, "reset_password", "user", user_id)
     return {"message": "ok"}
 
 # ── Ban / delete accounts (super_admin only) ───────────────
@@ -102,6 +104,7 @@ def set_banned(user_id: str, body: BanBody, user: dict = Depends(require_super_a
     if not res.data:
         raise HTTPException(404, "User not found")
     invalidate_profile(user_id)   # ban/unban takes effect immediately
+    record_audit(sb, user, "ban" if body.banned else "unban", "user", user_id)
     return res.data[0]
 
 @router.delete("/users/{user_id}")
@@ -148,6 +151,7 @@ def delete_user(user_id: str, user: dict = Depends(require_super_admin), sb: Cli
     if err:
         raise HTTPException(500, f"刪除未完成：{err}")
     invalidate_profile(user_id)
+    record_audit(sb, user, "delete_user", "user", user_id)
     return {"message": "deleted"}
 
 # ── 迷情劑 access gate ──────────────────────────────────────
@@ -163,23 +167,34 @@ def request_mqj(user: dict = Depends(get_current_user), sb: Client = Depends(get
 class AutoPublishBody(BaseModel):
     auto_publish: bool
 
-@router.patch("/users/{user_id}/auto-publish", dependencies=[Depends(require_admin)])
-def set_auto_publish(user_id: str, body: AutoPublishBody, sb: Client = Depends(get_supabase_admin)):
+@router.patch("/users/{user_id}/auto-publish")
+def set_auto_publish(user_id: str, body: AutoPublishBody, user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     res = sb.table("profiles").update({"auto_publish": body.auto_publish}).eq("id", user_id).execute()
     if not res.data:
         raise HTTPException(404, "User not found")
     invalidate_profile(user_id)   # takes effect on the writer's next upload immediately
+    record_audit(sb, user, "auto_publish", "user", user_id, f"on={body.auto_publish}")
     return res.data[0]
 
 class MqjBody(BaseModel):
     access: str  # 'none' | 'pending' | 'approved' | 'rejected'
 
-@router.patch("/users/{user_id}/mqj", dependencies=[Depends(require_admin)])
-def set_mqj(user_id: str, body: MqjBody, sb: Client = Depends(get_supabase_admin)):
+@router.patch("/users/{user_id}/mqj")
+def set_mqj(user_id: str, body: MqjBody, user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     if body.access not in ("none", "pending", "approved", "rejected"):
         raise HTTPException(400, "Invalid access value")
     res = sb.table("profiles").update({"mqj_access": body.access}).eq("id", user_id).execute()
     if not res.data:
         raise HTTPException(404, "User not found")
     invalidate_profile(user_id)   # 迷情劑 approval/revoke takes effect immediately
+    record_audit(sb, user, "mqj", "user", user_id, f"access={body.access}")
     return res.data[0]
+
+# ── Admin action audit log (super_admin only) ──────────────
+@router.get("/audit-log")
+def get_audit_log(user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
+    # Most recent admin actions (approve / ban / role / delete / lock / password / mqj / invite).
+    try:
+        return (sb.table("audit_log").select("*").order("created_at", desc=True).limit(200).execute().data or [])
+    except Exception:
+        return []

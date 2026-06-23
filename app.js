@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.24';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.25';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1977,12 +1977,45 @@ function updateReaderDarkBtn() {
 }
 
 // ── Admin ────────────────────────────────────────────────────
+const AUDIT_LABELS = {
+  approve_novel: '核准作品', delete_novel: '刪除作品', lock: '鎖上作品', unlock: '解鎖作品',
+  ban: '封禁帳號', unban: '解除封禁', change_role: '變更身份', reset_password: '重設密碼',
+  delete_user: '刪除帳號', auto_publish: '自動審核', mqj: '迷情劑權限',
+  generate_invite: '產生邀請', revoke_invite: '撤銷邀請',
+};
+async function loadAuditLog() {
+  const el = document.getElementById('admin-audit-list');
+  if (!el) return;
+  el.innerHTML = '<div class="spinner"></div>';
+  try {
+    const [rows, users] = await Promise.all([
+      api('/permissions/audit-log'),
+      api('/permissions/users').catch(() => []),
+    ]);
+    const nameById = {};
+    (users || []).forEach(u => { nameById[u.id] = u.username; });
+    if (!rows || !rows.length) { el.innerHTML = '<p style="font-size:13px;color:var(--ink-light)">尚無紀錄</p>'; return; }
+    el.innerHTML = rows.map(r => {
+      const label = AUDIT_LABELS[r.action] || r.action;
+      const when = r.created_at ? new Date(r.created_at).toLocaleString('zh-TW', { hour12: false }) : '';
+      const tgt = r.target_type === 'user'
+        ? (nameById[r.target_id] || (r.target_id ? '#' + String(r.target_id).slice(0, 8) : ''))
+        : (r.detail || (r.target_id ? '#' + String(r.target_id).slice(0, 8) : ''));
+      return `<div class="audit-row">
+        <div class="audit-act">${escapeHtml(label)}${tgt ? ` <span class="audit-tgt">${escapeHtml(String(tgt))}</span>` : ''}</div>
+        <div class="audit-meta">${escapeHtml(r.actor_name || '?')}　${escapeHtml(when)}</div>
+      </div>`;
+    }).join('');
+  } catch (e) { el.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${escapeHtml((e && e.message) || '')}</p>`; }
+}
+
 function switchAdminTab(tab) {
   document.querySelectorAll('.admin-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.admin-pane').forEach(p => p.classList.remove('active'));
   document.getElementById('admin-' + tab).classList.add('active');
   stopMonitor();                       // leaving any tab cancels the live monitor poll
   if (tab === 'monitor') startMonitor();
+  if (tab === 'audit') loadAuditLog();
   if (tab === 'novels') loadAdminNovelList();
   if (tab === 'users') loadAdminUsers();
   if (tab === 'upload') { setUploadKind('novel'); initUploadDraftWatch(); restoreUploadDraft(); }

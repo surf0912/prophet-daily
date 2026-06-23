@@ -2,7 +2,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
-from deps import get_supabase_admin, get_current_user, require_admin, require_writer, is_admin, can_see_mqj, check_novel_access
+from deps import get_supabase_admin, get_current_user, require_admin, require_writer, is_admin, can_see_mqj, check_novel_access, record_audit
 from supabase import Client
 
 router = APIRouter()
@@ -267,11 +267,12 @@ def create_forum_post(body: ForumPostCreate, user: dict = Depends(require_writer
         raise HTTPException(500, "發表失敗，請重試")
     return novel
 
-@router.patch("/{novel_id}/approve", dependencies=[Depends(require_admin)])
-def approve_novel(novel_id: str, sb: Client = Depends(get_supabase_admin)):
+@router.patch("/{novel_id}/approve")
+def approve_novel(novel_id: str, user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     res = sb.table("novels").update({"status": "approved"}).eq("id", novel_id).execute()
     if not res.data:
         raise HTTPException(404, "Novel not found")
+    record_audit(sb, user, "approve_novel", "novel", novel_id, res.data[0].get("title"))
     return res.data[0]
 
 class OwnersBody(BaseModel):
@@ -327,6 +328,7 @@ def delete_novel(novel_id: str, user: dict = Depends(require_writer), sb: Client
     if not is_admin(user) and user["id"] not in (rows[0].get("owners") or []):
         raise HTTPException(403, "只能刪除自己的作品")
     sb.table("novels").delete().eq("id", novel_id).execute()
+    record_audit(sb, user, "delete_novel", "novel", novel_id)
     return {"message": "Deleted"}
 
 class LockBody(BaseModel):
@@ -343,6 +345,7 @@ def set_locked(novel_id: str, body: LockBody, user: dict = Depends(require_write
     if user.get("role") != "super_admin" and user["id"] not in (rows[0].get("owners") or []):
         raise HTTPException(403, "只能鎖自己的作品")
     res = sb.table("novels").update({"locked": body.locked}).eq("id", novel_id).execute()
+    record_audit(sb, user, "lock" if body.locked else "unlock", "novel", novel_id)
     return res.data[0] if res.data else {"id": novel_id, "locked": body.locked}
 
 # ── Comment likes (forum 蓋樓) ───────────────────────────────

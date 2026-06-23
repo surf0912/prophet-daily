@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-from deps import get_supabase, get_supabase_admin, get_current_user, require_admin
+from deps import get_supabase, get_supabase_admin, get_current_user, require_admin, record_audit
 from supabase import Client
 import re
 
@@ -61,6 +61,7 @@ def generate_invite(
             except Exception:
                 if attempt == 5:
                     raise HTTPException(500, "產生邀請失敗，請重試")
+    record_audit(sb, user, "generate_invite", "invite", None, f"role={body.role} count={len(tokens)}")
     return {"tokens": tokens, "token": tokens[0], "role": body.role}
 
 @router.get("/validate/{token}")
@@ -168,4 +169,5 @@ def list_invites(user: dict = Depends(require_admin), sb: Client = Depends(get_s
 @router.delete("/{invite_id}")
 def revoke_invite(invite_id: str, user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     sb.table("invite_tokens").delete().eq("id", invite_id).execute()
+    record_audit(sb, user, "revoke_invite", "invite", invite_id)
     return {"message": "Revoked"}

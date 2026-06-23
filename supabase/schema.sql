@@ -361,3 +361,21 @@ revoke all privileges on all sequences in schema public from anon, authenticated
 alter default privileges in schema public revoke all on tables from anon, authenticated;
 alter default privileges in schema public revoke all on sequences from anon, authenticated;
 revoke execute on function public.handle_new_user() from public, anon, authenticated;
+
+-- ============================================================
+-- AUDIT LOG: admin actions — who approved / banned / changed role / deleted / locked / reset
+-- password / changed 迷情劑 / issued or revoked invites. Written only by the FastAPI service role;
+-- super_admin reads it through the backend (/permissions/audit-log).
+-- ============================================================
+create table if not exists public.audit_log (
+  id          uuid primary key default gen_random_uuid(),
+  actor_id    uuid,
+  actor_name  text,
+  action      text not null,
+  target_type text,
+  target_id   text,
+  detail      text,
+  created_at  timestamptz not null default now()
+);
+alter table public.audit_log enable row level security;
+revoke all privileges on table public.audit_log from anon, authenticated;

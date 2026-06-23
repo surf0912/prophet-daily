@@ -198,3 +198,18 @@ def check_novel_access(novel: dict, user: dict):
     if is_admin(user) or is_owner:
         return
     raise HTTPException(403, "This work is awaiting approval")
+
+def record_audit(sb, actor: dict, action: str, target_type: str = None, target_id=None, detail: str = None):
+    """Append one admin-action row to audit_log (who did what to whom). Best-effort — never let
+    audit logging break the underlying action. Requires an audit_log table (see schema.sql)."""
+    try:
+        sb.table("audit_log").insert({
+            "actor_id": (actor or {}).get("id"),
+            "actor_name": (actor or {}).get("username") or (actor or {}).get("nickname"),
+            "action": action,
+            "target_type": target_type,
+            "target_id": (str(target_id) if target_id is not None else None),
+            "detail": detail,
+        }).execute()
+    except Exception:
+        pass
