@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.30';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.31';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1431,9 +1431,9 @@ function applyMqjGuard(on) {
     const d = new Date();
     const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const dark = document.documentElement.classList.contains('dark');
-    // Aggressive: dense + deep + woven through the body text, so a screenshot's OCR (iOS Live Text)
-    // picks up the watermark code interleaved with the prose — a leaked copy is polluted + traceable.
-    const color = dark ? 'rgba(242,227,184,0.42)' : 'rgba(138,45,45,0.40)';
+    // Dense tiling (woven through the prose for OCR pollution + traceability) but a softer opacity
+    // so reading stays comfortable.
+    const color = dark ? 'rgba(242,227,184,0.26)' : 'rgba(138,45,45,0.22)';
     const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='150' height='58'><text x='2' y='44' transform='rotate(-24 75 36)' fill='${color}' font-size='15' font-weight='bold' font-family='sans-serif'>${escapeHtml(code + ' ' + stamp)}</text></svg>`;
     ov.style.backgroundImage = `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
     ov.style.backgroundRepeat = 'repeat';
