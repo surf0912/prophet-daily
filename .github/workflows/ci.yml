@@ -27,5 +27,9 @@ jobs:
           /tmp/pip-audit/bin/pip-audit -r requirements.lock --no-deps --disable-pip
       - name: Compile all backend Python
         run: python -m py_compile main.py deps.py monitor.py config.py routers/*.py
+      - name: Check frontend JavaScript syntax
+        run: |
+          node --check app.js
+          node --check safe-events.js
       - name: Security + output-safety tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v

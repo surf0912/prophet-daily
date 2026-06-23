@@ -99,7 +99,7 @@ app.mount("/chars", StaticFiles(directory="chars"), name="chars")
 
 # Top-level static assets we allow, by extension. Excludes .py so backend source is never served,
 # and the guard blocks path traversal — even though the repo is already public.
-_STATIC_EXT = {".woff2", ".jpg", ".jpeg", ".png", ".svg", ".json", ".js", ".ico"}
+_STATIC_EXT = {".woff2", ".jpg", ".jpeg", ".png", ".svg", ".json", ".css", ".js", ".ico"}
 
 @app.get("/")
 def _frontend_index():
