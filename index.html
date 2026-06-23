@@ -886,7 +886,7 @@
           <div class="form-group">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
               <label style="margin:0">內文</label>
-              <button type="button" onclick="document.getElementById('soon-modal').classList.add('open')" style="font-size:12px;padding:4px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-camera"/></svg> 圖片辨識</button>
+              <label style="font-size:12px;padding:4px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer;display:inline-flex;align-items:center;gap:4px"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-scroll"/></svg> 上傳 txt<input type="file" accept=".txt,text/plain" onchange="loadTxtIntoUpload(this)" style="display:none" /></label>
             </div>
             <textarea id="new-novel-content" rows="12" placeholder="在此貼上小說內文…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
           </div>
@@ -1056,7 +1056,7 @@
 <!-- Manage owners (co-authors) modal -->
 <div class="perm-modal" id="transfer-modal">
   <div class="perm-modal-inner">
-    <h3>管理作者 — <span id="transfer-novel-title" style="font-size:14px"></span></h3>
+    <h3><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-users"/></svg> 管理作者 — <span id="transfer-novel-title" style="font-size:14px"></span></h3>
     <p style="font-size:12px;color:var(--ink-light);margin:6px 0 10px">勾選擁有此作品的帳號（可多人共同擁有）：</p>
     <div id="transfer-user-list"></div>
     <div style="display:flex;gap:8px;margin-top:14px">
@@ -1069,7 +1069,7 @@
 <!-- Series binding modal -->
 <div class="perm-modal" id="series-modal">
   <div class="perm-modal-inner">
-    <h3>綁定系列 — <span id="series-novel-title" style="font-size:14px"></span></h3>
+    <h3><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-link"/></svg> 綁定系列 — <span id="series-novel-title" style="font-size:14px"></span></h3>
     <p style="font-size:12px;color:var(--ink-light);margin:6px 0 10px">填一樣的「系列名」即可把上下部綁在一起；留空則為單篇。</p>
     <div class="form-group"><label>系列名（留空 = 單篇）</label><input type="text" id="series-name-input" list="series-name-list" placeholder="例：火焰杯后" /><datalist id="series-name-list"></datalist></div>
     <div class="form-group"><label>第幾部（順序，1=上、2=下…）</label><input type="number" id="series-order-input" min="0" value="0" /></div>
@@ -1082,7 +1082,7 @@
 
 <div class="perm-modal" id="editclass-modal">
   <div class="perm-modal-inner">
-    <h3>編輯分類 — <span id="editclass-novel-title" style="font-size:14px"></span></h3>
+    <h3><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-edit"/></svg> 編輯分類 — <span id="editclass-novel-title" style="font-size:14px"></span></h3>
     <div class="form-group" id="editclass-cat-group"><label>故事類型</label><select id="editclass-category"></select></div>
     <div class="form-group"><label>角色（可多選）</label><div id="editclass-chars" class="char-picker"></div></div>
     <div style="display:flex;gap:8px;margin-top:6px">
@@ -1284,7 +1284,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.03';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.04';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2426,6 +2426,20 @@ function openAddPiece() {
   document.getElementById('bs-tag-list').innerHTML = [...new Set(_bookshelf.map(p => p.char_tag).filter(Boolean))].map(t => `<option value="${escapeHtml(t)}">`).join('');
   document.getElementById('bookshelf-add-modal').classList.add('open');
 }
+// 後台上傳：讀一個 .txt 進內文框(取代原本暫不支持的圖片辨識）
+function loadTxtIntoUpload(input) {
+  const f = input.files && input.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    document.getElementById('new-novel-content').value = r.result || '';
+    const t = document.getElementById('new-novel-title');
+    if (t && !t.value.trim()) t.value = f.name.replace(/\.txt$/i, '');
+  };
+  r.readAsText(f);
+  input.value = '';
+}
+
 function loadTxtFile(input) {
   const f = input.files && input.files[0];
   if (!f) return;
@@ -3583,12 +3597,12 @@ function renderAdminNovels() {
           <button onclick="deleteNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-trash',12)} 刪除</button>` : '';
       // 鎖上：作者本人(owner)或超管才有；鎖住後其他人完全看不到這篇存在。
       const canLock = !adminNovelScope || currentUser.role === 'super_admin';
-      const lockBtn = canLock ? `<button onclick='toggleLock(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${!n.locked})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid ${n.locked ? 'var(--series)' : 'var(--accent)'};color:${n.locked ? 'var(--series)' : 'var(--accent)'};border-radius:3px;cursor:pointer">${n.locked ? '解鎖' : '鎖上'}</button>` : '';
+      const lockBtn = canLock ? `<button onclick='toggleLock(${JSON.stringify(n.id)}, ${JSON.stringify(n.title)}, ${!n.locked})' style="font-size:12px;padding:3px 10px;background:none;border:1px solid ${n.locked ? 'var(--series)' : 'var(--accent)'};color:${n.locked ? 'var(--series)' : 'var(--accent)'};border-radius:3px;cursor:pointer">${ic('ic-key',12)} ${n.locked ? '解鎖' : '鎖上'}</button>` : '';
       return `
       <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
         <div style="margin-bottom:3px;display:flex;gap:5px;flex-wrap:wrap">${n.kind === 'forum'
           ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-scroll', 12) + ' 論壇體</span>'
-          : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-book', 12) + ' 小說</span>'}${statusTag}${n.is_guide ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-book', 12) + ' 範例·可刪除</span>' : ''}${n.locked ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.2);color:var(--accent)">已鎖·只你和超管可見</span>' : ''}</div>
+          : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-book', 12) + ' 小說</span>'}${statusTag}${n.is_guide ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-book', 12) + ' 範例·可刪除</span>' : ''}${n.locked ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.2);color:var(--accent)">' + ic('ic-key',11) + ' 已鎖·只你和超管可見</span>' : ''}</div>
         <div onclick="openNovel('${n.id}')" style="font-size:14px;font-weight:bold;cursor:pointer">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
           ${n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : ''}
