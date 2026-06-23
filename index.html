@@ -1318,7 +1318,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.18';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.19';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2510,9 +2510,10 @@ async function loadCustomChars() {
   renderUploadCcPicker();
 }
 // 單擊 = 選取(篩選作品)；雙擊 = 打開編輯
-function ccTap(id) {
+function ccTap(id, rerender) {
+  const draw = rerender || renderShelf;   // 意若思鏡用 renderShelf；作品管理傳 renderAdminNovels
   if (_ccTapTimer) { clearTimeout(_ccTapTimer); _ccTapTimer = null; editCustomChar(id); }
-  else { _ccTapTimer = setTimeout(() => { _ccTapTimer = null; _ccFilter = (_ccFilter === id) ? '' : id; renderShelf(); }, 320); }
+  else { _ccTapTimer = setTimeout(() => { _ccTapTimer = null; _ccFilter = (_ccFilter === id) ? '' : id; draw(); }, 320); }
 }
 function setCcAvatarPreview(url) {
   const el = document.getElementById('cc-avatar-preview');
@@ -3680,6 +3681,7 @@ function applyAdminFilter(list) {
       const ok = charAnd ? sel.every(c => have.includes(c)) : sel.some(c => have.includes(c));
       if (!ok) return false;
     }
+    if (isBeta() && _ccFilter) { const s = _ccTags[_ccFilter]; if (!s || !s.has(n.id)) return false; }   // 自創角色(私人標記)
     return true;
   });
 }
@@ -3695,8 +3697,10 @@ function renderAdminFilterBar(ns) {
   catEl.querySelectorAll('.cat-pill').forEach(b => b.onclick = () => { adminCat = (adminCat === b.dataset.c) ? '' : b.dataset.c; renderAdminNovels(); });   // 再點同一顆 = 取消 = 全部
   const chipEl = document.getElementById('admin-char-chips');
   chipEl.innerHTML = CHAR_LIST.map(ch =>
-    `<div class="char-chip ${adminChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}"><img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span></div>`).join('');
-  chipEl.querySelectorAll('.char-chip').forEach(el => el.onclick = () => {
+    `<div class="char-chip ${adminChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}"><img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span></div>`).join('')
+    // beta：官方角色之後接自創角色(單擊篩選・雙擊編輯)，與意若思鏡一致
+    + (isBeta() ? _customChars.map(c => `<div class="char-chip char-custom${_ccFilter === c.id ? ' cc-on' : ''}" onclick="ccTap('${c.id}', renderAdminNovels)" title="單擊篩選・雙擊編輯"><div class="cc-ava"${c.avatar ? ` style="background-image:url('${c.avatar}')"` : ''}>${c.avatar ? '' : ic('ic-wand', 20)}</div><span>${escapeHtml(c.name)}</span></div>`).join('') : '');
+  chipEl.querySelectorAll('.char-chip[data-ch]').forEach(el => el.onclick = () => {
     adminChars = adminChars.includes(el.dataset.ch) ? adminChars.filter(c => c !== el.dataset.ch) : [...adminChars, el.dataset.ch];
     renderAdminNovels();
   });
