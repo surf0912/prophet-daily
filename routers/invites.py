@@ -80,45 +80,54 @@ def validate_invite(token: str, sb: Client = Depends(get_supabase_admin)):
 
 @router.post("/register")
 def register_with_invite(body: RegisterWithInvite, sb_admin: Client = Depends(get_supabase_admin)):
-    # Validate token first
+    from datetime import datetime, timezone
+    # 1) Read once for clear error messages. The real gate is the atomic claim in step 3.
     rows = sb_admin.table("invite_tokens").select("*").eq("token", body.token).limit(1).execute().data
     inv = rows[0] if rows else None
     if not inv:
-        raise HTTPException(410, "此邀請連結已使用")   # not found = revoked (hard-deleted) or bad token → "used up", not "invalid". .single() raises on no row (→500), so use limit(1).
+        raise HTTPException(410, "此邀請連結已使用")   # not found = revoked (hard-deleted) or bad token. limit(1) (not .single()) so no row → no 500.
     if inv["used_at"] is not None:
         raise HTTPException(410, "此邀請連結已使用")
-    from datetime import datetime, timezone
     expires = datetime.fromisoformat(inv["expires_at"].replace("Z", "+00:00"))
     if datetime.now(timezone.utc) > expires:
         raise HTTPException(410, "此邀請連結已過期")
 
-    # Validate username format
+    # 2) Validate username BEFORE claiming so a malformed request never consumes the token.
     if not re.match(r'^[a-zA-Z0-9_]{2,20}$', body.username):
         raise HTTPException(400, "用戶名只能包含英文、數字、底線，長度 2-20 字元")
 
     email = username_to_email(body.username)
     nickname = (body.nickname or body.username).strip()[:20] or body.username
 
-    # Create auth user with correct role in metadata
-    auth_res = sb_admin.auth.admin.create_user({
-        "email": email,
-        "password": body.password,
-        "email_confirm": True,
-        "user_metadata": {"username": body.username, "role": inv["role"], "nickname": nickname},
-    })
-    if not auth_res.user:
-        raise HTTPException(400, "註冊失敗，請稍後再試")
+    # 3) ATOMIC CLAIM: flip used_at only while it is still NULL (and not expired). Concurrent
+    #    registrations race here and Postgres row-locks the UPDATE, so exactly one wins — one token
+    #    can never mint two accounts.
+    now_iso = datetime.now(timezone.utc).isoformat()
+    claimed = (sb_admin.table("invite_tokens").update({"used_at": now_iso})
+               .eq("token", body.token).is_("used_at", "null").gt("expires_at", now_iso)
+               .execute().data)
+    if not claimed:
+        raise HTTPException(410, "此邀請連結已使用")   # another request claimed it first
+
+    # 4) Create the account. On ANY failure, release the claim so the invite stays usable (no
+    #    orphaned "account exists but token still consumed / token consumed but no account" states).
+    try:
+        auth_res = sb_admin.auth.admin.create_user({
+            "email": email,
+            "password": body.password,
+            "email_confirm": True,
+            "user_metadata": {"username": body.username, "role": inv["role"], "nickname": nickname},
+        })
+        if not auth_res.user:
+            raise HTTPException(400, "註冊失敗，請稍後再試")
+    except Exception as e:
+        sb_admin.table("invite_tokens").update({"used_at": None, "used_by": None}).eq("token", body.token).execute()
+        raise e if isinstance(e, HTTPException) else HTTPException(400, "註冊失敗，請稍後再試")
 
     new_user_id = auth_res.user.id
-    # The profile row is created by a trigger from metadata; ensure nickname is set.
+    # Profile row is created by a trigger from metadata; ensure nickname + record who used the token.
     sb_admin.table("profiles").update({"nickname": nickname}).eq("id", new_user_id).execute()
-
-    # Mark token as used
-    sb_admin.table("invite_tokens").update({
-        "used_by": new_user_id,
-        "used_at": datetime.now(timezone.utc).isoformat(),
-    }).eq("token", body.token).execute()
-
+    sb_admin.table("invite_tokens").update({"used_by": new_user_id}).eq("token", body.token).execute()
     return {"message": "註冊成功，請使用你的帳號登入"}
 
 @router.get("/list")

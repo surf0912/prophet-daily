@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-from deps import get_supabase_admin, get_current_user, require_admin, require_writer, is_admin, can_see_mqj
+from deps import get_supabase_admin, get_current_user, require_admin, require_writer, is_admin, can_see_mqj, check_novel_access
 from supabase import Client
 
 router = APIRouter()
@@ -95,18 +95,8 @@ def _touch_novel(novel_id: str, sb_admin: Client):
     sb_admin.table("novels").update({"updated_at": "now()"}).eq("id", novel_id).execute()
 
 def _check_novel_access(novel_id: str, user: dict, sb: Client):
-    # Approved works → any logged-in user. Pending → admins and the creator only.
+    # Fetch the work and defer to the shared rule (locked / scheduled / 迷情劑 / pending).
     rows = sb.table("novels").select("*").eq("id", novel_id).limit(1).execute().data
-    nv = rows[0] if rows else None
-    if not nv:
+    if not rows:
         raise HTTPException(404, "Novel not found")
-    # Author-locked → 404 for everyone but super_admin + owners (don't reveal the work exists).
-    if nv.get("locked") and user.get("role") != "super_admin" and user["id"] not in (nv.get("owners") or []):
-        raise HTTPException(404, "Novel not found")
-    if nv.get("category") == "迷情劑" and not can_see_mqj(user):
-        raise HTTPException(403, "迷情劑分類需管理員開放才能閱讀")
-    if nv.get("status") == "approved":
-        return
-    if is_admin(user) or user["id"] in (nv.get("owners") or []):
-        return
-    raise HTTPException(403, "This work is awaiting approval")
+    check_novel_access(rows[0], user)

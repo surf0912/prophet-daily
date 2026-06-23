@@ -159,3 +159,37 @@ def is_writer_or_above(user: dict) -> bool:
 def can_see_mqj(user: dict) -> bool:
     # Admins/super_admin always; readers AND writers need an approved 迷情劑 access toggle.
     return is_admin(user) or user.get("mqj_access") == "approved"
+
+def _novel_scheduled_future(novel: dict) -> bool:
+    """True if the work's publish date (created_at, TW calendar day) is still in the future,
+    i.e. it is scheduled and not yet public."""
+    ts = novel.get("created_at")
+    if not ts:
+        return False
+    try:
+        from datetime import datetime, timezone, timedelta
+        TW = timezone(timedelta(hours=8))
+        return datetime.fromisoformat(str(ts).replace("Z", "+00:00")).astimezone(TW).date() > datetime.now(TW).date()
+    except Exception:
+        return False
+
+def check_novel_access(novel: dict, user: dict):
+    """Single source of truth for 'may this user access this work'. Raises HTTPException if not.
+    Used by every work / chapter / stat endpoint so visibility rules can't diverge. Uses 404 (not
+    403) where merely revealing that the work exists would itself be a leak (locked / scheduled)."""
+    is_owner = user["id"] in (novel.get("owners") or [])
+    # Author-locked → invisible to all but super_admin + owners.
+    if novel.get("locked") and user.get("role") != "super_admin" and not is_owner:
+        raise HTTPException(404, "Novel not found")
+    # Scheduled for a future date → not yet public; hide from non-admin / non-owner.
+    if _novel_scheduled_future(novel) and not is_admin(user) and not is_owner:
+        raise HTTPException(404, "Novel not found")
+    # 迷情劑 category needs an explicit access grant.
+    if novel.get("category") == "迷情劑" and not can_see_mqj(user):
+        raise HTTPException(403, "迷情劑分類需管理員開放才能閱讀")
+    # Approved → any logged-in user. Pending → admins and the creator/owner only.
+    if novel.get("status") == "approved":
+        return
+    if is_admin(user) or is_owner:
+        return
+    raise HTTPException(403, "This work is awaiting approval")

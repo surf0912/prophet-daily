@@ -2,7 +2,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
-from deps import get_supabase_admin, get_current_user, require_admin, require_writer, is_admin, can_see_mqj
+from deps import get_supabase_admin, get_current_user, require_admin, require_writer, is_admin, can_see_mqj, check_novel_access
 from supabase import Client
 
 router = APIRouter()
@@ -160,10 +160,10 @@ def my_liked(user: dict = Depends(get_current_user), sb: Client = Depends(get_su
     novels = sb.table("novels").select("*").in_("id", list(counts.keys())).execute().data or []
     out = []
     for n in novels:
-        if n.get("status") != "approved" and not is_admin(user):
-            continue  # don't surface works that are no longer public
-        if n.get("locked") and user.get("role") != "super_admin" and user["id"] not in (n.get("owners") or []):
-            continue  # author-locked → invisible to others
+        try:
+            check_novel_access(n, user)   # locked / scheduled / 迷情劑 / pending all filtered out
+        except HTTPException:
+            continue
         n["liked_count"] = counts.get(n["id"], 0)
         out.append(n)
     out.sort(key=lambda n: n["liked_count"], reverse=True)
@@ -184,8 +184,16 @@ def hot_novels(user: dict = Depends(get_current_user), sb: Client = Depends(get_
         return []
     if not score:
         return []
-    rows = sb.table("novels").select("id, status, kind").in_("id", list(score.keys())).execute().data or []
-    ok = {r["id"] for r in rows if r.get("status") == "approved" and r.get("kind") == "novel"}
+    rows = sb.table("novels").select("*").in_("id", list(score.keys())).execute().data or []
+    ok = set()
+    for r in rows:
+        if r.get("kind") != "novel":
+            continue
+        try:
+            check_novel_access(r, user)   # only surface works this user may actually open
+        except HTTPException:
+            continue
+        ok.add(r["id"])
     ranked = sorted((i for i in score if i in ok), key=lambda i: score[i], reverse=True)
     return ranked[:3]
 
@@ -335,6 +343,7 @@ def set_locked(novel_id: str, body: LockBody, user: dict = Depends(require_write
 # ── Comment likes (forum 蓋樓) ───────────────────────────────
 @router.get("/{novel_id}/likes")
 def get_comment_likes(novel_id: str, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
+    check_novel_access(_fetch_novel_or_404(novel_id, sb), user)   # only for works the caller may read
     rows = sb.table("comment_likes").select("comment_index, user_id").eq("novel_id", novel_id).execute().data or []
     counts, mine = {}, []
     for r in rows:
@@ -346,6 +355,7 @@ def get_comment_likes(novel_id: str, user: dict = Depends(get_current_user), sb:
 
 @router.post("/{novel_id}/comments/{idx}/like")
 def toggle_comment_like(novel_id: str, idx: int, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
+    check_novel_access(_fetch_novel_or_404(novel_id, sb), user)   # can't like comments on a hidden work
     existing = (sb.table("comment_likes").select("id")
                 .eq("novel_id", novel_id).eq("comment_index", idx).eq("user_id", user["id"]).execute().data)
     if existing:
@@ -364,16 +374,15 @@ def toggle_favorite(novel_id: str, user: dict = Depends(get_current_user), sb: C
     if existing:
         sb.table("novel_favorites").delete().eq("user_id", user["id"]).eq("novel_id", novel_id).execute()
         return {"favorited": False}
-    # Adding a new favourite: block 迷情劑 works the caller can't read (backstop — the UI already
-    # hides the ☆ on the access-gate page). Un-favouriting above is always allowed.
-    nv = sb.table("novels").select("category").eq("id", novel_id).execute().data
-    if nv and nv[0].get("category") == "迷情劑" and not can_see_mqj(user):
-        raise HTTPException(403, "迷情劑分類需管理員開放才能收藏")
+    # Adding a new favourite: the caller must actually be able to read the work — locked, scheduled,
+    # 迷情劑 and pending are all blocked. Un-favouriting above is always allowed so users can clean up.
+    check_novel_access(_fetch_novel_or_404(novel_id, sb), user)
     sb.table("novel_favorites").insert({"user_id": user["id"], "novel_id": novel_id}).execute()
     return {"favorited": True}
 
 @router.post("/{novel_id}/view")
 def log_view(novel_id: str, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
+    check_novel_access(_fetch_novel_or_404(novel_id, sb), user)   # don't log views for works the caller can't see
     # Record one view per user per work per 24h (so a single reader can't inflate the hot ranking).
     since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     try:
@@ -385,17 +394,13 @@ def log_view(novel_id: str, user: dict = Depends(get_current_user), sb: Client =
         pass  # view logging is best-effort; never block reading
     return {"ok": True}
 
-def _check_novel_access(novel: dict, user: dict):
-    # Author-locked → invisible to all but super_admin + owners. 404 (not 403) so it doesn't reveal
-    # the work exists. Owners are exempt so the author can still preview their own locked work.
-    if novel.get("locked") and user.get("role") != "super_admin" and user["id"] not in (novel.get("owners") or []):
+def _fetch_novel_or_404(novel_id: str, sb: Client) -> dict:
+    rows = sb.table("novels").select("*").eq("id", novel_id).limit(1).execute().data
+    if not rows:
         raise HTTPException(404, "Novel not found")
-    # Approved works are visible to every logged-in user.
-    # Pending works are visible only to admins and the creator (for preview/review).
-    if novel.get("category") == "迷情劑" and not can_see_mqj(user):
-        raise HTTPException(403, "迷情劑分類需管理員開放才能閱讀")
-    if novel.get("status") == "approved":
-        return
-    if is_admin(user) or user["id"] in (novel.get("owners") or []):
-        return
-    raise HTTPException(403, "This work is awaiting approval")
+    return rows[0]
+
+# The canonical visibility rule now lives in deps.check_novel_access (shared with chapters + stat
+# endpoints). Thin alias kept so existing call sites stay unchanged.
+def _check_novel_access(novel: dict, user: dict):
+    check_novel_access(novel, user)
