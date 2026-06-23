@@ -104,9 +104,12 @@ create policy "Public profiles are viewable by authenticated users"
   on public.profiles for select
   to authenticated using (true);
 
-create policy "Users can update own profile"
-  on public.profiles for update
-  using (auth.uid() = id);
+-- Profiles are deliberately NOT directly writable by anon/authenticated clients.
+-- Every profile mutation goes through the FastAPI backend, whose service-role client
+-- performs field-level validation and authorization. A row-only "own profile" UPDATE
+-- policy would also let a user change security-sensitive columns such as role, banned,
+-- mqj_access, and auto_publish.
+revoke update on table public.profiles from anon, authenticated;
 
 -- NOVELS: everyone authenticated can see novels (content gated via chapters)
 create policy "Authenticated users can view novels"
