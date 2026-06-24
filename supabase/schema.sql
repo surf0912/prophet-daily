@@ -319,6 +319,9 @@ alter table public.profiles add column if not exists guide_seeded boolean defaul
 alter table public.profiles add column if not exists tour_seen    text;       -- onboarding-tour version completed
 alter table public.profiles add column if not exists last_seen_at timestamptz;-- activity for the 不活躍用戶 report
 alter table public.profiles add column if not exists home_chars   text;       -- hidden 心動-cover photos (comma-joined)
+alter table public.profiles add column if not exists reg_ip       text;       -- IP at sign-up (re-registration / ban-evasion review)
+alter table public.profiles add column if not exists reg_fp       text;       -- browser fingerprint at sign-up (same)
+alter table public.profiles add column if not exists flag_note    text;       -- 疑似回鍋 review note, set when a sign-up matches a banned account
 
 -- novels: kind/category/characters/series/owners/status/locking the app relies on.
 alter table public.novels add column if not exists kind         text default 'novel';   -- 'novel' | 'forum'

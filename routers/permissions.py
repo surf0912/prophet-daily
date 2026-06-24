@@ -56,7 +56,7 @@ def export_all(sb: Client = Depends(get_supabase_admin)):
 def list_users(user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     # last_seen_at / auto_publish are optional columns; fall back gracefully if not added yet.
     try:
-        res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, created_at, last_seen_at, auto_publish").order("created_at", desc=True).execute()
+        res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, created_at, last_seen_at, auto_publish, flag_note").order("created_at", desc=True).execute()
     except Exception:
         res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, created_at").order("created_at", desc=True).execute()
     # An admin only sees members at the same rank or lower; only super_admin sees super_admin accounts.
@@ -198,3 +198,11 @@ def get_audit_log(user: dict = Depends(require_super_admin), sb: Client = Depend
         return (sb.table("audit_log").select("*").order("created_at", desc=True).limit(200).execute().data or [])
     except Exception:
         return []
+
+@router.patch("/users/{user_id}/clear-flag")
+def clear_flag(user_id: str, user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
+    # Dismiss a 疑似回鍋 flag after the super_admin has reviewed it.
+    sb.table("profiles").update({"flag_note": None}).eq("id", user_id).execute()
+    invalidate_profile(user_id)
+    record_audit(sb, user, "clear_flag", "user", user_id)
+    return {"ok": True}

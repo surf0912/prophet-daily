@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.31';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.32';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -342,6 +342,24 @@ async function doSignIn() {
   } catch (e) { shakeMsg('' + e.message); }
 }
 
+// Best-effort browser fingerprint for re-registration / ban-evasion review (NOT security). Uses
+// only stable-ish traits (no canvas — Safari randomises it) so the same device produces the same id
+// across sign-ups; admins review matches, nothing is blocked.
+function deviceFingerprint() {
+  try {
+    const n = navigator;
+    const s = [
+      n.userAgent, n.language, (n.languages || []).join(','), n.platform || '',
+      n.hardwareConcurrency || '', n.deviceMemory || '',
+      screen.width + 'x' + screen.height + 'x' + (screen.colorDepth || ''),
+      window.devicePixelRatio || '', (Intl.DateTimeFormat().resolvedOptions().timeZone) || '',
+    ].join('|');
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return 'fp' + h.toString(36);
+  } catch (e) { return ''; }
+}
+
 async function doInviteRegister() {
   const msg = document.getElementById('auth-msg');
   const username = document.getElementById('inv-name').value.trim();
@@ -358,7 +376,7 @@ async function doInviteRegister() {
   try {
     await api('/invites/register', {
       method: 'POST',
-      body: JSON.stringify({ token: invToken, username, password: pass, nickname }),
+      body: JSON.stringify({ token: invToken, username, password: pass, nickname, fingerprint: deviceFingerprint() }),
     });
     const url = new URL(window.location.href);
     url.searchParams.delete('invite');
@@ -2778,6 +2796,14 @@ function renderUserStats() {
     + chip('', '全部', total) + chip('15', '≥15天未上線', in15cum) + chip('30', '≥30天未上線', in30) + `</div>`
     + (noRec ? `<div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:6px">※ ${noRec} 位尚無上線紀錄，暫以註冊日估算（之後自動精準）</div>` : '');
 }
+async function clearUserFlag(userId) {
+  try {
+    await api(`/permissions/users/${userId}/clear-flag`, { method: 'PATCH' });
+    toast('已標記為已審');
+    loadAdminUsers();
+  } catch (e) { toast(e.message); }
+}
+
 // Render (optionally filtered) user rows. Search matches 巫師暱稱 or 入學全名.
 function renderUserRows(q) {
   const el = document.getElementById('user-list');
@@ -2805,6 +2831,8 @@ function renderUserRows(q) {
       // Tap the name to drill into this member's detail (their works + 迷情劑 toggle for readers).
       const open = `viewUserNovels('${u.id}')`;
       const banTag = u.banned ? '<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(138,45,45,.18);color:var(--accent);margin-left:6px">' + ic('ic-ban',10) + ' 已封禁</span>' : '';
+      const flagBadge = (u.flag_note && isSuper) ? '<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(201,168,76,.3);color:var(--ink);margin-left:6px">' + ic('ic-shield',10) + ' 疑似回鍋</span>' : '';
+      const flagRow = (u.flag_note && isSuper) ? `<div style="margin-top:5px;font-size:12px;color:var(--accent);background:rgba(138,45,45,.10);padding:6px 8px;border-radius:6px;display:flex;align-items:center;gap:8px;justify-content:space-between"><span>${escapeHtml(u.flag_note)}</span><button data-onclick="clearUserFlag('${u.id}')" style="flex-shrink:0;font-size:11px;padding:3px 9px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:4px;cursor:pointer;white-space:nowrap">已審</button></div>` : '';
       const seen = `<div style="font-size:11px;color:var(--ink-light);font-weight:normal;opacity:.8">${lastSeenLabel(u)}</div>`;
       // In an inactivity view, super_admin gets an inline 刪除 for quick manual cleanup (never automatic).
       const delBtn = (isSuper && !isSelf && userActivityFilter)
@@ -2816,9 +2844,10 @@ function renderUserRows(q) {
       <div style="padding:8px 0;border-bottom:1px solid rgba(26,10,0,.07)">
         <div class="user-row" style="border:none;padding:0">
           <span data-onclick="${open}" style="cursor:pointer;flex-shrink:0">${avatarHTML(u, 32)}</span>
-          <div class="u-name" data-onclick="${open}" style="cursor:pointer;line-height:1.3">${escapeHtml(display)}${banTag}<span style="color:var(--gold);font-weight:bold;margin-left:6px">›</span><div style="font-size:12px;color:var(--ink-light);font-weight:normal">@${escapeHtml(u.username)}</div>${seen}</div>
+          <div class="u-name" data-onclick="${open}" style="cursor:pointer;line-height:1.3">${escapeHtml(display)}${banTag}${flagBadge}<span style="color:var(--gold);font-weight:bold;margin-left:6px">›</span><div style="font-size:12px;color:var(--ink-light);font-weight:normal">@${escapeHtml(u.username)}</div>${seen}</div>
           ${delBtn || picker}
         </div>
+        ${flagRow}
       </div>`;
     }).join('') || `<p style="color:#888;padding:20px">${needle ? '找不到符合的用戶' : (userActivityFilter || userRoleFilter ? '沒有符合的用戶' : '尚無用戶')}</p>`;
 }

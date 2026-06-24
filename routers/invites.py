@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 from deps import get_supabase, get_supabase_admin, get_current_user, require_admin, record_audit
@@ -28,6 +28,7 @@ class RegisterWithInvite(BaseModel):
     username: str          # 巫師入學全名 (login id, English only)
     password: str          # 通關密語
     nickname: Optional[str] = None   # 巫師姓名 (display name, may be Chinese)
+    fingerprint: Optional[str] = None   # best-effort browser fingerprint (re-registration detection)
 
 @router.post("/generate")
 def generate_invite(
@@ -80,7 +81,7 @@ def validate_invite(token: str, sb: Client = Depends(get_supabase_admin)):
     return {"valid": True, "role": inv["role"]}
 
 @router.post("/register")
-def register_with_invite(body: RegisterWithInvite, sb_admin: Client = Depends(get_supabase_admin)):
+def register_with_invite(body: RegisterWithInvite, request: Request, sb_admin: Client = Depends(get_supabase_admin)):
     from datetime import datetime, timezone
     # 1) Read once for clear error messages. The real gate is the atomic claim in step 3.
     rows = sb_admin.table("invite_tokens").select("*").eq("token", body.token).limit(1).execute().data
@@ -131,12 +132,37 @@ def register_with_invite(body: RegisterWithInvite, sb_admin: Client = Depends(ge
         raise e if isinstance(e, HTTPException) else HTTPException(400, "註冊失敗，請稍後再試")
 
     new_user_id = auth_res.user.id
+    # Re-registration signal: record this sign-up's IP + browser fingerprint, and flag the account if
+    # either matches an already-BANNED account so an admin can review a likely ban-evader. Never blocks
+    # — IPs are shared (CGNAT) and fingerprints are spoofable; this only surfaces suspects for review.
+    ip = ((request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+           or (request.client.host if request and request.client else "")) or None)
+    fp = (body.fingerprint or "").strip()[:120] or None
+    flag_note = None
+    try:
+        fp_hit, ip_hit = set(), set()
+        if fp:
+            fp_hit = {r["username"] for r in (sb_admin.table("profiles").select("username")
+                      .eq("banned", True).eq("reg_fp", fp).execute().data or [])}
+        if ip:
+            ip_hit = {r["username"] for r in (sb_admin.table("profiles").select("username")
+                      .eq("banned", True).eq("reg_ip", ip).execute().data or [])} - fp_hit
+        parts = []
+        if fp_hit:
+            parts.append("裝置指紋同於已封禁帳號（" + "、".join(sorted(fp_hit)) + "）")
+        if ip_hit:
+            parts.append("網路 IP 同於已封禁帳號（" + "、".join(sorted(ip_hit)) + "，可能只是共用網路）")
+        if parts:
+            flag_note = "疑似回鍋：" + "；".join(parts)
+    except Exception:
+        pass
     # The DB trigger deliberately creates every profile as a reader: user_metadata is controlled
     # by the person signing up and must never grant authorization. Only this service-role path may
     # promote the new account to the role encoded in the already-claimed invite.
     try:
         profile = (sb_admin.table("profiles")
-                   .update({"nickname": nickname, "role": inv["role"]})
+                   .update({"nickname": nickname, "role": inv["role"],
+                            "reg_ip": ip, "reg_fp": fp, "flag_note": flag_note})
                    .eq("id", new_user_id).execute().data)
         if not profile:
             raise RuntimeError("profile was not created")

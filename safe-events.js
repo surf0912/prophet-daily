@@ -9,7 +9,7 @@
 
   const ALLOWED_ACTIONS = new Set([
     'addFaq', 'applyAppFontSize', 'approveNovel', 'avatarDragStart', 'avatarZoom', 'banUser',
-    'ccPickAvatar', 'ccTap', 'changeUserRole', 'closeCharProfile', 'closeReader', 'copyAllInvites',
+    'ccPickAvatar', 'ccTap', 'changeUserRole', 'clearUserFlag', 'closeCharProfile', 'closeReader', 'copyAllInvites',
     'copyText', 'deleteCustomChar', 'deleteFaq', 'deleteFeedbackItem', 'deleteNovel', 'deleteUser',
     'discardUploadDraft', 'dismissContinueBar', 'dismissTourBanner', 'doInviteRegister', 'doLogout',
     'doSignIn', 'editFaq', 'editNick', 'endTour', 'exportBackup', 'forceRefresh', 'generateInvite',
