@@ -180,6 +180,29 @@ def me(user: dict = Depends(get_current_user), sb_admin: Client = Depends(get_su
     _touch_last_seen(user, sb_admin)
     return user
 
+class SignalBody(BaseModel):
+    fingerprint: str = ""
+
+@router.post("/me/signal")
+def record_signal(body: SignalBody, request: Request, user: dict = Depends(get_current_user), sb_admin: Client = Depends(get_supabase_admin)):
+    # Record this device's IP + browser fingerprint on every app open, so an EXISTING user (who
+    # registered before fingerprinting existed) still has signals on file before you ban them — a
+    # later re-registration from the same device can then be flagged. Best-effort; no-op pre-migration.
+    ip = ((request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+           or (request.client.host if request and request.client else "")) or None)
+    fp = (body.fingerprint or "").strip()[:120] or None
+    try:
+        upd = {}
+        if ip:
+            upd["reg_ip"] = ip
+        if fp:
+            upd["reg_fp"] = fp
+        if upd:
+            sb_admin.table("profiles").update(upd).eq("id", user["id"]).execute()
+    except Exception:
+        pass
+    return {"ok": True}
+
 class NicknameBody(BaseModel):
     nickname: str
 

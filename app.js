@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.32';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.33';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -413,6 +413,10 @@ async function initApp() {
   // (e.g. cold start still waking) — retry rather than logging the user out over a blip.
   try { currentUser = await api('/auth/me'); } catch { setTimeout(initApp, 3000); return; }
   if (!currentUser) return;
+  // Record this device's signal (IP + fingerprint) once per launch, so existing members have signals
+  // on file before any ban — a later re-registration from the same device can then be flagged. Best-
+  // effort, never blocks the UI.
+  try { api('/auth/me/signal', { method: 'POST', body: JSON.stringify({ fingerprint: deviceFingerprint() }) }); } catch (e) {}
   document.getElementById('auth-overlay').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   // Reset role-based UI on every login (accounts can switch in-place without a page reload).
