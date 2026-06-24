@@ -24,7 +24,7 @@
     'setFeedbackStatus', 'setMqjAccess', 'setUploadKind', 'setUserFilter', 'setUserRole',
     'setWishFilter', 'showLoginForm', 'showPage', 'startTour', 'stepReaderFont', 'submitFeedback',
     'submitForumPost', 'submitNewNovel', 'switchAdminTab', 'tempBan', 'toggleCharAnd', 'toggleCoverPhoto',
-    'toggleDark', 'toggleFont', 'toggleForumFav', 'toggleLike', 'toggleLock', 'togglePwEdit',
+    'toggleDark', 'toggleFont', 'toggleForumFav', 'toggleLike', 'toggleLock', 'togglePwEdit', 'toggleTapFx',
     'toggleReaderDark', 'toggleReaderFavorite', 'toggleShelfFav', 'tourBack', 'tourNext',
     'updateBugCount', 'updateReaderDarkBtn', 'updateWishCount', 'viewUserNovels',
   ]);

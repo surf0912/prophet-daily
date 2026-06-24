@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.37';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.38';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -383,6 +383,7 @@ function deviceToken() {
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     let last = 0;
     document.addEventListener('pointerdown', (e) => {
+      if (localStorage.getItem('pd_tap_fx') === '0') return;   // user turned it off in 小工具
       const now = Date.now();
       if (now - last < 45) return;   // guard against rapid synthetic bursts
       last = now;
@@ -410,6 +411,12 @@ function deviceToken() {
     }, { passive: true });
   } catch (e) {}
 })();
+
+// 小工具 toggle for the tap sparkle (default on). The pointerdown handler reads this flag live, so
+// flipping it takes effect on the very next tap — no reload needed.
+function toggleTapFx(on) {
+  localStorage.setItem('pd_tap_fx', on ? '1' : '0');
+}
 
 async function doInviteRegister() {
   const msg = document.getElementById('auth-msg');
@@ -478,6 +485,7 @@ async function initApp() {
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = adminish ? '' : 'none');  // writers: only 作品管理 + 上傳
   document.querySelectorAll('.super-only').forEach(el => el.style.display = currentUser.role === 'super_admin' ? '' : 'none');  // 監看面板 + 實驗功能開關：只給 SA
   { const _bt = document.getElementById('beta-toggle'); if (_bt) _bt.checked = localStorage.getItem('pd_beta') === '1'; }
+  { const _fx = document.getElementById('tapfx-toggle'); if (_fx) _fx.checked = localStorage.getItem('pd_tap_fx') !== '0'; }   // 點擊特效預設開
   loadCustomChars().then(() => { if (typeof renderShelf === 'function') renderShelf(); });   // beta 自創角色載入後刷新角色列
   adminNovelScope = null;
   loadOwnerNames();   // super_admin only: map owner uuid → 巫師全名 for the owner hint
