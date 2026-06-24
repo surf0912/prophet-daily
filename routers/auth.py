@@ -4,7 +4,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from config import settings
-from deps import get_supabase, get_supabase_admin, get_current_user, ROLE_RANK, invalidate_profile, validate_image_data_url, record_signals
+from deps import get_supabase, get_supabase_admin, get_current_user, ROLE_RANK, invalidate_profile, validate_image_data_url, record_signals, _ban_expired
 from supabase import Client
 from guide_content import GUIDE_TITLE, GUIDE_AUTHOR, GUIDE_BODY
 
@@ -81,9 +81,15 @@ def signin(body: SignInRequest, request: Request, sb: Client = Depends(get_supab
 
     # Block banned accounts at the door with a clear message.
     try:
-        prof = sb_admin.table("profiles").select("banned").eq("id", res.user.id).single().execute()
+        prof = sb_admin.table("profiles").select("banned, ban_until").eq("id", res.user.id).single().execute()
         if prof.data and prof.data.get("banned"):
-            raise HTTPException(403, "此帳號已被封禁，如有疑問請聯絡管理員")
+            if _ban_expired(prof.data.get("ban_until")):
+                try:
+                    sb_admin.table("profiles").update({"banned": False, "ban_until": None}).eq("id", res.user.id).execute()
+                except Exception:
+                    pass
+            else:
+                raise HTTPException(403, "此帳號已被封禁，如有疑問請聯絡管理員")
     except HTTPException:
         raise
     except Exception:

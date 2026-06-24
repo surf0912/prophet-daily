@@ -23,7 +23,7 @@
     'saveNickname', 'saveOwners', 'saveSeries', 'setAutoPublish', 'setBetaFlag',
     'setFeedbackStatus', 'setMqjAccess', 'setUploadKind', 'setUserFilter', 'setUserRole',
     'setWishFilter', 'showLoginForm', 'showPage', 'startTour', 'stepReaderFont', 'submitFeedback',
-    'submitForumPost', 'submitNewNovel', 'switchAdminTab', 'toggleCharAnd', 'toggleCoverPhoto',
+    'submitForumPost', 'submitNewNovel', 'switchAdminTab', 'tempBan', 'toggleCharAnd', 'toggleCoverPhoto',
     'toggleDark', 'toggleFont', 'toggleForumFav', 'toggleLike', 'toggleLock', 'togglePwEdit',
     'toggleReaderDark', 'toggleReaderFavorite', 'toggleShelfFav', 'tourBack', 'tourNext',
     'updateBugCount', 'updateReaderDarkBtn', 'updateWishCount', 'viewUserNovels',

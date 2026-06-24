@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.34';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.35';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2018,8 +2018,9 @@ function updateReaderDarkBtn() {
 // ── Admin ────────────────────────────────────────────────────
 const AUDIT_LABELS = {
   approve_novel: '核准作品', delete_novel: '刪除作品', lock: '鎖上作品', unlock: '解鎖作品',
-  ban: '封禁帳號', unban: '解除封禁', change_role: '變更身份', reset_password: '重設密碼',
-  delete_user: '刪除帳號', auto_publish: '自動審核', mqj: '迷情劑權限',
+  ban: '封禁帳號', unban: '解除封禁', temp_ban: '臨時封禁 72h', temp_unban: '解除臨時封禁',
+  change_role: '變更身份', reset_password: '重設密碼',
+  delete_user: '刪除帳號', auto_publish: '自動審核', mqj: '迷情劑權限', clear_flag: '已審回鍋標記',
   generate_invite: '產生邀請', revoke_invite: '撤銷邀請',
 };
 async function loadAuditLog() {
@@ -2451,13 +2452,35 @@ async function loadAdminNovelList() {
           </label>
         </div>`;
       }
-      if (currentUser.role === 'super_admin' && sc.id !== currentUser.id) {
-        head += `<div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(26,10,0,.08);flex-wrap:wrap">
-          <button data-onclick="resetPassword('${sc.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-key',12)} 重設密碼</button>
-          <button data-onclick="banUser('${sc.id}', ${sc.banned ? 1 : 0})" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${sc.banned ? ic('ic-check',12)+' 解除封禁' : ic('ic-ban',12)+' 封禁'}</button>
-          <button data-onclick="deleteUser('${sc.id}')" style="font-size:12px;padding:4px 12px;background:var(--scarlet);border:none;color:var(--on-dark);border-radius:3px;cursor:pointer">${ic('ic-trash',12)} 刪除帳號</button>
-        </div>
-        <div style="font-size:12px;color:var(--ink-light);margin-top:8px">${ic('ic-shield',12)} 水印碼 <code style="font-size:12px;color:var(--ink)">${wmCode(sc.id)}</code><span style="opacity:.7"> — 迷情劑外流截圖上的代碼對得上此人</span></div>`;
+      const RANK = { reader: 0, writer: 1, admin: 2, super_admin: 3 };
+      const isSuper = currentUser.role === 'super_admin';
+      // Admins (and the owner) may act only on a strictly lower rank — never each other or the owner.
+      const canAct = sc.id !== currentUser.id && (RANK[currentUser.role] || 0) > (RANK[sc.role] || 0);
+      if (canAct) {
+        const tempActive = sc.banned && sc.ban_until && new Date(sc.ban_until) > new Date();
+        const permActive = sc.banned && !sc.ban_until;
+        const sTemp = 'font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink);border-radius:3px;cursor:pointer';
+        const sBan = 'font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer';
+        let banBtns;
+        if (permActive) {
+          // Permanent ban: only the owner can release it.
+          banBtns = isSuper
+            ? `<button data-onclick="banUser('${sc.id}',1)" style="${sBan}">${ic('ic-check',12)} 解除永久封禁</button>`
+            : `<span style="font-size:12px;color:var(--accent);align-self:center">${ic('ic-ban',12)} 已永久封禁（需擁有者解除）</span>`;
+        } else if (tempActive) {
+          banBtns = `<button data-onclick="tempBan('${sc.id}',0)" style="${sBan}">${ic('ic-check',12)} 解除臨時封禁</button>`
+            + (isSuper ? `<button data-onclick="banUser('${sc.id}',0)" style="${sBan}">${ic('ic-ban',12)} 改為永久封禁</button>` : '');
+        } else {
+          banBtns = `<button data-onclick="tempBan('${sc.id}',1)" style="${sTemp}">${ic('ic-clock',12)} 臨時封禁 72 小時</button>`
+            + (isSuper ? `<button data-onclick="banUser('${sc.id}',0)" style="${sBan}">${ic('ic-ban',12)} 永久封禁</button>` : '');
+        }
+        head += `<div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(26,10,0,.08);flex-wrap:wrap">`
+          + (isSuper ? `<button data-onclick="resetPassword('${sc.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-key',12)} 重設密碼</button>` : '')
+          + banBtns
+          + (isSuper ? `<button data-onclick="deleteUser('${sc.id}')" style="font-size:12px;padding:4px 12px;background:var(--scarlet);border:none;color:var(--on-dark);border-radius:3px;cursor:pointer">${ic('ic-trash',12)} 刪除帳號</button>` : '')
+          + `</div>`;
+        if (tempActive) head += `<div style="font-size:12px;color:var(--accent);margin-top:8px">${ic('ic-clock',12)} 臨時封禁中，${new Date(sc.ban_until).toLocaleString('zh-TW')} 自動解除</div>`;
+        if (isSuper) head += `<div style="font-size:12px;color:var(--ink-light);margin-top:8px">${ic('ic-shield',12)} 水印碼 <code style="font-size:12px;color:var(--ink)">${wmCode(sc.id)}</code><span style="opacity:.7"> — 迷情劑外流截圖上的代碼對得上此人</span></div>`;
       }
       note.innerHTML = head;
     } else {
@@ -2849,7 +2872,8 @@ function renderUserRows(q) {
         : `<div class="u-role">${u.role}${isSelf ? '（你）' : ''}</div>`;
       // Tap the name to drill into this member's detail (their works + 迷情劑 toggle for readers).
       const open = `viewUserNovels('${u.id}')`;
-      const banTag = u.banned ? '<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(138,45,45,.18);color:var(--accent);margin-left:6px">' + ic('ic-ban',10) + ' 已封禁</span>' : '';
+      const isTempBan = u.banned && u.ban_until && new Date(u.ban_until) > new Date();
+      const banTag = u.banned ? '<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(138,45,45,.18);color:var(--accent);margin-left:6px">' + ic(isTempBan ? 'ic-clock' : 'ic-ban',10) + (isTempBan ? ' 臨時封禁' : ' 已封禁') + '</span>' : '';
       const flagBadge = (u.flag_note && isSuper) ? '<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(201,168,76,.3);color:var(--ink);margin-left:6px">' + ic('ic-shield',10) + ' 疑似回鍋</span>' : '';
       const flagRow = (u.flag_note && isSuper) ? `<div style="margin-top:5px;font-size:12px;color:var(--accent);background:rgba(138,45,45,.10);padding:6px 8px;border-radius:6px;display:flex;align-items:center;gap:8px;justify-content:space-between"><span>${escapeHtml(u.flag_note)}</span><button data-onclick="clearUserFlag('${u.id}')" style="flex-shrink:0;font-size:11px;padding:3px 9px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:4px;cursor:pointer;white-space:nowrap">已審</button></div>` : '';
       const seen = `<div style="font-size:11px;color:var(--ink-light);font-weight:normal;opacity:.8">${lastSeenLabel(u)}</div>`;
@@ -2874,7 +2898,7 @@ function renderUserRows(q) {
 // Admin taps a member's name → their detail (scoped 作品管理 + 迷情劑 toggle for readers).
 function viewUserNovels(id) {
   const u = (window._adminUsers || []).find(x => x.id === id) || {};
-  adminNovelScope = { id, name: u.nickname || u.username || '', role: u.role, mqj: u.mqj_access, banned: u.banned, auto: !!u.auto_publish };
+  adminNovelScope = { id, name: u.nickname || u.username || '', role: u.role, mqj: u.mqj_access, banned: u.banned, ban_until: u.ban_until || null, auto: !!u.auto_publish };
   switchAdminTab('novels');
 }
 
@@ -2906,6 +2930,18 @@ async function resetPassword(id) {
     await api(`/permissions/users/${id}/password`, { method: 'PATCH', body: JSON.stringify({ password: pw.trim() }) });
     toast(`已重設 ${name} 的通關密語`);
   } catch (e) { toast('' + e.message); }
+}
+
+async function tempBan(id, on) {
+  const name = adminUserName(id);
+  if (on && !confirm(`臨時封禁「${name}」72 小時？\n對方暫時無法登入，72 小時後自動解除。`)) return;
+  if (!on && !confirm(`解除「${name}」的臨時封禁？`)) return;
+  try {
+    const r = await api(`/permissions/users/${id}/temp-ban`, { method: 'POST', body: JSON.stringify({ banned: !!on }) });
+    toast(on ? `已臨時封禁 ${name} 72 小時` : `已解除 ${name} 的臨時封禁`);
+    if (adminNovelScope && adminNovelScope.id === id) { adminNovelScope.banned = !!on; adminNovelScope.ban_until = (r && r.ban_until) || null; loadAdminNovelList(); }
+    else loadAdminUsers();
+  } catch (e) { toast(e.message); }
 }
 
 async function banUser(id, isBanned) {

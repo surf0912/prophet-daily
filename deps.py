@@ -132,9 +132,19 @@ def get_current_user(
         profile = rows[0]
         _profile_cache[user_id] = (profile, now)
     if profile.get("banned"):
-        _profile_cache.pop(user_id, None)   # never let a ban linger in cache
-        # 401 so the client drops the session and returns to the login screen.
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="此帳號已被封禁")
+        if _ban_expired(profile.get("ban_until")):
+            # A 72h temporary ban has elapsed → auto-lift and let them back in (no cron needed).
+            try:
+                sb_admin.table("profiles").update({"banned": False, "ban_until": None}).eq("id", user_id).execute()
+            except Exception:
+                pass
+            profile["banned"] = False
+            profile["ban_until"] = None
+            _profile_cache[user_id] = (profile, now)
+        else:
+            _profile_cache.pop(user_id, None)   # never let a ban linger in cache
+            # 401 so the client drops the session and returns to the login screen.
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="此帳號已被封禁")
     try:
         from monitor import record_user, record_auth
         record_user(user_id)
@@ -272,3 +282,14 @@ def match_banned_signals(sb, did: str = None, fp: str = None, ip: str = None):
         conf = "高" if ("did" in ks or ("fp" in ks and "ip" in ks)) else "中"
         parts.append(f"{u}（{'＋'.join(labels)}一致，{conf}信心）")
     return "疑似回鍋：與已封禁帳號 " + "、".join(parts)
+
+def _ban_expired(ban_until) -> bool:
+    """True if a temporary ban's ban_until timestamp is now in the past (so the ban auto-lifts).
+    A NULL ban_until means a PERMANENT ban (never expires) — returns False."""
+    if not ban_until:
+        return False
+    try:
+        from datetime import datetime, timezone
+        return datetime.fromisoformat(str(ban_until).replace("Z", "+00:00")) <= datetime.now(timezone.utc)
+    except Exception:
+        return False

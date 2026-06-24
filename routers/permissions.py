@@ -56,7 +56,7 @@ def export_all(sb: Client = Depends(get_supabase_admin)):
 def list_users(user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     # last_seen_at / auto_publish are optional columns; fall back gracefully if not added yet.
     try:
-        res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, created_at, last_seen_at, auto_publish, flag_note").order("created_at", desc=True).execute()
+        res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, ban_until, created_at, last_seen_at, auto_publish, flag_note").order("created_at", desc=True).execute()
     except Exception:
         res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, created_at").order("created_at", desc=True).execute()
     # An admin only sees members at the same rank or lower; only super_admin sees super_admin accounts.
@@ -98,14 +98,42 @@ class BanBody(BaseModel):
 
 @router.patch("/users/{user_id}/ban")
 def set_banned(user_id: str, body: BanBody, user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
+    # Permanent ban / full unban — owner (super_admin) only. ban_until is always cleared: a permanent
+    # ban has no expiry, and unbanning must also drop any leftover temp-ban window.
     if user_id == user["id"]:
         raise HTTPException(400, "不能封禁自己")
-    res = sb.table("profiles").update({"banned": body.banned}).eq("id", user_id).execute()
+    res = sb.table("profiles").update({"banned": body.banned, "ban_until": None}).eq("id", user_id).execute()
     if not res.data:
         raise HTTPException(404, "User not found")
     invalidate_profile(user_id)   # ban/unban takes effect immediately
     record_audit(sb, user, "ban" if body.banned else "unban", "user", user_id)
     return res.data[0]
+
+@router.post("/users/{user_id}/temp-ban")
+def temp_ban(user_id: str, body: BanBody, user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
+    # 72h temporary ban — available to admins (and super_admin). Auto-lifts once ban_until passes
+    # (enforced lazily in deps.get_current_user / signin). Admins may only act on a strictly lower
+    # rank, and may NOT release a permanent ban (that stays the owner's call via /ban).
+    if user_id == user["id"]:
+        raise HTTPException(400, "不能封禁自己")
+    target = sb.table("profiles").select("role, banned, ban_until").eq("id", user_id).single().execute().data
+    if not target:
+        raise HTTPException(404, "User not found")
+    if ROLE_RANK.get(target.get("role"), 0) >= ROLE_RANK.get(user.get("role"), 0):
+        raise HTTPException(403, "只能對權限較低的帳號操作")
+    from datetime import datetime, timezone, timedelta
+    if body.banned:
+        until = (datetime.now(timezone.utc) + timedelta(hours=72)).isoformat()
+        sb.table("profiles").update({"banned": True, "ban_until": until}).eq("id", user_id).execute()
+        invalidate_profile(user_id)
+        record_audit(sb, user, "temp_ban", "user", user_id, "72h")
+        return {"banned": True, "ban_until": until}
+    if target.get("banned") and not target.get("ban_until"):
+        raise HTTPException(403, "永久封禁需由擁有者解除")
+    sb.table("profiles").update({"banned": False, "ban_until": None}).eq("id", user_id).execute()
+    invalidate_profile(user_id)
+    record_audit(sb, user, "temp_unban", "user", user_id)
+    return {"banned": False, "ban_until": None}
 
 @router.delete("/users/{user_id}")
 def delete_user(user_id: str, user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):

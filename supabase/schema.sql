@@ -322,6 +322,7 @@ alter table public.profiles add column if not exists home_chars   text;       --
 alter table public.profiles add column if not exists reg_ip       text;       -- (legacy) IP at sign-up; matching now uses account_signals
 alter table public.profiles add column if not exists reg_fp       text;       -- (legacy) fingerprint at sign-up; matching now uses account_signals
 alter table public.profiles add column if not exists flag_note    text;       -- 疑似回鍋 review note, set when a sign-up matches a banned account
+alter table public.profiles add column if not exists ban_until    timestamptz; -- temp-ban expiry; NULL = permanent ban (when banned=true) or not relevant
 
 -- Per-account device signals for re-registration / ban-evasion review. We accumulate every distinct
 -- (kind,value) a member is seen with (did = localStorage token, fp = trait hash, ip = address) so a
