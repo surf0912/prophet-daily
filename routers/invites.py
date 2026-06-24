@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
-from deps import get_supabase, get_supabase_admin, get_current_user, require_admin, record_audit
+from deps import get_supabase, get_supabase_admin, get_current_user, require_admin, record_audit, record_signals, match_banned_signals
 from supabase import Client
 import re
 
@@ -28,7 +28,8 @@ class RegisterWithInvite(BaseModel):
     username: str          # 巫師入學全名 (login id, English only)
     password: str          # 通關密語
     nickname: Optional[str] = None   # 巫師姓名 (display name, may be Chinese)
-    fingerprint: Optional[str] = None   # best-effort browser fingerprint (re-registration detection)
+    fingerprint: Optional[str] = None   # best-effort device-trait hash (re-registration detection)
+    device: Optional[str] = None        # best-effort localStorage device token (same)
 
 @router.post("/generate")
 def generate_invite(
@@ -138,24 +139,8 @@ def register_with_invite(body: RegisterWithInvite, request: Request, sb_admin: C
     ip = ((request.headers.get("x-forwarded-for", "").split(",")[0].strip()
            or (request.client.host if request and request.client else "")) or None)
     fp = (body.fingerprint or "").strip()[:120] or None
-    flag_note = None
-    try:
-        fp_hit, ip_hit = set(), set()
-        if fp:
-            fp_hit = {r["username"] for r in (sb_admin.table("profiles").select("username")
-                      .eq("banned", True).eq("reg_fp", fp).execute().data or [])}
-        if ip:
-            ip_hit = {r["username"] for r in (sb_admin.table("profiles").select("username")
-                      .eq("banned", True).eq("reg_ip", ip).execute().data or [])} - fp_hit
-        parts = []
-        if fp_hit:
-            parts.append("裝置指紋同於已封禁帳號（" + "、".join(sorted(fp_hit)) + "）")
-        if ip_hit:
-            parts.append("網路 IP 同於已封禁帳號（" + "、".join(sorted(ip_hit)) + "，可能只是共用網路）")
-        if parts:
-            flag_note = "疑似回鍋：" + "；".join(parts)
-    except Exception:
-        pass
+    did = (body.device or "").strip()[:80] or None
+    flag_note = match_banned_signals(sb_admin, did, fp, ip)   # None unless a STRONG signal matches a banned account
     # The DB trigger deliberately creates every profile as a reader: user_metadata is controlled
     # by the person signing up and must never grant authorization. Only this service-role path may
     # promote the new account to the role encoded in the already-claimed invite.
@@ -165,12 +150,14 @@ def register_with_invite(body: RegisterWithInvite, request: Request, sb_admin: C
                    .eq("id", new_user_id).execute().data)
         if not profile:
             raise RuntimeError("profile was not created")
-        # Best-effort, AFTER the critical update: record sign-up signals + any 疑似回鍋 flag. Kept
-        # separate so a missing column (before the migration is run) can never break registration.
-        try:
-            sb_admin.table("profiles").update({"reg_ip": ip, "reg_fp": fp, "flag_note": flag_note}).eq("id", new_user_id).execute()
-        except Exception:
-            pass
+        # Best-effort, AFTER the critical update: store this account's signals + any 疑似回鍋 flag. Kept
+        # separate so a missing table/column (before the migration is run) can never break registration.
+        record_signals(sb_admin, new_user_id, did, fp, ip)
+        if flag_note:
+            try:
+                sb_admin.table("profiles").update({"flag_note": flag_note}).eq("id", new_user_id).execute()
+            except Exception:
+                pass
         finalized = (sb_admin.table("invite_tokens").update({"used_by": new_user_id})
                      .eq("token", body.token).eq("used_at", now_iso).is_("used_by", "null")
                      .execute().data)

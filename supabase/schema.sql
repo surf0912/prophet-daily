@@ -319,9 +319,25 @@ alter table public.profiles add column if not exists guide_seeded boolean defaul
 alter table public.profiles add column if not exists tour_seen    text;       -- onboarding-tour version completed
 alter table public.profiles add column if not exists last_seen_at timestamptz;-- activity for the 不活躍用戶 report
 alter table public.profiles add column if not exists home_chars   text;       -- hidden 心動-cover photos (comma-joined)
-alter table public.profiles add column if not exists reg_ip       text;       -- IP at sign-up (re-registration / ban-evasion review)
-alter table public.profiles add column if not exists reg_fp       text;       -- browser fingerprint at sign-up (same)
+alter table public.profiles add column if not exists reg_ip       text;       -- (legacy) IP at sign-up; matching now uses account_signals
+alter table public.profiles add column if not exists reg_fp       text;       -- (legacy) fingerprint at sign-up; matching now uses account_signals
 alter table public.profiles add column if not exists flag_note    text;       -- 疑似回鍋 review note, set when a sign-up matches a banned account
+
+-- Per-account device signals for re-registration / ban-evasion review. We accumulate every distinct
+-- (kind,value) a member is seen with (did = localStorage token, fp = trait hash, ip = address) so a
+-- returning banned user can be cross-matched on any device/network they have ever used.
+create table if not exists public.account_signals (
+  id         bigint generated always as identity primary key,
+  user_id    uuid not null references public.profiles(id) on delete cascade,
+  kind       text not null check (kind in ('did','fp','ip')),
+  value      text not null,
+  first_seen timestamptz not null default now(),
+  last_seen  timestamptz not null default now()
+);
+create unique index if not exists account_signals_uniq   on public.account_signals(user_id, kind, value);
+create index        if not exists account_signals_lookup on public.account_signals(kind, value);
+alter table public.account_signals enable row level security;   -- service-role only; no anon/authenticated policy
+revoke all on public.account_signals from anon, authenticated;
 
 -- novels: kind/category/characters/series/owners/status/locking the app relies on.
 alter table public.novels add column if not exists kind         text default 'novel';   -- 'novel' | 'forum'

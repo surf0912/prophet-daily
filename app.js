@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.33';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.34';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -360,6 +360,21 @@ function deviceFingerprint() {
   } catch (e) { return ''; }
 }
 
+// Persistent per-browser token (strongest "same browser" signal — survives until site data is cleared
+// or a different browser is used). Generated once, kept in localStorage. Cross-referenced with the
+// fingerprint + IP to recognise a returning banned account.
+function deviceToken() {
+  try {
+    let t = localStorage.getItem('pd_did');
+    if (!t) {
+      t = 'd' + ((window.crypto && crypto.randomUUID) ? crypto.randomUUID().replace(/-/g, '')
+                 : (Date.now().toString(36) + Math.random().toString(36).slice(2)));
+      localStorage.setItem('pd_did', t);
+    }
+    return t;
+  } catch (e) { return ''; }
+}
+
 async function doInviteRegister() {
   const msg = document.getElementById('auth-msg');
   const username = document.getElementById('inv-name').value.trim();
@@ -376,7 +391,7 @@ async function doInviteRegister() {
   try {
     await api('/invites/register', {
       method: 'POST',
-      body: JSON.stringify({ token: invToken, username, password: pass, nickname, fingerprint: deviceFingerprint() }),
+      body: JSON.stringify({ token: invToken, username, password: pass, nickname, fingerprint: deviceFingerprint(), device: deviceToken() }),
     });
     const url = new URL(window.location.href);
     url.searchParams.delete('invite');
@@ -416,7 +431,7 @@ async function initApp() {
   // Record this device's signal (IP + fingerprint) once per launch, so existing members have signals
   // on file before any ban — a later re-registration from the same device can then be flagged. Best-
   // effort, never blocks the UI.
-  try { api('/auth/me/signal', { method: 'POST', body: JSON.stringify({ fingerprint: deviceFingerprint() }) }); } catch (e) {}
+  try { api('/auth/me/signal', { method: 'POST', body: JSON.stringify({ fingerprint: deviceFingerprint(), device: deviceToken() }) }); } catch (e) {}
   document.getElementById('auth-overlay').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   // Reset role-based UI on every login (accounts can switch in-place without a page reload).

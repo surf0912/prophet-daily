@@ -213,3 +213,62 @@ def record_audit(sb, actor: dict, action: str, target_type: str = None, target_i
         }).execute()
     except Exception:
         pass
+
+# ── Re-registration / ban-evasion signals ──────────────────────────────────────
+# We accumulate per-account device signals (not a single overwritten value) so a member who uses
+# several devices/networks has all of them on file, and a returning banned user can be matched on
+# ANY of them. Three kinds, by reliability:
+#   did = a random token in the browser's localStorage (strongest "same browser"; defeated only by
+#         clearing site data or using another browser)
+#   fp  = a hash of stable device traits (survives clearing storage; can collide across identical devices)
+#   ip  = network address (weakest — shared via CGNAT; used only to CORROBORATE, never alone)
+def record_signals(sb, user_id: str, did: str = None, fp: str = None, ip: str = None):
+    """Best-effort upsert of this account's device/fingerprint/network signals. Requires the
+    account_signals table (see schema.sql); silently no-ops if it isn't there yet."""
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    rows = []
+    if did:
+        rows.append({"user_id": user_id, "kind": "did", "value": str(did)[:80], "last_seen": now})
+    if fp:
+        rows.append({"user_id": user_id, "kind": "fp", "value": str(fp)[:120], "last_seen": now})
+    if ip:
+        rows.append({"user_id": user_id, "kind": "ip", "value": str(ip)[:64], "last_seen": now})
+    for r in rows:
+        try:
+            sb.table("account_signals").upsert(r, on_conflict="user_id,kind,value").execute()
+        except Exception:
+            pass
+
+def match_banned_signals(sb, did: str = None, fp: str = None, ip: str = None):
+    """Cross-reference a sign-up's signals against BANNED accounts. Returns a 疑似回鍋 note string, or
+    None. To avoid false positives, a STRONG signal (did or fp) must match — a shared IP alone never
+    flags; it only raises confidence when a device/fingerprint already matched the same account."""
+    hits = {}   # username -> set of matched kinds
+    for kind, val in (("did", did), ("fp", fp), ("ip", ip)):
+        if not val:
+            continue
+        try:
+            rows = (sb.table("account_signals").select("kind, profiles(username, banned)")
+                    .eq("kind", kind).eq("value", str(val)).execute().data or [])
+        except Exception:
+            rows = []
+        for r in rows:
+            p = r.get("profiles") or {}
+            if p.get("banned"):
+                hits.setdefault(p.get("username") or "?", set()).add(kind)
+    strong = {u: ks for u, ks in hits.items() if ("did" in ks or "fp" in ks)}
+    if not strong:
+        return None
+    parts = []
+    for u, ks in strong.items():
+        labels = []
+        if "did" in ks:
+            labels.append("裝置識別碼")
+        if "fp" in ks:
+            labels.append("裝置指紋")
+        if "ip" in ks:
+            labels.append("網路IP")
+        conf = "高" if ("did" in ks or ("fp" in ks and "ip" in ks)) else "中"
+        parts.append(f"{u}（{'＋'.join(labels)}一致，{conf}信心）")
+    return "疑似回鍋：與已封禁帳號 " + "、".join(parts)

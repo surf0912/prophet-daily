@@ -4,7 +4,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from config import settings
-from deps import get_supabase, get_supabase_admin, get_current_user, ROLE_RANK, invalidate_profile, validate_image_data_url
+from deps import get_supabase, get_supabase_admin, get_current_user, ROLE_RANK, invalidate_profile, validate_image_data_url, record_signals
 from supabase import Client
 from guide_content import GUIDE_TITLE, GUIDE_AUTHOR, GUIDE_BODY
 
@@ -182,25 +182,18 @@ def me(user: dict = Depends(get_current_user), sb_admin: Client = Depends(get_su
 
 class SignalBody(BaseModel):
     fingerprint: str = ""
+    device: str = ""
 
 @router.post("/me/signal")
 def record_signal(body: SignalBody, request: Request, user: dict = Depends(get_current_user), sb_admin: Client = Depends(get_supabase_admin)):
-    # Record this device's IP + browser fingerprint on every app open, so an EXISTING user (who
-    # registered before fingerprinting existed) still has signals on file before you ban them — a
-    # later re-registration from the same device can then be flagged. Best-effort; no-op pre-migration.
+    # Accumulate this device's signals (token + fingerprint + IP) on every app open, so an EXISTING
+    # member (who registered before fingerprinting) still builds a signal history before any ban — a
+    # later re-registration from the same device can then be cross-matched. Best-effort, no-op pre-migration.
     ip = ((request.headers.get("x-forwarded-for", "").split(",")[0].strip()
            or (request.client.host if request and request.client else "")) or None)
     fp = (body.fingerprint or "").strip()[:120] or None
-    try:
-        upd = {}
-        if ip:
-            upd["reg_ip"] = ip
-        if fp:
-            upd["reg_fp"] = fp
-        if upd:
-            sb_admin.table("profiles").update(upd).eq("id", user["id"]).execute()
-    except Exception:
-        pass
+    did = (body.device or "").strip()[:80] or None
+    record_signals(sb_admin, user["id"], did, fp, ip)
     return {"ok": True}
 
 class NicknameBody(BaseModel):
