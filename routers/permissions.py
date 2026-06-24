@@ -54,11 +54,13 @@ def export_all(sb: Client = Depends(get_supabase_admin)):
 
 @router.get("/users")
 def list_users(user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
-    # last_seen_at / auto_publish are optional columns; fall back gracefully if not added yet.
+    # ban_until / flag_note are the NEWEST optional columns; if either isn't migrated yet the full
+    # select errors. The fallback drops ONLY those two and KEEPS last_seen_at + auto_publish, so a
+    # missing ban_until can never blank out everyone's 上線紀錄 (which is what happened before).
     try:
         res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, ban_until, created_at, last_seen_at, auto_publish, flag_note").order("created_at", desc=True).execute()
     except Exception:
-        res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, created_at").order("created_at", desc=True).execute()
+        res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, created_at, last_seen_at, auto_publish").order("created_at", desc=True).execute()
     # An admin only sees members at the same rank or lower; only super_admin sees super_admin accounts.
     my_rank = ROLE_RANK.get(user.get("role"), 0)
     return [u for u in res.data if ROLE_RANK.get(u.get("role"), 0) <= my_rank]
