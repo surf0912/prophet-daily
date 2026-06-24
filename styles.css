@@ -598,3 +598,26 @@
     .log-actor { color: var(--gold); font-weight: bold; flex-shrink: 0; }
     .log-act { color: var(--ink); }
     .log-tgt { color: var(--accent); }
+
+    /* Tap sparkle — a burst of gold motes + a ring at every tap. Decorative only,
+       pointer-events:none so it never blocks the real click. Disabled under reduced-motion. */
+    .tap-spark, .tap-ring { position: fixed; pointer-events: none; z-index: 9999; will-change: transform, opacity; }
+    .tap-spark {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: radial-gradient(circle, #fff6dd 0%, #c9a84c 55%, rgba(201, 168, 76, 0) 78%);
+      box-shadow: 0 0 6px rgba(201, 168, 76, .55);
+      animation: tap-spark-fly 600ms ease-out forwards;
+    }
+    @keyframes tap-spark-fly {
+      0%   { opacity: .95; transform: translate(-50%, -50%) scale(.35); }
+      100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px))) scale(1); }
+    }
+    .tap-ring {
+      width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid rgba(201, 168, 76, .65);
+      animation: tap-ring-grow 480ms ease-out forwards;
+    }
+    @keyframes tap-ring-grow {
+      0%   { opacity: .75; transform: translate(-50%, -50%) scale(.3); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(2.4); }
+    }
+    @media (prefers-reduced-motion: reduce) { .tap-spark, .tap-ring { display: none; } }

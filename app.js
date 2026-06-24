@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.36';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.37';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -374,6 +374,42 @@ function deviceToken() {
     return t;
   } catch (e) { return ''; }
 }
+
+// Magical tap sparkle — every tap/click spawns a small burst of gold motes + an expanding ring at
+// the pointer. Purely decorative (pointer-events:none, never blocks the real action); skipped when
+// the user prefers reduced motion. Runs at document level so it works everywhere, login included.
+(function initTapSparkle() {
+  try {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let last = 0;
+    document.addEventListener('pointerdown', (e) => {
+      const now = Date.now();
+      if (now - last < 45) return;   // guard against rapid synthetic bursts
+      last = now;
+      const x = e.clientX, y = e.clientY;
+      if (x == null || y == null) return;
+      const frag = document.createDocumentFragment();
+      const ring = document.createElement('div');
+      ring.className = 'tap-ring';
+      ring.style.left = x + 'px'; ring.style.top = y + 'px';
+      ring.addEventListener('animationend', () => ring.remove());
+      frag.appendChild(ring);
+      const n = 6;
+      for (let i = 0; i < n; i++) {
+        const a = (Math.PI * 2 * i) / n + Math.random() * 0.7;
+        const dist = 15 + Math.random() * 16;
+        const s = document.createElement('div');
+        s.className = 'tap-spark';
+        s.style.left = x + 'px'; s.style.top = y + 'px';
+        s.style.setProperty('--dx', (Math.cos(a) * dist).toFixed(1) + 'px');
+        s.style.setProperty('--dy', (Math.sin(a) * dist).toFixed(1) + 'px');
+        s.addEventListener('animationend', () => s.remove());
+        frag.appendChild(s);
+      }
+      document.body.appendChild(frag);
+    }, { passive: true });
+  } catch (e) {}
+})();
 
 async function doInviteRegister() {
   const msg = document.getElementById('auth-msg');
