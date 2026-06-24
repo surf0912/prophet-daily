@@ -580,8 +580,21 @@
     }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    /* Admin audit log */
-    .audit-row { padding: 9px 2px; border-bottom: 1px solid rgba(26, 10, 0, .07); }
-    .audit-act { font-size: 14px; color: var(--ink); }
-    .audit-tgt { color: var(--accent); }
-    .audit-meta { font-size: 12px; color: var(--ink-light); margin-top: 2px; }
+    /* Admin operation log (bottom of 監看) — terminal/log feel */
+    .log-panel { margin-top: 20px; padding-top: 14px; border-top: 1px solid rgba(128, 128, 128, .2); }
+    .log-head { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; color: var(--ink-light); }
+    .log-title { font-size: 13px; font-weight: bold; color: var(--ink); }
+    .log-sub { font-size: 11px; color: var(--ink-light); opacity: .85; }
+    .log-list {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px; line-height: 1.7;
+      background: var(--parchment2); border: 1px solid rgba(128, 128, 128, .22);
+      border-radius: 8px; max-height: 360px; overflow: auto; padding: 4px 0;
+    }
+    .log-line { display: flex; gap: 10px; padding: 3px 12px; align-items: baseline; }
+    .log-line + .log-line { border-top: 1px dashed rgba(128, 128, 128, .14); }
+    .log-line:hover { background: rgba(128, 128, 128, .08); }
+    .log-time { color: var(--ink-light); opacity: .85; flex-shrink: 0; }
+    .log-actor { color: var(--gold); font-weight: bold; flex-shrink: 0; }
+    .log-act { color: var(--ink); }
+    .log-tgt { color: var(--accent); }

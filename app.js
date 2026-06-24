@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.35';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.36';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2041,10 +2041,7 @@ async function loadAuditLog() {
       const tgt = r.target_type === 'user'
         ? (nameById[r.target_id] || (r.target_id ? '#' + String(r.target_id).slice(0, 8) : ''))
         : (r.detail || (r.target_id ? '#' + String(r.target_id).slice(0, 8) : ''));
-      return `<div class="audit-row">
-        <div class="audit-act">${escapeHtml(label)}${tgt ? ` <span class="audit-tgt">${escapeHtml(String(tgt))}</span>` : ''}</div>
-        <div class="audit-meta">${escapeHtml(r.actor_name || '?')}　${escapeHtml(when)}</div>
-      </div>`;
+      return `<div class="log-line"><span class="log-time">${escapeHtml(when)}</span><span class="log-actor">${escapeHtml(r.actor_name || '?')}</span><span class="log-act">${escapeHtml(label)}${tgt ? ` <span class="log-tgt">${escapeHtml(String(tgt))}</span>` : ''}</span></div>`;
     }).join('');
   } catch (e) { el.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${escapeHtml((e && e.message) || '')}</p>`; }
 }
@@ -2054,8 +2051,7 @@ function switchAdminTab(tab) {
   document.querySelectorAll('.admin-pane').forEach(p => p.classList.remove('active'));
   document.getElementById('admin-' + tab).classList.add('active');
   stopMonitor();                       // leaving any tab cancels the live monitor poll
-  if (tab === 'monitor') startMonitor();
-  if (tab === 'audit') loadAuditLog();
+  if (tab === 'monitor') { startMonitor(); loadAuditLog(); }   // 操作紀錄 lives at the bottom of 監看
   if (tab === 'novels') loadAdminNovelList();
   if (tab === 'users') loadAdminUsers();
   if (tab === 'upload') { setUploadKind('novel'); initUploadDraftWatch(); restoreUploadDraft(); }
