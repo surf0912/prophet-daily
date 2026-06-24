@@ -161,11 +161,16 @@ def register_with_invite(body: RegisterWithInvite, request: Request, sb_admin: C
     # promote the new account to the role encoded in the already-claimed invite.
     try:
         profile = (sb_admin.table("profiles")
-                   .update({"nickname": nickname, "role": inv["role"],
-                            "reg_ip": ip, "reg_fp": fp, "flag_note": flag_note})
+                   .update({"nickname": nickname, "role": inv["role"]})
                    .eq("id", new_user_id).execute().data)
         if not profile:
             raise RuntimeError("profile was not created")
+        # Best-effort, AFTER the critical update: record sign-up signals + any 疑似回鍋 flag. Kept
+        # separate so a missing column (before the migration is run) can never break registration.
+        try:
+            sb_admin.table("profiles").update({"reg_ip": ip, "reg_fp": fp, "flag_note": flag_note}).eq("id", new_user_id).execute()
+        except Exception:
+            pass
         finalized = (sb_admin.table("invite_tokens").update({"used_by": new_user_id})
                      .eq("token", body.token).eq("used_at", now_iso).is_("used_by", "null")
                      .execute().data)
