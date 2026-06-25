@@ -506,6 +506,14 @@
       <small style="color:var(--ink-light)">點上方上傳頭像</small>
     </div>
     <input id="cc-name" placeholder="角色名稱" maxlength="20" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px" />
+    <div class="settings-row" style="margin-top:12px;padding:8px 0;border-top:1px solid rgba(26,10,0,.08)">
+      <label style="font-size:14px"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-users"/></svg> 分享給其他人</label>
+      <label class="toggle">
+        <input type="checkbox" id="cc-share-toggle" data-onchange="toggleCcShare(this.checked)" />
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div id="cc-share-list" style="display:none;max-height:200px;overflow:auto;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2)"></div>
     <div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn-close-modal" style="flex:1;margin:0;font-size:14px" data-onclick="document.getElementById('custom-char-modal').classList.remove('open')">取消</button>
       <button class="btn-primary" style="flex:1;padding:10px;font-size:14px" data-onclick="saveCustomChar()">儲存</button>

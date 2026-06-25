@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.49';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.50';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1221,7 +1221,7 @@ function renderFilterBar(catEl, chipEl, curCat, curChars, onChange) {
      </div>`).join('') +
     // beta 自創角色：只在意若思鏡篩選列、且 isBeta() 時,接在四個角色頭像後面顯示我的自創角色 + 一顆建立鈕
     (chipEl.id === 'shelf-char-chips' && isBeta()
-      ? _customChars.map(c => { const av = safeAvatarDataUrl(c.avatar); return `<div class="char-chip char-custom${_ccFilter === c.id ? ' cc-on' : ''}" data-onclick="ccTap('${c.id}')" title="單擊篩選・雙擊編輯"><div class="cc-ava"${av ? ` style="background-image:url(&quot;${av}&quot;)"` : ''}>${av ? '' : ic('ic-wand', 20)}</div><span>${escapeHtml(c.name)}</span></div>`; }).join('')
+      ? _customChars.map(c => { const av = safeAvatarDataUrl(c.avatar); const sh = c.mine === false; return `<div class="char-chip char-custom${_ccFilter === c.id ? ' cc-on' : ''}${sh ? ' cc-shared' : ''}" data-onclick="ccTap('${c.id}')" title="${sh ? '他人分享（唯讀，可篩選）' : '單擊篩選・雙擊編輯'}"><div class="cc-ava"${av ? ` style="background-image:url(&quot;${av}&quot;)"` : ''}>${av ? '' : ic('ic-wand', 20)}</div><span>${escapeHtml(c.name)}${sh ? ' ' + ic('ic-users', 10) : ''}</span></div>`; }).join('')
         + `<div class="char-chip char-add" data-onclick="openCreateChar()" role="button" tabindex="0" aria-label="建立角色" title="建立自創角色"><div class="add-circle">＋</div></div>`
       : '');
   chipEl.querySelectorAll('.char-chip[data-ch]').forEach(el => el.onclick = () => officialCharTap(el.dataset.ch, onChange));
@@ -1308,6 +1308,7 @@ function setBetaFlag(on) {
 
 // ── 自創角色 (beta) — private custom characters: name + avatar, edit/delete ────────
 let _customChars = [], _ccEditId = null, _ccAvatar = null, _ccTags = {}, _ccFilter = '', _ccTapTimer = null;
+let _ccMembers = null, _ccShareInit = new Set();   // 分享：成員名單(快取) + 編輯時的初始分享對象
 async function loadCustomChars() {
   if (!isBeta()) { _customChars = []; _ccTags = {}; _ccFilter = ''; return; }
   try {
@@ -1324,8 +1325,13 @@ async function loadCustomChars() {
 // 單擊 = 選取(篩選作品)；雙擊 = 打開編輯
 function ccTap(id, rerender) {
   const draw = rerender || renderShelf;   // 意若思鏡用 renderShelf；作品管理傳 renderAdminNovels
-  if (_ccTapTimer) { clearTimeout(_ccTapTimer); _ccTapTimer = null; editCustomChar(id); }
-  else { _ccTapTimer = setTimeout(() => { _ccTapTimer = null; _ccFilter = (_ccFilter === id) ? '' : id; draw(); }, 320); }
+  if (_ccTapTimer) {
+    clearTimeout(_ccTapTimer); _ccTapTimer = null;
+    const c = _customChars.find(x => x.id === id);
+    if (c && c.mine !== false) editCustomChar(id);   // 只有擁有者能編輯；他人分享的 = 只能篩選
+  } else {
+    _ccTapTimer = setTimeout(() => { _ccTapTimer = null; _ccFilter = (_ccFilter === id) ? '' : id; draw(); }, 320);
+  }
 }
 function setCcAvatarPreview(url) {
   const el = document.getElementById('cc-avatar-preview');
@@ -1338,18 +1344,56 @@ function openCreateChar() {
   document.getElementById('cc-modal-title').textContent = '建立角色';
   document.getElementById('cc-name').value = '';
   setCcAvatarPreview('');
+  _ccShareInit = new Set();
+  document.getElementById('cc-share-toggle').checked = false;
+  toggleCcShare(false);
   document.getElementById('cc-delete-btn').style.display = 'none';
   document.getElementById('custom-char-modal').classList.add('open');
 }
 function editCustomChar(id) {
   const c = _customChars.find(x => x.id === id);
-  if (!c) return;
+  if (!c || c.mine === false) return;   // 他人分享的角色唯讀，不開編輯
   _ccEditId = id; _ccAvatar = c.avatar || null;
   document.getElementById('cc-modal-title').textContent = '編輯角色';
   document.getElementById('cc-name').value = c.name || '';
   setCcAvatarPreview(c.avatar || '');
+  _ccShareInit = new Set(c.shared_with || []);
+  const on = _ccShareInit.size > 0;
+  document.getElementById('cc-share-toggle').checked = on;
+  toggleCcShare(on);   // 有分享就展開名單(勾好現有對象)
   document.getElementById('cc-delete-btn').style.display = '';
   document.getElementById('custom-char-modal').classList.add('open');
+}
+// 取得全體成員(快取)，按身分高→低排序，給分享名單用
+async function ensureCcMembers() {
+  if (_ccMembers) return;
+  try {
+    const list = await api('/permissions/users') || [];
+    const RANK = { super_admin: 3, admin: 2, writer: 1, reader: 0 };
+    _ccMembers = list.slice().sort((a, b) =>
+      (RANK[b.role] || 0) - (RANK[a.role] || 0)
+      || (a.nickname || a.username || '').localeCompare(b.nickname || b.username || ''));
+  } catch (e) { _ccMembers = []; }
+}
+function renderCcShareList(selected) {
+  const el = document.getElementById('cc-share-list');
+  const rows = (_ccMembers || []).filter(u => u.id !== currentUser.id).map(u => {
+    const checked = selected.has(u.id) ? 'checked' : '';
+    const role = ROLE_NAME[u.role] || u.role;
+    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:13px;border-top:1px solid rgba(26,10,0,.05)">
+      <input type="checkbox" class="cc-share-cb" value="${u.id}" ${checked} style="flex-shrink:0;width:16px;height:16px" />
+      <span style="flex:1;color:var(--ink)">${escapeHtml(u.nickname || u.username || '')}</span>
+      <span style="font-size:11px;color:var(--ink-light)">${escapeHtml(role)}</span>
+    </label>`;
+  }).join('');
+  el.innerHTML = rows || '<p style="font-size:12px;color:var(--ink-light);padding:8px 12px;margin:0">沒有其他成員</p>';
+}
+async function toggleCcShare(on) {
+  const list = document.getElementById('cc-share-list');
+  if (!on) { list.style.display = 'none'; return; }
+  await ensureCcMembers();
+  renderCcShareList(_ccShareInit);
+  list.style.display = 'block';
 }
 function ccPickAvatar(input) {
   const f = input.files && input.files[0];
@@ -1367,8 +1411,14 @@ function ccPickAvatar(input) {
 async function saveCustomChar() {
   const name = document.getElementById('cc-name').value.trim();
   if (!name) { toast('請輸入角色名稱'); return; }
+  // 分享對象：開了開關才分享。名單已展開 → 讀勾選；沒展開 → 沿用原本(_ccShareInit)。關閉 → 不分享([])。
+  let shared_with = [];
+  if (document.getElementById('cc-share-toggle').checked) {
+    const cbs = document.querySelectorAll('#cc-share-list .cc-share-cb');
+    shared_with = cbs.length ? [...cbs].filter(cb => cb.checked).map(cb => cb.value) : [..._ccShareInit];
+  }
   try {
-    const body = JSON.stringify({ name, avatar: _ccAvatar });
+    const body = JSON.stringify({ name, avatar: _ccAvatar, shared_with });
     if (_ccEditId) await api('/custom-chars/' + _ccEditId, { method: 'PATCH', body });
     else await api('/custom-chars/', { method: 'POST', body });
     toast('已儲存');
@@ -1390,9 +1440,10 @@ async function deleteCustomChar() {
 function renderUploadCcPicker() {
   const group = document.getElementById('new-novel-cc-group');
   if (!group) return;
-  if (!isBeta() || !_customChars.length) { group.style.display = 'none'; return; }
+  const mine = _customChars.filter(c => c.mine !== false);   // 只能把作品標記到自己的角色(分享來的唯讀)
+  if (!isBeta() || !mine.length) { group.style.display = 'none'; return; }
   group.style.display = '';
-  document.getElementById('new-novel-cc').innerHTML = _customChars.map(c =>
+  document.getElementById('new-novel-cc').innerHTML = mine.map(c =>
     `<button type="button" class="cc-pick" data-cc="${c.id}" data-onclick="this.classList.toggle('on')">${escapeHtml(c.name)}</button>`).join('');
 }
 function readUploadCc() {
@@ -2580,7 +2631,7 @@ function renderAdminFilterBar(ns) {
   chipEl.innerHTML = CHAR_LIST.map(ch =>
     `<div class="char-chip ${adminChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}"><img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span></div>`).join('')
     // beta：官方角色之後接自創角色(單擊篩選・雙擊編輯)，與意若思鏡一致
-    + (isBeta() ? _customChars.map(c => { const av = safeAvatarDataUrl(c.avatar); return `<div class="char-chip char-custom${_ccFilter === c.id ? ' cc-on' : ''}" data-onclick="ccTap('${c.id}', renderAdminNovels)" title="單擊篩選・雙擊編輯"><div class="cc-ava"${av ? ` style="background-image:url(&quot;${av}&quot;)"` : ''}>${av ? '' : ic('ic-wand', 20)}</div><span>${escapeHtml(c.name)}</span></div>`; }).join('') : '');
+    + (isBeta() ? _customChars.map(c => { const av = safeAvatarDataUrl(c.avatar); const sh = c.mine === false; return `<div class="char-chip char-custom${_ccFilter === c.id ? ' cc-on' : ''}${sh ? ' cc-shared' : ''}" data-onclick="ccTap('${c.id}', renderAdminNovels)" title="${sh ? '他人分享（唯讀，可篩選）' : '單擊篩選・雙擊編輯'}"><div class="cc-ava"${av ? ` style="background-image:url(&quot;${av}&quot;)"` : ''}>${av ? '' : ic('ic-wand', 20)}</div><span>${escapeHtml(c.name)}${sh ? ' ' + ic('ic-users', 10) : ''}</span></div>`; }).join('') : '');
   chipEl.querySelectorAll('.char-chip[data-ch]').forEach(el => el.onclick = () => {
     adminChars = adminChars.includes(el.dataset.ch) ? adminChars.filter(c => c !== el.dataset.ch) : [...adminChars, el.dataset.ch];
     renderAdminNovels();

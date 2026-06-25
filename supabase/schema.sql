@@ -359,6 +359,8 @@ create table if not exists public.custom_characters (
   avatar     text,
   created_at timestamptz not null default now()
 );
+-- shared_with: user_ids the OWNER opted to share this character (and its work-tags) with, read-only.
+alter table public.custom_characters add column if not exists shared_with text[];
 create table if not exists public.custom_char_tags (
   user_id    uuid references public.profiles(id) on delete cascade not null,
   char_id    uuid not null,

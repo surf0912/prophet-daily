@@ -260,6 +260,7 @@
       border: 2px solid var(--gold-lt); display: flex; align-items: center; justify-content: center; color: var(--ink-light);
     }
     .char-chip.char-custom.cc-on .cc-ava { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,168,76,.35); }
+    .char-chip.char-custom.cc-shared .cc-ava { border-style: dashed; }   /* 他人分享(唯讀) */
     .cc-pick { border: 1px solid var(--gold-lt); background: none; color: var(--ink-light); border-radius: 14px; padding: 5px 12px; font-size: 13px; cursor: pointer; }
     .cc-pick.on { background: var(--gold); color: #fff; border-color: var(--gold); }
     /* 心動封面愛心 + 角色設定頁 (beta) */
