@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.51';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.52';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1439,14 +1439,24 @@ async function deleteCustomChar() {
   } catch (e) { toast(e.message); }
 }
 // 後台上傳：自創角色選擇器(只在 beta 顯示),上傳時把作品歸到選中的自創角色底下
-function renderUploadCcPicker() {
-  const group = document.getElementById('new-novel-cc-group');
-  if (!group) return;
-  const mine = _customChars.filter(c => c.mine !== false);   // 只能把作品標記到自己的角色(分享來的唯讀)
+// Shared 自創角色 picker — used by 上傳 and the 分類 editor. Only the user's OWN chars (shared-in
+// ones are read-only). `selected` pre-lights the chars a work is already filed under.
+function renderCcPickerInto(boxId, groupId, selected) {
+  const group = document.getElementById(groupId);
+  const box = document.getElementById(boxId);
+  if (!group || !box) return;
+  const mine = _customChars.filter(c => c.mine !== false);
   if (!isBeta() || !mine.length) { group.style.display = 'none'; return; }
   group.style.display = '';
-  document.getElementById('new-novel-cc').innerHTML = mine.map(c =>
-    `<button type="button" class="cc-pick" data-cc="${c.id}" data-onclick="this.classList.toggle('on')">${escapeHtml(c.name)}</button>`).join('');
+  box.innerHTML = mine.map(c =>
+    `<button type="button" class="cc-pick${selected && selected.has(c.id) ? ' on' : ''}" data-cc="${c.id}" data-onclick="this.classList.toggle('on')">${escapeHtml(c.name)}</button>`).join('');
+}
+function renderUploadCcPicker() { renderCcPickerInto('new-novel-cc', 'new-novel-cc-group', null); }
+// Which custom chars a work is currently filed under (from the cached private tag map).
+function ccTaggedSet(novelId) {
+  const s = new Set();
+  for (const cid in _ccTags) { if (_ccTags[cid] && _ccTags[cid].has(novelId)) s.add(cid); }
+  return s;
 }
 function readUploadCc() {
   return [...document.querySelectorAll('#new-novel-cc .cc-pick.on')].map(b => b.dataset.cc);
@@ -2791,6 +2801,7 @@ function openEditClass(id) {
   sel.value = category || '';
   const have = new Set(characters || []);
   div.querySelectorAll('.opt').forEach(el => el.classList.toggle('on', have.has(el.dataset.ch)));
+  renderCcPickerInto('editclass-cc', 'editclass-cc-group', ccTaggedSet(id));   // 自創角色標記(私人)
   document.getElementById('editclass-modal').classList.add('open');
 }
 
@@ -2802,6 +2813,11 @@ async function saveEditClass() {
   if (category) body.category = category;
   try {
     await api(`/novels/${editClassNovelId}`, { method: 'PATCH', body: JSON.stringify(body) });
+    // 更新自創角色標記(私人)。只在 picker 有顯示時(beta + 有自己的角色)才動，避免誤刪。
+    if (document.getElementById('editclass-cc-group').style.display !== 'none') {
+      const ccIds = [...document.querySelectorAll('#editclass-cc .cc-pick.on')].map(b => b.dataset.cc);
+      try { await api('/custom-chars/tag', { method: 'POST', body: JSON.stringify({ novel_id: editClassNovelId, char_ids: ccIds }) }); await loadCustomChars(); } catch (e) {}
+    }
     toast('分類已更新');
     document.getElementById('editclass-modal').classList.remove('open');
     loadAdminNovelList(); loadNovels();
