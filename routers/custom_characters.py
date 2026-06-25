@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
-from deps import get_supabase_admin, require_admin, validate_image_data_url
+from deps import get_supabase_admin, require_admin, get_current_user, validate_image_data_url
 from supabase import Client
 
 # ── 自創角色 (private custom characters) — EXPERIMENTAL ─────────────────────────
@@ -34,8 +34,9 @@ def _clean_shared(ids):
     return [str(x) for x in dict.fromkeys(ids) if x][:200]
 
 @router.get("/")
-def my_chars(user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
-    # Own characters PLUS any an owner shared with me (read-only). `mine` distinguishes them; the
+def my_chars(user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
+    # Readable by ANY member (creating stays admin-only): own characters PLUS any an owner shared
+    # with me (read-only). A non-admin only ever gets shared ones (they can't create their own). `mine` distinguishes them; the
     # shared audience list is stripped from chars I don't own.
     uid = user["id"]
     owned = (sb.table("custom_characters").select("*").eq("user_id", uid).order("created_at").execute().data or [])
@@ -97,7 +98,7 @@ class TagBody(BaseModel):
     char_ids: List[str] = []
 
 @router.get("/tags")
-def my_tags(user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
+def my_tags(user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
     # Tags for the characters I can SEE — mine + ones shared with me. Tags belong to each char's
     # owner (set_tags only lets you tag your own characters), so fetching by char_id is unambiguous.
     uid = user["id"]

@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.50';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.51';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1219,10 +1219,10 @@ function renderFilterBar(catEl, chipEl, curCat, curChars, onChange) {
     `<div class="char-chip ${curChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}">
        <img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span>
      </div>`).join('') +
-    // beta 自創角色：只在意若思鏡篩選列、且 isBeta() 時,接在四個角色頭像後面顯示我的自創角色 + 一顆建立鈕
-    (chipEl.id === 'shelf-char-chips' && isBeta()
+    // 自創角色(意若思鏡篩選列)：有角色就顯示 chip 可篩選(含他人分享給讀者/作家的)；建立鈕只給管理員(isBeta)
+    (chipEl.id === 'shelf-char-chips'
       ? _customChars.map(c => { const av = safeAvatarDataUrl(c.avatar); const sh = c.mine === false; return `<div class="char-chip char-custom${_ccFilter === c.id ? ' cc-on' : ''}${sh ? ' cc-shared' : ''}" data-onclick="ccTap('${c.id}')" title="${sh ? '他人分享（唯讀，可篩選）' : '單擊篩選・雙擊編輯'}"><div class="cc-ava"${av ? ` style="background-image:url(&quot;${av}&quot;)"` : ''}>${av ? '' : ic('ic-wand', 20)}</div><span>${escapeHtml(c.name)}${sh ? ' ' + ic('ic-users', 10) : ''}</span></div>`; }).join('')
-        + `<div class="char-chip char-add" data-onclick="openCreateChar()" role="button" tabindex="0" aria-label="建立角色" title="建立自創角色"><div class="add-circle">＋</div></div>`
+        + (isBeta() ? `<div class="char-chip char-add" data-onclick="openCreateChar()" role="button" tabindex="0" aria-label="建立角色" title="建立自創角色"><div class="add-circle">＋</div></div>` : '')
       : '');
   chipEl.querySelectorAll('.char-chip[data-ch]').forEach(el => el.onclick = () => officialCharTap(el.dataset.ch, onChange));
   mountCharAndBtn('shelf-char-and');
@@ -1310,7 +1310,9 @@ function setBetaFlag(on) {
 let _customChars = [], _ccEditId = null, _ccAvatar = null, _ccTags = {}, _ccFilter = '', _ccTapTimer = null;
 let _ccMembers = null, _ccShareInit = new Set();   // 分享：成員名單(快取) + 編輯時的初始分享對象
 async function loadCustomChars() {
-  if (!isBeta()) { _customChars = []; _ccTags = {}; _ccFilter = ''; return; }
+  // Load for EVERY member: admins get their own + shared; readers/writers get only chars shared
+  // with them (read-only). Creating/managing still gates on isBeta() in the UI + backend.
+  if (!currentUser) { _customChars = []; _ccTags = {}; _ccFilter = ''; return; }
   try {
     _customChars = await api('/custom-chars/') || [];
     const tags = await api('/custom-chars/tags') || [];
