@@ -110,6 +110,15 @@ class FrontendOutputSafetyTests(unittest.TestCase):
         self.assertNotRegex(self.events, r"\beval\s*\(")
         self.assertNotIn("new Function", self.events)
 
+    def test_img_src_allows_blob_and_data_for_avatar_cropping(self):
+        # The avatar crop flow loads the picked file via URL.createObjectURL (a blob: URL) and stores
+        # the result as a data: URL. img-src must permit both, or cropping breaks with 圖片讀取失敗.
+        csp = re.search(r'Content-Security-Policy" content="([^"]+)', self.html).group(1)
+        img_policy = next(part.strip() for part in csp.split(';')
+                          if part.strip().startswith('img-src'))
+        self.assertIn('blob:', img_policy)
+        self.assertIn('data:', img_policy)
+
     def test_javascript_and_styles_are_external_files(self):
         self.assertIn('<script src="./app.js" defer></script>', self.html)
         self.assertIn('<script src="./safe-events.js" defer></script>', self.html)
