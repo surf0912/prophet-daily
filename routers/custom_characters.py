@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
-from deps import get_supabase_admin, require_super_admin, validate_image_data_url
+from deps import get_supabase_admin, require_admin, validate_image_data_url
 from supabase import Client
 
 # ── 自創角色 (private custom characters) — EXPERIMENTAL ─────────────────────────
@@ -27,12 +27,12 @@ def _check_avatar(av):
     return validate_image_data_url(av, MAX_AVATAR)
 
 @router.get("/")
-def my_chars(user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
+def my_chars(user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     return (sb.table("custom_characters").select("*")
             .eq("user_id", user["id"]).order("created_at").execute().data or [])
 
 @router.post("/")
-def add_char(body: CharBody, user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
+def add_char(body: CharBody, user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     name = (body.name or "").strip()[:20]
     if not name:
         raise HTTPException(400, "角色名稱不能空白")
@@ -43,7 +43,7 @@ def add_char(body: CharBody, user: dict = Depends(require_super_admin), sb: Clie
     return rows[0] if rows else {}
 
 @router.patch("/{char_id}")
-def edit_char(char_id: str, body: CharBody, user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
+def edit_char(char_id: str, body: CharBody, user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     upd = {}
     if body.name is not None and body.name.strip():
         upd["name"] = body.name.strip()[:20]
@@ -69,12 +69,12 @@ class TagBody(BaseModel):
     char_ids: List[str] = []
 
 @router.get("/tags")
-def my_tags(user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
+def my_tags(user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     return (sb.table("custom_char_tags").select("char_id, novel_id")
             .eq("user_id", user["id"]).execute().data or [])
 
 @router.post("/tag")
-def set_tags(body: TagBody, user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
+def set_tags(body: TagBody, user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     """Replace which custom characters a single work is filed under (for this user)."""
     sb.table("custom_char_tags").delete().eq("user_id", user["id"]).eq("novel_id", body.novel_id).execute()
     ids = [c for c in dict.fromkeys(body.char_ids) if c]   # dedupe, drop blanks
@@ -84,7 +84,7 @@ def set_tags(body: TagBody, user: dict = Depends(require_super_admin), sb: Clien
     return {"ok": True}
 
 @router.delete("/{char_id}")
-def del_char(char_id: str, user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
+def del_char(char_id: str, user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
     sb.table("custom_char_tags").delete().eq("user_id", user["id"]).eq("char_id", char_id).execute()  # cascade its tags
     sb.table("custom_characters").delete().eq("id", char_id).eq("user_id", user["id"]).execute()
     return {"message": "deleted"}
