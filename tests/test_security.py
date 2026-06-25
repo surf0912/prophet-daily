@@ -61,10 +61,30 @@ class FrontendOutputSafetyTests(unittest.TestCase):
             "escapeHtml(p.author || '匿名')",
             "escapeHtml(c.title || '章節 ' + c.chapter_num)",
             "escapeHtml(n.category)",
+            "escapeHtml(it.content)",
+            "escapeHtml(it.admin_reply)",
+            "escapeHtml(f.question)",
+            "escapeHtml(f.answer)",
+            "escapeHtml(inv.profiles?.username || '')",
         ]
         for expression in required:
             with self.subTest(expression=expression):
                 self.assertIn(expression, self.frontend)
+
+    def test_html_escape_helper_handles_all_dynamic_text(self):
+        self.assertIn("function escapeHtml(s)", self.app)
+        self.assertIn("String(s ?? '').replace", self.app)
+        self.assertIn("escapeHtml(ROLE_NAME[role] || role || '未知身份')", self.app)
+
+    def test_forum_body_renderer_escapes_all_parsed_content(self):
+        render_forum = re.search(
+            r"function renderForumContent\(content\) \{(?P<body>.*?)\n\}\n\nfunction renderToc",
+            self.app,
+            re.S,
+        ).group("body")
+        self.assertIn("escapeHtml(l)", render_forum)
+        self.assertIn("escapeHtml(c.name)", render_forum)
+        self.assertNotRegex(render_forum, r"<p>\$\{l\}</p>")
 
     def test_avatar_values_are_filtered_before_html_or_css(self):
         self.assertIn("function safeAvatarDataUrl(value)", self.frontend)
@@ -174,6 +194,18 @@ class DependencyLockTests(unittest.TestCase):
     def test_ci_installs_and_audits_the_same_lock(self):
         self.assertIn("pip install -r requirements.lock", self.workflow)
         self.assertIn("pip-audit -r requirements.lock", self.workflow)
+
+
+class ConfigurationTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        root = Path(__file__).parents[1]
+        cls.config = (root / "config.py").read_text(encoding="utf-8")
+
+    def test_pydantic_settings_use_v2_config_style(self):
+        self.assertIn("SettingsConfigDict", self.config)
+        self.assertIn('model_config = SettingsConfigDict(env_file=".env")', self.config)
+        self.assertNotIn("class Config", self.config)
 
 
 if __name__ == "__main__":

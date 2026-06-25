@@ -1998,7 +1998,7 @@ function renderForumList() {
 }
 
 function escapeHtml(s) {
-  return (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 // Inline an icon from the sprite (currentColor → inherits text colour). For use in JS templates.
 function ic(id, size = 16) { return `<svg width="${size}" height="${size}" aria-hidden="true" style="vertical-align:-2px"><use href="#${id}"/></svg>`; }
@@ -2007,7 +2007,7 @@ const ROLE_ICON = { reader: 'ic-books', writer: 'ic-quill', admin: 'ic-castle', 
 const ROLE_NAME = { reader: '讀者', writer: '作家', admin: '管理員', super_admin: '最高管理員' };
 function roleBadge(role, size = 14) {
   const id = ROLE_ICON[role];
-  return `${id ? ic(id, size) : ''} ${ROLE_NAME[role] || role}`;
+  return `${id ? ic(id, size) : ''} ${escapeHtml(ROLE_NAME[role] || role || '未知身份')}`;
 }
 
 // ── Settings ─────────────────────────────────────────────────
@@ -3137,7 +3137,7 @@ async function loadInviteList() {
     if (!list.length) { el.innerHTML = '<p style="color:#888;font-size:13px">尚無邀請連結</p>'; return; }
     el.innerHTML = list.map(inv => {
       const used = !!inv.used_at;
-      const usedBy = inv.profiles?.username || '';
+      const usedBy = escapeHtml(inv.profiles?.username || '');
       const expired = !used && new Date(inv.expires_at) < new Date();
       const expires = new Date(inv.expires_at).toLocaleDateString('zh-TW');
       const dim = used || expired;
