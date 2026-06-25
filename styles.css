@@ -254,7 +254,7 @@
     }
     .char-chip.char-add:hover { opacity: 1; }
     .char-chip.char-add:hover .add-circle { border-color: var(--gold); color: var(--gold); }
-    .char-chip.char-custom { opacity: 1; }
+    .char-chip.char-custom.cc-on { opacity: 1; }   /* 未選 = base 的 .5 淡化（與官方一致）；選取才全亮 */
     .char-chip.char-custom .cc-ava {
       width: 44px; height: 44px; border-radius: 50%; background-size: cover; background-position: center;
       border: 2px solid var(--gold-lt); display: flex; align-items: center; justify-content: center; color: var(--ink-light);
