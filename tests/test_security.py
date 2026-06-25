@@ -179,6 +179,15 @@ class DatabaseBoundaryTests(unittest.TestCase):
         cls.migration = (root / "supabase" / "migrations" /
                          "20260623_lock_down_database_boundary.sql").read_text(encoding="utf-8")
         cls.invites = (root / "routers" / "invites.py").read_text(encoding="utf-8")
+        cls.custom_chars = (root / "routers" / "custom_characters.py").read_text(encoding="utf-8")
+
+    def test_shared_custom_chars_never_use_array_contains(self):
+        # `.contains('shared_with', [uid])` becomes `shared_with @> '{}'` when uid is empty, and in
+        # Postgres every array contains '{}', so that leaks every empty-shared character to everyone.
+        # Visibility must be decided in Python (uid in shared_with), never via an array contains filter.
+        self.assertNotIn('.contains("shared_with"', self.custom_chars)
+        self.assertNotIn(".contains('shared_with'", self.custom_chars)
+        self.assertIn("shared_with", self.custom_chars)  # feature still present
 
     def test_signup_trigger_never_trusts_metadata_role(self):
         for sql in (self.schema, self.migration):
