@@ -39,23 +39,25 @@ def my_chars(user: dict = Depends(get_current_user), sb: Client = Depends(get_su
     # with me (read-only). A non-admin only ever gets shared ones (they can't create their own). `mine` distinguishes them; the
     # shared audience list is stripped from chars I don't own.
     uid = user["id"]
-    owned = (sb.table("custom_characters").select("*").eq("user_id", uid).order("created_at").execute().data or [])
-    try:
-        shared = (sb.table("custom_characters").select("*").contains("shared_with", [uid]).order("created_at").execute().data or [])
-    except Exception:
-        shared = []
-    out, seen = [], set()
-    for c in owned:
-        c["mine"] = True
-        out.append(c)
-        seen.add(c["id"])
-    for c in shared:
-        if c["id"] in seen:
-            continue
-        c["mine"] = False
-        c.pop("shared_with", None)
-        out.append(c)
-    return out
+    # Decide visibility in Python, NOT with an array `contains` filter: in Postgres `arr @> '{}'` is
+    # TRUE for every array, so a `cs.{}`-style query would leak every empty-shared character. A char
+    # is visible ONLY if I own it, or my id is literally a member of its shared_with list.
+    meta = sb.table("custom_characters").select("id, user_id, shared_with").order("created_at").execute().data or []
+    mine = {}
+    for c in meta:
+        if c.get("user_id") == uid:
+            mine[c["id"]] = True
+        elif uid in (c.get("shared_with") or []):
+            mine[c["id"]] = False
+    if not mine:
+        return []
+    full = (sb.table("custom_characters").select("*").in_("id", list(mine.keys()))
+            .order("created_at").execute().data or [])
+    for c in full:
+        c["mine"] = mine.get(c["id"], True)
+        if c["mine"] is False:
+            c.pop("shared_with", None)
+    return full
 
 @router.post("/")
 def add_char(body: CharBody, user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
@@ -102,12 +104,9 @@ def my_tags(user: dict = Depends(get_current_user), sb: Client = Depends(get_sup
     # Tags for the characters I can SEE — mine + ones shared with me. Tags belong to each char's
     # owner (set_tags only lets you tag your own characters), so fetching by char_id is unambiguous.
     uid = user["id"]
-    owned = [c["id"] for c in (sb.table("custom_characters").select("id").eq("user_id", uid).execute().data or [])]
-    try:
-        shared = [c["id"] for c in (sb.table("custom_characters").select("id").contains("shared_with", [uid]).execute().data or [])]
-    except Exception:
-        shared = []
-    visible = list(dict.fromkeys(owned + shared))
+    # Same explicit visibility check as my_chars (never an array `contains` filter — see note there).
+    meta = sb.table("custom_characters").select("id, user_id, shared_with").execute().data or []
+    visible = [c["id"] for c in meta if c.get("user_id") == uid or uid in (c.get("shared_with") or [])]
     if not visible:
         return []
     return (sb.table("custom_char_tags").select("char_id, novel_id").in_("char_id", visible).execute().data or [])
