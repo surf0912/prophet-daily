@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.44';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.45';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1280,15 +1280,20 @@ function mqjGateBody() {
 }
 
 // ── EXPERIMENTAL feature gate ──────────────────────────────────────────────
-// isBeta() = admin/super_admin AND the beta flag. The flag lives in localStorage so it survives PWA
-// launches (a ?beta URL can't — the home-screen app carries no query). Toggle it in
-// 檔案 → 小工具 → 實驗功能, or via ?beta=1 / ?beta=0. Backend stays the real gate (require_admin).
+// isBeta() gates the custom-character / 心動 beta UI. Admins always have it (no toggle); the
+// super_admin gates their own view with the pd_beta flag (the 實驗功能 switch, super-only). The flag
+// lives in localStorage so it survives PWA launches; toggle in 檔案 → 小工具 → 實驗功能 or ?beta=1/0.
+// Backend stays the real gate (require_admin).
 (function () {
   const b = new URLSearchParams(location.search).get('beta');
   if (b === '1' || b === '') localStorage.setItem('pd_beta', '1');
   else if (b === '0') localStorage.removeItem('pd_beta');
 })();
-function isBeta() { return localStorage.getItem('pd_beta') === '1' && !!currentUser && ['admin', 'super_admin'].includes(currentUser.role); }
+function isBeta() {
+  if (!currentUser) return false;
+  if (currentUser.role === 'admin') return true;   // admins: feature is just on, no toggle
+  return currentUser.role === 'super_admin' && localStorage.getItem('pd_beta') === '1';   // super: behind their 實驗功能 switch
+}
 function setBetaFlag(on) {
   if (on) localStorage.setItem('pd_beta', '1'); else localStorage.removeItem('pd_beta');
   toast(on ? '實驗功能已開啟' : '實驗功能已關閉');
