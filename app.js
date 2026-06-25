@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.39';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.40';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -884,10 +884,10 @@ async function loadNovels() {
 // ── Classification (category + characters) ───────────────────
 const CATEGORIES = ['迷情劑', '吐真劑', '儲思盆'];
 const CHAR_LIST = [
-  { code: 'sean',   name: 'Sean',   img: './chars/sean_phone_1.jpg' },
-  { code: 'silas',  name: 'Silas',  img: './chars/silas_phone_1.jpg' },
-  { code: 'eli',    name: 'Eli',    img: './chars/eli_phone_1.jpg' },
-  { code: 'adrian', name: 'Adrian', img: './chars/adrian_phone_1.jpg' },
+  { code: 'sean',   name: 'Sean',   img: './chars/sean_phone_2.JPG' },   /* phone_1 暫時下架 */
+  { code: 'silas',  name: 'Silas',  img: './chars/silas_phone_2.JPG' },  /* phone_1 暫時下架 */
+  { code: 'eli',    name: 'Eli',    img: './chars/eli_phone_2.JPG' },    /* phone_1 暫時下架 */
+  { code: 'adrian', name: 'Adrian', img: './chars/adrian_phone_2.JPG' }, /* phone_1 暫時下架 */
 ];
 let shelfCat = '';        // '' = 全部
 let shelfChars = [];   // default: none lit = show everything; tap a character to filter to them (OR)
