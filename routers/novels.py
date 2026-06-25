@@ -81,11 +81,9 @@ def list_novels(
             except Exception:
                 return True
         data = [n for n in data if _live(n)]
-    # Without 迷情劑 access (regular admins included now), 迷情劑 works are hidden — EXCEPT the
-    # viewer's own (authors always see their own 迷情劑 in their shelf).
+    # Readers without 迷情劑 access don't see 迷情劑 works.
     if not can_see_mqj(user):
-        uid = user["id"]
-        data = [n for n in data if n.get("category") != "迷情劑" or uid in (n.get("owners") or [])]
+        data = [n for n in data if n.get("category") != "迷情劑"]
     # Author-locked works exist only for super_admin here; the author still sees/manages their own
     # via mine=true (作品管理). .get() is None-safe before the `locked` column is added.
     if user.get("role") != "super_admin":
@@ -124,7 +122,7 @@ def list_series_siblings(novel_id: str, user: dict = Depends(get_current_user), 
     for n in rows:
         if not visible(n):
             continue
-        locked = n.get("category") == "迷情劑" and not can_see_mqj(user) and user["id"] not in (n.get("owners") or [])
+        locked = n.get("category") == "迷情劑" and not can_see_mqj(user)
         out.append({
             "id": n["id"],
             "title": None if locked else n.get("title"),   # never leak a locked work's title
@@ -222,7 +220,7 @@ def _upload_status(user: dict, sb: Client) -> str:
 
 @router.post("/", dependencies=[Depends(require_writer)])
 def create_novel(body: NovelCreate, user: dict = Depends(require_writer), sb: Client = Depends(get_supabase_admin)):
-    if body.category == "迷情劑" and not is_admin(user) and not can_see_mqj(user):
+    if body.category == "迷情劑" and not can_see_mqj(user):
         raise HTTPException(403, "你尚未取得迷情劑權限，無法上傳此分類")
     # Admin/super_admin uploads are public immediately; writers' uploads await approval.
     status = _upload_status(user, sb)
@@ -237,7 +235,7 @@ def create_novel(body: NovelCreate, user: dict = Depends(require_writer), sb: Cl
 
 @router.post("/forum", dependencies=[Depends(require_writer)])
 def create_forum_post(body: ForumPostCreate, user: dict = Depends(require_writer), sb: Client = Depends(get_supabase_admin)):
-    if body.category == "迷情劑" and not is_admin(user) and not can_see_mqj(user):
+    if body.category == "迷情劑" and not can_see_mqj(user):
         raise HTTPException(403, "你尚未取得迷情劑權限，無法上傳此分類")
     # A forum post is a kind='forum' novel whose single chapter holds the body text.
     status = _upload_status(user, sb)

@@ -172,9 +172,8 @@ def is_writer_or_above(user: dict) -> bool:
     return ROLE_RANK.get(user.get("role"), 0) >= ROLE_RANK["writer"]
 
 def can_see_mqj(user: dict) -> bool:
-    # super_admin always; EVERYONE else (incl. regular admins) needs an approved 迷情劑 grant.
-    # Authors still see their OWN 迷情劑 works — that owner exemption lives at each call site.
-    return user.get("role") == "super_admin" or user.get("mqj_access") == "approved"
+    # Admins/super_admin always; readers AND writers need an approved 迷情劑 access toggle.
+    return is_admin(user) or user.get("mqj_access") == "approved"
 
 def _novel_scheduled_future(novel: dict) -> bool:
     """True if the work's publish date (created_at, TW calendar day) is still in the future,
@@ -201,7 +200,7 @@ def check_novel_access(novel: dict, user: dict):
     if _novel_scheduled_future(novel) and not is_admin(user) and not is_owner:
         raise HTTPException(404, "Novel not found")
     # 迷情劑 category needs an explicit access grant.
-    if novel.get("category") == "迷情劑" and not can_see_mqj(user) and not is_owner:
+    if novel.get("category") == "迷情劑" and not can_see_mqj(user):
         raise HTTPException(403, "迷情劑分類需管理員開放才能閱讀")
     # Approved → any logged-in user. Pending → admins and the creator/owner only.
     if novel.get("status") == "approved":
