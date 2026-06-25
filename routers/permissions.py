@@ -97,6 +97,7 @@ def reset_password(user_id: str, body: PasswordBody, user: dict = Depends(requir
 # ── Ban / delete accounts (super_admin only) ───────────────
 class BanBody(BaseModel):
     banned: bool
+    hours: int = 72   # temp-ban duration (24 or 72); ignored by the permanent /ban endpoint
 
 @router.patch("/users/{user_id}/ban")
 def set_banned(user_id: str, body: BanBody, user: dict = Depends(require_super_admin), sb: Client = Depends(get_supabase_admin)):
@@ -113,9 +114,9 @@ def set_banned(user_id: str, body: BanBody, user: dict = Depends(require_super_a
 
 @router.post("/users/{user_id}/temp-ban")
 def temp_ban(user_id: str, body: BanBody, user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
-    # 72h temporary ban — available to admins (and super_admin). Auto-lifts once ban_until passes
-    # (enforced lazily in deps.get_current_user / signin). Admins may only act on a strictly lower
-    # rank, and may NOT release a permanent ban (that stays the owner's call via /ban).
+    # 24h / 72h temporary ban — available to admins (and super_admin). Auto-lifts once ban_until
+    # passes (enforced lazily in deps.get_current_user / signin). Admins may only act on a strictly
+    # lower rank, and may NOT release a permanent ban (that stays the owner's call via /ban).
     if user_id == user["id"]:
         raise HTTPException(400, "不能封禁自己")
     target = sb.table("profiles").select("role, banned, ban_until").eq("id", user_id).single().execute().data
@@ -125,10 +126,11 @@ def temp_ban(user_id: str, body: BanBody, user: dict = Depends(require_admin), s
         raise HTTPException(403, "只能對權限較低的帳號操作")
     from datetime import datetime, timezone, timedelta
     if body.banned:
-        until = (datetime.now(timezone.utc) + timedelta(hours=72)).isoformat()
+        hours = body.hours if body.hours in (24, 72) else 72
+        until = (datetime.now(timezone.utc) + timedelta(hours=hours)).isoformat()
         sb.table("profiles").update({"banned": True, "ban_until": until}).eq("id", user_id).execute()
         invalidate_profile(user_id)
-        record_audit(sb, user, "temp_ban", "user", user_id, "72h")
+        record_audit(sb, user, "temp_ban", "user", user_id, f"{hours}h")
         return {"banned": True, "ban_until": until}
     if target.get("banned") and not target.get("ban_until"):
         raise HTTPException(403, "永久封禁需由擁有者解除")

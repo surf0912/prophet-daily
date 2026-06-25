@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.41';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.42';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2063,7 +2063,7 @@ function updateReaderDarkBtn() {
 // ── Admin ────────────────────────────────────────────────────
 const AUDIT_LABELS = {
   approve_novel: '核准作品', delete_novel: '刪除作品', lock: '鎖上作品', unlock: '解鎖作品',
-  ban: '封禁帳號', unban: '解除封禁', temp_ban: '臨時封禁 72h', temp_unban: '解除臨時封禁',
+  ban: '封禁帳號', unban: '解除封禁', temp_ban: '臨時封禁', temp_unban: '解除臨時封禁',
   change_role: '變更身份', reset_password: '重設密碼',
   delete_user: '刪除帳號', auto_publish: '自動審核', mqj: '迷情劑權限', clear_flag: '已審回鍋標記',
   generate_invite: '產生邀請', revoke_invite: '撤銷邀請',
@@ -2086,7 +2086,9 @@ async function loadAuditLog() {
       const tgt = r.target_type === 'user'
         ? (nameById[r.target_id] || (r.target_id ? '#' + String(r.target_id).slice(0, 8) : ''))
         : (r.detail || (r.target_id ? '#' + String(r.target_id).slice(0, 8) : ''));
-      return `<div class="log-line"><span class="log-time">${escapeHtml(when)}</span><span class="log-actor">${escapeHtml(r.actor_name || '?')}</span><span class="log-act">${escapeHtml(label)}${tgt ? ` <span class="log-tgt">${escapeHtml(String(tgt))}</span>` : ''}</span></div>`;
+      // For user-target rows the detail (e.g. temp-ban duration 24h/72h) is shown as a muted suffix.
+      const meta = (r.target_type === 'user' && r.detail) ? ` <span style="color:var(--ink-light);opacity:.8">${escapeHtml(r.detail)}</span>` : '';
+      return `<div class="log-line"><span class="log-time">${escapeHtml(when)}</span><span class="log-actor">${escapeHtml(r.actor_name || '?')}</span><span class="log-act">${escapeHtml(label)}${tgt ? ` <span class="log-tgt">${escapeHtml(String(tgt))}</span>` : ''}${meta}</span></div>`;
     }).join('');
   } catch (e) { el.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${escapeHtml((e && e.message) || '')}</p>`; }
 }
@@ -2512,7 +2514,8 @@ async function loadAdminNovelList() {
           banBtns = `<button data-onclick="tempBan('${sc.id}',0)" style="${sBan}">${ic('ic-check',12)} 解除臨時封禁</button>`
             + (isSuper ? `<button data-onclick="banUser('${sc.id}',0)" style="${sBan}">${ic('ic-ban',12)} 改為永久封禁</button>` : '');
         } else {
-          banBtns = `<button data-onclick="tempBan('${sc.id}',1)" style="${sTemp}">${ic('ic-clock',12)} 臨時封禁 72 小時</button>`
+          banBtns = `<button data-onclick="tempBan('${sc.id}',1,24)" style="${sTemp}">${ic('ic-clock',12)} 臨時封禁 24 小時</button>`
+            + `<button data-onclick="tempBan('${sc.id}',1,72)" style="${sTemp}">${ic('ic-clock',12)} 臨時封禁 72 小時</button>`
             + (isSuper ? `<button data-onclick="banUser('${sc.id}',0)" style="${sBan}">${ic('ic-ban',12)} 永久封禁</button>` : '');
         }
         head += `<div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(26,10,0,.08);flex-wrap:wrap">`
@@ -2973,13 +2976,14 @@ async function resetPassword(id) {
   } catch (e) { toast('' + e.message); }
 }
 
-async function tempBan(id, on) {
+async function tempBan(id, on, hours) {
+  hours = (hours === 24 || hours === 72) ? hours : 72;
   const name = adminUserName(id);
-  if (on && !confirm(`臨時封禁「${name}」72 小時？\n對方暫時無法登入，72 小時後自動解除。`)) return;
+  if (on && !confirm(`臨時封禁「${name}」${hours} 小時？\n對方暫時無法登入，${hours} 小時後自動解除。`)) return;
   if (!on && !confirm(`解除「${name}」的臨時封禁？`)) return;
   try {
-    const r = await api(`/permissions/users/${id}/temp-ban`, { method: 'POST', body: JSON.stringify({ banned: !!on }) });
-    toast(on ? `已臨時封禁 ${name} 72 小時` : `已解除 ${name} 的臨時封禁`);
+    const r = await api(`/permissions/users/${id}/temp-ban`, { method: 'POST', body: JSON.stringify({ banned: !!on, hours }) });
+    toast(on ? `已臨時封禁 ${name} ${hours} 小時` : `已解除 ${name} 的臨時封禁`);
     if (adminNovelScope && adminNovelScope.id === id) { adminNovelScope.banned = !!on; adminNovelScope.ban_until = (r && r.ban_until) || null; loadAdminNovelList(); }
     else loadAdminUsers();
   } catch (e) { toast(e.message); }
