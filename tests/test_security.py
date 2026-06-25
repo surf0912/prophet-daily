@@ -142,6 +142,28 @@ class FrontendOutputSafetyTests(unittest.TestCase):
                 self.assertIsNotNone(call, f"Unsupported handler statement: {statement}")
                 self.assertIn(f"'{call.group(1)}'", self.events)
 
+    def test_bare_identifier_handler_arguments_are_allowlisted(self):
+        # safe-events resolves a bare-identifier argument (e.g. a callback like renderAdminNovels)
+        # via window[token] ONLY if it's in ALLOWED_ACTIONS — otherwise parseArgument throws and the
+        # whole handler silently does nothing. Guard that every such argument is allowlisted.
+        literals = {"true", "false", "null", "event", "this"}
+        handlers = re.findall(
+            r'data-on(?:click|change|input|pointerdown|touchstart)="([^"]*)"',
+            self.frontend,
+        )
+        for handler in handlers:
+            for statement in filter(None, (p.strip() for p in handler.split(";"))):
+                m = re.match(r"^[A-Za-z_$][\w$]*\((.*)\)$", statement, re.S)
+                if not m:
+                    continue
+                for arg in m.group(1).split(","):
+                    arg = arg.strip()
+                    if re.fullmatch(r"[A-Za-z_$][\w$]*", arg) and arg not in literals:
+                        self.assertIn(
+                            f"'{arg}'", self.events,
+                            f"bare-identifier handler arg not in ALLOWED_ACTIONS: {arg} (in {statement})",
+                        )
+
     def test_app_and_service_worker_versions_match(self):
         worker = (Path(__file__).parents[1] / "service-worker.js").read_text(encoding="utf-8")
         app_version = re.search(r"APP_VERSION = '(v[\d.]+)'", self.app).group(1)
