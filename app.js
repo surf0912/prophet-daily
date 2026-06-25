@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.48';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.49';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1179,14 +1179,20 @@ function matchesQuery(item, q) {
 // All chips lit (default) or none lit = no character filtering (show everything);
 // deselect chips to narrow down to works featuring ANY still-lit character.
 let charAnd = false;   // false = 任一角色 (OR); true = 同框 (AND — every selected character must appear)
-function applyClassFilter(list, cat, chars) {
+// ccSet: when a 自創角色 is selected, its tagged-novel Set. It joins the SAME 任一/同框 (OR/AND)
+// evaluation as the official characters — it is NOT a separate AND gate (that made 自創+官方 an
+// impossible intersection in OR mode).
+function applyClassFilter(list, cat, chars, ccSet) {
   const sel = (chars || []).filter(Boolean);
-  const noFilter = sel.length === 0 || (!charAnd && sel.length === CHAR_LIST.length);
+  const ccActive = !!ccSet;
+  const noFilter = (sel.length === 0 && !ccActive) || (!charAnd && sel.length === CHAR_LIST.length && !ccActive);
   return list.filter(n => {
     if (cat && n.category !== cat) return false;
     if (!noFilter) {
       const have = n.characters || [];
-      const ok = charAnd ? sel.every(c => have.includes(c)) : sel.some(c => have.includes(c));
+      const checks = sel.map(c => have.includes(c));
+      if (ccActive) checks.push(ccSet.has(n.id));
+      const ok = charAnd ? checks.every(Boolean) : checks.some(Boolean);
       if (!ok) return false;
     }
     return true;
@@ -1434,13 +1440,12 @@ function renderShelf() {
     grid.innerHTML = `<div class="empty-shelf"><span style="display:block;margin-bottom:8px">${ic('ic-books', 30)}</span>目前沒有作品<br><small>等管理員上傳作品</small></div>`;
     return;
   }
-  let list = applyClassFilter(novels, shelfCat, shelfChars);
-  if (_ccFilter) { const s = _ccTags[_ccFilter]; list = s ? list.filter(n => s.has(n.id)) : []; }   // 自創角色篩選(私人)
+  let list = applyClassFilter(novels, shelfCat, shelfChars, _ccFilter ? (_ccTags[_ccFilter] || new Set()) : null);
   const q = (document.getElementById('shelf-search-input')?.value || '').trim().toLowerCase();
   if (q) list = list.filter(n => matchesQuery(n, q));
   // Only on the plain default view (no search, 全部, no character filter), float the 24h hot
   // works to the front — silently, no label.
-  const noCharFilter = shelfChars.length === 0 || shelfChars.length === CHAR_LIST.length;
+  const noCharFilter = (shelfChars.length === 0 || shelfChars.length === CHAR_LIST.length) && !_ccFilter;
   if (!q && shelfCat === '' && noCharFilter && hotIds.length) {
     const hot = hotIds.map(id => list.find(n => n.id === id)).filter(Boolean);
     if (hot.length) {
@@ -2544,16 +2549,20 @@ async function loadAdminNovelList() {
 // Type (含羊皮紙) + 角色 filter for 作品管理. 羊皮紙 = forum kind; the 3 categories are novels.
 function applyAdminFilter(list) {
   const sel = adminChars.filter(Boolean);
-  const noFilter = sel.length === 0 || (!charAnd && sel.length === CHAR_LIST.length);
+  // 自創角色 joins the SAME 任一/同框 evaluation as the official chars (not a separate AND gate).
+  const ccActive = isBeta() && !!_ccFilter;
+  const ccSet = ccActive ? (_ccTags[_ccFilter] || new Set()) : null;
+  const noFilter = (sel.length === 0 && !ccActive) || (!charAnd && sel.length === CHAR_LIST.length && !ccActive);
   return list.filter(n => {
     if (adminCat === '羊皮紙') { if (n.kind !== 'forum') return false; }
     else if (adminCat) { if (n.kind === 'forum' || n.category !== adminCat) return false; }
     if (!noFilter) {
       const have = n.characters || [];
-      const ok = charAnd ? sel.every(c => have.includes(c)) : sel.some(c => have.includes(c));
+      const checks = sel.map(c => have.includes(c));
+      if (ccActive) checks.push(ccSet.has(n.id));
+      const ok = charAnd ? checks.every(Boolean) : checks.some(Boolean);
       if (!ok) return false;
     }
-    if (isBeta() && _ccFilter) { const s = _ccTags[_ccFilter]; if (!s || !s.has(n.id)) return false; }   // 自創角色(私人標記)
     return true;
   });
 }
