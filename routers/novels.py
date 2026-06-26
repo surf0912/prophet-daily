@@ -211,6 +211,15 @@ def my_favorite_ids(user: dict = Depends(get_current_user), sb: Client = Depends
     rows = sb.table("novel_favorites").select("novel_id").eq("user_id", user["id"]).execute().data or []
     return [r["novel_id"] for r in rows]
 
+# Same favourites, but WITH the moment each was favourited. The 追蹤更新 owl uses this as the
+# server-side baseline (when you started following a series) — robust across devices, unlike the
+# old per-device localStorage baseline that silently swallowed installments after a data wipe.
+@router.get("/my-favorites")
+def my_favorites(user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
+    rows = (sb.table("novel_favorites").select("novel_id, created_at")
+            .eq("user_id", user["id"]).execute().data or [])
+    return [{"novel_id": r["novel_id"], "created_at": r.get("created_at")} for r in rows]
+
 @router.get("/{novel_id}")
 def get_novel(novel_id: str, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
     rows = sb.table("novels").select("*").eq("id", novel_id).limit(1).execute().data

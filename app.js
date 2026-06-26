@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.64';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.65';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -486,6 +486,7 @@ async function initApp() {
   document.querySelectorAll('.super-only').forEach(el => el.style.display = currentUser.role === 'super_admin' ? '' : 'none');  // 監看面板 + 實驗功能開關：只給 SA
   { const _bt = document.getElementById('beta-toggle'); if (_bt) _bt.checked = localStorage.getItem('pd_beta') === '1'; }
   { const _fx = document.getElementById('tapfx-toggle'); if (_fx) _fx.checked = localStorage.getItem('pd_tap_fx') !== '0'; }   // 點擊特效預設開
+  { const _ow = document.getElementById('owl-toggle'); if (_ow) _ow.checked = localStorage.getItem('pd_owl_always') === '1'; }   // 貓頭鷹常駐預設關
   loadCustomChars().then(() => { if (typeof renderShelf === 'function') renderShelf(); });   // beta 自創角色載入後刷新角色列
   adminNovelScope = null;
   loadOwnerNames();   // super_admin only: map owner uuid → 巫師全名 for the owner hint
@@ -934,94 +935,93 @@ const ADMIN_CATS = ['迷情劑', '吐真劑', '儲思盆', '羊皮紙'];
 let adminCat = '';        // '' | 迷情劑 | 吐真劑 | 儲思盆 | 羊皮紙
 let adminChars = [];
 let favIds = new Set();   // 意若思鏡 收藏夾: ids of whole works the user has favorited
+let favTimes = new Map();   // novel_id → 收藏時間（追蹤更新的伺服器端基準）
 let shelfFav = false;     // 收藏夾 view toggle
 
 async function loadFavIds() {
+  favTimes = new Map();
+  try {
+    const rows = await api('/novels/my-favorites');   // [{novel_id, created_at}]
+    if (Array.isArray(rows)) {
+      favIds = new Set(rows.map(r => r.novel_id));
+      rows.forEach(r => { if (r.created_at) favTimes.set(r.novel_id, r.created_at); });
+      return;
+    }
+  } catch (e) { /* 舊端點後援（部署空窗期） */ }
   try { favIds = new Set(await api('/novels/my-favorite-ids') || []); }
   catch { favIds = new Set(); }
 }
 
 // ── 追蹤更新: follow a SERIES by favouriting any of its parts ──
-// Works are single-piece (one work = one chapter, no add-chapter feature). A "series"
-// is several separate works sharing a `series` name. Favouriting any part = following
-// that series; the 心動 home then flags when a NEW installment is published. Per-series
-// we remember the newest installment's created_at seen; existing parts are baselined
-// silently, so only future installments raise a .
-function _seriesSeen() { try { return JSON.parse(localStorage.getItem('pd_series_seen') || '{}'); } catch { return {}; } }
-function _saveSeriesSeen(m) { localStorage.setItem('pd_series_seen', JSON.stringify(m)); }
-function markSeriesSeenForWork(novel) {   // opening a new installment clears its series flag
-  if (!novel || !novel.series || !novel.created_at) return;
-  const m = _seriesSeen();
-  if (m[novel.series] === undefined || new Date(novel.created_at) > new Date(m[novel.series])) {
-    m[novel.series] = novel.created_at; _saveSeriesSeen(m);
-  }
+// Works are single-piece (one work = one chapter). A "series" is several works sharing a
+// `series` name. Favouriting any part = following that series; an installment published
+// AFTER you started following (server favourite time) shows as a notification on the owl.
+function _readInstallments() { try { return JSON.parse(localStorage.getItem('pd_read_installments') || '[]'); } catch (e) { return []; } }
+function _markInstallmentRead(id) {   // 打開某篇 = 標記該篇追蹤通知為已讀（per-device 已讀狀態）
+  if (!id) return;
+  const a = _readInstallments();
+  if (!a.includes(id)) { a.push(id); try { localStorage.setItem('pd_read_installments', JSON.stringify(a)); } catch (e) {} }
 }
+function markSeriesSeenForWork(novel) { if (novel && novel.id) _markInstallmentRead(novel.id); }
+function owlAlways() { return localStorage.getItem('pd_owl_always') === '1'; }   // 小工具「貓頭鷹常駐」
+function toggleOwlAlways(on) { localStorage.setItem('pd_owl_always', on ? '1' : '0'); renderFavUpdates(); }
+// 貓頭鷹＝通知中心。項目：主編來信 + 追蹤更新（收藏系列的新作品）。保留 30 天，讀過的留作歷史（灰掉）。
+// 追蹤基準＝伺服器端「收藏該系列任一篇的最早時間」（favTimes），跨裝置一致，不再靠 localStorage。
 async function renderFavUpdates() {
   const wrap = document.getElementById('fav-owl-wrap'); if (!wrap) return;
   const pop = document.getElementById('fav-owl-pop');
-  const letterUnseen = !editorLetterSeen();
-  const updates = [];
+  const DAY = 86400000, cutoff = Date.now() - 30 * DAY;
+  const read = new Set(_readInstallments());
+  const items = [];   // {kind:'letter'|'work', id, title, sub, at, unread}
+  const ld = EDITOR_LETTER.date ? new Date(EDITOR_LETTER.date) : null;
+  if (ld && ld.getTime() >= cutoff) {
+    items.push({ kind: 'letter', title: '主編來信', sub: '本期更新與最新版本', at: EDITOR_LETTER.date, unread: !editorLetterSeen() });
+  }
   if (favIds && favIds.size) {
     let all = null;
     try { all = await api('/novels/') || []; } catch (e) { all = null; }
     if (all) {
-      const followed = new Set();   // series the reader follows, via any favourited part
-      all.forEach(n => { if (favIds.has(n.id) && n.series) followed.add(n.series); });
-      if (followed.size) {
-        const seen = _seriesSeen(); let changed = false;
-        followed.forEach(s => {
-          const members = all.filter(n => n.series === s && n.created_at);
-          if (!members.length) return;
-          const newest = members.reduce((a, b) => new Date(b.created_at) > new Date(a.created_at) ? b : a);
-          if (seen[s] === undefined) { seen[s] = newest.created_at; changed = true; return; }   // baseline silently
-          const fresh = members.filter(n => new Date(n.created_at) > new Date(seen[s]));
-          if (fresh.length) {
-            const top = fresh.reduce((a, b) => (b.series_order || 0) > (a.series_order || 0) ? b : a, fresh[0]);
-            updates.push({ series: s, work: top, count: fresh.length });
-          }
-        });
-        if (changed) _saveSeriesSeen(seen);
-      }
+      const since = new Map();   // 系列 → 追蹤起點（最早收藏時間）
+      all.forEach(n => {
+        if (!n.series || !favIds.has(n.id)) return;
+        const t = favTimes.get(n.id);
+        if (t && (!since.has(n.series) || new Date(t) < new Date(since.get(n.series)))) since.set(n.series, t);
+      });
+      all.forEach(n => {
+        if (!n.series || !n.created_at || !since.has(n.series)) return;
+        const c = new Date(n.created_at).getTime();
+        if (c > new Date(since.get(n.series)).getTime() && c >= cutoff) {
+          items.push({ kind: 'work', id: n.id, title: `系列《${n.series}》新作品`, sub: n.title, at: n.created_at, unread: !read.has(n.id) });
+        }
+      });
     }
   }
-  // 貓頭鷹只在「有未讀主編來信」或「追蹤的系列有新作品」時現身（跳動）；清單收進浮層，點貓頭鷹才展開。
-  if (!updates.length && !letterUnseen) { wrap.style.display = 'none'; if (pop) { pop.hidden = true; pop.innerHTML = ''; } return; }
+  items.sort((a, b) => new Date(b.at) - new Date(a.at));
+  const unread = items.filter(i => i.unread).length;
+  // 預設只在有未讀時現身；小工具「貓頭鷹常駐」打開則一直在（即使全已讀／無通知）。
+  if (!unread && !owlAlways()) { wrap.style.display = 'none'; if (pop) { pop.hidden = true; pop.innerHTML = ''; } return; }
   wrap.style.display = 'block';
   pop.hidden = true;
-  let html = '';
-  if (letterUnseen) {
-    html += `<a href="#" data-onclick="openEditorLetter();return false" style="display:flex;align-items:center;gap:9px;text-decoration:none;padding:10px 14px">
-      <span style="color:#bf9d44;font-size:15px;flex-shrink:0">✦</span>
-      <span style="flex:1;min-width:0">
-        <span style="font-size:13px;color:var(--ink);font-weight:bold;display:block">主編來信</span>
-        <span style="font-size:12px;color:var(--accent);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">本期更新與最新版本</span>
-      </span>
-      <span style="color:var(--ink-light);font-size:14px;flex-shrink:0">›</span>
-    </a>`;
-  }
-  if (updates.length) {
-    html += `<p class="fav-pop-title"${letterUnseen ? ' style="border-top:1px solid rgba(26,10,0,.07);margin-top:0"' : ''}>追蹤更新</p>`;
-    html += updates.map(u => {
-      const extra = u.count > 1 ? `（${u.count} 篇新作）` : '';
-      return `
-    <a href="#" data-onclick="favOwlOpen('${u.work.id}');return false" style="display:flex;align-items:center;gap:9px;text-decoration:none;padding:9px 14px;border-top:1px solid rgba(26,10,0,.07)">
-      <span style="width:7px;height:7px;border-radius:50%;background:var(--scarlet);flex-shrink:0;display:inline-block"></span>
-      <span style="flex:1;min-width:0">
-        <span style="font-size:13px;color:var(--ink);font-weight:bold;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">系列《${escapeHtml(u.series)}》有新作品${extra}</span>
-        <span style="font-size:12px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block">${escapeHtml(u.work.title)}・${fmtUpdated(u.work.created_at)}</span>
-      </span>
-      <span style="color:var(--ink-light);font-size:14px;flex-shrink:0">›</span>
-    </a>`;
-    }).join('');
-  }
-  pop.innerHTML = html;
+  if (!items.length) { pop.innerHTML = `<p class="fav-pop-empty">目前沒有新通知</p>`; return; }
+  pop.innerHTML = `<p class="fav-pop-title">通知</p>` + items.map(it => {
+    const dotClass = it.unread ? (it.kind === 'letter' ? 'fav-dot gold' : 'fav-dot') : 'fav-dot read';
+    const cls = `fav-row${it.unread ? '' : ' read'}`;
+    const inner = `<span class="${dotClass}"></span>`
+      + `<span class="fav-row-main"><span class="fav-row-t">${escapeHtml(it.title)}</span>`
+      + `<span class="fav-row-s">${escapeHtml(it.sub)}・${fmtUpdated(it.at)}</span></span>`
+      + `<span class="fav-row-x">›</span>`;
+    return it.kind === 'letter'
+      ? `<a href="#" data-onclick="openEditorLetter();return false" class="${cls}">${inner}</a>`
+      : `<a href="#" data-onclick="favOwlOpen('${it.id}');return false" class="${cls}">${inner}</a>`;
+  }).join('');
 }
 function toggleFavOwl() { const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = !p.hidden; }
-function favOwlOpen(id) { const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true; openNovel(id); }
+function favOwlOpen(id) { const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true; _markInstallmentRead(id); openNovel(id); }
 // ── 主編來信（單封更新公告）──────────────────────────────────────────
 // 換新一封時把 id 改掉即可：已讀狀態以 id 存 localStorage，每封只自動跳一次。
 const EDITOR_LETTER = {
   id: 'v2.62',
+  date: '2026-06-26',   // 通知中心保留 30 天起算日（換新一封時連同 id 一起更新）
   lead: '本期更新，重點如下：',
   items: [
     '心動頁左上新增貓頭鷹提醒——所追蹤的系列有新作品時，將現身通知。',
