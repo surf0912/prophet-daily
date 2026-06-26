@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.61';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.62';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1021,15 +1021,15 @@ function favOwlOpen(id) { const p = document.getElementById('fav-owl-pop'); if (
 // ── 主編來信（單封更新公告）──────────────────────────────────────────
 // 換新一封時把 id 改掉即可：已讀狀態以 id 存 localStorage，每封只自動跳一次。
 const EDITOR_LETTER = {
-  id: 'v2.60-2',
-  lead: '本期已更新，重點如下：',
+  id: 'v2.62',
+  lead: '本期更新，重點如下：',
   items: [
     '心動頁左上新增貓頭鷹提醒——所追蹤的系列有新作品時，將現身通知。',
     '點讚、收藏新增火花特效。',
     '心動封面點選愛心，即可進入角色設定頁。',
     '點擊特效可於「個人檔案 → 小工具」自行開關。',
   ],
-  closing: '請更新至 v2.60。',
+  closing: '版本更新至 v2.62。',
 };
 function editorLetterSeen() { return localStorage.getItem('pd_letter_seen') === EDITOR_LETTER.id; }
 function markEditorLetterSeen() { try { localStorage.setItem('pd_letter_seen', EDITOR_LETTER.id); } catch (e) {} }
