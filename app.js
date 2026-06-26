@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.52';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.54';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -770,11 +770,14 @@ function renderCharProfile(name) {
   let html = '';
   if (photos.length) {
     // 每張照片右上角一個開關：勾 = 這張出現在心動封面，取消 = 隱藏這張(連同桌機同序版)
+    const HEART = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.7l-1.45-1.32C5.4 14.74 2 11.66 2 7.9 2 5.1 4.2 3 7 3c1.6 0 3.14.74 4.13 1.9L12 5.9l.87-1C13.86 3.74 15.4 3 17 3c2.8 0 5 2.1 5 4.9 0 3.76-3.4 6.84-8.55 11.49L12 20.7z"/></svg>`;
+    const DL = `<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>`;
     html += `<div class="cp-gallery">${photos.map((u, i) => {
       const on = !excluded.has(u);
-      return `<div class="cp-shot" style="background-image:url('${u}')"><button class="cp-cover-toggle${on ? ' on' : ''}" data-onclick="toggleCoverPhoto('${name}', ${i}, this)" role="checkbox" aria-checked="${on}" aria-label="心動封面顯示這張" title="心動封面顯示這張"></button></div>`;
-    }).join('')}</div>`;
-    html += `<p class="cp-hint">每張右上角勾選 = 這張會出現在心動封面；取消 = 不出現（全部取消 = 全部隨機）。</p>`;
+      const dl = photoWallpaperUrl(u) ? `<button class="cp-download" data-onclick="downloadPhoto('${u}','${escapeHtml(name)}')" aria-label="下載桌布" title="下載桌布">${DL}</button>` : '';
+      const heart = `<button class="cp-cover-toggle${on ? ' on' : ''}" data-onclick="toggleCoverPhoto('${name}', ${i}, this)" role="checkbox" aria-checked="${on}" aria-label="心動封面顯示這張">${HEART}</button>`;
+      return `<div class="cp-shot" style="background-image:url('${u}')">${heart}${dl}</div>`;
+    }).join('')}<button class="cp-hint-btn" data-onclick="cpCoverHint()" aria-label="封面愛心說明" title="封面愛心說明">${ic('ic-help', 16)}</button></div>`;
   }
   html += `<div class="cp-section"><h3>基本資料</h3><p class="cp-bio">${prof.bio ? escapeHtml(prof.bio) : '（基本資料待補充）'}</p></div>`;
   html += `<div class="cp-section"><h3>我為 ${escapeHtml(name)} 寫的文章</h3>`;
@@ -785,6 +788,8 @@ function renderCharProfile(name) {
   document.getElementById('cp-body').innerHTML = html;
 }
 // 逐張開關：勾 = 這張出現在心動封面，取消 = 隱藏。連同同一序的桌機版一起排除(照顧桌機讀者)。
+// 封面愛心說明(收進 tooltip:點 ⓘ 才出現,不直接佔版面)
+function cpCoverHint() { toast('每張的愛心 = 這張會出現在心動封面;取消愛心 = 不出現(全部取消 = 全部隨機)'); }
 async function toggleCoverPhoto(charName, index, btn) {
   const c = CHARS.find(x => x.name === charName) || {};
   const ids = [(c.imgs || [c.img])[index], (c.imgsD || [])[index]].filter(Boolean);
@@ -812,6 +817,38 @@ function officialCharTap(code, onFilter) {
     if (_ocTapTimer) clearTimeout(_ocTapTimer);
     _ocTapCode = code;
     _ocTapTimer = setTimeout(() => { _ocTapTimer = null; _ocTapCode = null; onFilter('char', code); }, 320);
+  }
+}
+
+// 下載桌布:把某張封面照片對應的「加浮水印桌布版」抓下來。
+// ./chars/sean_phone_2.JPG → ./wallpapers/sean_phone_2_wall.jpg
+function photoWallpaperUrl(img) {
+  if (!img) return null;
+  return img.replace('./chars/', './wallpapers/').replace(/\.(jpe?g)$/i, '_wall.jpg');
+}
+async function downloadPhoto(img, charName) {
+  const url = photoWallpaperUrl(img);
+  if (!url) return;
+  await shareOrDownload(url, '預言家日報-' + (charName || '桌布') + '.jpg');
+}
+// iOS PWA 存相簿要走 Web Share(會跳「儲存影像」);桌機/Android 退回直接下載;再不行就開圖讓使用者長按存。
+async function shareOrDownload(url, filename) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('not found');
+    const blob = await res.blob();
+    const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); } catch (e) {}   // 使用者取消 = 不做事
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  } catch (e) {
+    window.open(url, '_blank');   // 最後手段:開圖,長按儲存
   }
 }
 

@@ -11,7 +11,7 @@
     'addFaq', 'applyAppFontSize', 'approveNovel', 'avatarDragStart', 'avatarZoom', 'banUser',
     'ccPickAvatar', 'ccTap', 'changeUserRole', 'clearUserFlag', 'closeCharProfile', 'closeReader', 'copyAllInvites',
     'copyText', 'deleteCustomChar', 'deleteFaq', 'deleteFeedbackItem', 'deleteNovel', 'deleteUser',
-    'discardUploadDraft', 'dismissContinueBar', 'dismissTourBanner', 'doInviteRegister', 'doLogout',
+    'cpCoverHint', 'discardUploadDraft', 'dismissContinueBar', 'dismissTourBanner', 'doInviteRegister', 'doLogout', 'downloadPhoto',
     'doSignIn', 'editFaq', 'editNick', 'endTour', 'exportBackup', 'forceRefresh', 'generateInvite',
     'handleAvatarUpload', 'loadChapter', 'loadForumPosts', 'loadNovels', 'loadTxtIntoUpload',
     'navigateChapter', 'navigateSeries', 'openBugReport', 'openCharProfileFromHome', 'openCreateChar',

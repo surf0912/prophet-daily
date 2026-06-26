@@ -276,9 +276,13 @@
     .cp-body { flex: 1; overflow-y: auto; padding: 16px 18px calc(28px + var(--safe-bottom)); }
     .cp-gallery { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 18px; }
     .cp-shot { position: relative; flex: 0 0 auto; width: 150px; height: 200px; border-radius: 12px; background-size: cover; background-position: center; border: 1px solid var(--gold-lt); }
-    .cp-cover-toggle { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; background: rgba(0,0,0,.35); cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.45); padding: 0; }
-    .cp-cover-toggle.on { background: var(--gold); }
-    .cp-cover-toggle.on::after { content: ''; position: absolute; inset: 6px; border-radius: 50%; background: #fff; }
+    .cp-cover-toggle { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border: none; border-radius: 50%; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; cursor: pointer; color: #fff; padding: 0; box-shadow: 0 1px 4px rgba(0,0,0,.45); }
+    .cp-cover-toggle svg path { fill: none; stroke: currentColor; stroke-width: 2; }
+    .cp-cover-toggle.on { color: var(--gold); }
+    .cp-cover-toggle.on svg path { fill: currentColor; stroke: none; }
+    .cp-download { position: absolute; bottom: 8px; right: 8px; width: 30px; height: 30px; border: none; border-radius: 50%; background: rgba(0,0,0,.4); color: #f4e8c1; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; box-shadow: 0 1px 4px rgba(0,0,0,.45); }
+    .cp-cover-toggle:active, .cp-download:active { transform: scale(.9); }
+    .cp-hint-btn { flex: 0 0 auto; align-self: center; width: 34px; height: 34px; border: 1px dashed var(--gold-lt); border-radius: 50%; background: none; color: var(--ink-light); display: flex; align-items: center; justify-content: center; cursor: pointer; }
     .cp-section { margin-bottom: 22px; }
     .cp-section h3 { font-size: 15px; color: var(--accent); margin-bottom: 8px; }
     .cp-bio { font-size: 14px; line-height: 1.7; color: var(--ink); white-space: pre-wrap; }
