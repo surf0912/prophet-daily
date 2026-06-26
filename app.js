@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.59';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.60';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -493,6 +493,7 @@ async function initApp() {
   renderSettings();
   renderGreeting();
   renderTourBanner();   // persistent home prompt for anyone not yet onboarded
+  setTimeout(maybeShowEditorLetter, 700);   // 主編來信：登入後跳一次（已看過導覽的人才跳，不與新手導覽撞窗）
   // Run the first-time tour only AFTER the shelf finishes loading — i.e. once the
   // backend is awake and the 喚醒中 overlay is gone — so it isn't shown over (and
   // accidentally dismissed during) a cold start. .catch keeps the chain alive even if
@@ -958,32 +959,51 @@ function markSeriesSeenForWork(novel) {   // opening a new installment clears it
 async function renderFavUpdates() {
   const wrap = document.getElementById('fav-owl-wrap'); if (!wrap) return;
   const pop = document.getElementById('fav-owl-pop');
-  const hide = () => { wrap.style.display = 'none'; if (pop) { pop.hidden = true; pop.innerHTML = ''; } };
-  if (!favIds || favIds.size === 0) return hide();
-  let all; try { all = await api('/novels/') || []; } catch { return hide(); }
-  const followed = new Set();   // series the reader follows, via any favourited part
-  all.forEach(n => { if (favIds.has(n.id) && n.series) followed.add(n.series); });
-  if (!followed.size) return hide();
-  const seen = _seriesSeen(); let changed = false; const updates = [];
-  followed.forEach(s => {
-    const members = all.filter(n => n.series === s && n.created_at);
-    if (!members.length) return;
-    const newest = members.reduce((a, b) => new Date(b.created_at) > new Date(a.created_at) ? b : a);
-    if (seen[s] === undefined) { seen[s] = newest.created_at; changed = true; return; }   // baseline silently
-    const fresh = members.filter(n => new Date(n.created_at) > new Date(seen[s]));
-    if (fresh.length) {
-      const top = fresh.reduce((a, b) => (b.series_order || 0) > (a.series_order || 0) ? b : a, fresh[0]);
-      updates.push({ series: s, work: top, count: fresh.length });
+  const letterUnseen = !editorLetterSeen();
+  const updates = [];
+  if (favIds && favIds.size) {
+    let all = null;
+    try { all = await api('/novels/') || []; } catch (e) { all = null; }
+    if (all) {
+      const followed = new Set();   // series the reader follows, via any favourited part
+      all.forEach(n => { if (favIds.has(n.id) && n.series) followed.add(n.series); });
+      if (followed.size) {
+        const seen = _seriesSeen(); let changed = false;
+        followed.forEach(s => {
+          const members = all.filter(n => n.series === s && n.created_at);
+          if (!members.length) return;
+          const newest = members.reduce((a, b) => new Date(b.created_at) > new Date(a.created_at) ? b : a);
+          if (seen[s] === undefined) { seen[s] = newest.created_at; changed = true; return; }   // baseline silently
+          const fresh = members.filter(n => new Date(n.created_at) > new Date(seen[s]));
+          if (fresh.length) {
+            const top = fresh.reduce((a, b) => (b.series_order || 0) > (a.series_order || 0) ? b : a, fresh[0]);
+            updates.push({ series: s, work: top, count: fresh.length });
+          }
+        });
+        if (changed) _saveSeriesSeen(seen);
+      }
     }
-  });
-  if (changed) _saveSeriesSeen(seen);
-  if (!updates.length) return hide();
-  // 有更新：貓頭鷹現身（跳動），清單放進浮層（預設收起，點貓頭鷹才展開）。
+  }
+  // 貓頭鷹只在「有未讀主編來信」或「追蹤的系列有新作品」時現身（跳動）；清單收進浮層，點貓頭鷹才展開。
+  if (!updates.length && !letterUnseen) { wrap.style.display = 'none'; if (pop) { pop.hidden = true; pop.innerHTML = ''; } return; }
   wrap.style.display = 'block';
   pop.hidden = true;
-  pop.innerHTML = `<p class="fav-pop-title">追蹤更新</p>` + updates.map(u => {
-    const extra = u.count > 1 ? `（${u.count} 篇新作）` : '';
-    return `
+  let html = '';
+  if (letterUnseen) {
+    html += `<a href="#" data-onclick="openEditorLetter();return false" style="display:flex;align-items:center;gap:9px;text-decoration:none;padding:10px 14px">
+      <span style="color:#bf9d44;font-size:15px;flex-shrink:0">✦</span>
+      <span style="flex:1;min-width:0">
+        <span style="font-size:13px;color:var(--ink);font-weight:bold;display:block">主編來信</span>
+        <span style="font-size:12px;color:var(--accent);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">本期更新與最新版本</span>
+      </span>
+      <span style="color:var(--ink-light);font-size:14px;flex-shrink:0">›</span>
+    </a>`;
+  }
+  if (updates.length) {
+    html += `<p class="fav-pop-title"${letterUnseen ? ' style="border-top:1px solid rgba(26,10,0,.07);margin-top:0"' : ''}>追蹤更新</p>`;
+    html += updates.map(u => {
+      const extra = u.count > 1 ? `（${u.count} 篇新作）` : '';
+      return `
     <a href="#" data-onclick="favOwlOpen('${u.work.id}');return false" style="display:flex;align-items:center;gap:9px;text-decoration:none;padding:9px 14px;border-top:1px solid rgba(26,10,0,.07)">
       <span style="width:7px;height:7px;border-radius:50%;background:var(--scarlet);flex-shrink:0;display:inline-block"></span>
       <span style="flex:1;min-width:0">
@@ -992,10 +1012,51 @@ async function renderFavUpdates() {
       </span>
       <span style="color:var(--ink-light);font-size:14px;flex-shrink:0">›</span>
     </a>`;
-  }).join('');
+    }).join('');
+  }
+  pop.innerHTML = html;
 }
 function toggleFavOwl() { const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = !p.hidden; }
 function favOwlOpen(id) { const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true; openNovel(id); }
+// ── 主編來信（單封更新公告）──────────────────────────────────────────
+// 換新一封時把 id 改掉即可：已讀狀態以 id 存 localStorage，每封只自動跳一次。
+const EDITOR_LETTER = {
+  id: 'v2.60',
+  lead: '本期已更新，重點如下：',
+  items: [
+    '心動頁左上新增貓頭鷹提醒——所追蹤的系列有新作品時，將現身通知。',
+    '點讚、收藏新增火花特效。',
+    '心動封面點選愛心，即可進入角色設定頁。',
+    '點擊特效可於「個人檔案 → 小工具」自行開關。',
+  ],
+  closing: '請更新至 v2.60。',
+};
+function editorLetterSeen() { return localStorage.getItem('pd_letter_seen') === EDITOR_LETTER.id; }
+function markEditorLetterSeen() { try { localStorage.setItem('pd_letter_seen', EDITOR_LETTER.id); } catch (e) {} }
+function openEditorLetter() {
+  const m = document.getElementById('editor-letter'); if (!m) return;
+  const pop = document.getElementById('fav-owl-pop'); if (pop) pop.hidden = true;   // 從貓頭鷹點進來時收起浮層
+  const body = document.getElementById('editor-letter-body');
+  if (body) body.innerHTML =
+    `<div class="el-lead">${escapeHtml(EDITOR_LETTER.lead)}</div>` +
+    EDITOR_LETTER.items.map(t => `<div class="el-item"><span class="el-dot">·</span><span>${escapeHtml(t)}</span></div>`).join('') +
+    `<div class="el-foot">${escapeHtml(EDITOR_LETTER.closing)}<span class="el-sign">—— 主編</span></div>`;
+  m.style.display = 'flex';
+}
+function dismissEditorLetter() {
+  markEditorLetterSeen();
+  const m = document.getElementById('editor-letter'); if (m) m.style.display = 'none';
+  renderFavUpdates();   // 已讀後貓頭鷹收起「主編來信」一條
+}
+async function getNewIssue() {   // 「取得新一期」：不另跳 confirm（按鈕本身即確認），清快取後重載最新版
+  markEditorLetterSeen();
+  try {
+    if (window.caches) { const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); }
+    if (navigator.serviceWorker) { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.unregister())); }
+  } catch (e) { /* best effort */ }
+  location.replace(location.pathname + '?fresh=' + Date.now());
+}
+function maybeShowEditorLetter() { if (!editorLetterSeen() && tourSeen()) openEditorLetter(); }
 function toggleShelfFav() {
   shelfFav = !shelfFav;
   document.getElementById('shelf-fav-btn').classList.toggle('on', shelfFav);
