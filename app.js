@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.63';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.64';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1048,13 +1048,13 @@ function dismissEditorLetter() {
   const m = document.getElementById('editor-letter'); if (m) m.style.display = 'none';
   renderFavUpdates();   // 已讀後貓頭鷹收起「主編來信」一條
 }
-async function getNewIssue() {   // 「取得新一期」：不另跳 confirm（按鈕本身即確認），清快取後重載最新版
+async function getNewIssue() {   // 「更新版本」：溫和更新——不清快取、不註銷 SW，否則冷重載時封面圖與離線快取會一起消失
   markEditorLetterSeen();
   try {
-    if (window.caches) { const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); }
-    if (navigator.serviceWorker) { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.unregister())); }
+    const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+    if (reg) await reg.update();   // 抓最新版 SW（install 內已 skipWaiting，會盡快接管並換上新版）
   } catch (e) { /* best effort */ }
-  location.replace(location.pathname + '?fresh=' + Date.now());
+  location.reload();   // HTML 為 network-first，重載即取最新 UI；既有快取（含 /chars/ 封面圖）保留
 }
 function maybeShowEditorLetter() {
   if (editorLetterSeen()) return;
