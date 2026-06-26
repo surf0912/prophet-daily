@@ -188,11 +188,66 @@ def _novel_scheduled_future(novel: dict) -> bool:
     except Exception:
         return False
 
-def check_novel_access(novel: dict, user: dict):
+def custom_char_blocked(sb, novel: dict, user: dict) -> bool:
+    """A work that an OWNER filed under a custom character is PRIVATE to that character's audience
+    (the work's owners + everyone the character is shared with). Returns True if `user` may NOT see
+    it. Only an owner's OWN tag locks the work — so nobody can hide someone else's public work by
+    tagging it. super_admin and the work's owners always pass."""
+    if not novel or user.get("role") == "super_admin":
+        return False
+    uid = user["id"]
+    owners = set(novel.get("owners") or [])
+    if uid in owners:
+        return False
+    nid = novel.get("id")
+    if not nid:
+        return False
+    try:
+        tags = sb.table("custom_char_tags").select("char_id, user_id").eq("novel_id", nid).execute().data or []
+        owner_char_ids = [t["char_id"] for t in tags if t.get("user_id") in owners]   # only owner tags lock
+        if not owner_char_ids:
+            return False
+        chars = sb.table("custom_characters").select("shared_with").in_("id", owner_char_ids).execute().data or []
+    except Exception:
+        return False   # table missing / query error → fail open to PUBLIC (never break reading)
+    for c in chars:
+        if uid in (c.get("shared_with") or []):
+            return False
+    return True
+
+def custom_char_restricted_map(sb) -> dict:
+    """Batch form of custom_char_blocked for list endpoints. novel_id -> set(allowed user_ids) for
+    every work an owner filed under a custom character. A novel in this map is visible ONLY to those
+    ids (plus super_admin)."""
+    try:
+        tags = sb.table("custom_char_tags").select("char_id, novel_id, user_id").execute().data or []
+        if not tags:
+            return {}
+        chars = {c["id"]: c for c in (sb.table("custom_characters").select("id, shared_with").execute().data or [])}
+        nids = list({t["novel_id"] for t in tags if t.get("novel_id")})
+        rows = sb.table("novels").select("id, owners").in_("id", nids).execute().data or []
+    except Exception:
+        return {}
+    owners_map = {n["id"]: set(n.get("owners") or []) for n in rows}
+    aud = {}
+    for t in tags:
+        nid, cid, tagger = t.get("novel_id"), t.get("char_id"), t.get("user_id")
+        owners = owners_map.get(nid, set())
+        if tagger in owners and cid in chars:   # only an owner's tag locks the work
+            a = aud.setdefault(nid, set())
+            a.update(owners)
+            a.update(chars[cid].get("shared_with") or [])
+    return aud
+
+def check_novel_access(novel: dict, user: dict, sb=None):
     """Single source of truth for 'may this user access this work'. Raises HTTPException if not.
     Used by every work / chapter / stat endpoint so visibility rules can't diverge. Uses 404 (not
-    403) where merely revealing that the work exists would itself be a leak (locked / scheduled)."""
+    403) where merely revealing that the work exists would itself be a leak (locked / scheduled /
+    filed under a private custom character). Pass `sb` to enforce the custom-character lock."""
     is_owner = user["id"] in (novel.get("owners") or [])
+    # Filed under an owner's custom character → private to that character's audience.
+    if sb is not None and custom_char_blocked(sb, novel, user):
+        raise HTTPException(404, "Novel not found")
     # Author-locked → invisible to all but super_admin + owners.
     if novel.get("locked") and user.get("role") != "super_admin" and not is_owner:
         raise HTTPException(404, "Novel not found")

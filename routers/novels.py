@@ -2,7 +2,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
-from deps import get_supabase_admin, get_current_user, require_admin, require_writer, is_admin, can_see_mqj, check_novel_access, record_audit
+from deps import get_supabase_admin, get_current_user, require_admin, require_writer, is_admin, can_see_mqj, check_novel_access, custom_char_blocked, custom_char_restricted_map, record_audit
 from supabase import Client
 
 router = APIRouter()
@@ -88,6 +88,12 @@ def list_novels(
     # via mine=true (作品管理). .get() is None-safe before the `locked` column is added.
     if user.get("role") != "super_admin":
         data = [n for n in data if not n.get("locked")]
+    # 自創角色鎖:作者把作品歸到自己的某個自創角色底下後,該作品變私密 — 只有作者 + 被分享的人(+ 超管)看得到。
+    if user.get("role") != "super_admin":
+        restricted = custom_char_restricted_map(sb)
+        if restricted:
+            uid = user["id"]
+            data = [n for n in data if n["id"] not in restricted or uid in restricted[n["id"]]]
     return data
 
 @router.get("/{novel_id}/siblings")
@@ -110,6 +116,8 @@ def list_series_siblings(novel_id: str, user: dict = Depends(get_current_user), 
             return False
         if n.get("locked") and user.get("role") != "super_admin" and user["id"] not in (n.get("owners") or []):
             return False   # author-locked → don't even reveal it exists in the 上下篇 nav
+        if custom_char_blocked(sb, n, user):
+            return False   # filed under a private custom character → hide from non-audience
         if not admin:   # scheduled-publish: hide future-dated parts
             ts = n.get("created_at")
             try:
@@ -161,7 +169,7 @@ def my_liked(user: dict = Depends(get_current_user), sb: Client = Depends(get_su
     out = []
     for n in novels:
         try:
-            check_novel_access(n, user)   # locked / scheduled / 迷情劑 / pending all filtered out
+            check_novel_access(n, user, sb)   # locked / scheduled / 迷情劑 / pending / 自創角色鎖 filtered out
         except HTTPException:
             continue
         n["liked_count"] = counts.get(n["id"], 0)
@@ -190,7 +198,7 @@ def hot_novels(user: dict = Depends(get_current_user), sb: Client = Depends(get_
         if r.get("kind") != "novel":
             continue
         try:
-            check_novel_access(r, user)   # only surface works this user may actually open
+            check_novel_access(r, user, sb)   # only surface works this user may actually open
         except HTTPException:
             continue
         ok.add(r["id"])
@@ -208,7 +216,7 @@ def get_novel(novel_id: str, user: dict = Depends(get_current_user), sb: Client 
     rows = sb.table("novels").select("*").eq("id", novel_id).limit(1).execute().data
     if not rows:
         raise HTTPException(404, "Novel not found")   # .single() raises on a missing/deleted id (→500), so use limit(1)
-    _check_novel_access(rows[0], user)
+    _check_novel_access(rows[0], user, sb)
     return rows[0]
 
 def _upload_status(user: dict, sb: Client) -> str:
@@ -351,7 +359,7 @@ def set_locked(novel_id: str, body: LockBody, user: dict = Depends(require_write
 # ── Comment likes (forum 蓋樓) ───────────────────────────────
 @router.get("/{novel_id}/likes")
 def get_comment_likes(novel_id: str, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
-    check_novel_access(_fetch_novel_or_404(novel_id, sb), user)   # only for works the caller may read
+    check_novel_access(_fetch_novel_or_404(novel_id, sb), user, sb)   # only for works the caller may read
     rows = sb.table("comment_likes").select("comment_index, user_id").eq("novel_id", novel_id).execute().data or []
     counts, mine = {}, []
     for r in rows:
@@ -363,7 +371,7 @@ def get_comment_likes(novel_id: str, user: dict = Depends(get_current_user), sb:
 
 @router.post("/{novel_id}/comments/{idx}/like")
 def toggle_comment_like(novel_id: str, idx: int, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
-    check_novel_access(_fetch_novel_or_404(novel_id, sb), user)   # can't like comments on a hidden work
+    check_novel_access(_fetch_novel_or_404(novel_id, sb), user, sb)   # can't like comments on a hidden work
     existing = (sb.table("comment_likes").select("id")
                 .eq("novel_id", novel_id).eq("comment_index", idx).eq("user_id", user["id"]).execute().data)
     if existing:
@@ -384,13 +392,13 @@ def toggle_favorite(novel_id: str, user: dict = Depends(get_current_user), sb: C
         return {"favorited": False}
     # Adding a new favourite: the caller must actually be able to read the work — locked, scheduled,
     # 迷情劑 and pending are all blocked. Un-favouriting above is always allowed so users can clean up.
-    check_novel_access(_fetch_novel_or_404(novel_id, sb), user)
+    check_novel_access(_fetch_novel_or_404(novel_id, sb), user, sb)
     sb.table("novel_favorites").insert({"user_id": user["id"], "novel_id": novel_id}).execute()
     return {"favorited": True}
 
 @router.post("/{novel_id}/view")
 def log_view(novel_id: str, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
-    check_novel_access(_fetch_novel_or_404(novel_id, sb), user)   # don't log views for works the caller can't see
+    check_novel_access(_fetch_novel_or_404(novel_id, sb), user, sb)   # don't log views for works the caller can't see
     # Record one view per user per work per 24h (so a single reader can't inflate the hot ranking).
     since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     try:
@@ -410,5 +418,5 @@ def _fetch_novel_or_404(novel_id: str, sb: Client) -> dict:
 
 # The canonical visibility rule now lives in deps.check_novel_access (shared with chapters + stat
 # endpoints). Thin alias kept so existing call sites stay unchanged.
-def _check_novel_access(novel: dict, user: dict):
-    check_novel_access(novel, user)
+def _check_novel_access(novel: dict, user: dict, sb=None):
+    check_novel_access(novel, user, sb)

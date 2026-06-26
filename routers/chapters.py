@@ -99,4 +99,4 @@ def _check_novel_access(novel_id: str, user: dict, sb: Client):
     rows = sb.table("novels").select("*").eq("id", novel_id).limit(1).execute().data
     if not rows:
         raise HTTPException(404, "Novel not found")
-    check_novel_access(rows[0], user)
+    check_novel_access(rows[0], user, sb)

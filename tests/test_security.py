@@ -181,6 +181,19 @@ class DatabaseBoundaryTests(unittest.TestCase):
         cls.invites = (root / "routers" / "invites.py").read_text(encoding="utf-8")
         cls.custom_chars = (root / "routers" / "custom_characters.py").read_text(encoding="utf-8")
 
+    def test_custom_char_lock_is_wired_into_access_gate(self):
+        # A work an owner files under a custom character is private to that character's audience. The
+        # lock must run inside the ONE access gate (check_novel_access) AND the content/list endpoints
+        # must pass sb so it actually fires — otherwise the content leaks from some other endpoint.
+        root = Path(__file__).parents[1]
+        deps = (root / "deps.py").read_text(encoding="utf-8")
+        chapters = (root / "routers" / "chapters.py").read_text(encoding="utf-8")
+        novels = (root / "routers" / "novels.py").read_text(encoding="utf-8")
+        self.assertIn("custom_char_blocked(sb, novel, user)", deps)        # gate enforces it
+        self.assertIn("check_novel_access(rows[0], user, sb)", chapters)   # chapter content gate
+        self.assertIn("custom_char_restricted_map(sb)", novels)            # shelf list filter
+        self.assertNotRegex(novels, r"check_novel_access\([^)]*user\)\s")  # no call left without sb
+
     def test_shared_custom_chars_never_use_array_contains(self):
         # `.contains('shared_with', [uid])` becomes `shared_with @> '{}'` when uid is empty, and in
         # Postgres every array contains '{}', so that leaks every empty-shared character to everyone.
