@@ -268,10 +268,10 @@
     .hero-heart:active { transform: scale(.92); }
     /* 追蹤更新貓頭鷹（心動頁左上，只在有更新時顯示） */
     #page-home { position: relative; }
-    #fav-owl-wrap { position: absolute; top: 14px; left: 14px; z-index: 6; }
-    .fav-owl { border: none; background: none; padding: 0; margin: 0; cursor: pointer; color: #e8c45a; display: block; line-height: 0; }
-    .fav-owl svg { filter: drop-shadow(0 2px 2px rgba(0,0,0,.4)); transform-origin: 50% 100%; animation: fav-owl-hop 1.3s ease-in-out infinite; }
-    @keyframes fav-owl-hop { 0% { transform: translateY(0) scaleY(1); } 20% { transform: translateY(-9px) scaleY(1.06); } 38% { transform: translateY(0) scaleY(.9); } 54% { transform: translateY(-4px) scaleY(1.02); } 70% { transform: translateY(0) scaleY(.97); } 100% { transform: translateY(0) scaleY(1); } }
+    #fav-owl-wrap { position: absolute; top: calc(var(--safe-top) + 12px); left: 12px; z-index: 6; }
+    .fav-owl { border: none; background: none; padding: 0; margin: 0; cursor: pointer; color: #dcbb66; display: block; line-height: 0; }
+    .fav-owl svg { filter: drop-shadow(0 0 1.5px rgba(0,0,0,.6)) drop-shadow(0 1px 2px rgba(0,0,0,.4)); animation: fav-owl-hop 1.5s ease-in-out infinite; }
+    @keyframes fav-owl-hop { 0% { transform: translateY(0); } 22% { transform: translateY(-6px); } 40% { transform: translateY(0); } 54% { transform: translateY(-3px); } 68% { transform: translateY(0); } 100% { transform: translateY(0); } }
     @media (prefers-reduced-motion: reduce) { .fav-owl svg { animation: none; } }
     .fav-owl-pop { position: absolute; top: 100%; left: 0; margin-top: 8px; width: 250px; background: var(--parchment); border: 1px solid var(--gold-lt); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.3); padding: 4px 0; }
     .fav-owl-pop[hidden] { display: none; }
