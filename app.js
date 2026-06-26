@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.55';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.56';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -772,7 +772,7 @@ function renderCharProfile(name) {
     // 每張照片右上角一個開關：勾 = 這張出現在心動封面，取消 = 隱藏這張(連同桌機同序版)
     const HEART = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.7l-1.45-1.32C5.4 14.74 2 11.66 2 7.9 2 5.1 4.2 3 7 3c1.6 0 3.14.74 4.13 1.9L12 5.9l.87-1C13.86 3.74 15.4 3 17 3c2.8 0 5 2.1 5 4.9 0 3.76-3.4 6.84-8.55 11.49L12 20.7z"/></svg>`;
     const DL = `<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>`;
-    html += `<div class="cp-cover-head"><h3>心動封面</h3><button class="cp-hint-btn" data-onclick="cpCoverHint()" aria-label="心動封面說明" title="心動封面說明">${ic('ic-help', 16)}</button></div>`;
+    html += `<div class="cp-cover-head"><h3>心動封面</h3><button class="cp-hint-btn" data-onclick="cpCoverHint()" aria-label="心動封面說明" title="心動封面說明">${ic('ic-help', 16)}</button><div class="cp-cover-note" id="cp-cover-note" hidden>點亮愛心即可加入心動封面；取消後不再出現。全部取消時，會恢復隨機輪替。</div></div>`;
     html += `<div class="cp-gallery">${photos.map((u, i) => {
       const on = !excluded.has(u);
       const dl = photoWallpaperUrl(u) ? `<button class="cp-download" data-onclick="downloadPhoto('${u}','${escapeHtml(name)}')" aria-label="下載桌布" title="下載桌布">${DL}</button>` : '';
@@ -790,7 +790,7 @@ function renderCharProfile(name) {
 }
 // 逐張開關：勾 = 這張出現在心動封面，取消 = 隱藏。連同同一序的桌機版一起排除(照顧桌機讀者)。
 // 封面愛心說明(收進 tooltip:點 ⓘ 才出現,不直接佔版面)
-function cpCoverHint() { toast('點亮愛心即可加入心動封面；取消後不再出現。全部取消時，會恢復隨機輪替。'); }
+function cpCoverHint() { const n = document.getElementById('cp-cover-note'); if (n) n.hidden = !n.hidden; }
 async function toggleCoverPhoto(charName, index, btn) {
   const c = CHARS.find(x => x.name === charName) || {};
   const ids = [(c.imgs || [c.img])[index], (c.imgsD || [])[index]].filter(Boolean);
