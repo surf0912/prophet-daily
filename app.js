@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.58';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.59';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -956,8 +956,9 @@ function markSeriesSeenForWork(novel) {   // opening a new installment clears it
   }
 }
 async function renderFavUpdates() {
-  const box = document.getElementById('fav-updates'); if (!box) return;
-  const hide = () => { box.style.display = 'none'; box.innerHTML = ''; };
+  const wrap = document.getElementById('fav-owl-wrap'); if (!wrap) return;
+  const pop = document.getElementById('fav-owl-pop');
+  const hide = () => { wrap.style.display = 'none'; if (pop) { pop.hidden = true; pop.innerHTML = ''; } };
   if (!favIds || favIds.size === 0) return hide();
   let all; try { all = await api('/novels/') || []; } catch { return hide(); }
   const followed = new Set();   // series the reader follows, via any favourited part
@@ -977,20 +978,24 @@ async function renderFavUpdates() {
   });
   if (changed) _saveSeriesSeen(seen);
   if (!updates.length) return hide();
-  box.style.display = 'block';
-  box.innerHTML = `<h3>${ic('ic-books', 17)} 追蹤更新</h3>` + updates.map(u => {
+  // 有更新：貓頭鷹現身（跳動），清單放進浮層（預設收起，點貓頭鷹才展開）。
+  wrap.style.display = 'block';
+  pop.hidden = true;
+  pop.innerHTML = `<p class="fav-pop-title">追蹤更新</p>` + updates.map(u => {
     const extra = u.count > 1 ? `（${u.count} 篇新作）` : '';
     return `
-    <a href="#" data-onclick="openNovel('${u.work.id}');return false;" style="display:flex;align-items:center;gap:10px;text-decoration:none;padding:9px 0;border-bottom:1px solid rgba(26,10,0,.07)">
-      <span style="width:8px;height:8px;border-radius:50%;background:var(--scarlet);flex-shrink:0;display:inline-block"></span>
+    <a href="#" data-onclick="favOwlOpen('${u.work.id}');return false" style="display:flex;align-items:center;gap:9px;text-decoration:none;padding:9px 14px;border-top:1px solid rgba(26,10,0,.07)">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--scarlet);flex-shrink:0;display:inline-block"></span>
       <span style="flex:1;min-width:0">
-        <span style="font-size:14px;color:var(--ink);font-weight:bold;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">系列《${escapeHtml(u.series)}》有新作品${extra}</span>
+        <span style="font-size:13px;color:var(--ink);font-weight:bold;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">系列《${escapeHtml(u.series)}》有新作品${extra}</span>
         <span style="font-size:12px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block">${escapeHtml(u.work.title)}・${fmtUpdated(u.work.created_at)}</span>
       </span>
-      <span style="color:var(--ink-light);font-size:12px;flex-shrink:0">→</span>
+      <span style="color:var(--ink-light);font-size:14px;flex-shrink:0">›</span>
     </a>`;
   }).join('');
 }
+function toggleFavOwl() { const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = !p.hidden; }
+function favOwlOpen(id) { const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true; openNovel(id); }
 function toggleShelfFav() {
   shelfFav = !shelfFav;
   document.getElementById('shelf-fav-btn').classList.toggle('on', shelfFav);

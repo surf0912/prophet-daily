@@ -12,7 +12,7 @@
     'ccPickAvatar', 'ccTap', 'changeUserRole', 'clearUserFlag', 'closeCharProfile', 'closeReader', 'copyAllInvites',
     'copyText', 'deleteCustomChar', 'deleteFaq', 'deleteFeedbackItem', 'deleteNovel', 'deleteUser',
     'cpCoverHint', 'discardUploadDraft', 'dismissContinueBar', 'dismissTourBanner', 'doInviteRegister', 'doLogout', 'downloadPhoto',
-    'doSignIn', 'editFaq', 'editNick', 'endTour', 'exportBackup', 'forceRefresh', 'generateInvite',
+    'doSignIn', 'editFaq', 'editNick', 'endTour', 'exportBackup', 'favOwlOpen', 'forceRefresh', 'generateInvite',
     'handleAvatarUpload', 'loadChapter', 'loadForumPosts', 'loadNovels', 'loadTxtIntoUpload',
     'navigateChapter', 'navigateSeries', 'openBugReport', 'openCharProfileFromHome', 'openCreateChar',
     'openEditClass', 'openEditWork', 'openFaq', 'openMqjDisclaimer', 'openNovel', 'openOwners',
@@ -24,7 +24,7 @@
     'setFeedbackStatus', 'setMqjAccess', 'setUploadKind', 'setUserFilter', 'setUserRole',
     'setWishFilter', 'showLoginForm', 'showPage', 'startTour', 'stepReaderFont', 'submitFeedback',
     'submitForumPost', 'submitNewNovel', 'switchAdminTab', 'tempBan', 'toggleCcShare', 'toggleCharAnd', 'toggleCoverPhoto',
-    'toggleDark', 'toggleFont', 'toggleForumFav', 'toggleLike', 'toggleLock', 'togglePwEdit', 'toggleTapFx',
+    'toggleDark', 'toggleFavOwl', 'toggleFont', 'toggleForumFav', 'toggleLike', 'toggleLock', 'togglePwEdit', 'toggleTapFx',
     'toggleReaderDark', 'toggleReaderFavorite', 'toggleShelfFav', 'tourBack', 'tourNext',
     'updateBugCount', 'updateReaderDarkBtn', 'updateWishCount', 'viewUserNovels',
   ]);

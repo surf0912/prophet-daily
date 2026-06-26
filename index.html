@@ -123,6 +123,10 @@
   <div id="page-area">
     <!-- HOME -->
     <div id="page-home" class="page active">
+      <div id="fav-owl-wrap" style="display:none">
+        <button id="fav-owl" class="fav-owl" data-onclick="toggleFavOwl()" aria-label="追蹤更新" title="追蹤更新"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M6.4 4.4l2.1 2.4M17.6 4.4l-2.1 2.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12 4.2c-3.7 0-6.4 2.7-6.4 6.3 0 4.3 3.2 8.4 6.4 9.4 3.2-1 6.4-5.1 6.4-9.4 0-3.6-2.7-6.3-6.4-6.3z" fill="currentColor"/><circle cx="9.4" cy="10" r="1.5" fill="#3a2412"/><circle cx="14.6" cy="10" r="1.5" fill="#3a2412"/><path d="M12 12.2l-1.1 1.4h2.2z" fill="#3a2412"/></svg></button>
+        <div id="fav-owl-pop" class="fav-owl-pop" hidden></div>
+      </div>
       <div class="greeting-hero" id="greeting-hero">
         <div class="char-emoji" id="char-emoji"></div>
         <h2 id="greeting-line" style="display:none"></h2>
@@ -142,7 +146,6 @@
         <span style="color:var(--ink-light);font-size:20px;flex-shrink:0;line-height:1">→</span>
         <span data-onclick="event.preventDefault();event.stopPropagation();dismissContinueBar()" role="button" aria-label="收起繼續閱讀" style="flex-shrink:0;color:var(--ink-light);font-size:17px;line-height:1;padding:6px 0 6px 8px;cursor:pointer;opacity:.65">✕</span>
       </a>
-      <div id="fav-updates" class="home-section" style="display:none"></div>
       <div id="tour-banner" style="display:none;margin:14px 18px;padding:14px 16px;background:var(--parchment2);border:1.5px solid var(--gold);border-radius:12px">
         <div style="font-size:14px;color:var(--ink);line-height:1.6">歡迎來到《預言家日報》！要不要花 30 秒看一下新手導覽，快速上手？</div>
         <div style="display:flex;gap:8px;margin-top:12px">
