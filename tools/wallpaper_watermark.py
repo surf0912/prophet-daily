@@ -17,8 +17,8 @@ import sys
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageFilter
 
 MARK = "預言家日報"          # 文字浮水印(沒給 logo 時用)
-MAX_W, MAX_H = 1290, 2796   # 桌布上限（直式，蓋過 iPhone Pro Max）；保持比例、不放大
-JPEG_Q = 88
+MAX_W, MAX_H = 99999, 99999   # 不壓解析度：直接用原檔尺寸，只加浮水印（不放大）
+JPEG_Q = 92
 LOGO_W_RATIO = 0.40         # logo 寬 = 桌布寬的比例(放大)
 PAD_RATIO = 0.045           # 距邊距 = 桌布寬的比例
 LOGO_OPACITY = 0.95         # logo 透明度(1=完全不透明)
