@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.57';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.58';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -750,9 +750,9 @@ function excludedPhotos() {
     .map(s => s.trim()).filter(Boolean));
 }
 
-// ── 角色設定頁 (beta) ───────────────────────────────────────
+// ── 角色設定頁（公開，所有人可用）─────────────────────────────
 function openCharProfile(name) {
-  if (!isBeta() || !name) return;
+  if (!name) return;
   renderCharProfile(name);
   document.getElementById('char-profile').classList.add('open');
 }
@@ -807,10 +807,9 @@ async function toggleCoverPhoto(charName, index, btn) {
     toast(e.message || '儲存失敗');
   }
 }
-// 官方角色頭像：單擊 = 篩選(原行為);雙擊 = 開角色頁(beta)。onFilter(type,val) 是原本的篩選回呼。
+// 官方角色頭像：單擊 = 篩選（原行為）；雙擊 = 開角色頁。onFilter(type,val) 是原本的篩選回呼。
 let _ocTapTimer = null, _ocTapCode = null;
 function officialCharTap(code, onFilter) {
-  if (!isBeta()) { onFilter('char', code); return; }
   if (_ocTapTimer && _ocTapCode === code) {
     clearTimeout(_ocTapTimer); _ocTapTimer = null; _ocTapCode = null;
     openCharProfile((CHAR_LIST.find(x => x.code === code) || {}).name);
@@ -861,7 +860,7 @@ function renderGreeting() {
   const isWide = window.matchMedia('(min-width: 600px)').matches;
   const photosOf = c => ((isWide ? (c.imgsD || [c.imgD]) : (c.imgs || [c.img])) || []).filter(Boolean);
   // 以「照片」為單位建池：每張未被隱藏的照片(連同它的角色)都是一個候選。全被隱藏 → 退回全部隨機。
-  const excluded = isBeta() ? excludedPhotos() : new Set();
+  const excluded = excludedPhotos();
   let cands = [];
   CHARS.forEach(c => photosOf(c).forEach(img => { if (!excluded.has(img)) cands.push({ char: c, img }); }));
   if (!cands.length) CHARS.forEach(c => photosOf(c).forEach(img => cands.push({ char: c, img })));
@@ -869,7 +868,7 @@ function renderGreeting() {
   const char = pick.char;
   _homeChar = char;
   const heart = document.getElementById('hero-heart');
-  if (heart) heart.style.display = isBeta() ? 'flex' : 'none';
+  if (heart) heart.style.display = 'flex';
   const hero = document.getElementById('greeting-hero');
   const emoji = document.getElementById('char-emoji');
   const GRAD = 'linear-gradient(160deg, #4a1d1d 0%, #2a1408 100%)';
@@ -1324,7 +1323,8 @@ function mqjGateBody() {
 }
 
 // ── EXPERIMENTAL feature gate ──────────────────────────────────────────────
-// isBeta() gates the custom-character / 心動 beta UI. Admins always have it (no toggle); the
+// isBeta() gates the 自創角色 (custom-character) beta UI only — the 心動 profile / cover-photo
+// preference / wallpaper download are now public. Admins always have it (no toggle); the
 // super_admin gates their own view with the pd_beta flag (the 實驗功能 switch, super-only). The flag
 // lives in localStorage so it survives PWA launches; toggle in 檔案 → 小工具 → 實驗功能 or ?beta=1/0.
 // Backend stays the real gate (require_admin).
