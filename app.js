@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.54';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.55';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -772,12 +772,13 @@ function renderCharProfile(name) {
     // 每張照片右上角一個開關：勾 = 這張出現在心動封面，取消 = 隱藏這張(連同桌機同序版)
     const HEART = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.7l-1.45-1.32C5.4 14.74 2 11.66 2 7.9 2 5.1 4.2 3 7 3c1.6 0 3.14.74 4.13 1.9L12 5.9l.87-1C13.86 3.74 15.4 3 17 3c2.8 0 5 2.1 5 4.9 0 3.76-3.4 6.84-8.55 11.49L12 20.7z"/></svg>`;
     const DL = `<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>`;
+    html += `<div class="cp-cover-head"><h3>心動封面</h3><button class="cp-hint-btn" data-onclick="cpCoverHint()" aria-label="心動封面說明" title="心動封面說明">${ic('ic-help', 16)}</button></div>`;
     html += `<div class="cp-gallery">${photos.map((u, i) => {
       const on = !excluded.has(u);
       const dl = photoWallpaperUrl(u) ? `<button class="cp-download" data-onclick="downloadPhoto('${u}','${escapeHtml(name)}')" aria-label="下載桌布" title="下載桌布">${DL}</button>` : '';
       const heart = `<button class="cp-cover-toggle${on ? ' on' : ''}" data-onclick="toggleCoverPhoto('${name}', ${i}, this)" role="checkbox" aria-checked="${on}" aria-label="心動封面顯示這張">${HEART}</button>`;
       return `<div class="cp-shot" style="background-image:url('${u}')">${heart}${dl}</div>`;
-    }).join('')}<button class="cp-hint-btn" data-onclick="cpCoverHint()" aria-label="封面愛心說明" title="封面愛心說明">${ic('ic-help', 16)}</button></div>`;
+    }).join('')}</div>`;
   }
   html += `<div class="cp-section"><h3>基本資料</h3><p class="cp-bio">${prof.bio ? escapeHtml(prof.bio) : '（基本資料待補充）'}</p></div>`;
   html += `<div class="cp-section"><h3>我為 ${escapeHtml(name)} 寫的文章</h3>`;
@@ -789,7 +790,7 @@ function renderCharProfile(name) {
 }
 // 逐張開關：勾 = 這張出現在心動封面，取消 = 隱藏。連同同一序的桌機版一起排除(照顧桌機讀者)。
 // 封面愛心說明(收進 tooltip:點 ⓘ 才出現,不直接佔版面)
-function cpCoverHint() { toast('每張的愛心 = 這張會出現在心動封面;取消愛心 = 不出現(全部取消 = 全部隨機)'); }
+function cpCoverHint() { toast('點亮愛心即可加入心動封面；取消後不再出現。全部取消時，會恢復隨機輪替。'); }
 async function toggleCoverPhoto(charName, index, btn) {
   const c = CHARS.find(x => x.name === charName) || {};
   const ids = [(c.imgs || [c.img])[index], (c.imgsD || [])[index]].filter(Boolean);
@@ -2718,7 +2719,7 @@ function renderAdminNovels() {
       <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
         <div style="margin-bottom:3px;display:flex;gap:5px;flex-wrap:wrap">${n.kind === 'forum'
           ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-scroll', 12) + ' 論壇體</span>'
-          : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-book', 12) + ' 小說</span>'}${statusTag}${n.is_guide ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-book', 12) + ' 範例·可刪除</span>' : ''}${n.locked ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.2);color:var(--accent)">' + ic('ic-key',11) + ' 已鎖·只你和超管可見</span>' : ''}</div>
+          : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-book', 12) + ' 小說</span>'}${statusTag}${n.is_guide ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-book', 12) + ' 範例·可刪除</span>' : ''}${n.locked ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.2);color:var(--accent)">' + ic('ic-key',11) + ' 已鎖 · 唯你可見</span>' : ''}</div>
         <div data-onclick="openNovel('${n.id}')" style="font-size:14px;font-weight:bold;cursor:pointer">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
           ${n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : ''}
@@ -2738,8 +2739,8 @@ function adminWorkById(id) { return (window._adminNovels || []).find(n => n.id =
 async function toggleLock(id, locked) {
   const title = adminWorkById(id).title || '這篇作品';
   const msg = locked
-    ? `把《${title}》鎖上？\n\n鎖住後,除了你和超級管理員,其他人都看不到這篇存在（書架、搜尋、連結全都不顯示）。`
-    : `解鎖《${title}》？解鎖後恢復原本的公開狀態。`;
+    ? `鎖上《${title}》？\n\n鎖上後，這篇作品會從書架、搜尋與連結中隱去，只有你能看見。`
+    : `解鎖《${title}》？\n\n解鎖後，這篇作品會恢復原本的公開狀態。`;
   if (!confirm(msg)) return;
   try {
     await api(`/novels/${id}/lock`, { method: 'PATCH', body: JSON.stringify({ locked }) });
