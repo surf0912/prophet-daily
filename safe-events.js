@@ -20,7 +20,7 @@
     'replyFeedback', 'requestMqj', 'resetAdminNovelScope',
     'resetPassword', 'resumeReading', 'reviewMqj', 'revokeInvite', 'saveAvatarCrop',
     'saveCustomChar', 'saveEditClass', 'saveEditWork', 'saveFaqEditor', 'saveMyPassword',
-    'saveNickname', 'saveOwners', 'saveSeries', 'setAutoPublish', 'setBetaFlag',
+    'saveNickname', 'saveNoticeDays', 'saveOwners', 'saveSeries', 'setAutoPublish', 'setBetaFlag',
     'setFeedbackStatus', 'setMqjAccess', 'setUploadKind', 'setUserFilter', 'setUserRole',
     'setWishFilter', 'showLoginForm', 'showPage', 'startTour', 'stepReaderFont', 'submitFeedback',
     'submitForumPost', 'submitNewNovel', 'switchAdminTab', 'tempBan', 'toggleCcShare', 'toggleCharAnd', 'toggleCoverPhoto',

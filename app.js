@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.65';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.66';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -491,6 +491,7 @@ async function initApp() {
   adminNovelScope = null;
   loadOwnerNames();   // super_admin only: map owner uuid → 巫師全名 for the owner hint
   loadFavIds().then(renderFavUpdates);   // 意若思鏡 收藏夾 ids + 追蹤更新 alert
+  loadAppSettings();   // 全域設定（通知保留天數等）→ 載入後重算貓頭鷹
   renderSettings();
   renderGreeting();
   renderTourBanner();   // persistent home prompt for anyone not yet onboarded
@@ -936,6 +937,7 @@ let adminCat = '';        // '' | 迷情劑 | 吐真劑 | 儲思盆 | 羊皮紙
 let adminChars = [];
 let favIds = new Set();   // 意若思鏡 收藏夾: ids of whole works the user has favorited
 let favTimes = new Map();   // novel_id → 收藏時間（追蹤更新的伺服器端基準）
+let APP_SETTINGS = {};   // 全域站台設定（超管可調，全體讀取）
 let shelfFav = false;     // 收藏夾 view toggle
 
 async function loadFavIds() {
@@ -965,12 +967,28 @@ function _markInstallmentRead(id) {   // 打開某篇 = 標記該篇追蹤通知
 function markSeriesSeenForWork(novel) { if (novel && novel.id) _markInstallmentRead(novel.id); }
 function owlAlways() { return localStorage.getItem('pd_owl_always') === '1'; }   // 小工具「貓頭鷹常駐」
 function toggleOwlAlways(on) { localStorage.setItem('pd_owl_always', on ? '1' : '0'); renderFavUpdates(); }
+function noticeDays() { const d = parseInt(APP_SETTINGS.notice_days, 10); return (d && d > 0) ? d : 30; }   // 通知保留天數（超管可調，預設 30）
+async function loadAppSettings() {
+  try { APP_SETTINGS = await api('/settings/') || {}; } catch (e) { APP_SETTINGS = {}; }
+  const nd = document.getElementById('notice-days'); if (nd) nd.value = noticeDays();
+  renderFavUpdates();
+}
+async function saveNoticeDays(v) {   // 超管：設定通知保留天數（全站一致）
+  const n = parseInt(v, 10);
+  if (!n || n < 1 || n > 365) { toast('請輸入 1–365 之間的天數'); return; }
+  try {
+    await api('/settings/notice_days', { method: 'PUT', body: JSON.stringify({ value: String(n) }) });
+    APP_SETTINGS.notice_days = String(n);
+    renderFavUpdates();
+    toast(`通知保留天數已設為 ${n} 天`);
+  } catch (e) { toast('更新失敗，請稍後再試'); }
+}
 // 貓頭鷹＝通知中心。項目：主編來信 + 追蹤更新（收藏系列的新作品）。保留 30 天，讀過的留作歷史（灰掉）。
 // 追蹤基準＝伺服器端「收藏該系列任一篇的最早時間」（favTimes），跨裝置一致，不再靠 localStorage。
 async function renderFavUpdates() {
   const wrap = document.getElementById('fav-owl-wrap'); if (!wrap) return;
   const pop = document.getElementById('fav-owl-pop');
-  const DAY = 86400000, cutoff = Date.now() - 30 * DAY;
+  const DAY = 86400000, cutoff = Date.now() - noticeDays() * DAY;
   const read = new Set(_readInstallments());
   const items = [];   // {kind:'letter'|'work', id, title, sub, at, unread}
   const ld = EDITOR_LETTER.date ? new Date(EDITOR_LETTER.date) : null;

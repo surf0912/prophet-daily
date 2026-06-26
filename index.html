@@ -295,6 +295,10 @@
               <span class="slider"></span>
             </label>
           </div>
+          <div class="settings-row super-only" style="display:none">
+            <label><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" style="vertical-align:-2px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></svg> 通知保留天數</label>
+            <input type="number" id="notice-days" min="1" max="365" value="30" data-onchange="saveNoticeDays(this.value)" style="width:64px;padding:6px 8px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink);font-size:14px;text-align:center" />
+          </div>
           <div class="settings-row">
             <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-compass"/></svg> 新手導覽</label>
             <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" data-onclick="startTour()">重看導覽</button>
