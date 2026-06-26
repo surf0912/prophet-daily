@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.62';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.63';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1056,7 +1056,13 @@ async function getNewIssue() {   // 「取得新一期」：不另跳 confirm（
   } catch (e) { /* best effort */ }
   location.replace(location.pathname + '?fresh=' + Date.now());
 }
-function maybeShowEditorLetter() { if (!editorLetterSeen() && tourSeen()) openEditorLetter(); }
+function maybeShowEditorLetter() {
+  if (editorLetterSeen()) return;
+  // 只在「首次自動導覽即將出現」時讓路（全新讀者/作家帳號），避免兩個彈窗疊在一起；
+  // 其餘人——管理員、超管、以及看過任何版本導覽的讀者/作家——都會跳。
+  if (['reader', 'writer'].includes(currentUser?.role) && !tourSeenAnyForRole()) return;
+  openEditorLetter();
+}
 function toggleShelfFav() {
   shelfFav = !shelfFav;
   document.getElementById('shelf-fav-btn').classList.toggle('on', shelfFav);
