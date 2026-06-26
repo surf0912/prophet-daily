@@ -278,11 +278,11 @@
     .fav-pop-title { font-size: 13px; font-weight: bold; color: var(--accent); padding: 8px 14px 6px; margin: 0; }
     /* 主編來信彈窗（米白＋金線，承自報頭插畫的語彙；刻意維持淺色，不隨深色模式翻轉） */
     .el-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(15,8,2,.55); display: flex; align-items: center; justify-content: center; padding: 20px; -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
-    .el-card { width: 300px; max-width: 100%; max-height: 92vh; overflow-y: auto; background: #fbf7ee; border: 1px solid rgba(160,130,60,.45); border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.4); animation: el-pop .28s ease; }
+    .el-card { width: 300px; max-width: 100%; max-height: 92vh; overflow-y: auto; background: #fff; border: 1px solid rgba(160,130,60,.45); border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.4); animation: el-pop .28s ease; }
     @keyframes el-pop { from { transform: translateY(12px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
     @media (prefers-reduced-motion: reduce) { .el-card { animation: none; } }
-    .el-art { height: 220px; background: radial-gradient(circle at 50% 42%, #fffdf6, #f4ecd6); border-radius: 14px 14px 0 0; }
-    .el-art svg { display: block; }
+    .el-art { background: #fff; border-radius: 14px 14px 0 0; overflow: hidden; text-align: center; line-height: 0; }
+    .el-art img { height: 310px; max-width: 100%; display: inline-block; }
     .el-letter { padding: 6px 20px 18px; font-family: Georgia, "Songti SC", "Songti TC", serif; }
     .el-title { text-align: center; color: #1f160c; font-size: 16px; letter-spacing: 2px; margin-bottom: 4px; }
     .el-rule { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 12px; }

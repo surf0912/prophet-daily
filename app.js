@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.60';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.61';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1021,7 +1021,7 @@ function favOwlOpen(id) { const p = document.getElementById('fav-owl-pop'); if (
 // ── 主編來信（單封更新公告）──────────────────────────────────────────
 // 換新一封時把 id 改掉即可：已讀狀態以 id 存 localStorage，每封只自動跳一次。
 const EDITOR_LETTER = {
-  id: 'v2.60',
+  id: 'v2.60-2',
   lead: '本期已更新，重點如下：',
   items: [
     '心動頁左上新增貓頭鷹提醒——所追蹤的系列有新作品時，將現身通知。',
