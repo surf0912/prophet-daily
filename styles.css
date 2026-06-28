@@ -269,8 +269,8 @@
     /* 追蹤更新貓頭鷹（心動頁左上，只在有更新時顯示） */
     #page-home { position: relative; }
     #fav-owl-wrap { position: absolute; top: calc(var(--safe-top) + 12px); left: 12px; z-index: 6; }
-    .fav-owl { border: none; background: none; padding: 0; margin: 0; cursor: pointer; color: #dcbb66; display: block; line-height: 0; }
-    .fav-owl svg { filter: drop-shadow(0 0 1.5px rgba(0,0,0,.6)) drop-shadow(0 1px 2px rgba(0,0,0,.4)); animation: fav-owl-hop 1.5s ease-in-out infinite; }
+    .fav-owl { border: none; background: none; padding: 0; margin: 0; cursor: pointer; color: #e7c878; display: block; line-height: 0; }
+    .fav-owl svg { filter: drop-shadow(0 0 1px rgba(74,40,15,.9)); animation: fav-owl-hop 1.5s ease-in-out infinite; }
     @keyframes fav-owl-hop { 0% { transform: translateY(0); } 22% { transform: translateY(-6px); } 40% { transform: translateY(0); } 54% { transform: translateY(-3px); } 68% { transform: translateY(0); } 100% { transform: translateY(0); } }
     @media (prefers-reduced-motion: reduce) { .fav-owl svg { animation: none; } }
     .fav-owl-pop { position: absolute; top: 100%; left: 0; margin-top: 8px; width: 250px; background: var(--parchment); border: 1px solid var(--gold-lt); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.3); padding: 4px 0; }
