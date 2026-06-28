@@ -58,7 +58,7 @@ def list_users(user: dict = Depends(require_admin), sb: Client = Depends(get_sup
     # select errors. The fallback drops ONLY those two and KEEPS last_seen_at + auto_publish, so a
     # missing ban_until can never blank out everyone's 上線紀錄 (which is what happened before).
     try:
-        res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, ban_until, created_at, last_seen_at, auto_publish, flag_note").order("created_at", desc=True).execute()
+        res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, ban_until, created_at, last_seen_at, auto_publish, wish_reply, flag_note").order("created_at", desc=True).execute()
     except Exception:
         res = sb.table("profiles").select("id, username, nickname, avatar_url, role, mqj_access, banned, created_at, last_seen_at, auto_publish").order("created_at", desc=True).execute()
     # An admin only sees members at the same rank or lower; only super_admin sees super_admin accounts.
@@ -206,6 +206,19 @@ def set_auto_publish(user_id: str, body: AutoPublishBody, user: dict = Depends(r
         raise HTTPException(404, "User not found")
     invalidate_profile(user_id)   # takes effect on the writer's next upload immediately
     record_audit(sb, user, "auto_publish", "user", user_id, f"on={body.auto_publish}")
+    return res.data[0]
+
+# ── 許願池回覆權：admin lets a writer respond to wishes (reply + 考慮中 only, never 婉拒) ──
+class WishReplyBody(BaseModel):
+    wish_reply: bool
+
+@router.patch("/users/{user_id}/wish-reply")
+def set_wish_reply(user_id: str, body: WishReplyBody, user: dict = Depends(require_admin), sb: Client = Depends(get_supabase_admin)):
+    res = sb.table("profiles").update({"wish_reply": body.wish_reply}).eq("id", user_id).execute()
+    if not res.data:
+        raise HTTPException(404, "User not found")
+    invalidate_profile(user_id)   # takes effect on the writer's next request immediately
+    record_audit(sb, user, "wish_reply", "user", user_id, f"on={body.wish_reply}")
     return res.data[0]
 
 class MqjBody(BaseModel):

@@ -86,11 +86,21 @@ class FeedbackUpdate(BaseModel):
     status: Optional[str] = None
     admin_reply: Optional[str] = None
 
-@router.patch("/{fb_id}", dependencies=[Depends(require_admin)])
-def update_feedback(fb_id: str, body: FeedbackUpdate, sb: Client = Depends(get_supabase_admin)):
+@router.patch("/{fb_id}")
+def update_feedback(fb_id: str, body: FeedbackUpdate, user: dict = Depends(get_current_user), sb: Client = Depends(get_supabase_admin)):
     updates = {k: v for k, v in body.dict().items() if v is not None}
     if not updates:
         raise HTTPException(400, "No fields to update")
+    # Admins can do anything. A writer GRANTED 許願池回覆 may reply to WISHES and mark 考慮中
+    # only — never 婉拒/已實現, and never touch bug reports. Enforced server-side, not just in UI.
+    if not is_admin(user):
+        if not (user.get("role") == "writer" and user.get("wish_reply")):
+            raise HTTPException(403, "你沒有回覆許願的權限")
+        row = sb.table("feedback").select("kind").eq("id", fb_id).limit(1).execute().data
+        if not row or row[0].get("kind") != "wish":
+            raise HTTPException(403, "你只能回覆許願池")
+        if "status" in updates and updates["status"] != "considering":
+            raise HTTPException(403, "你只能標記「考慮中」")
     res = sb.table("feedback").update(updates).eq("id", fb_id).execute()
     if not res.data:
         raise HTTPException(404, "Not found")

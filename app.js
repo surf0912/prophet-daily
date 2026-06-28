@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.67';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.68';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1175,14 +1175,18 @@ function renderFeedbackList(kind, items) {
   const listEl = document.getElementById(kind + '-list');
   if (!items.length) { listEl.innerHTML = `<p style="color:var(--ink-light);font-size:13px;text-align:center;padding:14px">${kind === 'wish' ? '還沒有人許願,當第一個吧' : '目前沒有回報'}</p>`; return; }
   const admin = isAdminUser();
+  // 作家獲得「許願池回覆權」後，也能回覆許願並標記「考慮中」（不能婉拒，且僅限許願）。
+  const wishReplier = !admin && kind === 'wish' && currentUser?.role === 'writer' && !!currentUser?.wish_reply;
+  const canReply = admin || wishReplier;
   listEl.innerHTML = items.map(it => {
     const label = (FB_STATUS[kind][it.status] || '');
     const badge = it.status && it.status !== 'open'
       ? `<span style="font-size:11px;padding:1px 8px;border-radius:9px;background:rgba(45,74,30,.15);color:var(--series)">${label}</span>` : '';
     const reply = it.admin_reply ? `<div style="font-size:12px;color:var(--accent);margin-top:5px;padding-left:8px;border-left:2px solid var(--gold-lt)">${ic('ic-megaphone',12)} ${escapeHtml(it.admin_reply)}</div>` : '';
-    const statusBtns = admin ? Object.keys(FB_STATUS[kind]).map(s =>
-      `<button data-onclick="setFeedbackStatus('${it.id}','${kind}','${s}')" style="font-size:11px;padding:2px 7px;border:1px solid var(--gold-lt);background:${it.status===s?'var(--scarlet)':'none'};color:${it.status===s?'var(--on-dark)':'var(--ink-light)'};border-radius:10px;cursor:pointer">${FB_STATUS[kind][s].replace(/^[^\s]+\s/, '')}</button>`).join('') : '';
-    const adminRow = admin ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center">${statusBtns}<button data-onclick="replyFeedback('${it.id}','${kind}')" style="font-size:11px;padding:2px 8px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:10px;cursor:pointer">${ic('ic-megaphone',12)} 回覆</button></div>` : '';
+    const _statusKeys = admin ? Object.keys(FB_STATUS[kind]) : (wishReplier ? ['considering'] : []);
+    const statusBtns = _statusKeys.map(s =>
+      `<button data-onclick="setFeedbackStatus('${it.id}','${kind}','${s}')" style="font-size:11px;padding:2px 7px;border:1px solid var(--gold-lt);background:${it.status===s?'var(--scarlet)':'none'};color:${it.status===s?'var(--on-dark)':'var(--ink-light)'};border-radius:10px;cursor:pointer">${FB_STATUS[kind][s].replace(/^[^\s]+\s/, '')}</button>`).join('');
+    const adminRow = canReply ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center">${statusBtns}<button data-onclick="replyFeedback('${it.id}','${kind}')" style="font-size:11px;padding:2px 8px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:10px;cursor:pointer">${ic('ic-megaphone',12)} 回覆</button></div>` : '';
     const del = (admin || it.mine) ? `<button data-onclick="deleteFeedbackItem('${it.id}','${kind}')" style="font-size:11px;background:none;border:none;color:var(--ink-light);cursor:pointer;flex-shrink:0">${ic('ic-trash',14)}</button>` : '';
     // Wishes are anonymous and dateless — show only a status badge (if any). Bug reports keep author + date.
     const metaInner = kind === 'wish'
@@ -2266,7 +2270,7 @@ const AUDIT_LABELS = {
   approve_novel: '核准作品', delete_novel: '刪除作品', lock: '鎖上作品', unlock: '解鎖作品',
   ban: '封禁帳號', unban: '解除封禁', temp_ban: '臨時封禁', temp_unban: '解除臨時封禁',
   change_role: '變更身份', reset_password: '重設密碼',
-  delete_user: '刪除帳號', auto_publish: '自動審核', mqj: '迷情劑權限', clear_flag: '已審回鍋標記',
+  delete_user: '刪除帳號', auto_publish: '自動審核', wish_reply: '許願池回覆權', mqj: '迷情劑權限', clear_flag: '已審回鍋標記',
   generate_invite: '產生邀請', revoke_invite: '撤銷邀請',
 };
 async function loadAuditLog() {
@@ -2692,6 +2696,13 @@ async function loadAdminNovelList() {
           <span style="font-size:13px;color:var(--ink-light)">${ic('ic-check',13)} 自動審核<span style="opacity:.7">（開啟後此作家發文免審核、直接公開）</span></span>
           <label class="toggle green" style="flex-shrink:0">
             <input type="checkbox" ${sc.auto ? 'checked' : ''} data-onchange="setAutoPublish('${sc.id}',this.checked)" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(26,10,0,.08)">
+          <span style="font-size:13px;color:var(--ink-light)">${ic('ic-megaphone',13)} 許願池回覆權<span style="opacity:.7">（開啟後此作家可回覆許願、標記「考慮中」；不能婉拒）</span></span>
+          <label class="toggle green" style="flex-shrink:0">
+            <input type="checkbox" ${sc.wish ? 'checked' : ''} data-onchange="setWishReply('${sc.id}',this.checked)" />
             <span class="slider"></span>
           </label>
         </div>`;
@@ -3153,7 +3164,7 @@ function renderUserRows(q) {
 // Admin taps a member's name → their detail (scoped 作品管理 + 迷情劑 toggle for readers).
 function viewUserNovels(id) {
   const u = (window._adminUsers || []).find(x => x.id === id) || {};
-  adminNovelScope = { id, name: u.nickname || u.username || '', role: u.role, mqj: u.mqj_access, banned: u.banned, ban_until: u.ban_until || null, auto: !!u.auto_publish };
+  adminNovelScope = { id, name: u.nickname || u.username || '', role: u.role, mqj: u.mqj_access, banned: u.banned, ban_until: u.ban_until || null, auto: !!u.auto_publish, wish: !!u.wish_reply };
   switchAdminTab('novels');
 }
 
@@ -3242,6 +3253,16 @@ async function setAutoPublish(userId, on) {
   try {
     await api(`/permissions/users/${userId}/auto-publish`, { method: 'PATCH', body: JSON.stringify({ auto_publish: on }) });
     toast(on ? `已開啟 ${username} 的自動審核（發文免審）` : `已關閉 ${username} 的自動審核`);
+    refresh();
+  } catch (e) { toast(e.message); refresh(); }
+}
+
+async function setWishReply(userId, on) {
+  const username = adminUserName(userId);
+  const refresh = () => { if (adminNovelScope) { adminNovelScope.wish = on; loadAdminNovelList(); } else loadAdminUsers(); };
+  try {
+    await api(`/permissions/users/${userId}/wish-reply`, { method: 'PATCH', body: JSON.stringify({ wish_reply: on }) });
+    toast(on ? `已開啟 ${username} 的許願池回覆權` : `已關閉 ${username} 的許願池回覆權`);
     refresh();
   } catch (e) { toast(e.message); refresh(); }
 }
