@@ -178,6 +178,8 @@ class DatabaseBoundaryTests(unittest.TestCase):
         cls.schema = (root / "supabase" / "schema.sql").read_text(encoding="utf-8")
         cls.migration = (root / "supabase" / "migrations" /
                          "20260623_lock_down_database_boundary.sql").read_text(encoding="utf-8")
+        cls.feature_migration = (root / "supabase" / "migrations" /
+                                 "20260629_add_wish_reply_and_app_settings.sql").read_text(encoding="utf-8")
         cls.invites = (root / "routers" / "invites.py").read_text(encoding="utf-8")
         cls.custom_chars = (root / "routers" / "custom_characters.py").read_text(encoding="utf-8")
 
@@ -221,6 +223,13 @@ class DatabaseBoundaryTests(unittest.TestCase):
     def test_invite_backend_explicitly_grants_claimed_role(self):
         self.assertIn('{"nickname": nickname, "role": inv["role"]}', self.invites)
         self.assertIn('.eq("used_at", now_iso).is_("used_by", "null")', self.invites)
+
+    def test_recent_feature_db_shape_is_recorded(self):
+        for sql in (self.schema, self.feature_migration):
+            with self.subTest(sql=sql[:40]):
+                self.assertRegex(sql, r"wish_reply\s+boolean default false")
+                self.assertIn("create table if not exists public.app_settings", sql)
+                self.assertIn("revoke all on public.app_settings from anon, authenticated", sql)
 
 
 class DependencyLockTests(unittest.TestCase):

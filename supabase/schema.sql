@@ -315,6 +315,7 @@ alter table public.profiles add column if not exists nickname     text;
 alter table public.profiles add column if not exists banned       boolean default false;
 alter table public.profiles add column if not exists mqj_access   text;       -- 迷情劑 access: null / 'pending' / 'approved'
 alter table public.profiles add column if not exists auto_publish boolean default false;
+alter table public.profiles add column if not exists wish_reply   boolean default false; -- writer may reply to 許願池 and mark 考慮中
 alter table public.profiles add column if not exists guide_seeded boolean default false;
 alter table public.profiles add column if not exists tour_seen    text;       -- onboarding-tour version completed
 alter table public.profiles add column if not exists last_seen_at timestamptz;-- activity for the 不活躍用戶 report
@@ -339,6 +340,16 @@ create unique index if not exists account_signals_uniq   on public.account_signa
 create index        if not exists account_signals_lookup on public.account_signals(kind, value);
 alter table public.account_signals enable row level security;   -- service-role only; no anon/authenticated policy
 revoke all on public.account_signals from anon, authenticated;
+
+-- Global app settings. Read/written through FastAPI only; clients use it for small site-wide knobs
+-- such as notification-centre retention days.
+create table if not exists public.app_settings (
+  key        text primary key,
+  value      text,
+  updated_at timestamptz not null default now()
+);
+alter table public.app_settings enable row level security;
+revoke all on public.app_settings from anon, authenticated;
 
 -- novels: kind/category/characters/series/owners/status/locking the app relies on.
 alter table public.novels add column if not exists kind         text default 'novel';   -- 'novel' | 'forum'
