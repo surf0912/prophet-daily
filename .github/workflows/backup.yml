@@ -1,7 +1,7 @@
-name: 每週資料庫備份 (DB backup)
+name: 每日資料庫備份 (DB backup)
 
 # Full disaster-recovery backup: pg_dump of the WHOLE database (content + auth/passwords),
-# gzipped and AES256-encrypted, stored as a 90-day GitHub artifact. Encryption means the dump
+# gzipped and AES256-encrypted, stored as a 7-day GitHub artifact. Encryption means the dump
 # is safe even if this repo is public (artifacts on public repos are downloadable by anyone).
 #
 # One-time setup — add two repo secrets (Settings → Secrets and variables → Actions):
