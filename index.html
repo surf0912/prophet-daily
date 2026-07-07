@@ -216,6 +216,7 @@
           <p id="settings-email">—</p>
           <p id="settings-role" style="font-size:12px;color:var(--accent);margin-top:4px"></p>
         </div>
+        <button id="version-status" class="version-btn checking" data-onclick="updateToLatest()">檢查更新中…</button>
         <div class="settings-section">
           <details class="profile-details">
             <summary>個人資料</summary>
@@ -751,8 +752,7 @@
       <div class="el-rule"><span></span><i>✦</i><span></span></div>
       <div id="editor-letter-body"></div>
       <div class="el-btns">
-        <button class="el-btn-ghost" data-onclick="dismissEditorLetter()">知道了</button>
-        <button class="el-btn-solid" data-onclick="getNewIssue()">更新版本</button>
+        <button class="el-btn-solid" data-onclick="dismissEditorLetter()">知道了</button>
       </div>
     </div>
   </div>

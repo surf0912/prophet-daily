@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.71';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.72';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -529,6 +529,7 @@ function showPage(id, btn) {
   if (id === 'home') { renderContinueBar(); renderFavUpdates(); }
   if (id === 'scroll') loadNovels();
   if (id === 'forum') loadForumPosts();
+  if (id === 'settings') renderVersionStatus();   // 每次進檔案頁重新檢查版本狀態
   if (id === 'admin') { adminNovelScope = null; switchAdminTab('novels'); }
 }
 
@@ -1066,13 +1067,40 @@ function dismissEditorLetter() {
   const m = document.getElementById('editor-letter'); if (m) m.style.display = 'none';
   renderFavUpdates();   // 已讀後貓頭鷹收起「主編來信」一條
 }
-async function getNewIssue() {   // 「更新版本」：溫和更新——不清快取、不註銷 SW，否則冷重載時封面圖與離線快取會一起消失
-  markEditorLetterSeen();
+// 版本狀態（檔案頁）：抓 service-worker.js 的 CACHE_NAME 版本，跟執行中的 APP_VERSION 比。
+async function fetchLatestVersion() {
   try {
-    const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
-    if (reg) await reg.update();   // 抓最新版 SW（install 內已 skipWaiting，會盡快接管並換上新版）
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 2500);
+    const res = await fetch('./service-worker.js?cb=' + Date.now(), { cache: 'no-store', signal: ctrl.signal });
+    clearTimeout(to);
+    if (!res.ok) return null;
+    const m = (await res.text()).match(/prophet-daily-(v[\d.]+)/);
+    return m ? m[1] : null;   // 'vN.NN'
+  } catch (e) { return null; }
+}
+async function renderVersionStatus() {
+  const el = document.getElementById('version-status'); if (!el) return;
+  el.disabled = true; el.className = 'version-btn checking'; el.textContent = '檢查更新中…';
+  const latest = await fetchLatestVersion();
+  if (latest && latest !== APP_VERSION) {   // 過時 → 可按，點了更新
+    el.className = 'version-btn outdated'; el.disabled = false;
+    el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg> 您的預言家日報已過時`;
+  } else {   // 最新（或抓不到 → 不誤報）→ 純狀態，不可按
+    el.className = 'version-btn latest'; el.disabled = true;
+    el.innerHTML = `${ic('ic-check', 14)} 您已收到最新一期的預言家日報`;
+  }
+}
+// 檔案頁「更新」鈕：只在確定過時時可按，使用者主動更新 → 徹底清快取＋SW 重載，保證拿到最新一期。
+async function updateToLatest() {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    if (window.caches) { const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); }
   } catch (e) { /* best effort */ }
-  location.reload();   // HTML 為 network-first，重載即取最新 UI；既有快取（含 /chars/ 封面圖）保留
+  location.reload();
 }
 function maybeShowEditorLetter() {
   if (editorLetterSeen()) return;
@@ -3292,6 +3320,7 @@ function renderSettings() {
   document.getElementById('settings-email').textContent = '';
   document.getElementById('settings-role').innerHTML = roleBadge(currentUser.role, 15);
   document.getElementById('app-version').textContent = '版本 ' + APP_VERSION;
+  renderVersionStatus();   // 檔案頁的「最新一期／已過時」狀態按鈕
   document.getElementById('profile-fullname').textContent = currentUser.username || '—';
   document.getElementById('nick-display').textContent = nick;
   document.getElementById('profile-nickname').value = currentUser.nickname || currentUser.username || '';

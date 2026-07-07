@@ -12,7 +12,7 @@
     'ccPickAvatar', 'ccTap', 'changeUserRole', 'clearUserFlag', 'closeCharProfile', 'closeReader', 'copyAllInvites',
     'copyText', 'deleteCustomChar', 'deleteFaq', 'deleteFeedbackItem', 'deleteNovel', 'deleteUser',
     'cpCoverHint', 'discardUploadDraft', 'dismissContinueBar', 'dismissEditorLetter', 'dismissTourBanner', 'doInviteRegister', 'doLogout', 'downloadPhoto',
-    'doSignIn', 'editFaq', 'editNick', 'endTour', 'exportBackup', 'favOwlOpen', 'forceRefresh', 'generateInvite', 'getNewIssue',
+    'doSignIn', 'editFaq', 'editNick', 'endTour', 'exportBackup', 'favOwlOpen', 'forceRefresh', 'generateInvite',
     'handleAvatarUpload', 'loadChapter', 'loadForumPosts', 'loadNovels', 'loadTxtIntoUpload',
     'navigateChapter', 'navigateSeries', 'openBugReport', 'openCharProfileFromHome', 'openCreateChar', 'openEditorLetter',
     'openEditClass', 'openEditWork', 'openFaq', 'openMqjDisclaimer', 'openNovel', 'openOwners',
@@ -26,7 +26,7 @@
     'submitForumPost', 'submitNewNovel', 'switchAdminTab', 'tempBan', 'toggleCcShare', 'toggleCharAnd', 'toggleCoverPhoto',
     'toggleDark', 'toggleFavOwl', 'toggleFont', 'toggleForumFav', 'toggleLike', 'toggleLock', 'toggleOwlAlways', 'togglePwEdit', 'toggleTapFx',
     'toggleReaderDark', 'toggleReaderFavorite', 'toggleShelfFav', 'tourBack', 'tourNext',
-    'updateBugCount', 'updateReaderDarkBtn', 'updateWishCount', 'viewUserNovels',
+    'updateBugCount', 'updateReaderDarkBtn', 'updateToLatest', 'updateWishCount', 'viewUserNovels',
   ]);
 
   const EVENT_ATTRIBUTES = {
