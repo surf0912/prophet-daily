@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.69';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.70';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2605,6 +2605,10 @@ async function loadReviewList() {
         <div style="padding:12px 0;border-bottom:1px solid rgba(26,10,0,.1)">
           <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)}</div>
           <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${n.kind === 'forum' ? ic('ic-scroll', 12) + ' 論壇貼文' : ic('ic-book', 12) + ' 小說'}・${escapeHtml(n.author || '匿名')}・${fmtUpdated(n.created_at)}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:5px">
+            ${n.category ? `<span style="font-size:11px;padding:1px 8px;border-radius:9px;background:rgba(138,45,45,.12);color:var(--accent)">${escapeHtml(n.category)}</span>` : '<span style="font-size:11px;color:var(--ink-light);opacity:.65">未分類</span>'}
+            <span style="font-size:12px;color:var(--ink-light)">男主・${charNames(n.characters) ? escapeHtml(charNames(n.characters)) : '<span style="opacity:.6">未標記</span>'}</span>
+          </div>
           <div style="display:flex;gap:8px;margin-top:8px">
             <button data-onclick="openNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">預覽</button>
             <button data-onclick="approveNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:#2d4a1e;border:none;color:#fff;border-radius:3px;cursor:pointer">${ic('ic-check',12)} 通過</button>
