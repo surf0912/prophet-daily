@@ -54,7 +54,11 @@
         <input type="text" id="inv-nickname" placeholder="顯示用，可用中文" maxlength="7" />
         <small style="color:var(--gold-lt);font-size:13px">大家看到的名字，之後可自行更改</small>
       </div>
-      <div class="field"><label>通關密語</label><input type="password" id="inv-pass" placeholder="至少 8 位" autocomplete="new-password" /></div>
+      <div class="field">
+        <label>個人通關密語</label>
+        <input type="password" id="inv-pass" placeholder="至少 8 字" autocomplete="new-password" />
+        <small style="color:var(--gold-lt);font-size:13px">登入用，由你自己設定並牢記</small>
+      </div>
       <button class="btn-primary" data-onclick="doInviteRegister()">領取通行證</button>
       <button data-onclick="showLoginForm()" style="display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--gold-lt);font-size:12px;cursor:pointer">已有帳號？直接登入</button>
     </div>
