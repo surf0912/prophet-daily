@@ -138,7 +138,7 @@
       flex-direction: column; gap: 0;
     }
     .auth-box {
-      width: calc(100% - 32px); max-width: 400px; padding: 40px 48px;
+      width: calc(100% - 32px); max-width: 400px; padding: 40px 48px 72px;   /* 下 72px：錯誤訊息落在金框底線(約 47px)上方 */
       background: rgba(47,33,20,0.82);
       border-radius: 6px;
       position: relative;
