@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.74';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.75';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -740,6 +740,25 @@ const CHARS = [
   },
 ];
 
+// ── 心動封面「日／夜」分類 ─────────────────────────────────────────────────
+// 判準：圖裡有陽光(直射日光/日照氛圍)＝白天；無陽光(室內/暗水族箱/夜景/燭光)＝默認夜晚。
+// 只列「白天」的；不在此集合的一律當夜晚。首頁 06:00–18:00 只抽白天、其餘只抽夜晚(見 renderGreeting)。
+const DAY_COVERS = new Set([
+  // 手機封面(8)
+  './chars/sean_phone_1.JPG',    // 水族箱：水面透亮、有日光
+  './chars/sean_phone_3.JPG',    // 雨天陰天日光
+  './chars/sean_phone_4.JPG',    // 海邊日落
+  './chars/silas_phone_3.JPG',   // 窗邊明亮日光
+  './chars/silas_phone_4.JPG',   // 金色逆光/黃昏
+  './chars/silas_phone_5.JPG',   // 臥室柔和日光
+  './chars/eli_phone_1.JPG',     // 水族箱：偏亮有日光
+  './chars/eli_phone_2.JPG',     // 溫室陽光
+  // 桌機封面(3；其餘桌機為室內燭光/夜景，默認夜晚)
+  './chars/Silas_desktop_1.JPG', // 圖書館窗外日光
+  './chars/Eli_desktop_1.JPG',   // 教室窗光
+  './chars/eli_desktop_2.JPG',   // 溫室陽光
+]);
+
 // ── 角色設定頁 (beta) — 基本資料 + GitHub 圖庫。bio / gallery 由站長填寫；gallery 留空時自動用封面圖。
 const CHAR_PROFILE = {
   Sean:   { bio: '', gallery: [] },
@@ -863,12 +882,17 @@ function renderGreeting() {
   const period = h < 5 ? '深夜好' : h < 12 ? '早安' : h < 18 ? '午安' : '晚安';
   const isWide = window.matchMedia('(min-width: 600px)').matches;
   const photosOf = c => ((isWide ? (c.imgsD || [c.imgD]) : (c.imgs || [c.img])) || []).filter(Boolean);
-  // 以「照片」為單位建池：每張未被隱藏的照片(連同它的角色)都是一個候選。全被隱藏 → 退回全部隨機。
+  // 以「照片」為單位建池：使用者未取消的照片(連同角色)都是候選。全被取消 → 退回全部隨機。
   const excluded = excludedPhotos();
-  let cands = [];
-  CHARS.forEach(c => photosOf(c).forEach(img => { if (!excluded.has(img)) cands.push({ char: c, img }); }));
-  if (!cands.length) CHARS.forEach(c => photosOf(c).forEach(img => cands.push({ char: c, img })));
-  const pick = cands[Math.floor(Math.random() * cands.length)] || { char: CHARS[0], img: CHARS[0].img };
+  let selected = [];
+  CHARS.forEach(c => photosOf(c).forEach(img => { if (!excluded.has(img)) selected.push({ char: c, img }); }));
+  if (!selected.length) CHARS.forEach(c => photosOf(c).forEach(img => selected.push({ char: c, img })));
+  // 日夜門檻：06:00–18:00 只抽白天封面，其餘只抽夜晚(無陽光者默認夜晚，見 DAY_COVERS)。
+  const wantDay = h >= 6 && h < 18;
+  let pool = selected.filter(x => DAY_COVERS.has(x.img) === wantDay);
+  // 保底：使用者的選取在當前時段沒有任何圖 → 忽略日夜，改在他選的那幾張裡隨機輪轉(不留白)。
+  if (!pool.length) pool = selected;
+  const pick = pool[Math.floor(Math.random() * pool.length)] || { char: CHARS[0], img: CHARS[0].img };
   const char = pick.char;
   _homeChar = char;
   const heart = document.getElementById('hero-heart');
