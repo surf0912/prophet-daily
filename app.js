@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.5';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.6';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -461,6 +461,50 @@ async function doInviteRegister() {
 // 就會露出深色。登入頁設成「暗化羊皮紙」融入背景、登入後(導覽列蓋住)再設回深色。
 const LOGIN_THEME = '#5D4B38';
 function setThemeColor(c) { const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', c); }
+
+// ── 簡/繁 文字偏好（檔案 → 閱讀偏好 → 文字）────────────────────────────────
+// 原始碼（介面與作品）一律繁體；使用者選「簡體」時才用 zhconv.js 的繁→簡字表逐字轉換。
+// 繁→簡是多對一，逐字轉幾乎不會錯字；反向（簡→繁）才有一對多的錯字問題，所以永遠不做反向。
+let uiScript = localStorage.getItem('pd_script') === 'sc' ? 'sc' : 'tc';
+function setUiScript(v) {
+  localStorage.setItem('pd_script', v === 'sc' ? 'sc' : 'tc');
+  // reload：整個 UI 從繁體原始碼重新渲染再轉換，避免在已轉換的文字上反覆原地轉換。
+  location.reload();
+}
+// 把 root 底下所有文字節點（含 placeholder/title/aria-label）轉成簡體。
+function zhConvertTree(root) {
+  if (!root) return;
+  if (root.nodeType === 3) { const v = tcToSc(root.nodeValue); if (v !== root.nodeValue) root.nodeValue = v; return; }
+  if (root.nodeType !== 1) return;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  while (w.nextNode()) {
+    const n = w.currentNode;
+    const v = tcToSc(n.nodeValue);
+    if (v !== n.nodeValue) n.nodeValue = v;
+  }
+  const els = [root, ...root.querySelectorAll('[placeholder],[title],[aria-label]')];
+  for (const el of els) {
+    for (const a of ['placeholder', 'title', 'aria-label']) {
+      const v = el.getAttribute && el.getAttribute(a);
+      if (v) { const c = tcToSc(v); if (c !== v) el.setAttribute(a, c); }
+    }
+  }
+}
+// 簡體模式：先整棵轉一次，之後任何新渲染（頁面切換、toast、彈窗、章節內容）由 observer 接手。
+// 只在文字真的有變時才寫回，observer 不會自己觸發自己。
+if (uiScript === 'sc') {
+  document.documentElement.lang = 'zh-CN';
+  const start = () => {
+    zhConvertTree(document.body);
+    new MutationObserver(muts => {
+      for (const m of muts) {
+        if (m.type === 'characterData') { const v = tcToSc(m.target.nodeValue); if (v !== m.target.nodeValue) m.target.nodeValue = v; }
+        else for (const n of m.addedNodes) zhConvertTree(n);
+      }
+    }).observe(document.body, { subtree: true, childList: true, characterData: true });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+}
 function doLogout() {
   token = null; currentUser = null;
   localStorage.removeItem('pd_token');
@@ -3553,6 +3597,7 @@ document.addEventListener('click', (e) => {
   const readerFs = localStorage.getItem('pd_reader_font');
   if (readerFs) applyReaderFontSize(parseInt(readerFs)); else applyReaderFontSize(15);
   if (localStorage.getItem('pd_dark') === '1') { document.getElementById('dark-toggle').checked = true; toggleDark(true); }
+  { const ss = document.getElementById('script-select'); if (ss) ss.value = uiScript; }
 
   // Check for invite token in URL
   const inviteToken = new URLSearchParams(window.location.search).get('invite');

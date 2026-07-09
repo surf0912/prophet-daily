@@ -282,6 +282,13 @@
               <span class="slider"></span>
             </label>
           </div>
+          <div class="settings-row">
+            <label>文字</label>
+            <select id="script-select" data-onchange="setUiScript(this.value)">
+              <option value="tc">繁體中文</option>
+              <option value="sc">简体中文</option>
+            </select>
+          </div>
           </details>
         </div>
         <div class="settings-section">
@@ -770,6 +777,7 @@
 
 <div id="toast"></div>
 
+<script src="./zhconv.js" defer></script>
 <script src="./app.js" defer></script>
 <script src="./safe-events.js" defer></script>
 </body>
