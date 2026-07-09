@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.10';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.11';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -645,26 +645,26 @@ function showPage(id, btn) {
 // ── Guided tour (新手導覽) ─────────────────────────────────────
 // Steps anchor to data-tour / stable ids; a missing target degrades to a
 // centered bubble (auto-skip look) instead of breaking. See infra notes.
-const TOUR_VERSION = '4';   // bump to re-show the (revised) tour to everyone
+const TOUR_VERSION = '5';   // bump to re-show the (revised) tour to everyone
 const TOUR_READER = [
+  { page: 'home', target: '[data-tour="nav-home"]',
+    html: "<span class='tour-h'>歡迎來到《預言家日報》</span>這裡是心動頁，封面會隨晨昏時段輪替登場。左上角若出現<b>貓頭鷹</b>，代表有信等你——追蹤的系列出了新作品、主編來信，或你的願望有了回音。" },
+  { page: 'home', target: '#hero-heart',
+    html: "<span class='tour-h'>他是誰？</span>點封面右上的<b>愛心</b>，走進角色設定頁——挑選你想在心動頁遇見的封面，也能下載帶浮水印的桌布。" },
   { page: 'scroll', target: '[data-tour="nav-scroll"]',
-    html: "<span class='tour-h'>意若思鏡</span>歡迎來到《預言家日報》!<br>這面鏡子映照出大家所有的作品——點這裡就能走進書架找文。" },
+    html: "<span class='tour-h'>意若思鏡</span>這面鏡子映照出大家所有的作品——點這裡就能走進書架找文。" },
   { page: 'scroll', target: '#shelf-search-input',
-    html: "<span class='tour-h'>召喚你想看的</span>輸入<b>篇名、作者或角色名</b>,想找的文章就會自己浮現,不必翻遍整座書庫。" },
+    html: "<span class='tour-h'>召喚你想看的</span>輸入<b>篇名、作者或角色名</b>，想找的文章就會自己浮現，不必翻遍整座書庫。" },
   { page: 'scroll', target: '#shelf-char-chips',
-    html: "<span class='tour-h'>只看某個人</span>點角色頭像,就只顯示有那位角色的故事,再點一次即可取消。想只看兩個角色<b>同框</b>的文,選好兩個頭像後再點「同框」就好。" },
+    html: "<span class='tour-h'>只看某個人</span>點角色頭像，就只顯示有那位角色的故事，再點一次即可取消；選好兩個頭像再點「同框」，就只看兩人<b>同框</b>的文。<b>雙擊頭像</b>可直接開啟角色設定頁。" },
   { page: 'scroll', target: '#shelf-cat-pills',
     html: "<span class='tour-h'>故事分類</span><b>迷情劑</b>為受限內容、<b>吐真劑</b>為全年齡向、<b>儲思盆</b>是人物小傳與背景故事。迷情劑需先向管理員<b>申請開放</b>才看得到。" },
   { page: 'scroll', target: '#shelf-wish-btn',
-    html: "<span class='tour-h'>許願池</span>想看的主題、主角,或想加的網站功能,都能在這裡許願——作者與管理員都看得到,而且一律匿名,放心許。" },
-  { page: 'scroll', target: '#shelf-fav-btn',
-    html: "<span class='tour-h'>收藏夾</span>讀作品時點右上角的<b>星星</b>就能收藏整篇,之後從這裡找回來重讀。" },
+    html: "<span class='tour-h'>許願池</span>想看的主題、主角，或想加的網站功能，都能在這裡許願——一律匿名，放心許。<b>被回覆時，貓頭鷹會叼信通知你</b>，點通知就能跳回那則願望。" },
   { page: 'forum', target: '[data-tour="nav-forum"]',
-    html: "<span class='tour-h'>匿名羊皮紙</span>從這裡進入論壇體文章,看看大家都在討論些什麼——傳閱時小心點,別被級長抓到!" },
-  { page: 'forum', target: '#forum-fav-btn',
-    html: "<span class='tour-h'>收藏喜歡的留言</span>讀文時點留言上的<b>羽毛筆</b>就會收藏,再點右上角的「<b>收藏夾</b>」就能找回來重讀。" },
+    html: "<span class='tour-h'>匿名羊皮紙</span>從這裡進入論壇體文章，看看大家都在討論些什麼——傳閱時小心點，別被級長抓到！讀文時點留言上的<b>羽毛筆</b>就能收藏，右上角「<b>收藏夾</b>」隨時找回來。" },
   { page: 'settings', target: '[data-tour="nav-settings"]',
-    html: "<span class='tour-h'>個人檔案</span>在這裡調字體大小、夜間模式,也能換頭像。想<b>重看這份導覽</b>,到「檔案 → 小工具 → 新手導覽」隨時都能再看。" },
+    html: "<span class='tour-h'>個人檔案</span>字體大小、夜間模式、<b>語言選擇（原文／繁體／簡體）</b>都在閱讀偏好；頁面最下方能查看你手上的日報是否為最新一期。想<b>重看這份導覽</b>，到「檔案 → 小工具 → 新手導覽」。" },
 ];
 const TOUR_WRITER_EXTRA = [
   { page: 'admin', target: '[data-tour="nav-admin"]',
@@ -1232,16 +1232,16 @@ function wishReplyOpen(id) {
 // ── 主編來信（單封更新公告）──────────────────────────────────────────
 // 換新一封時把 id 改掉即可：已讀狀態以 id 存 localStorage，每封只自動跳一次。
 const EDITOR_LETTER = {
-  id: 'v2.62',
-  date: '2026-06-26',   // 通知中心保留 30 天起算日（換新一封時連同 id 一起更新）
+  id: 'v3.11',
+  date: '2026-07-09',   // 通知中心保留 30 天起算日（換新一封時連同 id 一起更新）
   lead: '本期更新，重點如下：',
   items: [
-    '心動頁左上新增貓頭鷹提醒——所追蹤的系列有新作品時，將現身通知。',
-    '點讚、收藏新增火花特效。',
-    '心動封面點選愛心，即可進入角色設定頁。',
-    '點擊特效可於「個人檔案 → 小工具」自行開關。',
+    '貓頭鷹如今也會捎來許願池的回音——你的願望被回覆時，牠會第一時間通知你。',
+    '通知可以整理了：輕點叉號即可送走一則，最多保留五則。',
+    '新增「語言選擇」：檔案 → 閱讀偏好，可在原文、繁體、簡體之間切換。',
+    '心動封面大批上新。',
   ],
-  closing: '版本更新至 v2.62。',
+  closing: '版本更新至 v3.11。',
 };
 function editorLetterSeen() { return localStorage.getItem('pd_letter_seen') === EDITOR_LETTER.id; }
 function markEditorLetterSeen() { try { localStorage.setItem('pd_letter_seen', EDITOR_LETTER.id); } catch (e) {} pushClientState({ letter_seen: EDITOR_LETTER.id }); }
@@ -1253,7 +1253,15 @@ function openEditorLetter() {
     `<div class="el-lead">${escapeHtml(EDITOR_LETTER.lead)}</div>` +
     EDITOR_LETTER.items.map(t => `<div class="el-item"><span class="el-dot">·</span><span>${escapeHtml(t)}</span></div>`).join('') +
     `<div class="el-foot">${escapeHtml(EDITOR_LETTER.closing)}<span class="el-sign">—— 主編</span></div>`;
+  // 一次性更新鈕：這台裝置按過（記在 pd_letter_upd）就不再出現，之後從貓頭鷹回看只剩「知道了」。
+  const ub = document.getElementById('letter-update-btn');
+  if (ub) ub.style.display = localStorage.getItem('pd_letter_upd') === EDITOR_LETTER.id ? 'none' : '';
   m.style.display = 'flex';
+}
+function letterUpdateOnce() {
+  try { localStorage.setItem('pd_letter_upd', EDITOR_LETTER.id); } catch (e) {}
+  markEditorLetterSeen();
+  updateToLatest();   // 清快取＋重載，拿最新一期
 }
 function dismissEditorLetter() {
   markEditorLetterSeen();

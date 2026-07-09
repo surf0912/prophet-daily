@@ -13,7 +13,7 @@
     'copyText', 'deleteCustomChar', 'deleteFaq', 'deleteFeedbackItem', 'deleteNovel', 'deleteUser',
     'cpCoverHint', 'discardUploadDraft', 'dismissNotice', 'dismissContinueBar', 'dismissEditorLetter', 'dismissTourBanner', 'doInviteRegister', 'doLogout', 'downloadPhoto',
     'doSignIn', 'editFaq', 'editNick', 'endTour', 'exportBackup', 'favOwlOpen', 'forceRefresh', 'generateInvite',
-    'handleAvatarUpload', 'loadChapter', 'loadForumPosts', 'loadNovels', 'loadTxtIntoUpload',
+    'handleAvatarUpload', 'loadChapter', 'loadForumPosts', 'loadNovels', 'letterUpdateOnce', 'loadTxtIntoUpload',
     'navigateChapter', 'navigateSeries', 'openBugReport', 'openCharProfileFromHome', 'openCreateChar', 'openEditorLetter',
     'openEditClass', 'openEditWork', 'openFaq', 'openMqjDisclaimer', 'openNovel', 'openOwners',
     'openSeries', 'openWishPool', 'renderAdminNovels', 'renderForumList', 'renderShelf', 'renderUserRows',
