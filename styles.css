@@ -136,6 +136,9 @@
       background-position: center, center;
       display: flex; align-items: center; justify-content: center;
       flex-direction: column; gap: 0;
+      /* 版面高度不含底部系統列，flex 置中會整體偏上；補一個等於底部安全區的 padding-top，
+         置中點下移半格 → 對「整個實體螢幕（含底部那條）」視覺置中。 */
+      padding-top: env(safe-area-inset-bottom, 0px);
     }
     .auth-box {
       width: calc(100% - 32px); max-width: 400px; padding: 40px 48px 72px;   /* 下 72px：錯誤訊息落在金框底線(約 47px)上方 */
