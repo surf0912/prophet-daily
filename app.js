@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.8';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.9';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -470,9 +470,15 @@ function setThemeColor(c) { const m = document.querySelector('meta[name="theme-c
 let uiScript = ['tc', 'sc'].includes(localStorage.getItem('pd_script')) ? localStorage.getItem('pd_script') : 'orig';
 const _zhConv = uiScript === 'sc' ? (s => tcToSc(s)) : (s => scToTc(s));
 function setUiScript(v) {
-  localStorage.setItem('pd_script', ['tc', 'sc'].includes(v) ? v : 'orig');
-  // reload：整個 UI 從原始碼重新渲染再轉換，避免在已轉換的文字上反覆原地轉換。
-  location.reload();
+  const val = ['tc', 'sc'].includes(v) ? v : 'orig';
+  localStorage.setItem('pd_script', val);
+  // 先回寫帳號（跨裝置同步），再 reload 從原始碼重新渲染；斷網最多等 1.2 秒照樣切換。
+  let reloaded = false;
+  const done = () => { if (!reloaded) { reloaded = true; location.reload(); } };
+  if (typeof token !== 'undefined' && token) {
+    try { api('/auth/me/client-state', { method: 'PATCH', body: JSON.stringify({ script: val }) }).catch(() => {}).finally(done); } catch (e) { done(); }
+    setTimeout(done, 1200);
+  } else done();
 }
 // 把 root 底下所有文字節點（含 placeholder/title/aria-label）轉成目前選擇的字體。
 function zhConvertTree(root) {
@@ -508,6 +514,53 @@ if (uiScript !== 'orig') {
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 }
+// ── 已讀狀態＋語言選擇：跨裝置同步（profiles.client_state；開機合併、變動即回寫）────
+// localStorage 只是本機快取；合併採「聯集」——換裝置/重加 App/換鏡像不會重跳已讀過的通知。
+// 夜間模式、字級等裝置偏好刻意不同步（同一人不同裝置要不同設定是合理需求）。
+function pushClientState(delta) {
+  if (!token) return;
+  try { api('/auth/me/client-state', { method: 'PATCH', body: JSON.stringify(delta) }).catch(() => {}); } catch (e) {}
+}
+function syncClientState() {
+  const cs = (currentUser && currentUser.client_state) || {};
+  const delta = {};
+  // 主編來信：只在意「現行這一封」
+  const localSeen = localStorage.getItem('pd_letter_seen');
+  if (cs.letter_seen === EDITOR_LETTER.id && localSeen !== EDITOR_LETTER.id) {
+    try { localStorage.setItem('pd_letter_seen', EDITOR_LETTER.id); } catch (e) {}
+  } else if (localSeen === EDITOR_LETTER.id && cs.letter_seen !== EDITOR_LETTER.id) {
+    delta.letter_seen = EDITOR_LETTER.id;
+  }
+  // 追蹤更新已讀：雙向聯集
+  const localWorks = _readInstallments();
+  const serverWorks = Array.isArray(cs.read_works) ? cs.read_works : [];
+  const worksUp = localWorks.filter(x => !serverWorks.includes(x));
+  if (worksUp.length) delta.read_works_add = worksUp;
+  try { localStorage.setItem('pd_read_installments', JSON.stringify([...new Set([...serverWorks, ...localWorks])].slice(-300))); } catch (e) {}
+  // 願望回音已讀：伺服器優先合併；本機獨有的推上去
+  const localW = _readWishReplies(), serverW = cs.read_wishes || {};
+  const wishUp = {};
+  for (const k in localW) if (!(k in serverW)) wishUp[k] = localW[k];
+  if (Object.keys(wishUp).length) delta.read_wishes_set = wishUp;
+  try { localStorage.setItem('pd_read_wishreplies', JSON.stringify({ ...localW, ...serverW })); } catch (e) {}
+  // 被叉掉的通知：雙向聯集
+  const localD = _dismissedNotices();
+  const serverD = Array.isArray(cs.dismissed) ? cs.dismissed : [];
+  const dUp = localD.filter(x => !serverD.includes(x));
+  if (dUp.length) delta.dismissed_add = dUp;
+  try { localStorage.setItem('pd_dismissed_notices', JSON.stringify([...new Set([...serverD, ...localD])].slice(-100))); } catch (e) {}
+  // 語言選擇：伺服器有值且與本機不同 → 套用並重載（一次性）；伺服器沒有而本機有 → 推上去
+  const localScript = localStorage.getItem('pd_script');
+  let needReload = false;
+  if (['orig', 'tc', 'sc'].includes(cs.script) && cs.script !== (localScript || 'orig')) {
+    try { localStorage.setItem('pd_script', cs.script); } catch (e) {}
+    needReload = true;
+  } else if (localScript && !cs.script) {
+    delta.script = localScript;
+  }
+  if (Object.keys(delta).length) pushClientState(delta);
+  if (needReload) location.reload();
+}
 function doLogout() {
   token = null; currentUser = null;
   localStorage.removeItem('pd_token');
@@ -528,6 +581,7 @@ async function initApp() {
   // on file before any ban — a later re-registration from the same device can then be flagged. Best-
   // effort, never blocks the UI.
   try { api('/auth/me/signal', { method: 'POST', body: JSON.stringify({ fingerprint: deviceFingerprint(), device: deviceToken() }) }); } catch (e) {}
+  syncClientState();   // 先跟帳號合併已讀狀態/語言，再讓主編來信與貓頭鷹用合併後的狀態判斷
   document.getElementById('auth-overlay').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   setThemeColor('#1a0a00');   // 進 App：導覽列蓋住底部，theme-color 設回深色
@@ -1054,7 +1108,7 @@ function _readInstallments() { try { return JSON.parse(localStorage.getItem('pd_
 function _markInstallmentRead(id) {   // 打開某篇 = 標記該篇追蹤通知為已讀（per-device 已讀狀態）
   if (!id) return;
   const a = _readInstallments();
-  if (!a.includes(id)) { a.push(id); try { localStorage.setItem('pd_read_installments', JSON.stringify(a)); } catch (e) {} }
+  if (!a.includes(id)) { a.push(id); try { localStorage.setItem('pd_read_installments', JSON.stringify(a)); } catch (e) {} pushClientState({ read_works_add: [id] }); }
 }
 function markSeriesSeenForWork(novel) { if (novel && novel.id) _markInstallmentRead(novel.id); }
 function owlAlways() { return localStorage.getItem('pd_owl_always') === '1'; }   // 小工具「貓頭鷹常駐」
@@ -1151,6 +1205,7 @@ function dismissNotice(i) {
   const arr = _dismissedNotices();
   if (!arr.includes(it.key)) arr.push(it.key);
   try { localStorage.setItem('pd_dismissed_notices', JSON.stringify(arr.slice(-100))); } catch (e) {}
+  pushClientState({ dismissed_add: [it.key] });
   // 重畫後把浮層留在開啟狀態，讓使用者能連續清理；貓頭鷹若因此整個沒通知則收起。
   renderFavUpdates().then(() => {
     const w = document.getElementById('fav-owl-wrap'), p = document.getElementById('fav-owl-pop');
@@ -1167,6 +1222,7 @@ function _markWishReplyRead(id) {
   const w = favWishReplies.find(x => x.id === id); if (!w) return;
   const m = _readWishReplies(); m[id] = _wishReplySig(w);
   try { localStorage.setItem('pd_read_wishreplies', JSON.stringify(m)); } catch (e) {}
+  pushClientState({ read_wishes_set: { [id]: _wishReplySig(w) } });
 }
 function wishReplyOpen(id) {
   const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true;
@@ -1188,7 +1244,7 @@ const EDITOR_LETTER = {
   closing: '版本更新至 v2.62。',
 };
 function editorLetterSeen() { return localStorage.getItem('pd_letter_seen') === EDITOR_LETTER.id; }
-function markEditorLetterSeen() { try { localStorage.setItem('pd_letter_seen', EDITOR_LETTER.id); } catch (e) {} }
+function markEditorLetterSeen() { try { localStorage.setItem('pd_letter_seen', EDITOR_LETTER.id); } catch (e) {} pushClientState({ letter_seen: EDITOR_LETTER.id }); }
 function openEditorLetter() {
   const m = document.getElementById('editor-letter'); if (!m) return;
   const pop = document.getElementById('fav-owl-pop'); if (pop) pop.hidden = true;   // 從貓頭鷹點進來時收起浮層
