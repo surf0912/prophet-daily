@@ -136,6 +136,11 @@
       border-radius: 6px;
       position: relative;
     }
+    /* 金色華麗外框（貼齊棕框內緣，透明中心讓內容透出，不擋點擊） */
+    .auth-box::before {
+      content: ''; position: absolute; inset: 8px; pointer-events: none;
+      background: url('./auth-frame.png') 50% / 100% 100% no-repeat;
+    }
     @media (min-width: 640px) {
       .auth-box { max-width: 580px; padding: 56px 64px; }
       .auth-logo { margin-bottom: 40px; }
@@ -170,7 +175,7 @@
     }
     .auth-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
     .field { margin-bottom: 20px; }
-    .field label { display: block; font-size: 12px; color: var(--gold); margin-bottom: 8px; letter-spacing: .06em; }
+    .field label { display: block; font-size: 14px; color: var(--gold); margin-bottom: 8px; letter-spacing: .06em; }
     .field input {
       width: 100%; padding: 12px 14px; background: #ede0c0;
       border: 1px solid rgba(201,168,76,.55); border-radius: 10px;
