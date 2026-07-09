@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.92';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.93';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -457,12 +457,17 @@ async function doInviteRegister() {
   } catch (e) { shakeMsg('' + e.message); }
 }
 
+// iOS 獨立模式：底部安全區(home indicator 那條)會被填上 meta theme-color。登入頁沒有導覽列蓋住，
+// 就會露出深色。登入頁設成「暗化羊皮紙」融入背景、登入後(導覽列蓋住)再設回深色。
+const LOGIN_THEME = '#5a4c38';
+function setThemeColor(c) { const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', c); }
 function doLogout() {
   token = null; currentUser = null;
   localStorage.removeItem('pd_token');
   localStorage.removeItem('pd_refresh');
   document.getElementById('auth-overlay').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
+  setThemeColor(LOGIN_THEME);
   showLoginForm();
 }
 
@@ -477,6 +482,7 @@ async function initApp() {
   try { api('/auth/me/signal', { method: 'POST', body: JSON.stringify({ fingerprint: deviceFingerprint(), device: deviceToken() }) }); } catch (e) {}
   document.getElementById('auth-overlay').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
+  setThemeColor('#1a0a00');   // 進 App：導覽列蓋住底部，theme-color 設回深色
   // Reset role-based UI on every login (accounts can switch in-place without a page reload).
   const staff = ['writer', 'admin', 'super_admin'].includes(currentUser.role);
   const adminish = ['admin', 'super_admin'].includes(currentUser.role);
