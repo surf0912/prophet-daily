@@ -73,6 +73,11 @@
     /* 登入後（in-app）：底層切回原本的深棕，羊皮紙色只屬於登入頁。
        頂部時間列與導覽列下方的安全區於是恢復 --chrome。 */
     html.in-app, body.in-app { background: var(--chrome); }
+    /* 頂部時間列：登入後不分日夜、不分頁面，固定一條 --chrome 深棕（內容本來就從它下方開始） */
+    body.in-app::before {
+      content: ''; position: fixed; top: 0; left: 0; right: 0; height: var(--safe-top);
+      background: var(--chrome); z-index: 9999; pointer-events: none;
+    }
     /* Disable Safari/iOS double-tap-to-zoom everywhere (keeps scroll + pinch). */
     * { touch-action: manipulation; }
 
