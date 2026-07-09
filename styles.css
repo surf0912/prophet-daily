@@ -76,7 +76,7 @@
     /* 頂部時間列：登入後不分日夜、不分頁面，固定一條 --chrome 深棕（內容本來就從它下方開始） */
     body.in-app::before {
       content: ''; position: fixed; top: 0; left: 0; right: 0; height: var(--safe-top);
-      background: var(--chrome); z-index: 9999; pointer-events: none;
+      background: var(--chrome); z-index: 50; pointer-events: none;   /* 高於頁面內容、低於彈窗（別蓋掉主編來信頂部） */
     }
     /* Disable Safari/iOS double-tap-to-zoom everywhere (keeps scroll + pinch). */
     * { touch-action: manipulation; }
@@ -338,8 +338,8 @@
     .fav-row.read .fav-row-t { font-weight: normal; color: var(--ink-light); }
     .fav-row.read .fav-row-s { color: var(--ink-light); opacity: .8; }
     /* 主編來信彈窗（米白＋金線，承自報頭插畫的語彙；刻意維持淺色，不隨深色模式翻轉） */
-    .el-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(15,8,2,.55); display: flex; align-items: center; justify-content: center; padding: 20px; -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
-    .el-card { width: 300px; max-width: 100%; max-height: 92vh; overflow-y: auto; background: #fff; border: 1px solid rgba(160,130,60,.45); border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.4); animation: el-pop .28s ease; }
+    .el-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(15,8,2,.55); display: flex; align-items: center; justify-content: center; padding: calc(12px + var(--safe-top)) 20px calc(12px + var(--safe-bottom)); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+    .el-card { width: 300px; max-width: 100%; max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 24px); overflow-y: auto; background: #fff; border: 1px solid rgba(160,130,60,.45); border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.4); animation: el-pop .28s ease; }
     @keyframes el-pop { from { transform: translateY(12px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
     @media (prefers-reduced-motion: reduce) { .el-card { animation: none; } }
     .el-art { background: #fff; border-radius: 14px 14px 0 0; overflow: hidden; text-align: center; line-height: 0; }
