@@ -332,6 +332,9 @@
     .fav-row-t { font-size: 13px; color: var(--ink); font-weight: bold; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .fav-row-s { font-size: 12px; color: var(--accent); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .fav-row-x { color: var(--ink-light); font-size: 14px; flex-shrink: 0; }
+    /* 通知列的叉叉：低調灰、獨立可點（safe-events 只跑最近的 data-onclick，不會誤觸整列開啟） */
+    .fav-row-del { flex-shrink: 0; background: none; border: none; cursor: pointer; color: var(--ink-light); opacity: .55; padding: 6px; margin: -6px -4px -6px 0; line-height: 0; }
+    .fav-row-del:active { opacity: 1; }
     .fav-row.read .fav-row-t { font-weight: normal; color: var(--ink-light); }
     .fav-row.read .fav-row-s { color: var(--ink-light); opacity: .8; }
     /* 主編來信彈窗（米白＋金線，承自報頭插畫的語彙；刻意維持淺色，不隨深色模式翻轉） */

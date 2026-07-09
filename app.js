@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.6';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.7';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1081,7 +1081,7 @@ async function renderFavUpdates() {
   const items = [];   // {kind:'letter'|'work', id, title, sub, at, unread}
   const ld = EDITOR_LETTER.date ? new Date(EDITOR_LETTER.date) : null;
   if (ld && ld.getTime() >= cutoff) {
-    items.push({ kind: 'letter', title: '主編來信', sub: '本期更新與最新版本', at: EDITOR_LETTER.date, unread: !editorLetterSeen() });
+    items.push({ kind: 'letter', key: `letter:${EDITOR_LETTER.id}`, title: '主編來信', sub: '本期更新與最新版本', at: EDITOR_LETTER.date, unread: !editorLetterSeen() });
   }
   if (favIds && favIds.size) {
     let all = null;
@@ -1097,7 +1097,7 @@ async function renderFavUpdates() {
         if (!n.series || !n.created_at || !since.has(n.series)) return;
         const c = new Date(n.created_at).getTime();
         if (c > new Date(since.get(n.series)).getTime() && c >= cutoff) {
-          items.push({ kind: 'work', id: n.id, title: `系列《${n.series}》新作品`, sub: n.title, at: n.created_at, unread: !read.has(n.id) });
+          items.push({ kind: 'work', id: n.id, key: `work:${n.id}`, title: `系列《${n.series}》新作品`, sub: n.title, at: n.created_at, unread: !read.has(n.id) });
         }
       });
     }
@@ -1111,27 +1111,47 @@ async function renderFavUpdates() {
     const reply = (w.admin_reply || '').trim();
     const st = (FB_STATUS.wish && FB_STATUS.wish[w.status]) || '';
     const sub = reply || (st ? `願望狀態：${st}` : '有新回應');
-    items.push({ kind: 'wishreply', id: w.id, title: '你的願望有了回音', sub, at, unread: isUnread });
+    items.push({ kind: 'wishreply', id: w.id, key: `wish:${w.id}:${_wishReplySig(w)}`, title: '你的願望有了回音', sub, at, unread: isUnread });
   });
-  items.sort((a, b) => new Date(b.at) - new Date(a.at));
-  const unread = items.filter(i => i.unread).length;
+  // 使用者按叉叉刪掉的不再出現；其餘依時間新到舊，最多顯示 5 則（列表才不會無限長）。
+  const dismissed = new Set(_dismissedNotices());
+  const visible = items.filter(it => !dismissed.has(it.key));
+  visible.sort((a, b) => new Date(b.at) - new Date(a.at));
+  _owlItems = visible.slice(0, 5);
+  const unread = visible.filter(i => i.unread).length;
   // 預設只在有未讀時現身；小工具「貓頭鷹常駐」打開則一直在（即使全已讀／無通知）。
   if (!unread && !owlAlways()) { wrap.style.display = 'none'; if (pop) { pop.hidden = true; pop.innerHTML = ''; } return; }
   wrap.style.display = 'block';
   pop.hidden = true;
-  if (!items.length) { pop.innerHTML = `<p class="fav-pop-empty">目前沒有新通知</p>`; return; }
-  pop.innerHTML = `<p class="fav-pop-title">通知</p>` + items.map(it => {
+  if (!_owlItems.length) { pop.innerHTML = `<p class="fav-pop-empty">目前沒有新通知</p>`; return; }
+  pop.innerHTML = `<p class="fav-pop-title">通知</p>` + _owlItems.map((it, i) => {
     const gold = it.kind === 'letter' || it.kind === 'wishreply';   // 主編來信、你的願望回音＝金點
     const dotClass = it.unread ? (gold ? 'fav-dot gold' : 'fav-dot') : 'fav-dot read';
     const cls = `fav-row${it.unread ? '' : ' read'}`;
+    // 叉叉用索引指到 _owlItems（key 可能含任意文字，不能塞進屬性）
     const inner = `<span class="${dotClass}"></span>`
       + `<span class="fav-row-main"><span class="fav-row-t">${escapeHtml(it.title)}</span>`
       + `<span class="fav-row-s">${escapeHtml(it.sub)}・${fmtUpdated(it.at)}</span></span>`
-      + `<span class="fav-row-x">›</span>`;
+      + `<button class="fav-row-del" data-onclick="dismissNotice(${i});return false" aria-label="移除這則通知">${ic('ic-x', 13)}</button>`;
     if (it.kind === 'letter') return `<a href="#" data-onclick="openEditorLetter();return false" class="${cls}">${inner}</a>`;
     if (it.kind === 'wishreply') return `<a href="#" data-onclick="wishReplyOpen('${it.id}');return false" class="${cls}">${inner}</a>`;
     return `<a href="#" data-onclick="favOwlOpen('${it.id}');return false" class="${cls}">${inner}</a>`;
   }).join('');
+}
+// 被叉掉的通知（key 清單，localStorage，最多留 100 筆舊紀錄）。
+// 願望回音的 key 含回覆簽章：之後回覆若有變動會換 key → 重新出現，不會漏掉新回應。
+let _owlItems = [];
+function _dismissedNotices() { try { return JSON.parse(localStorage.getItem('pd_dismissed_notices') || '[]'); } catch (e) { return []; } }
+function dismissNotice(i) {
+  const it = _owlItems[i]; if (!it) return;
+  const arr = _dismissedNotices();
+  if (!arr.includes(it.key)) arr.push(it.key);
+  try { localStorage.setItem('pd_dismissed_notices', JSON.stringify(arr.slice(-100))); } catch (e) {}
+  // 重畫後把浮層留在開啟狀態，讓使用者能連續清理；貓頭鷹若因此整個沒通知則收起。
+  renderFavUpdates().then(() => {
+    const w = document.getElementById('fav-owl-wrap'), p = document.getElementById('fav-owl-pop');
+    if (w && w.style.display !== 'none' && p && p.innerHTML) p.hidden = false;
+  });
 }
 function toggleFavOwl() { const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = !p.hidden; }
 function favOwlOpen(id) { const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true; _markInstallmentRead(id); openNovel(id); }
