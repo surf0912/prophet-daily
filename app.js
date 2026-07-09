@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.82';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.83';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -703,7 +703,7 @@ function dismissTourBanner() { markTourSeen(); renderTourBanner(); }
 // quotes[0]=早上  quotes[1]=中午  quotes[2]=下午  quotes[3]=晚上
 const CHARS = [
   {
-    name: 'Sean', emoji: '', img: './chars/sean_phone_2.JPG', imgs: ['./chars/sean_phone_1.JPG', './chars/sean_phone_2.JPG', './chars/sean_phone_3.JPG', './chars/sean_phone_4.JPG'], imgD: './chars/Sean_desktop_1.JPG', imgsD: ['./chars/Sean_desktop_1.JPG', './chars/sean_desktop_2.JPG'], bgPos: 'center 20%',
+    name: 'Sean', emoji: '', img: './chars/sean_phone_2.JPG', imgs: ['./chars/sean_phone_1.JPG', './chars/sean_phone_2.JPG', './chars/sean_phone_3.JPG', './chars/sean_phone_4.JPG', './chars/sean_phone_5.JPG'], imgD: './chars/Sean_desktop_1.JPG', imgsD: ['./chars/Sean_desktop_1.JPG', './chars/sean_desktop_2.JPG', './chars/sean_desktop_3.JPG'], bgPos: 'center 20%',
     quotes: [
       '早上好，今天也很漂亮。別懷疑，我說的是事實。',
       '中午好。終於下課了？我可以把你借走一會兒嗎？',
@@ -751,9 +751,11 @@ const MORNING_COVERS = new Set([   // 早晨＆中午：一般日光/明亮
   './chars/silas_phone_5.JPG',   // 臥室柔和日光
   './chars/eli_phone_1.JPG',     // 水族箱：偏亮有日光
   './chars/eli_phone_2.JPG',     // 溫室陽光
+  './chars/sean_phone_5.JPG',    // 鬱金香花田＋風車、藍天大晴
   './chars/Silas_desktop_1.JPG', // 圖書館窗外日光（桌機）
   './chars/Eli_desktop_1.JPG',   // 教室窗光（桌機）
   './chars/eli_desktop_2.JPG',   // 溫室陽光（桌機）
+  './chars/sean_desktop_3.JPG',  // 鬱金香花田（桌機橫版）
 ]);
 const AFTERNOON_COVERS = new Set([ // 下午：日落/黃昏金色光
   './chars/sean_phone_4.JPG',    // 海邊日落
