@@ -1,5 +1,6 @@
-const CACHE_NAME = 'prophet-daily-v2.78';
+const CACHE_NAME = 'prophet-daily-v2.79';
 const ASSETS = [
+  './index.html',
   './styles.css',
   './app.js',
   './safe-events.js',
@@ -42,7 +43,17 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((c) => c.put(req, copy));
           return res;
         })
-        .catch(() => caches.match(req).then((c) => c || caches.match('./index.html')))
+        // Network failed (offline, flaky, or GitHub Pages blocked/throttled on some CN networks).
+        // Fall back through the cache, and ALWAYS end in a real Response — never resolve to null,
+        // or Safari throws "FetchEvent.respondWith received an error: Returned response is null"
+        // and the whole page fails to open instead of degrading gracefully.
+        .catch(() => caches.match(req)
+          .then((c) => c || caches.match('./index.html'))
+          .then((c) => c || caches.match('./'))
+          .then((c) => c || new Response(
+            '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>預言家日報</title></head><body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;background:#141019;color:#e7d9b8;font-family:-apple-system,\'PingFang TC\',sans-serif;line-height:1.8"><div><p>目前連線不穩，暫時打不開。</p><p style="font-size:14px;opacity:.7">請確認網路後重新整理。</p></div></body></html>',
+            { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+          )))
     );
     return;
   }
