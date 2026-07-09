@@ -53,7 +53,12 @@
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; overflow: hidden; overscroll-behavior: none; width: 100%; max-width: 100%; position: fixed; inset: 0; }
-    body { background: var(--chrome); color: var(--on-dark); touch-action: manipulation; }
+    body {
+      background: var(--chrome); color: var(--on-dark); touch-action: manipulation;
+      /* 圓體 UI 字：拉丁/數字→YuseiMagic、繁中→粉圓(HuninnUI)、簡體專屬字→糖圓(SimpRound)、最後系統。
+         之前 @font-face 有定義卻沒套用，全站掉回系統字；補回這行讓圓體真正生效。 */
+      font-family: 'YuseiMagic', 'HuninnUI', 'SimpRound', -apple-system, "PingFang TC", "PingFang SC", system-ui, sans-serif;
+    }
     /* Disable Safari/iOS double-tap-to-zoom everywhere (keeps scroll + pinch). */
     * { touch-action: manipulation; }
 
@@ -141,6 +146,14 @@
       line-height: 1.15;
     }
     .auth-logo .subtitle { color: var(--gold-lt); font-size: 13px; margin-top: 8px; letter-spacing: .14em; }
+    .auth-divider { display: flex; align-items: center; justify-content: center; gap: 11px; width: 62%; margin: 15px auto 0; color: var(--gold); opacity: .75; }
+    .auth-divider::before, .auth-divider::after { content: ''; height: 1px; flex: 1; }
+    .auth-divider::before { background: linear-gradient(90deg, transparent, var(--gold-lt)); }
+    .auth-divider::after { background: linear-gradient(90deg, var(--gold-lt), transparent); }
+    .auth-divider svg { width: 9px; height: 9px; flex: none; }
+    /* 從貓頭鷹通知跳到某則願望時的短暫金色高亮 */
+    .fb-focus { animation: fbFocus 2.4s ease both; border-radius: 6px; }
+    @keyframes fbFocus { 0% { background: rgba(201,168,76,.32); } 70% { background: rgba(201,168,76,.20); } 100% { background: transparent; } }
     .auth-tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid var(--gold); }
     .auth-tab {
       flex: 1; padding: 8px; text-align: center; cursor: pointer;

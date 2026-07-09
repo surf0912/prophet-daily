@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.87';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.88';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1095,7 +1095,7 @@ function _markWishReplyRead(id) {
 function wishReplyOpen(id) {
   const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true;
   _markWishReplyRead(id);
-  openWishPool();
+  openWishPool(id);   // 帶 id → 開許願池並跳到那一則願望
 }
 // ── 主編來信（單封更新公告）──────────────────────────────────────────
 // 換新一封時把 id 改掉即可：已讀狀態以 id 存 localStorage，每封只自動跳一次。
@@ -1204,11 +1204,13 @@ const FB_STATUS = {
 function isAdminUser() { return ['admin', 'super_admin'].includes(currentUser?.role); }
 
 let wishFilter = 'all';   // 'open' | 'done' | 'all'
-let _wishItems = [];
-function openWishPool() {
+let _wishItems = [], _wishFocusId = null;
+function openWishPool(focusId) {
   document.getElementById('wish-modal').classList.add('open');
   document.getElementById('wish-input').value=''; updateWishCount();
-  wishFilter = isAdminUser() ? 'open' : 'all';   // admins land on what still needs handling
+  _wishFocusId = (typeof focusId === 'string') ? focusId : null;
+  // 從貓頭鷹通知點進來 → 用「全部」確保那則願望一定顯示並跳到它；否則維持預設。
+  wishFilter = _wishFocusId ? 'all' : (isAdminUser() ? 'open' : 'all');
   loadFeedback('wish');
 }
 function setWishFilter(f) { wishFilter = f; renderWishFiltered(); }
@@ -1282,12 +1284,20 @@ function renderFeedbackList(kind, items) {
       ? badge
       : `<span>${escapeHtml(it.author || '讀者')}</span><span>${fmtUpdated(it.created_at)}</span>${badge}`;
     const meta = metaInner ? `<div style="font-size:11px;color:var(--ink-light);margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${metaInner}</div>` : '';
-    return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
+    return `<div id="fb-item-${it.id}" style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
       <div style="display:flex;justify-content:space-between;gap:8px">
         <div style="font-size:14px;color:var(--ink);line-height:1.5;white-space:pre-wrap;flex:1">${escapeHtml(it.content)}</div>${del}
       </div>${meta}${reply}${adminRow}
     </div>`;
   }).join('');
+  // 從貓頭鷹通知跳轉：捲到那一則願望並短暫高亮。
+  if (kind === 'wish' && _wishFocusId) {
+    const target = _wishFocusId; _wishFocusId = null;
+    requestAnimationFrame(() => {
+      const el = document.getElementById('fb-item-' + target);
+      if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('fb-focus'); setTimeout(() => el.classList.remove('fb-focus'), 2400); }
+    });
+  }
 }
 
 async function submitFeedback(kind) {
