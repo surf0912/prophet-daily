@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.0';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.1';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -459,7 +459,7 @@ async function doInviteRegister() {
 
 // iOS 獨立模式：底部安全區(home indicator 那條)會被填上 meta theme-color。登入頁沒有導覽列蓋住，
 // 就會露出深色。登入頁設成「暗化羊皮紙」融入背景、登入後(導覽列蓋住)再設回深色。
-const LOGIN_THEME = '#5a4c38';
+const LOGIN_THEME = '#5D4B38';
 function setThemeColor(c) { const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', c); }
 function doLogout() {
   token = null; currentUser = null;

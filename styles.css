@@ -55,14 +55,14 @@
     html, body { height: 100%; overflow: hidden; overscroll-behavior: none; width: 100%; max-width: 100%; position: fixed; inset: 0; }
     /* 最底層也鋪同一張羊皮紙：html/body/#auth-overlay 三層一致，安全區露出哪一層都是羊皮紙 */
     html {
-      background-color: #2F2114;
+      background-color: #5D4B38;   /* ＝暗化羊皮紙的實際平均色，系統列取純色時與頁面融合 */
       background-image: linear-gradient(rgba(47,33,20,0.72), rgba(47,33,20,0.72)), url('./parchment.jpg');
       background-size: 100% 100%, cover; background-position: center, center;
     }
     body {
       /* 底色改成與登入頁一致的「暗化羊皮紙」，這樣 iOS 底部安全區露出 body 時，
          也是羊皮紙質感、不會變成 --chrome 深棕（被誤認成導覽列顏色）。登入後 #app 會蓋住 body，不受影響。 */
-      background-color: #2F2114;
+      background-color: #5D4B38;   /* ＝暗化羊皮紙的實際平均色，系統列取純色時與頁面融合 */
       background-image: linear-gradient(rgba(47,33,20,0.72), rgba(47,33,20,0.72)), url('./parchment.jpg');
       background-size: 100% 100%, cover; background-position: center, center;
       color: var(--on-dark); touch-action: manipulation;
@@ -130,7 +130,7 @@
          那條不會被鋪到，露出後面的底色。這樣羊皮紙才會真正鋪到最底。 */
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       height: 100vh; height: 100dvh;
-      background-color: #2F2114;
+      background-color: #5D4B38;   /* ＝暗化羊皮紙的實際平均色，系統列取純色時與頁面融合 */
       background-image: linear-gradient(rgba(47,33,20,0.72), rgba(47,33,20,0.72)), url('./parchment.jpg');
       background-size: 100% 100%, cover;
       background-position: center, center;
