@@ -439,13 +439,16 @@
     #reader-view, .reader-content { max-width: 100%; }
     .reader-content { touch-action: pan-y; }
     .reader-content { overflow-wrap: anywhere; word-break: break-word; }
+    /* 兩行式：上行＝返回＋標題＋收藏（長標題不再被工具擠成三四行）；下行＝字級/夜間工具 */
     .reader-header {
       position: sticky; top: 0; background: var(--chrome-dk); color: var(--gold);
-      padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px; display: flex; align-items: center; gap: 12px;
+      padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 8px;
       border-bottom: 1px solid var(--gold); z-index: 5;
     }
-    .reader-header > button { background: none; border: none; color: var(--gold); font-size: 22px; cursor: pointer; }
+    .reader-head-main { display: flex; align-items: center; gap: 12px; }
+    .reader-head-main > button { background: none; border: none; color: var(--gold); font-size: 22px; cursor: pointer; }
     .reader-header h3 { flex: 1; font-size: 15px; }
+    .reader-head-tools { display: flex; align-items: center; justify-content: flex-end; gap: 16px; margin-top: 8px; }
     .reader-font-ctrl { display: flex; align-items: center; gap: 8px; }
     .reader-font-ctrl button {
       background: rgba(201,168,76,.15); border: 1px solid var(--gold);

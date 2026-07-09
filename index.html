@@ -493,15 +493,19 @@
 <!-- Reader overlay -->
 <div id="reader-view">
   <div class="reader-header">
-    <button data-onclick="closeReader()" aria-label="返回" style="font-size:15px;display:flex;align-items:center;gap:3px;white-space:nowrap">‹&nbsp;返回</button>
-    <h3 id="reader-title">—</h3>
-    <div class="reader-font-ctrl">
-      <button data-onclick="stepReaderFont(-1)" aria-label="縮小字體">A−</button>
-      <span id="reader-font-label">15</span>
-      <button data-onclick="stepReaderFont(1)" aria-label="放大字體">A+</button>
+    <div class="reader-head-main">
+      <button data-onclick="closeReader()" aria-label="返回" style="font-size:15px;display:flex;align-items:center;gap:3px;white-space:nowrap">‹&nbsp;返回</button>
+      <h3 id="reader-title">—</h3>
+      <button id="reader-fav-btn" data-onclick="toggleReaderFavorite()" aria-label="收藏" style="display:none;background:none;border:none;color:var(--gold-lt);font-size:22px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0"><svg width="22" height="22" aria-hidden="true" style="display:block"><use href="#ic-starline"/></svg></button>
     </div>
-    <button id="reader-dark-btn" data-onclick="toggleReaderDark()" aria-label="夜間模式" style="background:none;border:none;color:var(--gold-lt);font-size:19px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0"><svg width="19" height="19" aria-hidden="true" style="display:block"><use href="#ic-moon"/></svg></button>
-    <button id="reader-fav-btn" data-onclick="toggleReaderFavorite()" aria-label="收藏" style="display:none;background:none;border:none;color:var(--gold-lt);font-size:22px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0"><svg width="22" height="22" aria-hidden="true" style="display:block"><use href="#ic-starline"/></svg></button>
+    <div class="reader-head-tools">
+      <div class="reader-font-ctrl">
+        <button data-onclick="stepReaderFont(-1)" aria-label="縮小字體">A−</button>
+        <span id="reader-font-label">15</span>
+        <button data-onclick="stepReaderFont(1)" aria-label="放大字體">A+</button>
+      </div>
+      <button id="reader-dark-btn" data-onclick="toggleReaderDark()" aria-label="夜間模式" style="background:none;border:none;color:var(--gold-lt);font-size:19px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0"><svg width="19" height="19" aria-hidden="true" style="display:block"><use href="#ic-moon"/></svg></button>
+    </div>
   </div>
   <div class="chapter-list-panel" id="reader-toc-panel">
     <details>

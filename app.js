@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.9';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.10';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1405,7 +1405,10 @@ function renderFeedbackList(kind, items) {
     const label = (FB_STATUS[kind][it.status] || '');
     const badge = it.status && it.status !== 'open'
       ? `<span style="font-size:11px;padding:1px 8px;border-radius:9px;background:rgba(45,74,30,.15);color:var(--series)">${label}</span>` : '';
-    const reply = it.admin_reply ? `<div style="font-size:12px;color:var(--accent);margin-top:5px;padding-left:8px;border-left:2px solid var(--gold-lt)">${ic('ic-megaphone',12)} ${escapeHtml(it.admin_reply)}</div>` : '';
+    // 多重回覆：完整串在 replies；沒有 replies 欄位的舊資料退回單則 admin_reply
+    const _rs = (Array.isArray(it.replies) && it.replies.length) ? it.replies
+      : ((it.admin_reply || '').trim() ? [{ t: it.admin_reply }] : []);
+    const reply = _rs.map(r => `<div style="font-size:12px;color:var(--accent);margin-top:5px;padding-left:8px;border-left:2px solid var(--gold-lt)">${ic('ic-megaphone',12)} ${escapeHtml(r.t || '')}</div>`).join('');
     const _statusKeys = admin ? Object.keys(FB_STATUS[kind]) : (wishReplier ? ['considering'] : []);
     const statusBtns = _statusKeys.map(s =>
       `<button data-onclick="setFeedbackStatus('${it.id}','${kind}','${s}')" style="font-size:11px;padding:2px 7px;border:1px solid var(--gold-lt);background:${it.status===s?'var(--scarlet)':'none'};color:${it.status===s?'var(--on-dark)':'var(--ink-light)'};border-radius:10px;cursor:pointer">${FB_STATUS[kind][s].replace(/^[^\s]+\s/, '')}</button>`).join('');
