@@ -498,6 +498,21 @@
   </nav>
 </div>
 
+<!-- 月末讀報回顧 -->
+<div id="recap-card" class="el-overlay" style="display:none" data-onclick="dismissRecap()">
+  <div class="el-card" data-onclick="event.stopPropagation()">
+    <div class="el-letter">
+      <div class="el-title">月末讀報回顧</div>
+      <div class="el-rule"><span></span><i>✦</i><span></span></div>
+      <div id="recap-body" style="font-family:-apple-system,system-ui,sans-serif;font-size:12.5px;color:#2b2018;line-height:1.8"></div>
+      <div class="el-foot" style="margin-top:10px">新的一月，也請多指教。<span class="el-sign">—— 主編</span></div>
+      <div class="el-btns">
+        <button class="el-btn-solid" data-onclick="dismissRecap()">知道了</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Reader overlay -->
 <div id="reader-view">
   <div class="reader-header">

@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.13';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.14';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -521,6 +521,16 @@ function pushClientState(delta) {
   if (!token) return;
   try { api('/auth/me/client-state', { method: 'PATCH', body: JSON.stringify(delta) }).catch(() => {}); } catch (e) {}
 }
+let _readingPushT = null;
+function _pushReadingNow() {
+  try {
+    const raw = localStorage.getItem('pd_last_read'); if (!raw) return;
+    const p = JSON.parse(raw); p.at = Date.now();
+    localStorage.setItem('pd_last_read', JSON.stringify(p));
+    pushClientState({ reading: p });
+  } catch (e) {}
+}
+function _pushReadingSoon() { clearTimeout(_readingPushT); _readingPushT = setTimeout(_pushReadingNow, 1500); }
 function syncClientState() {
   const cs = (currentUser && currentUser.client_state) || {};
   const delta = {};
@@ -555,6 +565,14 @@ function syncClientState() {
   } else if (localStorage.getItem('pd_install_hint') === '1' && cs.install_hint !== 'dismissed') {
     delta.install_hint = 'dismissed';
   }
+  // 續讀進度：兩邊取較新的一份（手機讀到哪、電腦接著讀）
+  try {
+    const localR = JSON.parse(localStorage.getItem('pd_last_read') || 'null');
+    const serverR = cs.reading || null;
+    const lAt = (localR && localR.at) || 0, sAt = (serverR && serverR.at) || 0;
+    if (serverR && sAt > lAt) localStorage.setItem('pd_last_read', JSON.stringify(serverR));
+    else if (localR && lAt > sAt) delta.reading = localR;
+  } catch (e) {}
   // 語言選擇：伺服器有值且與本機不同 → 套用並重載（一次性）；伺服器沒有而本機有 → 推上去
   const localScript = localStorage.getItem('pd_script');
   let needReload = false;
@@ -612,6 +630,7 @@ async function initApp() {
   renderTourBanner();
   renderInstallHint();   // persistent home prompt for anyone not yet onboarded
   setTimeout(maybeShowEditorLetter, 700);   // 主編來信：登入後跳一次（已看過導覽的人才跳，不與新手導覽撞窗）
+  setTimeout(maybeShowMonthlyRecap, 1600);  // 月末讀報回顧：每月第一次開啟時回顧上月（不與主編來信撞窗）
   // Run the first-time tour only AFTER the shelf finishes loading — i.e. once the
   // backend is awake and the 喚醒中 overlay is gone — so it isn't shown over (and
   // accidentally dismissed during) a cold start. .catch keeps the chain alive even if
@@ -1179,9 +1198,12 @@ async function renderFavUpdates() {
   if (ld && ld.getTime() >= cutoff) {
     items.push({ kind: 'letter', key: `letter:${EDITOR_LETTER.id}`, title: '主編來信', sub: '本期更新與最新版本', at: EDITOR_LETTER.date, unread: !editorLetterSeen() });
   }
-  if (favIds && favIds.size) {
-    let all = null;
+  const _writerPlus = currentUser && ['writer', 'admin', 'super_admin'].includes(currentUser.role);
+  let all = null;
+  if ((favIds && favIds.size) || _writerPlus) {
     try { all = await api('/novels/') || []; } catch (e) { all = null; }
+  }
+  if (favIds && favIds.size) {
     if (all) {
       const since = new Map();   // 系列 → 追蹤起點（最早收藏時間）
       all.forEach(n => {
@@ -1196,7 +1218,26 @@ async function renderFavUpdates() {
           items.push({ kind: 'work', id: n.id, key: `work:${n.id}`, title: `系列《${n.series}》新作品`, sub: n.title, at: n.created_at, unread: !read.has(n.id) });
         }
       });
+      // 直接收藏的作品加了新章節 → 通知（key 含時間戳：之後再更新會再次通知）
+      all.forEach(n => {
+        if (!n.last_chapter_at || !favIds.has(n.id)) return;
+        const ft = favTimes.get(n.id); if (!ft) return;
+        const t = new Date(n.last_chapter_at).getTime();
+        if (isNaN(t) || t <= new Date(ft).getTime() || t < cutoff) return;
+        const k = `chap:${n.id}:${n.last_chapter_at}`;
+        items.push({ kind: 'chap', id: n.id, key: k, readKey: k, title: '追蹤的作品有新章節', sub: n.title, at: n.last_chapter_at, unread: !read.has(k) });
+      });
     }
+  }
+  // 自己的作品審核刊出（執筆人以上）
+  if (all && _writerPlus) {
+    all.forEach(n => {
+      if (!n.approved_at || !(n.owners || []).includes(currentUser.id)) return;
+      const t = new Date(n.approved_at).getTime();
+      if (isNaN(t) || t < cutoff) return;
+      const k = `pub:${n.id}`;
+      items.push({ kind: 'pub', id: n.id, key: k, readKey: k, title: '你的作品已刊出', sub: n.title, at: n.approved_at, unread: !read.has(k) });
+    });
   }
   // 許願池：我自己的願望被回應（文字回覆 或 狀態變動）→ 通知
   try { favWishReplies = await api('/feedback/my-wish-replies') || []; } catch (e) { favWishReplies = []; }
@@ -1221,7 +1262,7 @@ async function renderFavUpdates() {
   pop.hidden = true;
   if (!_owlItems.length) { pop.innerHTML = `<p class="fav-pop-empty">目前沒有新通知</p>`; return; }
   pop.innerHTML = `<p class="fav-pop-title">通知</p>` + _owlItems.map((it, i) => {
-    const gold = it.kind === 'letter' || it.kind === 'wishreply';   // 主編來信、你的願望回音＝金點
+    const gold = it.kind === 'letter' || it.kind === 'wishreply' || it.kind === 'pub';   // 個人信件類＝金點
     const dotClass = it.unread ? (gold ? 'fav-dot gold' : 'fav-dot') : 'fav-dot read';
     const cls = `fav-row${it.unread ? '' : ' read'}`;
     // 叉叉用索引指到 _owlItems（key 可能含任意文字，不能塞進屬性）
@@ -1230,6 +1271,7 @@ async function renderFavUpdates() {
       + `<span class="fav-row-s">${escapeHtml(it.sub)}・${fmtUpdated(it.at)}</span></span>`
       + `<button class="fav-row-del" data-onclick="dismissNotice(${i});return false" aria-label="移除這則通知">${ic('ic-x', 13)}</button>`;
     if (it.kind === 'letter') return `<a href="#" data-onclick="openEditorLetter();return false" class="${cls}">${inner}</a>`;
+    if (it.kind === 'chap' || it.kind === 'pub') return `<a href="#" data-onclick="owlOpenIdx(${i});return false" class="${cls}">${inner}</a>`;
     if (it.kind === 'wishreply') return `<a href="#" data-onclick="wishReplyOpen('${it.id}');return false" class="${cls}">${inner}</a>`;
     return `<a href="#" data-onclick="favOwlOpen('${it.id}');return false" class="${cls}">${inner}</a>`;
   }).join('');
@@ -1251,6 +1293,12 @@ function dismissNotice(i) {
   });
 }
 function toggleFavOwl() { const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = !p.hidden; }
+function owlOpenIdx(i) {   // 章節更新/作品刊出：標記已讀（帶前綴 key）並打開作品
+  const it = _owlItems[i]; if (!it) return;
+  const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true;
+  if (it.readKey) _markInstallmentRead(it.readKey);
+  openNovel(it.id);
+}
 function favOwlOpen(id) { const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true; _markInstallmentRead(id); openNovel(id); }
 // 許願回音的已讀狀態：以「status＋回覆內容」當簽章，回覆有變動就再次變未讀。
 function _readWishReplies() { try { return JSON.parse(localStorage.getItem('pd_read_wishreplies') || '{}'); } catch (e) { return {}; } }
@@ -1302,6 +1350,31 @@ function letterUpdateOnce() {
   markEditorLetterSeen();
   updateToLatest();   // 清快取＋重載，拿最新一期
 }
+// ── 月末讀報回顧：每月第一次打開時回顧上一個月；帳號級只跳一次，上月沒讀就靜靜略過 ──
+async function maybeShowMonthlyRecap() {
+  if (!currentUser) return;
+  if (!editorLetterSeen()) return;   // 主編來信優先，回顧留到下次開啟
+  const now = new Date();
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const key = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+  const cs = (currentUser && currentUser.client_state) || {};
+  if (cs.recap_seen === key || localStorage.getItem('pd_recap_seen') === key) return;
+  let r = null;
+  try { r = await api('/auth/me/monthly-recap'); } catch (e) { return; }
+  const markSeen = () => { try { localStorage.setItem('pd_recap_seen', key); } catch (e) {} pushClientState({ recap_seen: key }); };
+  if (!r || r.month !== key || !r.reads) { markSeen(); return; }
+  const zh = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
+  let charPart = '';
+  if (r.top_char) {
+    const c = (typeof CHAR_LIST !== 'undefined' ? CHAR_LIST : []).find(x => x.code === r.top_char);
+    if (c && c.name) charPart = `，最常相遇的是 ${c.name}`;
+  }
+  const body = document.getElementById('recap-body');
+  if (body) body.textContent = `${zh[prev.getMonth()]}月，你翻開日報 ${r.active_days} 天，讀過 ${r.works} 篇作品${charPart}。`;
+  const m = document.getElementById('recap-card'); if (m) m.style.display = 'flex';
+  markSeen();
+}
+function dismissRecap() { const m = document.getElementById('recap-card'); if (m) m.style.display = 'none'; }
 function dismissEditorLetter() {
   markEditorLetterSeen();
   const m = document.getElementById('editor-letter'); if (m) m.style.display = 'none';
@@ -2244,8 +2317,10 @@ async function loadChapter(idx) {
       chapterIdx: idx, chapterId: ch.id, chapterCount: currentChapters.length,
       chapterTitle: ch.title || `第 ${ch.chapter_num} 章`,
       scrollTop: Math.round(rv.scrollTop),
+      at: Date.now(),
     }));
     renderContinueBar();
+    _pushReadingSoon();   // 續讀進度回寫帳號（防抖）
   }
 }
 
@@ -2352,7 +2427,10 @@ function navigateChapter(dir) {
   if (next >= 0 && next < currentChapters.length) loadChapter(next);
 }
 
-function closeReader() { document.getElementById('reader-view').classList.remove('open'); }
+function closeReader() {
+  document.getElementById('reader-view').classList.remove('open');
+  _pushReadingNow();   // 離開閱讀器＝把最新進度（含捲動位置）回寫帳號
+}
 
 // ── Forum ────────────────────────────────────────────────────
 let forumPosts = [];
