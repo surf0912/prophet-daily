@@ -133,7 +133,6 @@
     .auth-box {
       width: calc(100% - 32px); max-width: 400px; padding: 36px 28px;
       background: rgba(47,33,20,0.82);
-      border: 1px solid var(--gold);
       border-radius: 6px;
       position: relative;
     }
@@ -145,6 +144,10 @@
       .btn-primary { padding: 16px; font-size: 17px; }
     }
     .auth-logo { text-align: center; margin-bottom: 28px; padding-top: 32px; }
+    .auth-icon {
+      display: block; width: 140px; height: auto; margin: 0 auto 6px;
+    }
+    @media (min-width: 640px) { .auth-icon { width: 170px; } }
     .auth-logo h1 {
       color: var(--gold); letter-spacing: .06em;
       font-size: clamp(32px, 6vw, 60px); font-weight: 400;
@@ -169,11 +172,13 @@
     .field { margin-bottom: 20px; }
     .field label { display: block; font-size: 12px; color: var(--gold); margin-bottom: 8px; letter-spacing: .06em; }
     .field input {
-      width: 100%; padding: 10px 12px; background: rgba(255,255,255,.07);
-      border: 1px solid rgba(201,168,76,.4); border-radius: 3px;
-      color: var(--on-dark); font-size: 15px; outline: none;
+      width: 100%; padding: 12px 14px; background: #ede0c0;
+      border: 1px solid rgba(201,168,76,.55); border-radius: 10px;
+      color: var(--ink); font-size: 15px; outline: none;
     }
+    .field input::placeholder { color: #9a8560; }
     .field input:focus { border-color: var(--gold); }
+    #auth-overlay .btn-primary { border-radius: 10px; }
     .btn-primary {
       width: 100%; padding: 12px; background: var(--scarlet);
       border: 1px solid var(--scarlet-dk); border-radius: 3px;
