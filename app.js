@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.14';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.15';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -318,6 +318,9 @@ function shakeMsg(text) {
   el.classList.remove('shake');
   void el.offsetWidth;        // force reflow so the animation replays on repeat clicks
   el.classList.add('shake');
+  // 從 GitHub Pages 開啟且登入出錯 → 提示鏡像入口（部分地區 Pages 不穩，鏡像走 Render）
+  const mh = document.getElementById('mirror-hint');
+  if (mh && location.hostname === 'surf0912.github.io') mh.style.display = '';
 }
 
 async function doSignIn() {
@@ -919,6 +922,9 @@ const MORNING_COVERS = new Set([   // 早晨＆中午：一般日光/明亮
   './chars/eli_phone_2.JPG',     // 溫室陽光
   './chars/eli_phone_5.JPG',     // 溫室日光（照料植物）
   './chars/sean_phone_5.JPG',    // 鬱金香花田＋風車、藍天大晴
+  './chars/adrian_phone_1.JPG',  // 水族箱（使用者指定白天）
+  './chars/silas_phone_1.JPG',   // 水族箱（使用者指定白天）
+  './chars/silas_phone_9.JPG',   // 正氣師辦公室（使用者指定白天）
   './chars/Silas_desktop_1.JPG', // 圖書館窗外日光（桌機）
   './chars/Eli_desktop_1.JPG',   // 教室窗光（桌機）
   './chars/eli_desktop_2.JPG',   // 溫室陽光（桌機）
@@ -928,6 +934,8 @@ const AFTERNOON_COVERS = new Set([ // 下午：日落/黃昏金色光
   './chars/sean_phone_6.JPG',    // 海邊日落（原 phone_4 改號）
   './chars/silas_phone_4.JPG',   // 金色逆光/黃昏
   './chars/adrian_phone_3.JPG',  // 佛羅倫斯日落
+  './chars/silas_phone_2.JPG',   // 水晶球燭光（使用者指定下午）
+  './chars/sean_phone_2.JPG',    // 書桌燭光（使用者指定下午）
   './chars/adrian_desktop_3.JPG',// 佛羅倫斯日落（桌機橫版）
 ]);
 // 傳回某封面的時段：am=早晨中午、pm=下午、night=夜晚(預設)。
