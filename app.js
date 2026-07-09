@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.77';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.78';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -740,26 +740,29 @@ const CHARS = [
   },
 ];
 
-// ── 心動封面「日／夜」分類 ─────────────────────────────────────────────────
-// 判準：圖裡有陽光(直射日光/日照氛圍)＝白天；無陽光(室內/暗水族箱/夜景/燭光)＝默認夜晚。
-// 只列「白天」的；不在此集合的一律當夜晚。首頁 06:00–18:00 只抽白天、其餘只抽夜晚(見 renderGreeting)。
-const DAY_COVERS = new Set([
-  // 手機封面(8)
+// ── 心動封面時段分類（早晨＆中午 / 下午 / 夜晚）─────────────────────────────
+// 判準：有陽光的白天圖再依光線細分——一般日光/明亮＝早晨＆中午；日落/黃昏金色光＝下午；
+// 無陽光(室內/暗水族箱/夜景/燭光)一律默認夜晚(不在下面兩集合的都算夜晚)。
+// 首頁時段：06:00–14:30 早晨＆中午、14:30–18:00 下午、其餘夜晚(見 renderGreeting)。
+const MORNING_COVERS = new Set([   // 早晨＆中午：一般日光/明亮
   './chars/sean_phone_1.JPG',    // 水族箱：水面透亮、有日光
   './chars/sean_phone_3.JPG',    // 雨天陰天日光
-  './chars/sean_phone_4.JPG',    // 海邊日落
   './chars/silas_phone_3.JPG',   // 窗邊明亮日光
-  './chars/silas_phone_4.JPG',   // 金色逆光/黃昏
   './chars/silas_phone_5.JPG',   // 臥室柔和日光
   './chars/eli_phone_1.JPG',     // 水族箱：偏亮有日光
   './chars/eli_phone_2.JPG',     // 溫室陽光
+  './chars/Silas_desktop_1.JPG', // 圖書館窗外日光（桌機）
+  './chars/Eli_desktop_1.JPG',   // 教室窗光（桌機）
+  './chars/eli_desktop_2.JPG',   // 溫室陽光（桌機）
+]);
+const AFTERNOON_COVERS = new Set([ // 下午：日落/黃昏金色光
+  './chars/sean_phone_4.JPG',    // 海邊日落
+  './chars/silas_phone_4.JPG',   // 金色逆光/黃昏
   './chars/adrian_phone_3.JPG',  // 佛羅倫斯日落
-  // 桌機封面(4；其餘桌機為室內燭光/夜景，默認夜晚)
-  './chars/Silas_desktop_1.JPG', // 圖書館窗外日光
-  './chars/Eli_desktop_1.JPG',   // 教室窗光
-  './chars/eli_desktop_2.JPG',   // 溫室陽光
   './chars/adrian_desktop_3.JPG',// 佛羅倫斯日落（桌機橫版）
 ]);
+// 傳回某封面的時段：am=早晨中午、pm=下午、night=夜晚(預設)。
+function coverSlot(img) { return MORNING_COVERS.has(img) ? 'am' : AFTERNOON_COVERS.has(img) ? 'pm' : 'night'; }
 
 // ── 角色設定頁 (beta) — 基本資料 + GitHub 圖庫。bio / gallery 由站長填寫；gallery 留空時自動用封面圖。
 const CHAR_PROFILE = {
@@ -889,10 +892,11 @@ function renderGreeting() {
   let selected = [];
   CHARS.forEach(c => photosOf(c).forEach(img => { if (!excluded.has(img)) selected.push({ char: c, img }); }));
   if (!selected.length) CHARS.forEach(c => photosOf(c).forEach(img => selected.push({ char: c, img })));
-  // 日夜門檻：06:00–18:00 只抽白天封面，其餘只抽夜晚(無陽光者默認夜晚，見 DAY_COVERS)。
-  const wantDay = h >= 6 && h < 18;
-  let pool = selected.filter(x => DAY_COVERS.has(x.img) === wantDay);
-  // 保底：使用者的選取在當前時段沒有任何圖 → 忽略日夜，改在他選的那幾張裡隨機輪轉(不留白)。
+  // 時段門檻：06:00–14:30 早晨＆中午(am)、14:30–18:00 下午(pm)、其餘夜晚(night；無陽光者默認夜晚)。
+  const mins = h * 60 + new Date().getMinutes();
+  const slot = (mins >= 360 && mins < 870) ? 'am' : (mins >= 870 && mins < 1080) ? 'pm' : 'night';
+  let pool = selected.filter(x => coverSlot(x.img) === slot);
+  // 保底：使用者的選取在當前時段沒有任何圖 → 忽略時段，改在他選的那幾張裡隨機輪轉(不留白)。
   if (!pool.length) pool = selected;
   const pick = pool[Math.floor(Math.random() * pool.length)] || { char: CHARS[0], img: CHARS[0].img };
   const char = pick.char;
