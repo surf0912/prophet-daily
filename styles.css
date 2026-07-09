@@ -70,6 +70,9 @@
          之前 @font-face 有定義卻沒套用，全站掉回系統字；補回這行讓圓體真正生效。 */
       font-family: 'YuseiMagic', 'HuninnUI', 'SimpRound', -apple-system, "PingFang TC", "PingFang SC", system-ui, sans-serif;
     }
+    /* 登入後（in-app）：底層切回原本的深棕，羊皮紙色只屬於登入頁。
+       頂部時間列與導覽列下方的安全區於是恢復 --chrome。 */
+    html.in-app, body.in-app { background: var(--chrome); }
     /* Disable Safari/iOS double-tap-to-zoom everywhere (keeps scroll + pinch). */
     * { touch-action: manipulation; }
 
@@ -120,7 +123,7 @@
     .page:not(#page-home) { zoom: var(--app-zoom, 1); }
     /* No horizontal swipe on any of our own pages (the 防窺 iframe keeps its own gestures). */
     .page:not(#page-protect), .page:not(#page-protect) * { touch-action: pan-y; }
-    #page-home { display: none; flex-direction: column; padding: var(--safe-top) 0 0; min-height: unset; height: 100%; overflow: hidden; }
+    #page-home { display: none; flex-direction: column; padding: var(--safe-top) 0 0; min-height: unset; height: 100%; overflow: hidden; background: var(--chrome); }   /* 頂部時間列＝深棕 */
     #page-home.active { display: flex; }
     #page-home .greeting-hero { flex: 1; max-height: unset; aspect-ratio: unset; }
 

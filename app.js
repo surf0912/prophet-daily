@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.2';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.3';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -468,6 +468,7 @@ function doLogout() {
   document.getElementById('auth-overlay').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   setThemeColor(LOGIN_THEME);
+  document.documentElement.classList.remove('in-app'); document.body.classList.remove('in-app');   // 底層回羊皮紙（登入頁專屬）
   showLoginForm();
 }
 
@@ -483,6 +484,7 @@ async function initApp() {
   document.getElementById('auth-overlay').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   setThemeColor('#1a0a00');   // 進 App：導覽列蓋住底部，theme-color 設回深色
+  document.documentElement.classList.add('in-app'); document.body.classList.add('in-app');   // 底層切回 --chrome（頂部時間列/導覽列下方＝原本深棕）
   // Reset role-based UI on every login (accounts can switch in-place without a page reload).
   const staff = ['writer', 'admin', 'super_admin'].includes(currentUser.role);
   const adminish = ['admin', 'super_admin'].includes(currentUser.role);
