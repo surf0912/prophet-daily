@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.11';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.12';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -549,6 +549,12 @@ function syncClientState() {
   const dUp = localD.filter(x => !serverD.includes(x));
   if (dUp.length) delta.dismissed_add = dUp;
   try { localStorage.setItem('pd_dismissed_notices', JSON.stringify([...new Set([...serverD, ...localD])].slice(-100))); } catch (e) {}
+  // 加入主畫面引導卡：「知道了」為帳號級
+  if (cs.install_hint === 'dismissed' && localStorage.getItem('pd_install_hint') !== '1') {
+    try { localStorage.setItem('pd_install_hint', '1'); } catch (e) {}
+  } else if (localStorage.getItem('pd_install_hint') === '1' && cs.install_hint !== 'dismissed') {
+    delta.install_hint = 'dismissed';
+  }
   // 語言選擇：伺服器有值且與本機不同 → 套用並重載（一次性）；伺服器沒有而本機有 → 推上去
   const localScript = localStorage.getItem('pd_script');
   let needReload = false;
@@ -603,7 +609,8 @@ async function initApp() {
   loadAppSettings();   // 全域設定（通知保留天數等）→ 載入後重算貓頭鷹
   renderSettings();
   renderGreeting();
-  renderTourBanner();   // persistent home prompt for anyone not yet onboarded
+  renderTourBanner();
+  renderInstallHint();   // persistent home prompt for anyone not yet onboarded
   setTimeout(maybeShowEditorLetter, 700);   // 主編來信：登入後跳一次（已看過導覽的人才跳，不與新手導覽撞窗）
   // Run the first-time tour only AFTER the shelf finishes loading — i.e. once the
   // backend is awake and the 喚醒中 overlay is gone — so it isn't shown over (and
@@ -798,6 +805,7 @@ function endTour(markSeen) {
   if (markSeen) markTourSeen();
   showPage('home', document.querySelector('[data-tour="nav-home"]'));
   renderTourBanner();
+  renderInstallHint();
 }
 
 // Persistent home prompt — the reliable entry point that can't be missed/consumed.
@@ -807,6 +815,36 @@ function renderTourBanner() {
   b.style.display = (currentUser && ['reader', 'writer'].includes(currentUser.role) && !tourSeen()) ? 'block' : 'none';
 }
 function dismissTourBanner() { markTourSeen(); renderTourBanner(); }
+
+// ── 「加入主畫面」引導卡（心動頁）───────────────────────────────────────────
+// 只在瀏覽器模式出現（已加入主畫面永遠看不到）；iOS 給分步說明、Android 給一鍵安裝。
+// 「知道了」跟帳號同步（client_state.install_hint）——全帳號只提醒一次。
+let _bipEvent = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); _bipEvent = e; renderInstallHint(); });
+function _isStandalone() { return navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches); }
+function renderInstallHint() {
+  const el = document.getElementById('install-hint'); if (!el) return;
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const show = currentUser && !_isStandalone() && localStorage.getItem('pd_install_hint') !== '1' && (isIOS || !!_bipEvent);
+  el.style.display = show ? 'block' : 'none';
+  if (!show) return;
+  const go = document.getElementById('install-hint-go');
+  if (go) go.style.display = _bipEvent ? '' : 'none';
+  if (_bipEvent) {
+    const b = document.getElementById('install-hint-body');
+    if (b) b.textContent = '一鍵安裝，之後像 App 一樣從主畫面翻開——全螢幕、更快，貓頭鷹也在。';
+  }
+}
+function dismissInstallHint() {
+  try { localStorage.setItem('pd_install_hint', '1'); } catch (e) {}
+  pushClientState({ install_hint: 'dismissed' });
+  renderInstallHint();
+}
+function installPwaNow() {
+  const ev = _bipEvent; _bipEvent = null;
+  if (ev) ev.prompt();
+  dismissInstallHint();
+}
 
 // ── Home ─────────────────────────────────────────────────────
 // quotes[0]=早上  quotes[1]=中午  quotes[2]=下午  quotes[3]=晚上
@@ -1240,6 +1278,7 @@ const EDITOR_LETTER = {
     '通知可以整理了：輕點叉號即可送走一則，最多保留五則。',
     '新增「語言選擇」：檔案 → 閱讀偏好，可在原文、繁體、簡體之間切換。',
     '心動封面大批上新。',
+    '讀報最好的方式：用 Safari 開啟本站，點「分享」、選「加入主畫面」——之後像 App 一樣一鍵翻開。',
   ],
   closing: '版本更新至 v3.11。',
 };

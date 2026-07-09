@@ -159,6 +159,14 @@
           <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="dismissTourBanner()">先略過</button>
         </div>
       </div>
+      <div id="install-hint" style="display:none;margin:14px 18px;padding:14px 16px;background:var(--parchment2);border:1.5px solid var(--gold);border-radius:12px">
+        <div style="font-size:14px;color:var(--ink);font-weight:bold;margin-bottom:6px">把日報放進口袋</div>
+        <div id="install-hint-body" style="font-size:13px;color:var(--ink-light);line-height:1.7">用 Safari 開啟本站 → 點下方<b>分享</b>鈕 → 選「<b>加入主畫面</b>」——之後像 App 一樣一鍵翻開，全螢幕、更快，貓頭鷹也在。</div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button id="install-hint-go" class="btn-primary" style="flex:1;padding:10px;font-size:13px;display:none" data-onclick="installPwaNow()">安裝</button>
+          <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="dismissInstallHint()">知道了</button>
+        </div>
+      </div>
     </div>
 
     <!-- SCROLL 卷軸 -->
