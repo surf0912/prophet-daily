@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.7';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.8';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -462,43 +462,46 @@ async function doInviteRegister() {
 const LOGIN_THEME = '#5D4B38';
 function setThemeColor(c) { const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', c); }
 
-// ── 簡/繁 文字偏好（檔案 → 閱讀偏好 → 文字）────────────────────────────────
-// 原始碼（介面與作品）一律繁體；使用者選「簡體」時才用 zhconv.js 的繁→簡字表逐字轉換。
-// 繁→簡是多對一，逐字轉幾乎不會錯字；反向（簡→繁）才有一對多的錯字問題，所以永遠不做反向。
-let uiScript = localStorage.getItem('pd_script') === 'sc' ? 'sc' : 'tc';
+// ── 語言選擇（檔案 → 閱讀偏好）──────────────────────────────────────────────
+// 三檔：orig 原文（預設）＝介面繁體、內文照作者原樣，完全不轉換；
+//       tc 繁體＝全站含內文轉繁（站內不少文章以簡體撰寫；scToTc＋S2T_FIX 修正表）；
+//       sc 簡體＝全站含內文轉簡（tcToSc，多對一幾乎不錯字）。
+// 繁體原文經 scToTc 是恆等（字表鍵都是簡體字），所以 tc 模式不會動到本來就是繁體的文字。
+let uiScript = ['tc', 'sc'].includes(localStorage.getItem('pd_script')) ? localStorage.getItem('pd_script') : 'orig';
+const _zhConv = uiScript === 'sc' ? (s => tcToSc(s)) : (s => scToTc(s));
 function setUiScript(v) {
-  localStorage.setItem('pd_script', v === 'sc' ? 'sc' : 'tc');
-  // reload：整個 UI 從繁體原始碼重新渲染再轉換，避免在已轉換的文字上反覆原地轉換。
+  localStorage.setItem('pd_script', ['tc', 'sc'].includes(v) ? v : 'orig');
+  // reload：整個 UI 從原始碼重新渲染再轉換，避免在已轉換的文字上反覆原地轉換。
   location.reload();
 }
-// 把 root 底下所有文字節點（含 placeholder/title/aria-label）轉成簡體。
+// 把 root 底下所有文字節點（含 placeholder/title/aria-label）轉成目前選擇的字體。
 function zhConvertTree(root) {
   if (!root) return;
-  if (root.nodeType === 3) { const v = tcToSc(root.nodeValue); if (v !== root.nodeValue) root.nodeValue = v; return; }
+  if (root.nodeType === 3) { const v = _zhConv(root.nodeValue); if (v !== root.nodeValue) root.nodeValue = v; return; }
   if (root.nodeType !== 1) return;
   const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   while (w.nextNode()) {
     const n = w.currentNode;
-    const v = tcToSc(n.nodeValue);
+    const v = _zhConv(n.nodeValue);
     if (v !== n.nodeValue) n.nodeValue = v;
   }
   const els = [root, ...root.querySelectorAll('[placeholder],[title],[aria-label]')];
   for (const el of els) {
     for (const a of ['placeholder', 'title', 'aria-label']) {
       const v = el.getAttribute && el.getAttribute(a);
-      if (v) { const c = tcToSc(v); if (c !== v) el.setAttribute(a, c); }
+      if (v) { const c = _zhConv(v); if (c !== v) el.setAttribute(a, c); }
     }
   }
 }
-// 簡體模式：先整棵轉一次，之後任何新渲染（頁面切換、toast、彈窗、章節內容）由 observer 接手。
-// 只在文字真的有變時才寫回，observer 不會自己觸發自己。
-if (uiScript === 'sc') {
-  document.documentElement.lang = 'zh-CN';
+// 轉換模式（tc/sc）：先整棵轉一次，之後任何新渲染（頁面切換、toast、彈窗、章節內容）由 observer 接手。
+// 只在文字真的有變時才寫回，observer 不會自己觸發自己。orig 完全不掛 observer。
+if (uiScript !== 'orig') {
+  if (uiScript === 'sc') document.documentElement.lang = 'zh-CN';
   const start = () => {
     zhConvertTree(document.body);
     new MutationObserver(muts => {
       for (const m of muts) {
-        if (m.type === 'characterData') { const v = tcToSc(m.target.nodeValue); if (v !== m.target.nodeValue) m.target.nodeValue = v; }
+        if (m.type === 'characterData') { const v = _zhConv(m.target.nodeValue); if (v !== m.target.nodeValue) m.target.nodeValue = v; }
         else for (const n of m.addedNodes) zhConvertTree(n);
       }
     }).observe(document.body, { subtree: true, childList: true, characterData: true });
@@ -755,7 +758,7 @@ function dismissTourBanner() { markTourSeen(); renderTourBanner(); }
 // quotes[0]=早上  quotes[1]=中午  quotes[2]=下午  quotes[3]=晚上
 const CHARS = [
   {
-    name: 'Sean', emoji: '', img: './chars/sean_phone_2.JPG', imgs: ['./chars/sean_phone_1.JPG', './chars/sean_phone_2.JPG', './chars/sean_phone_3.JPG', './chars/sean_phone_4.JPG', './chars/sean_phone_5.JPG'], imgD: './chars/Sean_desktop_1.JPG', imgsD: ['./chars/Sean_desktop_1.JPG', './chars/sean_desktop_2.JPG', './chars/sean_desktop_3.JPG'], bgPos: 'center 20%',
+    name: 'Sean', emoji: '', img: './chars/sean_phone_2.JPG', imgs: ['./chars/sean_phone_1.JPG', './chars/sean_phone_2.JPG', './chars/sean_phone_3.JPG', './chars/sean_phone_4.JPG', './chars/sean_phone_5.JPG', './chars/sean_phone_6.JPG', './chars/sean_phone_7.JPG', './chars/sean_phone_8.JPG', './chars/sean_phone_10.JPG', './chars/sean_phone_11.JPG'], imgD: './chars/Sean_desktop_1.JPG', imgsD: ['./chars/Sean_desktop_1.JPG', './chars/sean_desktop_2.JPG', './chars/sean_desktop_3.JPG', './chars/sean_desktop_4.JPG'], bgPos: 'center 20%',
     quotes: [
       '早上好，今天也很漂亮。別懷疑，我說的是事實。',
       '中午好。終於下課了？我可以把你借走一會兒嗎？',
@@ -764,7 +767,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Silas', emoji: '', img: './chars/silas_phone_2.JPG', imgs: ['./chars/silas_phone_1.JPG', './chars/silas_phone_2.JPG', './chars/silas_phone_3.JPG', './chars/silas_phone_4.JPG', './chars/silas_phone_5.JPG', './chars/silas_phone_6.JPG'], imgD: './chars/Silas_desktop_1.JPG', imgsD: ['./chars/Silas_desktop_1.JPG', './chars/silas_desktop_2.JPG', './chars/silas_desktop_3.JPG'], bgPos: 'center top', bgPosDesktop: 'center 30%',
+    name: 'Silas', emoji: '', img: './chars/silas_phone_2.JPG', imgs: ['./chars/silas_phone_1.JPG', './chars/silas_phone_2.JPG', './chars/silas_phone_3.JPG', './chars/silas_phone_4.JPG', './chars/silas_phone_5.JPG', './chars/silas_phone_6.JPG', './chars/silas_phone_7.JPG', './chars/silas_phone_8.JPG', './chars/silas_phone_9.JPG', './chars/silas_phone_10.JPG', './chars/silas_phone_11.JPG'], imgD: './chars/Silas_desktop_1.JPG', imgsD: ['./chars/Silas_desktop_1.JPG', './chars/silas_desktop_2.JPG', './chars/silas_desktop_3.JPG'], bgPos: 'center top', bgPosDesktop: 'center 30%',
     quotes: [
       '早上好。你的座位在這裡。',
       '中午好。先吃飯，你上午已經喝了兩杯咖啡了。',
@@ -773,7 +776,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Eli', emoji: '', img: './chars/eli_phone_2.JPG', imgs: ['./chars/eli_phone_1.JPG', './chars/eli_phone_2.JPG', './chars/eli_phone_4.JPG'], imgD: './chars/Eli_desktop_1.JPG', imgsD: ['./chars/Eli_desktop_1.JPG', './chars/eli_desktop_2.JPG'], bgPos: 'center 20%',
+    name: 'Eli', emoji: '', img: './chars/eli_phone_2.JPG', imgs: ['./chars/eli_phone_1.JPG', './chars/eli_phone_2.JPG', './chars/eli_phone_4.JPG', './chars/eli_phone_5.JPG', './chars/eli_phone_7.JPG', './chars/eli_phone_8.JPG', './chars/eli_phone_10.JPG', './chars/eli_phone_11.JPG'], imgD: './chars/Eli_desktop_1.JPG', imgsD: ['./chars/Eli_desktop_1.JPG', './chars/eli_desktop_2.JPG'], bgPos: 'center 20%',
     quotes: [
       '啊，早上好。你吃早飯了嗎？我這裡還有一塊餅乾。',
       '啊，中午好。剛剛有一隻蒲絨絨一直跟著我……我想它可能比較喜歡你。',
@@ -782,7 +785,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Adrian', emoji: '', img: './chars/adrian_phone_2.JPG', imgs: ['./chars/adrian_phone_1.JPG', './chars/adrian_phone_2.JPG', './chars/adrian_phone_3.JPG'], imgD: './chars/Adrian_desktop_1.JPG', imgsD: ['./chars/Adrian_desktop_1.JPG', './chars/adrian_desktop_2.JPG', './chars/adrian_desktop_3.JPG'], bgPos: 'center top', bgPosDesktop: 'center 20%',
+    name: 'Adrian', emoji: '', img: './chars/adrian_phone_2.JPG', imgs: ['./chars/adrian_phone_1.JPG', './chars/adrian_phone_2.JPG', './chars/adrian_phone_3.JPG', './chars/adrian_phone_4.JPG', './chars/adrian_phone_7.JPG', './chars/adrian_phone_8.JPG', './chars/adrian_phone_10.JPG'], imgD: './chars/Adrian_desktop_1.JPG', imgsD: ['./chars/Adrian_desktop_1.JPG', './chars/adrian_desktop_2.JPG', './chars/adrian_desktop_3.JPG'], bgPos: 'center top', bgPosDesktop: 'center 20%',
     quotes: [
       '早上好。你今天沒繞遠路，看來心情不錯。',
       '中午好。當心，西側長廊今天別去。',
@@ -803,6 +806,7 @@ const MORNING_COVERS = new Set([   // 早晨＆中午：一般日光/明亮
   './chars/silas_phone_5.JPG',   // 臥室柔和日光
   './chars/eli_phone_1.JPG',     // 水族箱：偏亮有日光
   './chars/eli_phone_2.JPG',     // 溫室陽光
+  './chars/eli_phone_5.JPG',     // 溫室日光（照料植物）
   './chars/sean_phone_5.JPG',    // 鬱金香花田＋風車、藍天大晴
   './chars/Silas_desktop_1.JPG', // 圖書館窗外日光（桌機）
   './chars/Eli_desktop_1.JPG',   // 教室窗光（桌機）
@@ -810,7 +814,7 @@ const MORNING_COVERS = new Set([   // 早晨＆中午：一般日光/明亮
   './chars/sean_desktop_3.JPG',  // 鬱金香花田（桌機橫版）
 ]);
 const AFTERNOON_COVERS = new Set([ // 下午：日落/黃昏金色光
-  './chars/sean_phone_4.JPG',    // 海邊日落
+  './chars/sean_phone_6.JPG',    // 海邊日落（原 phone_4 改號）
   './chars/silas_phone_4.JPG',   // 金色逆光/黃昏
   './chars/adrian_phone_3.JPG',  // 佛羅倫斯日落
   './chars/adrian_desktop_3.JPG',// 佛羅倫斯日落（桌機橫版）
