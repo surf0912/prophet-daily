@@ -131,7 +131,7 @@
       flex-direction: column; gap: 0;
     }
     .auth-box {
-      width: calc(100% - 32px); max-width: 400px; padding: 36px 28px;
+      width: calc(100% - 32px); max-width: 400px; padding: 40px 48px;
       background: rgba(47,33,20,0.82);
       border-radius: 6px;
       position: relative;
