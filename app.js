@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.86';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.87';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -972,6 +972,7 @@ let adminCat = '';        // '' | 迷情劑 | 吐真劑 | 儲思盆 | 羊皮紙
 let adminChars = [];
 let favIds = new Set();   // 意若思鏡 收藏夾: ids of whole works the user has favorited
 let favTimes = new Map();   // novel_id → 收藏時間（追蹤更新的伺服器端基準）
+let favWishReplies = [];    // 我自己被回應的許願（貓頭鷹通知用）
 let APP_SETTINGS = {};   // 全域站台設定（超管可調，全體讀取）
 let shelfFav = false;     // 收藏夾 view toggle
 
@@ -1049,6 +1050,17 @@ async function renderFavUpdates() {
       });
     }
   }
+  // 許願池：我自己的願望被回應（文字回覆 或 狀態變動）→ 通知
+  try { favWishReplies = await api('/feedback/my-wish-replies') || []; } catch (e) { favWishReplies = []; }
+  favWishReplies.forEach(w => {
+    const isUnread = _wishReplyUnread(w);
+    const at = w.created_at, atMs = at ? new Date(at).getTime() : 0;
+    if (!isUnread && atMs < cutoff) return;   // 已讀且過期才隱藏；未讀一律顯示（回應可能落在舊願望上）
+    const reply = (w.admin_reply || '').trim();
+    const st = (FB_STATUS.wish && FB_STATUS.wish[w.status]) || '';
+    const sub = reply || (st ? `願望狀態：${st}` : '有新回應');
+    items.push({ kind: 'wishreply', id: w.id, title: '你的願望有了回音', sub, at, unread: isUnread });
+  });
   items.sort((a, b) => new Date(b.at) - new Date(a.at));
   const unread = items.filter(i => i.unread).length;
   // 預設只在有未讀時現身；小工具「貓頭鷹常駐」打開則一直在（即使全已讀／無通知）。
@@ -1057,19 +1069,34 @@ async function renderFavUpdates() {
   pop.hidden = true;
   if (!items.length) { pop.innerHTML = `<p class="fav-pop-empty">目前沒有新通知</p>`; return; }
   pop.innerHTML = `<p class="fav-pop-title">通知</p>` + items.map(it => {
-    const dotClass = it.unread ? (it.kind === 'letter' ? 'fav-dot gold' : 'fav-dot') : 'fav-dot read';
+    const gold = it.kind === 'letter' || it.kind === 'wishreply';   // 主編來信、你的願望回音＝金點
+    const dotClass = it.unread ? (gold ? 'fav-dot gold' : 'fav-dot') : 'fav-dot read';
     const cls = `fav-row${it.unread ? '' : ' read'}`;
     const inner = `<span class="${dotClass}"></span>`
       + `<span class="fav-row-main"><span class="fav-row-t">${escapeHtml(it.title)}</span>`
       + `<span class="fav-row-s">${escapeHtml(it.sub)}・${fmtUpdated(it.at)}</span></span>`
       + `<span class="fav-row-x">›</span>`;
-    return it.kind === 'letter'
-      ? `<a href="#" data-onclick="openEditorLetter();return false" class="${cls}">${inner}</a>`
-      : `<a href="#" data-onclick="favOwlOpen('${it.id}');return false" class="${cls}">${inner}</a>`;
+    if (it.kind === 'letter') return `<a href="#" data-onclick="openEditorLetter();return false" class="${cls}">${inner}</a>`;
+    if (it.kind === 'wishreply') return `<a href="#" data-onclick="wishReplyOpen('${it.id}');return false" class="${cls}">${inner}</a>`;
+    return `<a href="#" data-onclick="favOwlOpen('${it.id}');return false" class="${cls}">${inner}</a>`;
   }).join('');
 }
 function toggleFavOwl() { const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = !p.hidden; }
 function favOwlOpen(id) { const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true; _markInstallmentRead(id); openNovel(id); }
+// 許願回音的已讀狀態：以「status＋回覆內容」當簽章，回覆有變動就再次變未讀。
+function _readWishReplies() { try { return JSON.parse(localStorage.getItem('pd_read_wishreplies') || '{}'); } catch (e) { return {}; } }
+function _wishReplySig(w) { return `${w.status || ''}||${(w.admin_reply || '').trim()}`; }
+function _wishReplyUnread(w) { return _readWishReplies()[w.id] !== _wishReplySig(w); }
+function _markWishReplyRead(id) {
+  const w = favWishReplies.find(x => x.id === id); if (!w) return;
+  const m = _readWishReplies(); m[id] = _wishReplySig(w);
+  try { localStorage.setItem('pd_read_wishreplies', JSON.stringify(m)); } catch (e) {}
+}
+function wishReplyOpen(id) {
+  const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true;
+  _markWishReplyRead(id);
+  openWishPool();
+}
 // ── 主編來信（單封更新公告）──────────────────────────────────────────
 // 換新一封時把 id 改掉即可：已讀狀態以 id 存 localStorage，每封只自動跳一次。
 const EDITOR_LETTER = {
