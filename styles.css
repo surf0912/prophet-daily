@@ -54,7 +54,12 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; overflow: hidden; overscroll-behavior: none; width: 100%; max-width: 100%; position: fixed; inset: 0; }
     body {
-      background: var(--chrome); color: var(--on-dark); touch-action: manipulation;
+      /* 底色改成與登入頁一致的「暗化羊皮紙」，這樣 iOS 底部安全區露出 body 時，
+         也是羊皮紙質感、不會變成 --chrome 深棕（被誤認成導覽列顏色）。登入後 #app 會蓋住 body，不受影響。 */
+      background-color: #2F2114;
+      background-image: linear-gradient(rgba(47,33,20,0.72), rgba(47,33,20,0.72)), url('./parchment.jpg');
+      background-size: 100% 100%, cover; background-position: center; background-attachment: fixed;
+      color: var(--on-dark); touch-action: manipulation;
       /* 圓體 UI 字：拉丁/數字→YuseiMagic、繁中→粉圓(HuninnUI)、簡體專屬字→糖圓(SimpRound)、最後系統。
          之前 @font-face 有定義卻沒套用，全站掉回系統字；補回這行讓圓體真正生效。 */
       font-family: 'YuseiMagic', 'HuninnUI', 'SimpRound', -apple-system, "PingFang TC", "PingFang SC", system-ui, sans-serif;
