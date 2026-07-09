@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.79';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.80';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -721,7 +721,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Eli', emoji: '', img: './chars/eli_phone_2.JPG', imgs: ['./chars/eli_phone_1.JPG', './chars/eli_phone_2.JPG', './chars/eli_phone_3.JPG', './chars/eli_phone_4.JPG', './chars/eli_phone_5.JPG'], imgD: './chars/Eli_desktop_1.JPG', imgsD: ['./chars/Eli_desktop_1.JPG', './chars/eli_desktop_2.JPG'], bgPos: 'center 20%',
+    name: 'Eli', emoji: '', img: './chars/eli_phone_2.JPG', imgs: ['./chars/eli_phone_1.JPG', './chars/eli_phone_2.JPG', './chars/eli_phone_4.JPG'], imgD: './chars/Eli_desktop_1.JPG', imgsD: ['./chars/Eli_desktop_1.JPG', './chars/eli_desktop_2.JPG'], bgPos: 'center 20%',
     quotes: [
       '啊，早上好。你吃早飯了嗎？我這裡還有一塊餅乾。',
       '啊，中午好。剛剛有一隻蒲絨絨一直跟著我……我想它可能比較喜歡你。',
