@@ -26,7 +26,7 @@
 const API = 'https://prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v2.76';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v2.77';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -712,7 +712,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Silas', emoji: '', img: './chars/silas_phone_2.JPG', imgs: ['./chars/silas_phone_1.JPG', './chars/silas_phone_2.JPG', './chars/silas_phone_3.JPG', './chars/silas_phone_4.JPG', './chars/silas_phone_5.JPG'], imgD: './chars/Silas_desktop_1.JPG', imgsD: ['./chars/Silas_desktop_1.JPG', './chars/silas_desktop_2.JPG'], bgPos: 'center top', bgPosDesktop: 'center 30%',
+    name: 'Silas', emoji: '', img: './chars/silas_phone_2.JPG', imgs: ['./chars/silas_phone_1.JPG', './chars/silas_phone_2.JPG', './chars/silas_phone_3.JPG', './chars/silas_phone_4.JPG', './chars/silas_phone_5.JPG', './chars/silas_phone_6.JPG'], imgD: './chars/Silas_desktop_1.JPG', imgsD: ['./chars/Silas_desktop_1.JPG', './chars/silas_desktop_2.JPG', './chars/silas_desktop_3.JPG'], bgPos: 'center top', bgPosDesktop: 'center 30%',
     quotes: [
       '早上好。你的座位在這裡。',
       '中午好。先吃飯，你上午已經喝了兩杯咖啡了。',
@@ -730,7 +730,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Adrian', emoji: '', img: './chars/adrian_phone_2.JPG', imgs: ['./chars/adrian_phone_1.JPG', './chars/adrian_phone_2.JPG', './chars/adrian_phone_3.JPG'], imgD: './chars/Adrian_desktop_1.JPG', imgsD: ['./chars/Adrian_desktop_1.JPG', './chars/adrian_desktop_2.JPG'], bgPos: 'center top', bgPosDesktop: 'center 20%',
+    name: 'Adrian', emoji: '', img: './chars/adrian_phone_2.JPG', imgs: ['./chars/adrian_phone_1.JPG', './chars/adrian_phone_2.JPG', './chars/adrian_phone_3.JPG'], imgD: './chars/Adrian_desktop_1.JPG', imgsD: ['./chars/Adrian_desktop_1.JPG', './chars/adrian_desktop_2.JPG', './chars/adrian_desktop_3.JPG'], bgPos: 'center top', bgPosDesktop: 'center 20%',
     quotes: [
       '早上好。你今天沒繞遠路，看來心情不錯。',
       '中午好。當心，西側長廊今天別去。',
@@ -753,10 +753,12 @@ const DAY_COVERS = new Set([
   './chars/silas_phone_5.JPG',   // 臥室柔和日光
   './chars/eli_phone_1.JPG',     // 水族箱：偏亮有日光
   './chars/eli_phone_2.JPG',     // 溫室陽光
-  // 桌機封面(3；其餘桌機為室內燭光/夜景，默認夜晚)
+  './chars/adrian_phone_3.JPG',  // 佛羅倫斯日落
+  // 桌機封面(4；其餘桌機為室內燭光/夜景，默認夜晚)
   './chars/Silas_desktop_1.JPG', // 圖書館窗外日光
   './chars/Eli_desktop_1.JPG',   // 教室窗光
   './chars/eli_desktop_2.JPG',   // 溫室陽光
+  './chars/adrian_desktop_3.JPG',// 佛羅倫斯日落（桌機橫版）
 ]);
 
 // ── 角色設定頁 (beta) — 基本資料 + GitHub 圖庫。bio / gallery 由站長填寫；gallery 留空時自動用封面圖。
@@ -933,7 +935,9 @@ function fmtUpdated(ts) {
   if (!ts) return '';
   const d = new Date(ts);
   if (isNaN(d)) return '';
-  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+  // 用固定時區(台北 UTC+8，與後端「上架/排程」判斷同基準)顯示發佈日期，讓所有讀者(含美東作者、
+  // 美國讀者)看到同一個日曆日期，避免依觀看者本機時區換算造成 off-by-one(11 號被顯示成 10 號)。
+  return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' }).replace(/-/g, '/');
 }
 
 let novelsError = false;
@@ -1109,7 +1113,7 @@ async function renderVersionStatus() {
   const latest = await fetchLatestVersion();
   if (latest && latest !== APP_VERSION) {   // 過時 → 可按，點了更新
     el.className = 'version-btn outdated'; el.disabled = false;
-    el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg> 您的預言家日報已過時`;
+    el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg> 獲取一份新的預言家日報`;
   } else {   // 最新（或抓不到 → 不誤報）→ 純狀態，不可按
     el.className = 'version-btn latest'; el.disabled = true;
     el.innerHTML = `${ic('ic-check', 14)} 您已收到最新一期的預言家日報`;
@@ -2529,13 +2533,16 @@ function setUploadKind(kind) {
   const nh = document.getElementById('new-novel-hint'); if (nh) nh.textContent = writerNote;
 }
 
-// Turn a <input type="date"> value (YYYY-MM-DD) into the UTC instant of LOCAL midnight of that
-// day. So a future date schedules the work to go live exactly at 00:00 of that day in the
-// author's timezone (and it displays as that date locally). Past dates just back-date it.
+// Turn a <input type="date"> value (YYYY-MM-DD) into an instant anchored at NOON Taipei (UTC+8) of
+// that day — independent of the author's browser timezone. The backend gates 上架/排程 on the TW
+// date, and fmtUpdated() displays in TW too, so the chosen day IS the day everyone sees and the day
+// it goes live (at 00:00 TW). Anchoring at noon keeps it clear of the midnight boundary. A US-East
+// author picking the 11th no longer stores their local-midnight (which read as the 10th elsewhere).
+// 12:00 +08:00 == 04:00 UTC.
 function dateToIso(d) {
   if (!d) return null;
   const [y, m, day] = d.split('-').map(Number);
-  return new Date(y, m - 1, day, 0, 0, 0).toISOString();
+  return new Date(Date.UTC(y, m - 1, day, 4, 0, 0)).toISOString();
 }
 function isFutureIso(ts) { return !!ts && new Date(ts) > new Date(); }
 
