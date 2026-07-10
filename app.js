@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.28';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.29';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2077,6 +2077,7 @@ function renderHomeNovels() {
 }
 
 // ── Reader ───────────────────────────────────────────────────
+let _artSeq = 0;   // 文首插圖探測序號（防切章後舊回呼誤插）
 let currentNovelKind = 'novel';
 let currentNovelTitle = '';
 
@@ -2331,6 +2332,22 @@ async function loadChapter(idx) {
       el.textContent = full.content;
     }
   } catch { document.getElementById('reader-content').textContent = '載入失敗'; }
+  // 文首插圖：管理員把圖放 repo 的 artwork/<作品id>.jpg（免上傳介面、不佔資料庫，走 Pages/鏡像
+  // 並被 SW 快取）。只在第一章文首顯示；檔案不存在＝探測失敗＝靜靜略過。
+  if (idx === 0) {
+    const artSrc = `./artwork/${currentNovelId}.jpg`;
+    const artSeq = ++_artSeq, artNid = currentNovelId;
+    const artIm = new Image();
+    artIm.onload = () => {
+      if (artSeq !== _artSeq || artNid !== currentNovelId) return;   // 已切到別的作品/章節
+      const rc = document.getElementById('reader-content');
+      if (!rc || rc.querySelector('.reader-artwork')) return;
+      const img = document.createElement('img');
+      img.src = artSrc; img.className = 'reader-artwork'; img.alt = '';
+      rc.prepend(img);
+    };
+    artIm.src = artSrc;
+  }
   const rv = document.getElementById('reader-view');
   rv.scrollTo(0, pendingScroll || 0);   // resume to saved spot; 0 for a fresh chapter
   pendingScroll = 0;
