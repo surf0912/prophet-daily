@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.17';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.18';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2946,6 +2946,12 @@ async function submitForumPost() {
 
 async function loadReviewList() {
   const el = document.getElementById('admin-review-list');
+  // 記住各區目前的展開狀態：按「通過/不通過」重畫列表時原樣還原，不會自己收合。
+  const prevOpen = {};
+  el.querySelectorAll('details.review-sec').forEach(d => {
+    const t = (d.querySelector('summary') || {}).textContent || '';
+    prevOpen[t.includes('迷情劑') ? 'mqj' : 'novel'] = d.open;
+  });
   el.innerHTML = '<div class="spinner"></div>';
   try {
     const [pending, users] = await Promise.all([
@@ -2955,8 +2961,8 @@ async function loadReviewList() {
     const mqjReqs = (users || []).filter(u => u.mqj_access === 'pending');
     const novelsPending = pending || [];
     const arrow = `<svg class="rv-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>`;
-    const section = (icon, title, count, bodyHtml, openByDefault = true) => `
-      <details class="review-sec"${count && openByDefault ? ' open' : ''}>
+    const section = (icon, title, count, bodyHtml, open) => `
+      <details class="review-sec"${open ? ' open' : ''}>
         <summary>${arrow}${ic(icon, 14)} ${title}<span class="rv-count${count ? '' : ' zero'}">${count}</span></summary>
         <div class="rv-body">${count ? bodyHtml : '<p style="color:var(--ink-light);font-size:13px;padding:8px 0 14px">目前沒有待審核的項目</p>'}</div>
       </details>`;
@@ -2986,8 +2992,11 @@ async function loadReviewList() {
           </div>
         </div>`).join('');
 
-    el.innerHTML = section('ic-wine', '迷情劑閱讀權申請', mqjReqs.length, mqjBody, false)   // 預設收起
-                 + section('ic-book', '作品審核', novelsPending.length, novelBody);
+    // 首次載入：迷情劑預設收起、作品審核有件數才展開；重畫（審核操作後）：還原剛才的狀態。
+    const mqjOpen = prevOpen.mqj !== undefined ? prevOpen.mqj : false;
+    const novelOpen = prevOpen.novel !== undefined ? prevOpen.novel : novelsPending.length > 0;
+    el.innerHTML = section('ic-wine', '迷情劑閱讀權申請', mqjReqs.length, mqjBody, mqjOpen)
+                 + section('ic-book', '作品審核', novelsPending.length, novelBody, novelOpen);
   } catch (e) { el.innerHTML = '<p>載入失敗</p>'; }
 }
 
