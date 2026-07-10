@@ -630,7 +630,9 @@
 
 <div class="perm-modal" id="editwork-modal">
   <div class="perm-modal-inner">
-    <h3><svg width="17" height="17" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-edit"/></svg> 編輯作品</h3>
+    <h3 style="display:flex;align-items:center;gap:8px"><svg width="17" height="17" aria-hidden="true" style="vertical-align:-3px;flex-shrink:0"><use href="#ic-edit"/></svg> 編輯作品
+      <button id="editwork-copyid" class="admin-only" style="margin-left:auto;background:none;border:1px solid var(--gold-lt);color:var(--ink-light);font-size:11px;font-weight:normal;padding:3px 10px;border-radius:3px;cursor:pointer">複製作品編號</button>
+    </h3>
     <div class="form-group"><label>標題</label><input type="text" id="editwork-title" /></div>
     <div class="form-group"><label>作者署名</label><input type="text" id="editwork-author" placeholder="留空則佚名" /></div>
     <div class="form-group"><label>發佈日期</label><input type="date" id="editwork-date" /></div>

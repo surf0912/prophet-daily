@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.30';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.31';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3396,6 +3396,8 @@ async function openEditWork(id) {
   const n = (window._adminNovels || []).find(x => x.id === id) || {};
   editWork = { id, chapterId: null, chapterNum: 1, chapterTitle: null, kind: n.kind || 'novel' };
   const isForum = n.kind === 'forum';
+  // 複製作品編號（admin-only）：給文首插圖 artwork/<id>.jpg 等「以編號對應」的用途
+  { const cp = document.getElementById('editwork-copyid'); if (cp) cp.setAttribute('data-onclick', `copyText('${id}', '已複製作品編號')`); }
   document.getElementById('editwork-title').value = n.title || '';
   document.getElementById('editwork-author').value = n.author || '';
   document.getElementById('editwork-date').value = (n.created_at || '').slice(0, 10);   // 發佈日期
