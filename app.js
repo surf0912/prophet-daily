@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.20';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.21';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1099,7 +1099,7 @@ function renderGreeting() {
   // 候選圖：先用挑中的那張，載入失敗時退回同角色其他「未隱藏」的照片，最後才是全部(避免空白)。
   const heroPos = isWide ? (char.bgPosDesktop || char.bgPos || 'center') : (char.bgPos || 'center');
   // 斷網最後方案：角色金線稿（隨 App 殼預快取在 SW ASSETS，完全離線也顯示得出來）。
-  const FALLBACK_ART = { Sean: './assets/offline_sean.jpg', Eli: './assets/offline_eli.jpg', Adrian: './assets/offline_adrian.jpg' };
+  const FALLBACK_ART = { Sean: './assets/offline_sean.jpg', Silas: './assets/offline_silas.jpg', Eli: './assets/offline_eli.jpg', Adrian: './assets/offline_adrian.jpg' };
   let candidates = [pick.img, ...photosOf(char).filter(u => !excluded.has(u)), ...photosOf(char), FALLBACK_ART[char.name]];
   candidates = [...new Set(candidates.filter(Boolean))];   // dedup, keep order
   (function tryLoad(i) {

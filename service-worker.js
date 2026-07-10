@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prophet-daily-v3.20';
+const CACHE_NAME = 'prophet-daily-v3.21';
 const ASSETS = [
   './index.html',
   './styles.css',
@@ -6,6 +6,7 @@ const ASSETS = [
   './safe-events.js',
   './zhconv.js',
   './assets/offline_sean.jpg',
+  './assets/offline_silas.jpg',
   './assets/offline_eli.jpg',
   './assets/offline_adrian.jpg',
   './manifest.json',
