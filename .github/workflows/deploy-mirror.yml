@@ -26,7 +26,8 @@ jobs:
           fi
           code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 -X POST "$HOOK")
           echo "主鏡像 deploy hook → $code"
-          [ "$code" = "200" ] || exit 1
+          # Render 的 deploy hook 回 202 Accepted（非同步排入部署）；2xx 一律視為成功。
+          case "$code" in 2??) ;; *) echo "::error::deploy hook 失敗 ($code)"; exit 1 ;; esac
           # 舊殼：盡力而為 —— 失敗（例如已退役）只記錄，不讓 workflow 紅燈。
           if [ -n "$HOOK_OLD" ]; then
             code2=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 -X POST "$HOOK_OLD" || echo "err")
