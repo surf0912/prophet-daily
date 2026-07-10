@@ -1,14 +1,14 @@
-const CACHE_NAME = 'prophet-daily-v3.22';
+const CACHE_NAME = 'prophet-daily-v3.23';
 const ASSETS = [
   './index.html',
   './styles.css',
   './app.js',
   './safe-events.js',
   './zhconv.js',
-  './assets/offline_sean.jpg',
-  './assets/offline_silas.jpg',
-  './assets/offline_eli.jpg',
-  './assets/offline_adrian.jpg',
+  './assets/offline_sean.webp',
+  './assets/offline_silas.webp',
+  './assets/offline_eli.webp',
+  './assets/offline_adrian.webp',
   './manifest.json',
   './favicon.png',
   './apple-touch-icon.png',
