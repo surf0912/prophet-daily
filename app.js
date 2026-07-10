@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.24';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.25';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1074,7 +1074,10 @@ function renderGreeting() {
   // 時段門檻：06:00–14:30 早晨＆中午(am)、14:30–18:00 下午(pm)、其餘夜晚(night；無陽光者默認夜晚)。
   const mins = h * 60 + new Date().getMinutes();
   const slot = (mins >= 360 && mins < 870) ? 'am' : (mins >= 870 && mins < 1080) ? 'pm' : 'night';
-  let pool = selected.filter(x => coverSlot(x.img) === slot);
+  // 下午池較小：下午時段讓「早晨中午」的圖也一起輪（反向不成立——下午的圖只在下午出現）。
+  let pool = selected.filter(x => slot === 'pm'
+    ? (coverSlot(x.img) === 'pm' || coverSlot(x.img) === 'am')
+    : coverSlot(x.img) === slot);
   // 保底：使用者的選取在當前時段沒有任何圖 → 忽略時段，改在他選的那幾張裡隨機輪轉(不留白)。
   if (!pool.length) pool = selected;
   const pick = pool[Math.floor(Math.random() * pool.length)] || { char: CHARS[0], img: CHARS[0].img };
