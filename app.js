@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.33';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.34';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -663,6 +663,9 @@ function showPage(id, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
   if (btn) btn.classList.add('active');
+  // 所有頁面共用 #page-area 這個捲動容器；切頁時把它捲回頂部，否則在某頁往下滑後
+  // 切走再切回，會停在上次的捲動位置（首頁自身鎖定不捲，不受影響）。
+  { const pa = document.getElementById('page-area'); if (pa) pa.scrollTop = 0; }
   if (id !== 'admin') stopMonitor();   // leaving 編輯部 cancels the live monitor poll
   if (id === 'home') { renderContinueBar(); renderFavUpdates(); }
   if (id === 'scroll') loadNovels();
