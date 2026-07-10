@@ -1098,7 +1098,9 @@ function renderGreeting() {
   };
   // 候選圖：先用挑中的那張，載入失敗時退回同角色其他「未隱藏」的照片，最後才是全部(避免空白)。
   const heroPos = isWide ? (char.bgPosDesktop || char.bgPos || 'center') : (char.bgPos || 'center');
-  let candidates = [pick.img, ...photosOf(char).filter(u => !excluded.has(u)), ...photosOf(char)];
+  // 斷網最後方案：角色金線稿（隨 App 殼預快取在 SW ASSETS，完全離線也顯示得出來）。
+  const FALLBACK_ART = { Sean: './assets/offline_sean.jpg', Eli: './assets/offline_eli.jpg', Adrian: './assets/offline_adrian.jpg' };
+  let candidates = [pick.img, ...photosOf(char).filter(u => !excluded.has(u)), ...photosOf(char), FALLBACK_ART[char.name]];
   candidates = [...new Set(candidates.filter(Boolean))];   // dedup, keep order
   (function tryLoad(i) {
     if (i >= candidates.length) return;   // all failed → keep the gradient + emoji
