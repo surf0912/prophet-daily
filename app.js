@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.23';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.24';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1058,6 +1058,7 @@ async function shareOrDownload(url, filename) {
   }
 }
 
+let _heroSeq = 0;   // 心動封面載入的渲染序號（防舊計時器/回呼蓋掉新一輪）
 function renderGreeting() {
   const h = new Date().getHours();
   // 時段 index：0=早上(5-11) 1=中午(12-13) 2=下午(14-17) 3=晚上/深夜(18-4)
@@ -1102,10 +1103,24 @@ function renderGreeting() {
   const FALLBACK_ART = { Sean: './assets/offline_sean.webp', Silas: './assets/offline_silas.webp', Eli: './assets/offline_eli.webp', Adrian: './assets/offline_adrian.webp' };
   let candidates = [pick.img, ...photosOf(char).filter(u => !excluded.has(u)), ...photosOf(char), FALLBACK_ART[char.name]];
   candidates = [...new Set(candidates.filter(Boolean))];   // dedup, keep order
+  // 慢網路時限：2.5 秒還沒載到任何封面，先亮該角色線稿頂著（載入不中斷，真封面到貨自動換回）。
+  // _heroSeq 防舊一輪的計時器/回呼污染新渲染（切頁、整點換圖時 renderGreeting 會重跑）。
+  const seq = ++_heroSeq;
+  let heroShown = false;
+  const fbArt = FALLBACK_ART[char.name];
+  const slowTimer = fbArt ? setTimeout(() => {
+    if (seq === _heroSeq && !heroShown) showHero(fbArt, heroPos);
+  }, 2500) : null;
   (function tryLoad(i) {
-    if (i >= candidates.length) return;   // all failed → keep the gradient + emoji
+    if (seq !== _heroSeq) return;         // 已有更新一輪的渲染，放棄
+    if (i >= candidates.length) return;   // 全部失敗 → 線稿（計時器已顯示）或漸層+emoji
     const im = new Image();
-    im.onload = () => showHero(candidates[i], heroPos);
+    im.onload = () => {
+      if (seq !== _heroSeq) return;
+      heroShown = true;
+      if (slowTimer) clearTimeout(slowTimer);
+      showHero(candidates[i], heroPos);
+    };
     im.onerror = () => tryLoad(i + 1);
     im.src = candidates[i];
   })(0);
