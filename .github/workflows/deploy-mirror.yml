@@ -15,14 +15,20 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Render deploy hook
+      - name: Trigger Render deploy hooks
         env:
-          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}          # 主力：the-prophet-daily（Singapore）
+          HOOK_OLD: ${{ secrets.RENDER_DEPLOY_HOOK_OLD }}  # 過渡：舊 Oregon 殼（可不設；退役後刪 secret 即可）
         run: |
           if [ -z "$HOOK" ]; then
             echo "RENDER_DEPLOY_HOOK secret 未設定，跳過（鏡像需手動 Deploy）"
             exit 0
           fi
           code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 -X POST "$HOOK")
-          echo "Render deploy hook → $code"
+          echo "主鏡像 deploy hook → $code"
           [ "$code" = "200" ] || exit 1
+          # 舊殼：盡力而為 —— 失敗（例如已退役）只記錄，不讓 workflow 紅燈。
+          if [ -n "$HOOK_OLD" ]; then
+            code2=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 -X POST "$HOOK_OLD" || echo "err")
+            echo "舊殼 deploy hook → $code2（best-effort）"
+          fi
