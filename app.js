@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.25';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.26';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1093,37 +1093,32 @@ function renderGreeting() {
   hero.style.backgroundImage = GRAD;   // gradient base — never let parchment show through
   document.getElementById('greeting-line-text').innerHTML = `${period}，${escapeHtml(currentUser.nickname || currentUser.username || '你')} <svg width="17" height="17" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star"/></svg>`;
   document.getElementById('greeting-quote-text').textContent = char.quotes[timeIdx];
-  const showHero = (url, pos) => {     // photo layered OVER the gradient (gradient stays as fallback)
-    hero.style.backgroundImage = `url('${url}'), ${GRAD}`;
-    hero.style.backgroundPosition = `${pos}, center`;
-    hero.style.backgroundRepeat = 'no-repeat, no-repeat';
-    hero.style.backgroundSize = `${char.bgSize || 'cover'}, cover`;
-    emoji.style.display = 'none';
-  };
-  // 候選圖：先用挑中的那張，載入失敗時退回同角色其他「未隱藏」的照片，最後才是全部(避免空白)。
+  // 三層背景：封面（最上，載完自動浮現）→ 角色線稿（0 秒即顯示的底稿）→ 漸層（最後保底）。
+  // 瀏覽器把「還沒載好的背景層」視為透明，所以不需要計時器：網路快線稿只閃一瞬，
+  // 網路慢/斷網線稿一直陪著，封面到貨那一刻自動蓋上。
   const heroPos = isWide ? (char.bgPosDesktop || char.bgPos || 'center') : (char.bgPos || 'center');
-  // 斷網最後方案：角色金線稿（隨 App 殼預快取在 SW ASSETS，完全離線也顯示得出來）。
   const FALLBACK_ART = { Sean: './assets/offline_sean.webp', Silas: './assets/offline_silas.webp', Eli: './assets/offline_eli.webp', Adrian: './assets/offline_adrian.webp' };
-  let candidates = [pick.img, ...photosOf(char).filter(u => !excluded.has(u)), ...photosOf(char), FALLBACK_ART[char.name]];
-  candidates = [...new Set(candidates.filter(Boolean))];   // dedup, keep order
-  // 慢網路時限：2.5 秒還沒載到任何封面，先亮該角色線稿頂著（載入不中斷，真封面到貨自動換回）。
-  // _heroSeq 防舊一輪的計時器/回呼污染新渲染（切頁、整點換圖時 renderGreeting 會重跑）。
-  const seq = ++_heroSeq;
-  let heroShown = false;
   const fbArt = FALLBACK_ART[char.name];
-  const slowTimer = fbArt ? setTimeout(() => {
-    if (seq === _heroSeq && !heroShown) showHero(fbArt, heroPos);
-  }, 2500) : null;
+  const layers = (top) => {
+    const imgs = [top && `url('${top}')`, fbArt && `url('${fbArt}')`, GRAD].filter(Boolean);
+    const n = imgs.length - 1;   // 圖片層數（不含漸層）
+    hero.style.backgroundImage = imgs.join(', ');
+    hero.style.backgroundPosition = Array(n).fill(heroPos).concat('center').join(', ');
+    hero.style.backgroundRepeat = Array(n + 1).fill('no-repeat').join(', ');
+    hero.style.backgroundSize = Array(n).fill(char.bgSize || 'cover').concat('cover').join(', ');
+  };
+  const showHero = (url) => { layers(url); emoji.style.display = 'none'; };
+  // 0 秒先鋪線稿底稿（有的話），封面載到再蓋上。
+  if (fbArt) { layers(null); emoji.style.display = 'none'; }
+  // 候選圖：先用挑中的那張，載入失敗時退回同角色其他「未隱藏」的照片，最後才是全部(避免空白)。
+  let candidates = [pick.img, ...photosOf(char).filter(u => !excluded.has(u)), ...photosOf(char)];
+  candidates = [...new Set(candidates.filter(Boolean))];   // dedup, keep order
+  const seq = ++_heroSeq;   // 防舊一輪回呼污染新渲染（切頁、整點換圖時 renderGreeting 會重跑）
   (function tryLoad(i) {
-    if (seq !== _heroSeq) return;         // 已有更新一輪的渲染，放棄
-    if (i >= candidates.length) return;   // 全部失敗 → 線稿（計時器已顯示）或漸層+emoji
+    if (seq !== _heroSeq) return;
+    if (i >= candidates.length) return;   // 全部失敗 → 線稿底稿留守（或漸層+emoji）
     const im = new Image();
-    im.onload = () => {
-      if (seq !== _heroSeq) return;
-      heroShown = true;
-      if (slowTimer) clearTimeout(slowTimer);
-      showHero(candidates[i], heroPos);
-    };
+    im.onload = () => { if (seq === _heroSeq) showHero(candidates[i]); };
     im.onerror = () => tryLoad(i + 1);
     im.src = candidates[i];
   })(0);
