@@ -1,8 +1,11 @@
-name: CI (compile + security tests)
+name: CI (frontend syntax + output-safety tests)
 
-# Runs on every push/PR to main: compiles all backend Python and runs the security /
-# output-safety test suite (tests/). Fast gate so a regression in avatar validation, the
-# XSS-encoding sinks, or the APP_VERSION/CACHE_NAME match can't slip in unnoticed.
+# 這個 repo 只放前端。後端（FastAPI）已移到私有 repo surf0912/prophet-daily-api，
+# 由該 repo 的 CI 負責 py_compile、pip-audit、後端安全測試（它會 clone 這裡的前端一起測）。
+#
+# 這裡跑的是快速前端閘門：JS 語法，以及純靜態的輸出安全檢查
+# （XSS 編碼沉澱點、CSP 無 inline/eval、data-on handler 全在白名單、
+#  APP_VERSION 必須等於 service-worker.js 的 CACHE_NAME）。
 
 on:
   push:
@@ -18,18 +21,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install locked production dependencies
-        run: pip install -r requirements.lock
-      - name: Audit locked dependencies
-        run: |
-          python -m venv /tmp/pip-audit
-          /tmp/pip-audit/bin/pip install pip-audit==2.10.1
-          /tmp/pip-audit/bin/pip-audit -r requirements.lock --no-deps --disable-pip
-      - name: Compile all backend Python
-        run: python -m py_compile main.py deps.py monitor.py config.py routers/*.py
       - name: Check frontend JavaScript syntax
         run: |
           node --check app.js
           node --check safe-events.js
-      - name: Security + output-safety tests
+          node --check zhconv.js
+          node --check service-worker.js
+      - name: Output-safety tests (stdlib only, no dependencies)
         run: python -m unittest discover -s tests -p 'test_*.py' -v

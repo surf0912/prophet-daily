@@ -1,4 +1,0 @@
-# Production entry point used by Render.
-# Exact direct + transitive versions live in requirements.lock so every deploy installs the
-# same dependency graph that CI tested. Edit requirements.in when intentionally upgrading.
--r requirements.lock
