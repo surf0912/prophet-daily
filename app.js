@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.32';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.33';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1790,10 +1790,16 @@ function mqjGateBody() {
   const eIc = (id) => `<span style="display:block;margin-bottom:8px">${ic(id, 30)}</span>`;
   const applyBtn = (label) => `<button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" data-onclick="openMqjDisclaimer()">${ic('ic-send', 14)} ${label}</button>`;
   if (a === 'pending')
-    return `${eIc('ic-clock')}你已申請開放「迷情劑」<br><small>管理員通過後即可閱讀</small>`;
-  if (a === 'rejected')
-    return `${eIc('ic-ban')}你的「迷情劑」閱讀申請未通過<br><small style="display:block;margin-bottom:14px">如有異議，可再次提出申請</small>${applyBtn('再次申請')}`;
-  return `${eIc('ic-key')}「迷情劑」分類需開放才能閱讀<br><small style="display:block;margin-bottom:14px">點下方按鈕向管理員申請</small>${applyBtn('要求管理員開放')}`;
+    return `${eIc('ic-clock')}你已申請開放「迷情劑」<br><small>請至微信群私訊《預言家日報》客服完成年齡驗證<br>驗證通過後，管理員才會開放</small>`;
+  if (a === 'rejected') {
+    // 被拒後 7 天冷卻：期間不給按鈕，只留說明；期滿恢復再次申請
+    const ra = currentUser?.mqj_rejected_at ? new Date(currentUser.mqj_rejected_at) : null;
+    const left = ra ? 7 - Math.floor((Date.now() - ra.getTime()) / 86400000) : 0;
+    if (left > 0)
+      return `${eIc('ic-ban')}你的「迷情劑」閱讀申請未通過<br><small>通常是尚未完成年齡驗證——請先至微信群私訊客服驗證<br>${left} 天後可再次提出申請</small>`;
+    return `${eIc('ic-ban')}你的「迷情劑」閱讀申請未通過<br><small style="display:block;margin-bottom:14px">請先至微信群私訊客服完成年齡驗證，再提出申請</small>${applyBtn('再次申請')}`;
+  }
+  return `${eIc('ic-key')}「迷情劑」分類需開放才能閱讀<br><small style="display:block;margin-bottom:14px">點下方按鈕申請，並至微信群私訊客服完成年齡驗證</small>${applyBtn('要求管理員開放')}`;
 }
 
 // ── EXPERIMENTAL feature gate ──────────────────────────────────────────────
@@ -3005,7 +3011,7 @@ async function loadReviewList() {
     const mqjBody = mqjReqs.map(u => `
         <div style="padding:12px 0;border-bottom:1px solid rgba(26,10,0,.1)">
           <div style="font-size:14px;font-weight:bold">${escapeHtml(u.nickname || u.username)} <span style="font-size:12px;color:var(--ink-light);font-weight:normal">@${escapeHtml(u.username)}</span></div>
-          <div style="font-size:12px;color:var(--ink-light);margin-top:3px">申請閱讀「迷情劑」分類</div>
+          <div style="font-size:12px;color:var(--ink-light);margin-top:3px">申請閱讀「迷情劑」分類${(u.mqj_request_count || 0) > 1 ? `・第 ${u.mqj_request_count} 次申請` : ''}${u.mqj_rejected_at ? `・上次未通過：${fmtUpdated(u.mqj_rejected_at)}` : ''}</div>
           <div style="display:flex;gap:8px;margin-top:8px">
             <button data-onclick="reviewMqj('${u.id}', true)" style="font-size:12px;padding:4px 12px;background:#2d4a1e;border:none;color:#fff;border-radius:3px;cursor:pointer">${ic('ic-check',12)} 通過</button>
             <button data-onclick="reviewMqj('${u.id}', false)" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-x',12)} 不通過</button>
