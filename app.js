@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.27';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.28';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -631,8 +631,7 @@ async function initApp() {
   renderSettings();
   renderGreeting();
   renderTourBanner();
-  renderInstallHint();
-  renderDivineBall();   // persistent home prompt for anyone not yet onboarded
+  renderInstallHint();   // persistent home prompt for anyone not yet onboarded
   setTimeout(maybeShowEditorLetter, 700);   // 主編來信：登入後跳一次（已看過導覽的人才跳，不與新手導覽撞窗）
   setTimeout(maybeShowMonthlyRecap, 1600);  // 月末讀報回顧：每月第一次開啟時回顧上月（不與主編來信撞窗）
   // Run the first-time tour only AFTER the shelf finishes loading — i.e. once the
@@ -665,7 +664,7 @@ function showPage(id, btn) {
   document.getElementById('page-' + id).classList.add('active');
   if (btn) btn.classList.add('active');
   if (id !== 'admin') stopMonitor();   // leaving 編輯部 cancels the live monitor poll
-  if (id === 'home') { renderContinueBar(); renderFavUpdates(); renderDivineBall(); }
+  if (id === 'home') { renderContinueBar(); renderFavUpdates(); }
   if (id === 'scroll') loadNovels();
   if (id === 'forum') loadForumPosts();
   if (id === 'settings') renderVersionStatus();   // 每次進檔案頁重新檢查版本狀態
@@ -829,7 +828,6 @@ function endTour(markSeen) {
   showPage('home', document.querySelector('[data-tour="nav-home"]'));
   renderTourBanner();
   renderInstallHint();
-  renderDivineBall();
 }
 
 // Persistent home prompt — the reliable entry point that can't be missed/consumed.
@@ -1061,139 +1059,6 @@ async function shareOrDownload(url, filename) {
 }
 
 
-// ── 每日占卜（beta 測試中：isBeta() 才看得到）──────────────────────────────
-// 零成本設計：籤池預寫、抽選種子＝user_id＋日期 → 全天固定、跨裝置一致、不需後端。
-// 純拉式不推播；水晶球小金點「今日未卜」可在 小工具 關（pd_divine_dot）。
-const DIVINE = {
-  tiers: [   // 籤級用意象不用吉凶，永不給傷人的壞籤；權重合計 100
-    { name: '鳳凰之兆', w: 8 },
-    { name: '護法之光', w: 24 },
-    { name: '星軌如常', w: 44 },
-    { name: '迷霧未明', w: 24 },
-  ],
-  notes: ['星象偏北', '月相盈凸', '水星順行', '獵戶低語', '霧中有光', '南風過境', '燭火安定', '星軌微斜'],
-  lines: [
-    '今日適合讓一篇舊文再讀一遍，你錯過的伏筆正等著你。',
-    '有一行你曾劃過的句子，今天會想起你。',
-    '貓頭鷹翅膀掠過的方向，藏著你下一篇心頭好。',
-    '今日的茶葉渣排成了書頁的形狀——放心讀，別趕。',
-    '星象顯示：收藏夾裡最安靜的那篇，今天最適合翻開。',
-    '有靈感在你耳後三寸徘徊，記得留一張羊皮紙給它。',
-    '今日水晶球霧氣偏甜，適合讀一點讓人臉紅的段落。',
-    '你的護法今天格外精神，適合開始一件拖延已久的小事。',
-    '儲思盆微瀾——舊回憶今天對你格外溫柔。',
-    '今日不宜與情節較勁，作者自有安排。',
-    '適合在窗邊讀完一章，再抬頭看一次天色。',
-    '今天遇到的第一個句號，值得你停留三秒。',
-    '魔杖芯微微發燙：你惦記的更新，比你想的更近。',
-    '今日的你適合當讀者，不適合當評審——寬容一點。',
-    '有一場久違的心動排在你的日程之外，留點空。',
-    '星軌顯示：慢慢讀，結局不會跑。',
-    '今天適合把「以後再看」的那篇，變成「原來如此」。',
-    '占卜學教授說：今日直覺可信，尤其在選書這件事上。',
-    '圖書館禁書區今夜無人——你的秘密愛好很安全。',
-    '今日適合替喜歡的作品點一次讚，光會傳回去。',
-    '貓頭鷹今天心情好，有話想說就去許願池丟一枚願望。',
-    '你上次許的願，正在某支羽毛筆下慢慢成形。',
-    '今日郵路通暢，錯過的通知都會找到你。',
-    '適合整理收藏夾，像整理一格自己的儲思盆。',
-    '今天讀到的某句話，會在三天後派上用場。',
-    '星象偏暖：舊文重讀，會讀出新的心跳。',
-    '今日適合換一位主角陪你——輪值的他已經等很久了。',
-    '水晶球起霧不是壞事，霧散之後的第一眼最清楚。',
-    '你的羊皮紙今天格外聽話，想寫點什麼就趁現在。',
-    '今日風向偏向溫柔，對自己也請比照辦理。',
-    '有一段你以為忘了的劇情，今天會突然想起——去查證吧。',
-    '今日的幸運藏在目錄的第三行。',
-    '魁地奇開賽前的天空最好看——忙碌之前，先看一眼喜歡的封面。',
-    '今天適合被一個標題騙進去，然後心甘情願讀完。',
-    '星象顯示你與某位作者的頻率今日重合，留意新作。',
-    '深夜的更新最香，但你的睡眠更貴——明早再讀也不遲。',
-    '今日適合在喜歡的段落停下來，重讀第二遍。',
-    '你錯過的那班貓頭鷹，帶的其實是明天的信。',
-    '今天的心動封面值得多看三秒，那三秒是你的。',
-    '占卜顯示：今日的眼淚額度已預留給某個章節，帶好手帕。',
-    '適合把手機亮度調暗一格，讓文字亮一點。',
-    '今日與其追新，不如補舊——舊坑的土是甜的。',
-    '護法之光在你肩上停了一下，今天適合原諒一個小失誤。',
-    '星軌如常，你也如常，就很好。',
-    '今天適合把一句喜歡的台詞抄進備忘錄。',
-    '水晶球說：你想等的那個更新在路上了，別問第幾天。',
-    '今日書緣旺，隨手點開的那篇就是對的那篇。',
-    '有個角色今天特別想見你——回心動頁看看是誰。',
-    '今日適合早點收工，把黃昏留給一章短的。',
-    '魔法部溫馨提醒：閱讀過久請起身倒水——順便回味剛才那段。',
-  ],
-  yi: [
-    '重讀收藏', '給貓頭鷹順毛', '補一個舊坑', '抄一句台詞', '換一張心動封面',
-    '許一個小願', '配熱茶閱讀', '讀一章短的', '把讚點出去', '翻目錄找驚喜',
-    '窗邊讀書', '慢讀', '跟角色道晚安', '整理收藏夾', '重看第一章',
-    '早點收工', '擦亮魔杖', '餵貓頭鷹點心', '白日夢五分鐘', '把黃昏留給閱讀',
-  ],
-  ji: [
-    '熬夜追更', '在走廊奔跑', '劇透他人', '跳章', '與結局較勁',
-    '心裡催更太大聲', '邊讀邊回訊息', '囤太多待讀', '快轉心動段落', '深夜點開虐文',
-    '一目十行', '同時開三篇', '餓著肚子讀美食文', '把「明天讀」說第三次', '對占卜太認真',
-    '把魔杖當筷子', '對鏡子練台詞太投入', '亮度開到刺眼', '忘記眨眼', '跟貓頭鷹搶零食',
-  ],
-};
-function _fnv(str) { let h = 2166136261; for (const c of str) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; }
-function _divineKey() { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`; }
-function _zhDay(d) {
-  const t = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
-  if (d === 10) return '十'; if (d < 10) return t[d];
-  if (d < 20) return '十' + t[d % 10];
-  return t[Math.floor(d / 10)] + '十' + (d % 10 ? t[d % 10] : '');
-}
-function divineToday() {
-  const key = _divineKey(), uid = (currentUser && currentUser.id) || 'anon';
-  const h = (salt) => _fnv(uid + '|' + key + '|' + salt);
-  const roll = h('tier') % 100; let acc = 0, tier = DIVINE.tiers[DIVINE.tiers.length - 1];
-  for (const t of DIVINE.tiers) { acc += t.w; if (roll < acc) { tier = t; break; } }
-  const jiPool = DIVINE.ji;
-  const char = CHARS[h('char') % CHARS.length];
-  const n = new Date(); const zhM = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
-  return {
-    dateLabel: `${zhM[n.getMonth()]}月${_zhDay(n.getDate())}日・${DIVINE.notes[h('note') % DIVINE.notes.length]}`,
-    tier: tier.name,
-    line: DIVINE.lines[h('line') % DIVINE.lines.length],
-    yi: DIVINE.yi[h('yi') % DIVINE.yi.length],
-    ji: jiPool[h('ji') % jiPool.length],
-    charName: char.name,
-    quote: char.quotes[h('quote') % char.quotes.length],
-  };
-}
-function renderDivineBall() {
-  const w = document.getElementById('divine-wrap'); if (!w) return;
-  if (!isBeta()) { w.style.display = 'none'; return; }
-  w.style.display = 'block';
-  const row = document.getElementById('divine-dot-row'); if (row) row.style.display = '';
-  const tg = document.getElementById('divine-dot-toggle'); if (tg) tg.checked = localStorage.getItem('pd_divine_dot') !== '0';
-  const dot = document.getElementById('divine-dot');
-  if (dot) dot.style.display = (localStorage.getItem('pd_divine_dot') !== '0' && localStorage.getItem('pd_divined') !== _divineKey()) ? '' : 'none';
-}
-function openDivination() {
-  const m = document.getElementById('divine-card'); if (!m) return;
-  const first = localStorage.getItem('pd_divined') !== _divineKey();
-  try { localStorage.setItem('pd_divined', _divineKey()); } catch (e) {}
-  renderDivineBall();
-  const r = divineToday();
-  document.getElementById('divine-date').textContent = r.dateLabel;
-  document.getElementById('divine-tier').textContent = r.tier;
-  document.getElementById('divine-line').textContent = `「${r.line}」`;
-  document.getElementById('divine-yiji').textContent = `宜：${r.yi}　忌：${r.ji}`;
-  document.getElementById('divine-guardian').textContent = `今日守護：${r.charName}——「${r.quote}」`;
-  document.getElementById('divine-veil').style.display = first ? '' : 'none';
-  document.getElementById('divine-body').style.display = first ? 'none' : '';
-  m.style.display = 'flex';
-}
-function revealDivination() {
-  document.getElementById('divine-veil').style.display = 'none';
-  const b = document.getElementById('divine-body');
-  b.style.display = ''; b.classList.remove('divine-in'); void b.offsetWidth; b.classList.add('divine-in');
-}
-function dismissDivination() { const m = document.getElementById('divine-card'); if (m) m.style.display = 'none'; }
-function toggleDivineDot(on) { localStorage.setItem('pd_divine_dot', on ? '1' : '0'); renderDivineBall(); }
 
 let _heroSeq = 0;   // 心動封面載入的渲染序號（防舊計時器/回呼蓋掉新一輪）
 function renderGreeting() {
@@ -1950,7 +1815,6 @@ function isBeta() {
 function setBetaFlag(on) {
   if (on) localStorage.setItem('pd_beta', '1'); else localStorage.removeItem('pd_beta');
   toast(on ? '實驗功能已開啟' : '實驗功能已關閉');
-  renderDivineBall();
   loadCustomChars().then(() => { if (typeof renderShelf === 'function') renderShelf(); });   // 角色列出現/隱藏自創角色 + ＋
 }
 
