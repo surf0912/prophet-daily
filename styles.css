@@ -455,8 +455,15 @@
       color: var(--gold); font-size: 13px; padding: 4px 9px; border-radius: 4px; cursor: pointer;
     }
     .reader-font-ctrl span { color: var(--gold-lt); font-size: 12px; min-width: 18px; text-align: center; }
-    /* 文首插圖（artwork/<作品id>.jpg）：滿版、輕圓角、與內文留一口氣 */
-    .reader-artwork { display: block; width: 100%; height: auto; border-radius: 8px; margin: 0 0 20px; }
+    /* 文首插圖（artwork/<作品id>.jpg）：深木框＋內圈金髮絲線（V2），像掛在牆上的一幅畫。
+       --chrome/--gold 不隨夜間翻轉，日夜模式都成立。 */
+    .reader-artwork {
+      display: block; width: 100%; height: auto; margin: 0 0 22px;
+      border: 12px solid var(--chrome);
+      outline: 1px solid var(--gold); outline-offset: -14px;
+      border-radius: 2px;
+      box-shadow: 0 6px 16px rgba(26,10,0,.28);
+    }
     .reader-content { padding: 24px 20px 100px; font-size: var(--reader-font, 15px); line-height: 2; color: var(--ink); user-select: none; flex: 1 0 auto; }
     .reader-content p { font-size: inherit; }
     /* ── Forum post layout (post body separated from comments) ── */
