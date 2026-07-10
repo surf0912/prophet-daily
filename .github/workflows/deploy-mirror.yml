@@ -1,0 +1,28 @@
+name: Deploy mirror (Render)
+
+# 前端一 push 就自動觸發 Render 的 the-prophet-daily 重建（build.sh 會 clone 最新前端進 ./web），
+# 鏡像因此永遠跟上 Pages 版本 —— 不再需要手動 Manual Deploy。
+#
+# 需要 repo secret `RENDER_DEPLOY_HOOK`＝Render 給的 Deploy Hook 完整網址（含 key）。
+# 沒設 secret 時這個 job 會安靜跳過，不會紅燈。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy hook
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "RENDER_DEPLOY_HOOK secret 未設定，跳過（鏡像需手動 Deploy）"
+            exit 0
+          fi
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 -X POST "$HOOK")
+          echo "Render deploy hook → $code"
+          [ "$code" = "200" ] || exit 1
