@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.38';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.39';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3050,23 +3050,6 @@ function openGalleryFull() {
   document.getElementById('gallery-full').style.display = 'flex';
 }
 function closeGalleryFull() { document.getElementById('gallery-full').style.display = 'none'; }
-
-async function importCoverGallery() {
-  const covers = [];
-  const seen = new Set();
-  CHARS.forEach(ch => {
-    const code = (ch.name || '').toLowerCase();
-    [...(ch.imgs || []), ...(ch.imgsD || [])].forEach(u => {
-      if (u && !seen.has(u)) { seen.add(u); covers.push({ image_url: u, character: code, title: ch.name }); }
-    });
-  });
-  if (!covers.length) { toast('沒有可匯入的封面'); return; }
-  try {
-    const res = await api('/novels/gallery/import-covers', { method: 'POST', body: JSON.stringify({ covers, author: '主編' }) });
-    toast(`已匯入 ${res.inserted} 張，略過 ${res.skipped} 張`);
-    if (document.getElementById('forum-gallery') && document.getElementById('forum-gallery').style.display !== 'none') loadGallery();
-  } catch (e) { toast(e.message); }
-}
 
 async function setImageSlot(id, slot) {
   try {
