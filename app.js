@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.55';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.56';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3260,7 +3260,10 @@ function closeGalleryFull() { document.getElementById('gallery-full').style.disp
 async function setImageSlot(id, slot) {
   try {
     await api(`/novels/${id}/image-slot`, { method: 'PATCH', body: JSON.stringify({ slot }) });
-    const it = _galleryItems.find(x => x.id === id); if (it) it.image_slot = slot;
+    // 詳情卡可能從肖像廊(_galleryItems)或作品管理(_adminNovels)開啟——兩份快取＋當前詳情物件都更新，
+    // 否則從作品管理開的那張重繪時讀到舊值，按鈕不高亮（看起來像「沒反應」）。
+    [_galleryDetailItem, ...(_galleryItems || []), ...(window._adminNovels || [])]
+      .forEach(o => { if (o && o.id === id) o.image_slot = slot; });
     openGalleryItem(id);   // 重繪高亮
     loadHomeGalleryCovers();   // 立刻反映到心動封面池
     toast('已設定心動封面時段');
