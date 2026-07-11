@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.54';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.55';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -635,6 +635,7 @@ async function initApp() {
   adminNovelScope = null;
   loadOwnerNames();   // super_admin only: map owner uuid → 巫師全名 for the owner hint
   loadFavIds().then(renderFavUpdates);   // 意若思鏡 收藏夾 ids + 追蹤更新 alert
+  loadHomeGalleryCovers();   // P2：肖像廊已排時段的畫作併入心動封面池
   loadAppSettings();   // 全域設定（通知保留天數等）→ 載入後重算貓頭鷹
   renderSettings();
   renderGreeting();
@@ -1082,6 +1083,15 @@ async function shareOrDownload(url, filename) {
 
 
 
+// P2：肖像廊已指定時段的畫作，登入後抓一次併入心動封面池（依角色分入 CHARS 輪替）。
+let _homeGalleryCovers = [];
+async function loadHomeGalleryCovers() {
+  try { _homeGalleryCovers = await api('/novels/home-covers', { background: true }) || []; }
+  catch { _homeGalleryCovers = []; }
+  // 抓到資料時，若正停在心動頁就重繪讓畫作即時登場
+  if (_homeGalleryCovers.length && document.getElementById('page-home')?.classList.contains('active')) renderGreeting();
+}
+
 let _heroSeq = 0;   // 心動封面載入的渲染序號（防舊計時器/回呼蓋掉新一輪）
 function renderGreeting() {
   const h = new Date().getHours();
@@ -1095,13 +1105,24 @@ function renderGreeting() {
   let selected = [];
   CHARS.forEach(c => photosOf(c).forEach(img => { if (!excluded.has(photoKey(img))) selected.push({ char: c, img }); }));
   if (!selected.length) CHARS.forEach(c => photosOf(c).forEach(img => selected.push({ char: c, img })));
+  // P2：併入肖像廊已指定時段的畫作。依角色代碼對回 CHARS（一張多角色 → 每個角色都當候選），
+  // 候選帶著自己的 slot（Supabase URL 無法用 coverSlot 推時段，靠後端給的 image_slot）。
+  (_homeGalleryCovers || []).forEach(gc => {
+    (gc.characters || []).forEach(code => {
+      const nm = (CHAR_LIST.find(x => x.code === code) || {}).name;
+      const c = nm && CHARS.find(x => x.name === nm);
+      if (c && !excluded.has(photoKey(gc.image_url))) selected.push({ char: c, img: gc.image_url, slot: gc.slot });
+    });
+  });
   // 時段門檻：06:00–14:30 早晨＆中午(am)、14:30–18:00 下午(pm)、其餘夜晚(night；無陽光者默認夜晚)。
   const mins = h * 60 + new Date().getMinutes();
   const slot = (mins >= 360 && mins < 870) ? 'am' : (mins >= 870 && mins < 1080) ? 'pm' : 'night';
+  // 候選時段：畫作用自帶 slot，官方封面照舊用 coverSlot(檔名) 推。
+  const slotOf = x => x.slot || coverSlot(x.img);
   // 下午池較小：下午時段讓「早晨中午」的圖也一起輪（反向不成立——下午的圖只在下午出現）。
   let pool = selected.filter(x => slot === 'pm'
-    ? (coverSlot(x.img) === 'pm' || coverSlot(x.img) === 'am')
-    : coverSlot(x.img) === slot);
+    ? (slotOf(x) === 'pm' || slotOf(x) === 'am')
+    : slotOf(x) === slot);
   // 保底：使用者的選取在當前時段沒有任何圖 → 忽略時段，改在他選的那幾張裡隨機輪轉(不留白)。
   if (!pool.length) pool = selected;
   const pick = pool[Math.floor(Math.random() * pool.length)] || { char: CHARS[0], img: CHARS[0].img };
@@ -3241,6 +3262,7 @@ async function setImageSlot(id, slot) {
     await api(`/novels/${id}/image-slot`, { method: 'PATCH', body: JSON.stringify({ slot }) });
     const it = _galleryItems.find(x => x.id === id); if (it) it.image_slot = slot;
     openGalleryItem(id);   // 重繪高亮
+    loadHomeGalleryCovers();   // 立刻反映到心動封面池
     toast('已設定心動封面時段');
   } catch (e) { toast(e.message); }
 }
