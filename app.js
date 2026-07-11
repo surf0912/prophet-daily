@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.39';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.40';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -944,6 +944,11 @@ const AFTERNOON_COVERS = new Set([ // 下午：日落/黃昏金色光
 ]);
 // 傳回某封面的時段：am=早晨中午、pm=下午、night=夜晚(預設)。
 function coverSlot(img) { return MORNING_COVERS.has(img) ? 'am' : AFTERNOON_COVERS.has(img) ? 'pm' : 'night'; }
+// 匯入肖像廊的心動封面：image_slot 空時，回退顯示它在心動的原始早/午/晚分類（只對「確實是封面」的 url 生效，
+// 一般作者投稿的圖不套用，避免被誤判成夜晚）。管理員按時段鈕仍可覆寫（存進 image_slot）。P2 心動池同樣用此回退。
+const _ALL_COVER_URLS = (() => { const s = new Set(); CHARS.forEach(ch => [...(ch.imgs || []), ...(ch.imgsD || [])].forEach(u => u && s.add(u))); return s; })();
+function coverSlotForUrl(url) { return _ALL_COVER_URLS.has(url) ? coverSlot(url) : ''; }
+function effectiveImageSlot(work) { return (work && work.image_slot) || coverSlotForUrl(work && work.image_url) || ''; }
 
 // ── 角色設定頁 (beta) — 基本資料 + GitHub 圖庫。bio / gallery 由站長填寫；gallery 留空時自動用封面圖。
 const CHAR_PROFILE = {
@@ -3036,10 +3041,11 @@ function openGalleryItem(id) {
   const adminish = currentUser && ['admin', 'super_admin'].includes(currentUser.role);
   if (adminish) {
     const slots = [['am', '早晨'], ['pm', '下午'], ['night', '夜晚']];
+    const cur = effectiveImageSlot(it);
     adminBox.style.display = '';
     adminBox.innerHTML = '<div style="font-size:12px;color:var(--ink-light);margin-bottom:6px">心動封面時段</div>'
       + '<div style="display:flex;gap:8px">' + slots.map(([v, n]) =>
-        `<button data-onclick="setImageSlot('${it.id}','${v}')" style="flex:1;font-size:12px;padding:6px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:${it.image_slot === v ? 'var(--scarlet)' : 'var(--parchment2)'};color:${it.image_slot === v ? 'var(--on-dark)' : 'var(--ink-light)'}">${n}</button>`).join('') + '</div>';
+        `<button data-onclick="setImageSlot('${it.id}','${v}')" style="flex:1;font-size:12px;padding:6px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:${cur === v ? 'var(--scarlet)' : 'var(--parchment2)'};color:${cur === v ? 'var(--on-dark)' : 'var(--ink-light)'}">${n}</button>`).join('') + '</div>';
   } else { adminBox.style.display = 'none'; }
   document.getElementById('gallery-detail').style.display = 'flex';
 }
@@ -3196,9 +3202,9 @@ async function loadReviewList() {
     const _kindTag = n => n.kind === 'image' ? ic('ic-gallery', 12) + ' 畫作'
                         : n.kind === 'forum' ? ic('ic-scroll', 12) + ' 論壇貼文'
                         : ic('ic-book', 12) + ' 小說';
-    const _slotBtns = n => { const slots = [['am', '早晨'], ['pm', '下午'], ['night', '夜晚']];
+    const _slotBtns = n => { const slots = [['am', '早晨'], ['pm', '下午'], ['night', '夜晚']]; const cur = effectiveImageSlot(n);
       return '<div style="font-size:12px;color:var(--ink-light);margin:8px 0 4px">心動封面時段（選填）</div><div style="display:flex;gap:6px">'
-        + slots.map(([v, name]) => `<button data-onclick="setImageSlot('${n.id}','${v}')" style="flex:1;font-size:12px;padding:5px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:${n.image_slot === v ? 'var(--scarlet)' : 'var(--parchment2)'};color:${n.image_slot === v ? 'var(--on-dark)' : 'var(--ink-light)'}">${name}</button>`).join('') + '</div>'; };
+        + slots.map(([v, name]) => `<button data-onclick="setImageSlot('${n.id}','${v}')" style="flex:1;font-size:12px;padding:5px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:${cur === v ? 'var(--scarlet)' : 'var(--parchment2)'};color:${cur === v ? 'var(--on-dark)' : 'var(--ink-light)'}">${name}</button>`).join('') + '</div>'; };
     const novelBody = novelsPending.map(n => `
         <div style="padding:12px 0;border-bottom:1px solid rgba(26,10,0,.1)">
           <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)}</div>
