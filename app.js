@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.46';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.47';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3518,9 +3518,10 @@ function renderAdminFilterBar(ns) {
   if (!ns.length) { wrap.style.display = 'none'; wrap.innerHTML = ''; if (sbar) sbar.style.display = 'none'; return; }
   if (sbar) sbar.style.display = '';
   // 種類分頁（附件數，件數為名下總數、不受其他篩選影響）
-  const counts = { all: ns.length, novel: 0, forum: 0, image: 0 };
+  const counts = { novel: 0, forum: 0, image: 0 };
   ns.forEach(n => { if (n.kind === 'forum') counts.forum++; else if (n.kind === 'image') counts.image++; else counts.novel++; });
-  const KINDS = [['', 'ic-books', '全部', counts.all], ['novel', 'ic-book', '小說', counts.novel], ['forum', 'ic-scroll', '羊皮紙', counts.forum], ['image', 'ic-gallery', '肖像', counts.image]];
+  // 沒有「全部」pill：不選任何種類 = 全部；再點亮著的 pill 取消回全部
+  const KINDS = [['novel', 'ic-book', '小說', counts.novel], ['forum', 'ic-scroll', '羊皮紙', counts.forum], ['image', 'ic-gallery', '肖像', counts.image]];
   const showCat = adminKind === 'novel';
   wrap.style.display = 'block';
   wrap.innerHTML = `<div class="admin-kind-row">${KINDS.map(([k, icn, label, cnt]) =>
@@ -3528,7 +3529,7 @@ function renderAdminFilterBar(ns) {
     + (showCat ? `<div class="filter-label">${ic('ic-sparkles', 12)} 分類</div><div class="cat-pills" id="admin-cat-pills"></div>` : '')
     + `<div class="filter-label" style="margin-top:8px;display:flex;align-items:center;gap:10px"><span>${ic('ic-sparkles', 12)} 角色</span><span id="admin-char-and"></span></div><div class="char-chips" id="admin-char-chips"></div>`;
   wrap.querySelectorAll('.kind-pill').forEach(b => b.onclick = () => {
-    adminKind = b.dataset.k;
+    adminKind = (adminKind === b.dataset.k) ? '' : b.dataset.k;   // 再點同一顆 = 取消（回全部）
     if (adminKind !== 'novel') adminCat = '';   // 離開小說就清掉分類子篩
     renderAdminNovels();
   });
@@ -3575,20 +3576,47 @@ function renderAdminNovels() {
       // 鎖上：作者本人(owner)或超管才有；鎖住後其他人完全看不到這篇存在。
       const canLock = !adminNovelScope || currentUser.role === 'super_admin';
       const lockBtn = canLock ? `<button data-onclick="toggleLock('${n.id}', ${!n.locked})" style="font-size:12px;padding:3px 10px;background:none;border:1px solid ${n.locked ? 'var(--series)' : 'var(--accent)'};color:${n.locked ? 'var(--series)' : 'var(--accent)'};border-radius:3px;cursor:pointer">${ic('ic-key',12)} ${n.locked ? '解鎖' : '鎖上'}</button>` : '';
-      return `
-      <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
-        <div style="margin-bottom:3px;display:flex;gap:5px;flex-wrap:wrap">${n.kind === 'forum'
+      const badges = (n.kind === 'forum'
           ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-scroll', 12) + ' 論壇體</span>'
           : n.kind === 'image'
           ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-gallery', 12) + ' 畫作</span>'
-          : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-book', 12) + ' 小說</span>'}${statusTag}${n.is_guide ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-book', 12) + ' 範例·可刪除</span>' : ''}${n.locked ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.2);color:var(--accent)">' + ic('ic-key',11) + ' 已鎖 · 唯你可見</span>' : ''}</div>
-        ${n.kind === 'image' ? `<div data-onclick="openGalleryItem('${n.id}')" style="display:flex;align-items:center;gap:10px;cursor:pointer"><img src="${escapeHtml(n.image_url || '')}" alt="" style="width:46px;height:46px;object-fit:cover;border-radius:5px;flex-shrink:0" /><div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div></div>`
-          : `<div data-onclick="openNovel('${n.id}')" style="font-size:14px;font-weight:bold;cursor:pointer">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>`}
-        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
-          ${n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : ''}
-          ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${escapeHtml(n.category)}</span>` : ''}
-          ${(n.characters || []).map(c => `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.18);color:var(--ink-light)">${escapeHtml(charNames([c]))}</span>`).join('')}
+          : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-book', 12) + ' 小說</span>')
+        + statusTag
+        + (n.is_guide ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-book', 12) + ' 範例·可刪除</span>' : '')
+        + (n.locked ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.2);color:var(--accent)">' + ic('ic-key',11) + ' 已鎖 · 唯你可見</span>' : '');
+      const tags = (n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : '')
+        + (n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${escapeHtml(n.category)}</span>` : '')
+        + (n.characters || []).map(c => `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.18);color:var(--ink-light)">${escapeHtml(charNames([c]))}</span>`).join('');
+      // 畫作：緊湊橫排卡 — 大縮圖靠左，資訊集中右側，動作列一排圖示圓鈕（省一半以上高度）
+      if (n.kind === 'image') {
+        // handler 必須寫成字面量（安全測試靜態掃 data-onclick），所以只抽共用的圓鈕樣式
+        const ibs = (border, color) => `width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;background:none;border:1px solid ${border};color:${color};border-radius:50%;cursor:pointer;padding:0;flex-shrink:0`;
+        const lockCol = n.locked ? 'var(--series)' : 'var(--accent)';
+        const acts = `<button data-onclick="openEditWork('${n.id}')" aria-label="編輯" title="編輯" style="${ibs('var(--gold)', 'var(--ink-light)')}">${ic('ic-edit', 15)}</button>`
+          + (canManage ? `<button data-onclick="openEditClass('${n.id}')" aria-label="分類" title="分類" style="${ibs('var(--accent)', 'var(--accent)')}">${ic('ic-tag', 15)}</button>
+            <button data-onclick="openSeries('${n.id}')" aria-label="系列" title="系列" style="${ibs('var(--series)', 'var(--series)')}">${ic('ic-link', 15)}</button>` : '')
+          + (isAdmin ? `<button data-onclick="openOwners('${n.id}')" aria-label="作者" title="作者" style="${ibs('var(--gold)', 'var(--ink-light)')}">${ic('ic-users', 15)}</button>` : '')
+          + (canLock ? `<button data-onclick="toggleLock('${n.id}', ${!n.locked})" aria-label="${n.locked ? '解鎖' : '鎖上'}" title="${n.locked ? '解鎖' : '鎖上'}" style="${ibs(lockCol, lockCol)}">${ic('ic-key', 15)}</button>` : '')
+          + (canManage ? `<button data-onclick="deleteNovel('${n.id}')" aria-label="刪除" title="刪除" style="${ibs('var(--accent)', 'var(--accent)')}">${ic('ic-trash', 15)}</button>` : '');
+        return `
+      <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <img src="${escapeHtml(n.image_url || '')}" alt="" data-onclick="openGalleryItem('${n.id}')" style="width:84px;height:84px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:pointer" />
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;gap:5px;flex-wrap:wrap">${badges}</div>
+            <div data-onclick="openGalleryItem('${n.id}')" style="font-size:14px;font-weight:bold;cursor:pointer;margin-top:3px">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">${tags}</div>
+            <div style="font-size:12px;color:var(--ink-light);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(n.author || '佚名')}${ownerTag(n)}${n.created_at ? ' · ' + ic('ic-calendar',11) + ' ' + fmtUpdated(n.created_at) : ''}</div>
+          </div>
         </div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">${acts}</div>
+      </div>`;
+      }
+      return `
+      <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
+        <div style="margin-bottom:3px;display:flex;gap:5px;flex-wrap:wrap">${badges}</div>
+        <div data-onclick="openNovel('${n.id}')" style="font-size:14px;font-weight:bold;cursor:pointer">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">${tags}</div>
         <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${escapeHtml(n.author || '佚名')}${ownerTag(n)}</div>
         ${n.created_at ? `<div style="font-size:12px;color:var(--ink-light);margin-top:2px">${ic('ic-calendar',11)} 發佈日期 ${fmtUpdated(n.created_at)}</div>` : ''}
         <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${editBtn}${manageBtns}${ownerAssignBtn}${lockBtn}${delBtn}</div>
