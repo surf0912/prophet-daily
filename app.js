@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.69';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.70';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -636,6 +636,7 @@ async function initApp() {
   loadOwnerNames();   // super_admin only: map owner uuid → 巫師全名 for the owner hint
   loadFavIds().then(renderFavUpdates);   // 意若思鏡 收藏夾 ids + 追蹤更新 alert
   loadHomeGalleryCovers();   // P2：肖像廊已排時段的畫作併入心動封面池
+  loadCoverCrops().then(() => renderGreeting());   // 封面裁切框：載完重繪一次心動，讓已設定的框立即生效
   loadAppSettings();   // 全域設定（通知保留天數等）→ 載入後重算貓頭鷹
   renderSettings();
   renderGreeting();
@@ -968,6 +969,55 @@ const _ALL_COVER_URLS = (() => { const s = new Set(); CHARS.forEach(ch => [...(c
 function coverSlotForUrl(url) { return _ALL_COVER_URLS.has(photoKey(url)) ? coverSlot(url) : ''; }
 function effectiveImageSlot(work) { return (work && work.image_slot) || coverSlotForUrl(work && work.image_url) || ''; }
 
+// ── 封面裁切框（心動 hero / 角色頁縮圖共用）──────────────────────────────────
+// 非破壞性：原圖不動，後端只存一個 "z,x,y" 顯示框（z=在 cover 之上的縮放倍率≥1，x,y=可視框在
+// 圖上的正規化焦點中心 0..1）。套用時依當前框（不同頁面框比例不同）以 cover 為底重算，所以同一份
+// 設定在心動大圖與角色頁縮圖都成立——中心固定、縮放一致，只有邊緣依框比例裁掉（cover 本義）。
+let _coverCrops = {};       // photoKey → "z,x,y"
+const _imgNat = {};         // photoKey → {w,h}（原圖尺寸快取）
+async function loadCoverCrops() {
+  try { _coverCrops = await api('/novels/cover-crops') || {}; }
+  catch { _coverCrops = {}; }
+}
+function parseCrop(s) {
+  const p = String(s || '').split(',').map(Number);
+  if (p.length < 3 || p.some(n => !isFinite(n))) return null;
+  return { z: Math.max(1, p[0]), x: Math.min(1, Math.max(0, p[1])), y: Math.min(1, Math.max(0, p[2])) };
+}
+function getCoverCrop(url) { return parseCrop(_coverCrops[photoKey(url)]); }
+function imgNat(url) {
+  const k = photoKey(url);
+  if (_imgNat[k]) return Promise.resolve(_imgNat[k]);
+  return new Promise(res => {
+    const im = new Image();
+    im.onload = () => { _imgNat[k] = { w: im.naturalWidth, h: im.naturalHeight }; res(_imgNat[k]); };
+    im.onerror = () => res(null);
+    im.src = url;
+  });
+}
+// 依框尺寸把「z,x,y」換算成該圖層的 background-size / background-position（px）。
+function cropBgPx(fw, fh, nw, nh, crop) {
+  const cover = Math.max(fw / nw, fh / nh);
+  const s = cover * crop.z, dw = nw * s, dh = nh * s;
+  let left = fw / 2 - crop.x * dw, top = fh / 2 - crop.y * dh;
+  left = Math.min(0, Math.max(fw - dw, left));
+  top = Math.min(0, Math.max(fh - dh, top));
+  return { size: `${dw}px ${dh}px`, position: `${left}px ${top}px` };
+}
+// 對一個以 background-image 呈現的元素套用裁切框；無裁切或原圖未知時回退預設 cover。
+function applyCoverCropToEl(el, url) {
+  const crop = getCoverCrop(url);
+  if (!crop) { el.style.backgroundSize = ''; el.style.backgroundPosition = ''; return; }
+  imgNat(url).then(nat => {
+    if (!nat) return;
+    const fw = el.clientWidth, fh = el.clientHeight;
+    if (!fw || !fh) return;
+    const px = cropBgPx(fw, fh, nat.w, nat.h, crop);
+    el.style.backgroundSize = px.size;
+    el.style.backgroundPosition = px.position;
+  });
+}
+
 // ── 角色設定頁 (beta) — 基本資料 + GitHub 圖庫。bio / gallery 由站長填寫；gallery 留空時自動用封面圖。
 const CHAR_PROFILE = {
   Sean:   { bio: '', gallery: [] },
@@ -1005,12 +1055,16 @@ function renderCharProfile(name) {
     // 每張照片右上角一個開關：勾 = 這張出現在心動封面，取消 = 隱藏這張(連同桌機同序版)
     const HEART = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.7l-1.45-1.32C5.4 14.74 2 11.66 2 7.9 2 5.1 4.2 3 7 3c1.6 0 3.14.74 4.13 1.9L12 5.9l.87-1C13.86 3.74 15.4 3 17 3c2.8 0 5 2.1 5 4.9 0 3.76-3.4 6.84-8.55 11.49L12 20.7z"/></svg>`;
     const DL = `<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>`;
+    // 裁切框（心動顯示焦點）：官方封面只有管理員能框；肖像廊畫作作者(gc.mine)或管理員能框。
+    const CROP = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>`;
+    const adminish = currentUser && ['admin', 'super_admin'].includes(currentUser.role);
+    const cropBtn = (u) => `<button class="cp-crop" data-onclick="openCoverCrop('${escapeHtml(u)}')" aria-label="調整心動封面顯示" title="調整心動封面顯示">${CROP}</button>`;
     html += `<div class="cp-cover-head"><h3>心動封面</h3><button class="cp-hint-btn" data-onclick="cpCoverHint()" aria-label="心動封面說明" title="心動封面說明">${ic('ic-help', 16)}</button><div class="cp-cover-note" id="cp-cover-note" hidden>點亮愛心即可加入心動封面；取消後不再出現。全部取消時，會恢復隨機輪替。</div></div>`;
     const charShots = photos.map((u, i) => {
       const on = !excluded.has(photoKey(u));
       const dl = photoWallpaperUrl(u) ? `<button class="cp-download" data-onclick="downloadPhoto('${u}','${escapeHtml(name)}')" aria-label="下載桌布" title="下載桌布">${DL}</button>` : '';
       const heart = `<button class="cp-cover-toggle${on ? ' on' : ''}" data-onclick="toggleCoverPhoto('${name}', ${i}, this)" role="checkbox" aria-checked="${on}" aria-label="心動封面顯示這張">${HEART}</button>`;
-      return `<div class="cp-shot" data-full="${escapeHtml(u)}" style="background-image:url('${u}')">${heart}${dl}</div>`;
+      return `<div class="cp-shot" data-full="${escapeHtml(u)}" style="background-image:url('${u}')">${heart}${dl}${adminish ? cropBtn(u) : ''}</div>`;
     }).join('');
     // P2：這個角色「已排時段」的肖像廊畫作也列進來（傳全域索引給 toggle，避免把 URL 塞進宣告式 handler）
     const galShots = (_homeGalleryCovers || []).map((gc, gi) => ({ gc, gi }))
@@ -1018,7 +1072,8 @@ function renderCharProfile(name) {
       .map(({ gc, gi }) => {
         const on = !excluded.has(photoKey(gc.image_url));
         const heart = `<button class="cp-cover-toggle${on ? ' on' : ''}" data-onclick="toggleCoverGallery(${gi}, this)" role="checkbox" aria-checked="${on}" aria-label="心動封面顯示這張">${HEART}</button>`;
-        return `<div class="cp-shot" data-full="${escapeHtml(gc.image_url)}" style="background-image:url('${escapeHtml(gc.image_url)}')">${heart}</div>`;
+        const canCrop = adminish || gc.mine;
+        return `<div class="cp-shot" data-full="${escapeHtml(gc.image_url)}" style="background-image:url('${escapeHtml(gc.image_url)}')">${heart}${canCrop ? cropBtn(gc.image_url) : ''}</div>`;
       }).join('');
     html += `<div class="cp-gallery">${charShots}${galShots}</div>`;
   }
@@ -1030,6 +1085,8 @@ function renderCharProfile(name) {
   html += `</div>`;
   const body = document.getElementById('cp-body');
   body.innerHTML = html;
+  // 每張縮圖套用自己的裁切框（有設定才動，否則維持 cover 預設）。
+  body.querySelectorAll('.cp-shot[data-full]').forEach(el => applyCoverCropToEl(el, el.dataset.full));
   // 封面雙擊 → 全螢幕帶浮水印大圖（同肖像廊）。手動雙擊偵測，避免與愛心／下載鈕的單擊誤觸。
   body.querySelectorAll('.cp-shot').forEach(el => {
     let t = 0;
@@ -1193,15 +1250,27 @@ function renderGreeting() {
   const heroPos = isWide ? (char.bgPosDesktop || char.bgPos || 'center') : (char.bgPos || 'center');
   const FALLBACK_ART = { Sean: './assets/offline_sean.webp', Silas: './assets/offline_silas.webp', Eli: './assets/offline_eli.webp', Adrian: './assets/offline_adrian.webp' };
   const fbArt = FALLBACK_ART[char.name];
-  const layers = (top) => {
+  const layers = (top, cropPx) => {
     const imgs = [top && `url('${top}')`, fbArt && `url('${fbArt}')`, GRAD].filter(Boolean);
     const n = imgs.length - 1;   // 圖片層數（不含漸層）
+    const poss = Array(n).fill(heroPos).concat('center');
+    const sizes = Array(n).fill(char.bgSize || 'cover').concat('cover');
+    if (top && cropPx) { poss[0] = cropPx.position; sizes[0] = cropPx.size; }   // 頂層封面有裁切框時只覆寫它
     hero.style.backgroundImage = imgs.join(', ');
-    hero.style.backgroundPosition = Array(n).fill(heroPos).concat('center').join(', ');
+    hero.style.backgroundPosition = poss.join(', ');
     hero.style.backgroundRepeat = Array(n + 1).fill('no-repeat').join(', ');
-    hero.style.backgroundSize = Array(n).fill(char.bgSize || 'cover').concat('cover').join(', ');
+    hero.style.backgroundSize = sizes.join(', ');
   };
-  const showHero = (url) => { layers(url); emoji.style.display = 'none'; };
+  const showHero = (url, natEl) => {
+    let cropPx = null;
+    const crop = getCoverCrop(url);
+    if (crop && natEl && natEl.naturalWidth && hero.clientWidth) {
+      _imgNat[photoKey(url)] = { w: natEl.naturalWidth, h: natEl.naturalHeight };
+      cropPx = cropBgPx(hero.clientWidth, hero.clientHeight, natEl.naturalWidth, natEl.naturalHeight, crop);
+    }
+    layers(url, cropPx);
+    emoji.style.display = 'none';
+  };
   // 0 秒先鋪線稿底稿（有的話），封面載到再蓋上。
   if (fbArt) { layers(null); emoji.style.display = 'none'; }
   // 候選圖：先用挑中的那張，載入失敗時退回同角色其他「未隱藏」的照片，最後才是全部(避免空白)。
@@ -1212,7 +1281,7 @@ function renderGreeting() {
     if (seq !== _heroSeq) return;
     if (i >= candidates.length) return;   // 全部失敗 → 線稿底稿留守（或漸層+emoji）
     const im = new Image();
-    im.onload = () => { if (seq === _heroSeq) showHero(candidates[i]); };
+    im.onload = () => { if (seq === _heroSeq) showHero(candidates[i], im); };
     im.onerror = () => tryLoad(i + 1);
     im.src = candidates[i];
   })(0);
@@ -3330,7 +3399,8 @@ function openGalleryItem(id) {
     adminBox.style.display = '';
     adminBox.innerHTML = '<div style="font-size:12px;color:var(--ink-light);margin-bottom:6px">心動封面時段</div>'
       + '<div style="display:flex;gap:8px">' + slots.map(([v, n]) =>
-        `<button data-onclick="setImageSlot('${it.id}','${v}')" style="flex:1;font-size:12px;padding:6px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:${cur === v ? 'var(--scarlet)' : 'var(--parchment2)'};color:${cur === v ? 'var(--on-dark)' : 'var(--ink-light)'}">${n}</button>`).join('') + '</div>';
+        `<button data-onclick="setImageSlot('${it.id}','${v}')" style="flex:1;font-size:12px;padding:6px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:${cur === v ? 'var(--scarlet)' : 'var(--parchment2)'};color:${cur === v ? 'var(--on-dark)' : 'var(--ink-light)'}">${n}</button>`).join('') + '</div>'
+      + `<button data-onclick="openCoverCrop('${escapeHtml(it.image_url)}')" style="width:100%;margin-top:8px;font-size:12px;padding:7px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:var(--parchment2);color:var(--ink-light)">調整心動封面顯示（裁切框）</button>`;
   } else { adminBox.style.display = 'none'; }
   document.getElementById('gallery-detail').style.display = 'flex';
 }
@@ -3422,6 +3492,110 @@ function openImageFull(src) {
   document.getElementById('gallery-full').style.display = 'flex';
 }
 function closeGalleryFull() { document.getElementById('gallery-full').style.display = 'none'; }
+
+// ── 心動封面裁切框編輯器 ────────────────────────────────────────────────────
+// 拖動＋縮放（同頭像裁切的手感，但方框、非破壞性）。存的是 z,x,y（見 loadCoverCrops 註解）。
+// 權限由後端把關；前端只對「有入口鈕的圖」開這個編輯器。
+const _ccrop = { url: null, nw: 0, nh: 0, fw: 0, fh: 0, scale: 0, minScale: 0, tx: 0, ty: 0 };
+function openCoverCrop(url) {
+  if (!url) return;
+  _ccrop.url = url;
+  const modal = document.getElementById('cover-crop-modal');
+  const imgEl = document.getElementById('cc-img');
+  const im = new Image();
+  im.onload = () => {
+    _ccrop.nw = im.naturalWidth; _ccrop.nh = im.naturalHeight;
+    _imgNat[photoKey(url)] = { w: im.naturalWidth, h: im.naturalHeight };
+    imgEl.src = url;
+    imgEl.style.width = im.naturalWidth + 'px';
+    imgEl.style.height = im.naturalHeight + 'px';
+    modal.classList.add('open');
+    requestAnimationFrame(_ccrInit);   // 開窗後才量得到方框尺寸
+  };
+  im.onerror = () => toast('圖片讀取失敗');
+  im.src = url;
+}
+function _ccrInit() {
+  const frame = document.getElementById('cc-frame');
+  const fw = frame.clientWidth, fh = frame.clientHeight;
+  _ccrop.fw = fw; _ccrop.fh = fh;
+  const cover = Math.max(fw / _ccrop.nw, fh / _ccrop.nh);
+  _ccrop.minScale = cover;
+  const existing = getCoverCrop(_ccrop.url);
+  if (existing) {
+    _ccrop.scale = cover * existing.z;
+    _ccrop.tx = fw / 2 - existing.x * _ccrop.nw * _ccrop.scale;
+    _ccrop.ty = fh / 2 - existing.y * _ccrop.nh * _ccrop.scale;
+  } else {
+    _ccrop.scale = cover;
+    _ccrop.tx = (fw - _ccrop.nw * _ccrop.scale) / 2;
+    _ccrop.ty = (fh - _ccrop.nh * _ccrop.scale) / 2;
+  }
+  _ccrClamp();
+  document.getElementById('cc-zoom').value = (_ccrop.scale / _ccrop.minScale).toFixed(2);
+  _ccrApply();
+}
+function _ccrApply() {
+  document.getElementById('cc-img').style.transform = `translate(${_ccrop.tx}px, ${_ccrop.ty}px) scale(${_ccrop.scale})`;
+}
+function _ccrClamp() {
+  const { fw, fh, scale, nw, nh } = _ccrop;
+  _ccrop.tx = Math.min(0, Math.max(fw - nw * scale, _ccrop.tx));
+  _ccrop.ty = Math.min(0, Math.max(fh - nh * scale, _ccrop.ty));
+}
+function ccrZoom(mult) {
+  const { fw, fh } = _ccrop;
+  const cx = (fw / 2 - _ccrop.tx) / _ccrop.scale, cy = (fh / 2 - _ccrop.ty) / _ccrop.scale;
+  _ccrop.scale = _ccrop.minScale * parseFloat(mult);
+  _ccrop.tx = fw / 2 - cx * _ccrop.scale; _ccrop.ty = fh / 2 - cy * _ccrop.scale;
+  _ccrClamp(); _ccrApply();
+}
+function ccrDragStart(ev) {
+  ev.preventDefault();
+  const p = ev.touches ? ev.touches[0] : ev;
+  let lastX = p.clientX, lastY = p.clientY;
+  const move = (e) => {
+    const q = e.touches ? e.touches[0] : e;
+    _ccrop.tx += q.clientX - lastX; _ccrop.ty += q.clientY - lastY;
+    lastX = q.clientX; lastY = q.clientY;
+    _ccrClamp(); _ccrApply();
+  };
+  const end = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', end); };
+  window.addEventListener('pointermove', move); window.addEventListener('pointerup', end);
+}
+function closeCoverCrop() { document.getElementById('cover-crop-modal').classList.remove('open'); }
+async function saveCoverCrop() {
+  const { fw, fh, scale, minScale, tx, ty, nw, nh, url } = _ccrop;
+  if (!url || !scale) return;
+  const z = Math.max(1, scale / minScale);
+  const x = Math.min(1, Math.max(0, (fw / 2 - tx) / (scale * nw)));
+  const y = Math.min(1, Math.max(0, (fh / 2 - ty) / (scale * nh)));
+  const crop = `${z.toFixed(3)},${x.toFixed(4)},${y.toFixed(4)}`;
+  try {
+    await api('/novels/cover-crops', { method: 'PATCH', body: JSON.stringify({ image_url: url, crop }) });
+    _coverCrops[photoKey(url)] = crop;
+    closeCoverCrop();
+    toast('已更新心動封面顯示');
+    _afterCropChange(url);
+  } catch (e) { toast(e.message); }
+}
+async function clearCoverCrop() {
+  const url = _ccrop.url;
+  if (!url) return;
+  try {
+    await api('/novels/cover-crops', { method: 'PATCH', body: JSON.stringify({ image_url: url, crop: null }) });
+    delete _coverCrops[photoKey(url)];
+    closeCoverCrop();
+    toast('已清除裁切框');
+    _afterCropChange(url);
+  } catch (e) { toast(e.message); }
+}
+function _afterCropChange(url) {
+  document.querySelectorAll('#cp-body .cp-shot[data-full]').forEach(el => {
+    if (photoKey(el.dataset.full) === photoKey(url)) applyCoverCropToEl(el, el.dataset.full);
+  });
+  if (typeof renderGreeting === 'function') renderGreeting();   // 心動 hero 依新框重繪
+}
 
 async function setImageSlot(id, slot) {
   try {

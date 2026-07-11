@@ -747,6 +747,26 @@
   </div>
 </div>
 
+<div class="perm-modal" id="cover-crop-modal">
+  <div class="perm-modal-inner" style="text-align:center">
+    <h3>調整心動封面顯示</h3>
+    <div id="cc-frame" data-onpointerdown="ccrDragStart(event)" data-ontouchstart="ccrDragStart(event)"
+         style="width:240px;max-width:70vw;aspect-ratio:3/4;margin:12px auto;border-radius:12px;overflow:hidden;position:relative;background:#000;touch-action:none;cursor:grab;box-shadow:0 0 0 2px var(--gold) inset">
+      <img id="cc-img" alt="" style="position:absolute;left:0;top:0;transform-origin:0 0;user-select:none;-webkit-user-drag:none;pointer-events:none;max-width:none" />
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:0 6px;margin-bottom:8px">
+      <span style="font-size:12px;color:var(--ink)">縮放</span>
+      <input type="range" id="cc-zoom" min="1" max="3" step="0.01" value="1" style="flex:1" data-oninput="ccrZoom(this.value)" />
+    </div>
+    <p style="font-size:12px;color:var(--ink-light);opacity:.8;margin-bottom:4px">拖曳移動、滑桿縮放，框內就是心動與角色頁會顯示的部分</p>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="closeCoverCrop()">取消</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="clearCoverCrop()">清除</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" data-onclick="saveCoverCrop()">儲存</button>
+    </div>
+  </div>
+</div>
+
 <div id="waking-overlay">
   <div class="box">
     <div class="spinner" style="margin:0 auto 12px"></div>
