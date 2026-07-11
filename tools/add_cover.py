@@ -2,7 +2,7 @@
 """心動封面「標準化」處理工具。
 
 把一張（或多張）原圖轉成網站要的兩個版本：
-  ‧ 顯示版 → chars/<name>.JPG    首頁 hero + 角色資料頁 gallery 用；壓小才不會「圖跑不出來」
+  ‧ 顯示版 → chars/<name>.webp   首頁 hero + 角色資料頁 gallery 用（v3.49 起 WebP，比 JPG 省 ~40%）
   ‧ 下載版 → wallpapers/<name>_wall.jpg   角色頁「浮水印下載」用；用原圖＋浮水印保持清晰
 
 用法：
@@ -19,7 +19,7 @@
 import os
 import sys
 import glob
-from PIL import Image
+from PIL import Image, ImageOps
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from wallpaper_watermark import overlay_logo   # 沿用同一顆浮水印邏輯，樣式一致
@@ -29,7 +29,7 @@ CHARS_DIR = os.path.join(REPO, "chars")
 WALL_DIR = os.path.join(REPO, "wallpapers")
 LOGO = os.path.join(REPO, "tools", "watermark_logo.png")   # repo 內建，不依賴 wp
 PHONE_MAX_W, DESK_MAX_W = 1080, 1366
-DISPLAY_Q, WALL_Q = 80, 92
+DISPLAY_Q, WALL_Q = 82, 92
 
 
 def process(src):
@@ -39,13 +39,13 @@ def process(src):
     if not (is_phone or is_desk):
         print(f"  ⚠ 跳過 {os.path.basename(src)}：檔名要含 _phone_ 或 _desktop_")
         return None
-    orig = Image.open(src).convert("RGB")
+    orig = ImageOps.exif_transpose(Image.open(src)).convert("RGB")   # 先落實 EXIF 方向，WebP 不帶方向資訊
     w, h = orig.size
     max_w = PHONE_MAX_W if is_phone else DESK_MAX_W
     disp = orig.resize((max_w, round(h * max_w / w)), Image.LANCZOS) if w > max_w else orig
-    disp_path = os.path.join(CHARS_DIR, name + ".JPG")
-    disp.save(disp_path, "JPEG", quality=DISPLAY_Q, optimize=True)
-    msg = f"  ✓ chars/{name}.JPG  {disp.size[0]}x{disp.size[1]}  {os.path.getsize(disp_path)//1024}KB"
+    disp_path = os.path.join(CHARS_DIR, name + ".webp")
+    disp.save(disp_path, "WEBP", quality=DISPLAY_Q, method=6)
+    msg = f"  ✓ chars/{name}.webp  {disp.size[0]}x{disp.size[1]}  {os.path.getsize(disp_path)//1024}KB"
     if is_phone:
         wm = overlay_logo(orig, Image.open(LOGO).convert("RGBA"))   # 浮水印疊在原圖上（下載版要清晰）
         wm_path = os.path.join(WALL_DIR, name + "_wall.jpg")
@@ -78,7 +78,7 @@ def main():
         print(f"     app.js CHARS：把 {', '.join(desks)} 加進對應角色的 imgsD（桌機）")
     print("  2) 日夜分類：有日光/明亮→MORNING_COVERS；日落黃昏→AFTERNOON_COVERS；無陽光不加(=夜晚)")
     print("  3) bump APP_VERSION + service-worker CACHE_NAME（兩者必須一致）")
-    print("  4) esprima 驗語法 → git add/commit/push → 提醒上 Render 手動 Deploy")
+    print("  4) esprima 驗語法 → git add/commit/push（main 推上去 Pages/Render 鏡像都會自動部署）")
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@
 /usr/bin/python3 tools/add_cover.py ~/Desktop/wp/sean_phone_5.png ~/Desktop/wp/sean_desktop_3.png
 ```
 它會產生：
-- `chars/<name>.JPG` — 網站顯示版（手機壓到 ≤1080 寬 q80、桌機 ≤1366 寬 q82；約 0.2–0.4MB）。
+- `chars/<name>.webp` — 網站顯示版（v3.49 起 WebP q82；手機壓到 ≤1080 寬、桌機 ≤1366 寬；約 0.1–0.25MB）。
 - `wallpapers/<name>_wall.jpg` — **手機才有**，用原圖＋浮水印 q92（角色頁「下載桌布」用）。
 
 浮水印 logo 內建在 `tools/watermark_logo.png`（不依賴桌面 wp，之前 wp 的 logo 曾消失過）。
@@ -36,7 +36,7 @@
 
 ## 5. 驗證 → 推 → 部署
 - esprima 驗語法（見健檢流程）。
-- 確認每張 `chars/*.JPG`（＋手機的 `wallpapers/*_wall.jpg`）都在、CHARS 引用大小寫一致。
+- 確認每張 `chars/*.webp`（＋手機的 `wallpapers/*_wall.jpg`）都在、CHARS 引用大小寫一致。
 - `git add -A && git commit && git push`。
 - **提醒自己上 Render 手動 Deploy**（Manual Deploy → Deploy latest commit），中國鏡像才會同步。
 

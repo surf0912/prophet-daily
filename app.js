@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.48';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.49';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -878,7 +878,7 @@ function installPwaNow() {
 // quotes[0]=早上  quotes[1]=中午  quotes[2]=下午  quotes[3]=晚上
 const CHARS = [
   {
-    name: 'Sean', emoji: '', img: './chars/sean_phone_2.JPG', imgs: ['./chars/sean_phone_1.JPG', './chars/sean_phone_2.JPG', './chars/sean_phone_3.JPG', './chars/sean_phone_4.JPG', './chars/sean_phone_5.JPG', './chars/sean_phone_6.JPG', './chars/sean_phone_7.JPG', './chars/sean_phone_8.JPG', './chars/sean_phone_9.JPG', './chars/sean_phone_10.JPG', './chars/sean_phone_11.JPG'], imgD: './chars/Sean_desktop_1.JPG', imgsD: ['./chars/Sean_desktop_1.JPG', './chars/sean_desktop_2.JPG', './chars/sean_desktop_3.JPG', './chars/sean_desktop_4.JPG'], bgPos: 'center 20%',
+    name: 'Sean', emoji: '', img: './chars/sean_phone_2.webp', imgs: ['./chars/sean_phone_1.webp', './chars/sean_phone_2.webp', './chars/sean_phone_3.webp', './chars/sean_phone_4.webp', './chars/sean_phone_5.webp', './chars/sean_phone_6.webp', './chars/sean_phone_7.webp', './chars/sean_phone_8.webp', './chars/sean_phone_9.webp', './chars/sean_phone_10.webp', './chars/sean_phone_11.webp'], imgD: './chars/Sean_desktop_1.webp', imgsD: ['./chars/Sean_desktop_1.webp', './chars/sean_desktop_2.webp', './chars/sean_desktop_3.webp', './chars/sean_desktop_4.webp'], bgPos: 'center 20%',
     quotes: [
       '早上好，今天也很漂亮。別懷疑，我說的是事實。',
       '中午好。終於下課了？我可以把你借走一會兒嗎？',
@@ -887,7 +887,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Silas', emoji: '', img: './chars/silas_phone_2.JPG', imgs: ['./chars/silas_phone_1.JPG', './chars/silas_phone_2.JPG', './chars/silas_phone_3.JPG', './chars/silas_phone_4.JPG', './chars/silas_phone_5.JPG', './chars/silas_phone_6.JPG', './chars/silas_phone_7.JPG', './chars/silas_phone_8.JPG', './chars/silas_phone_9.JPG', './chars/silas_phone_10.JPG', './chars/silas_phone_11.JPG'], imgD: './chars/Silas_desktop_1.JPG', imgsD: ['./chars/Silas_desktop_1.JPG', './chars/silas_desktop_2.JPG', './chars/silas_desktop_3.JPG'], bgPos: 'center top', bgPosDesktop: 'center 30%',
+    name: 'Silas', emoji: '', img: './chars/silas_phone_2.webp', imgs: ['./chars/silas_phone_1.webp', './chars/silas_phone_2.webp', './chars/silas_phone_3.webp', './chars/silas_phone_4.webp', './chars/silas_phone_5.webp', './chars/silas_phone_6.webp', './chars/silas_phone_7.webp', './chars/silas_phone_8.webp', './chars/silas_phone_9.webp', './chars/silas_phone_10.webp', './chars/silas_phone_11.webp'], imgD: './chars/Silas_desktop_1.webp', imgsD: ['./chars/Silas_desktop_1.webp', './chars/silas_desktop_2.webp', './chars/silas_desktop_3.webp'], bgPos: 'center top', bgPosDesktop: 'center 30%',
     quotes: [
       '早上好。你的座位在這裡。',
       '中午好。先吃飯，你上午已經喝了兩杯咖啡了。',
@@ -896,7 +896,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Eli', emoji: '', img: './chars/eli_phone_2.JPG', imgs: ['./chars/eli_phone_1.JPG', './chars/eli_phone_2.JPG', './chars/eli_phone_4.JPG', './chars/eli_phone_5.JPG', './chars/eli_phone_7.JPG', './chars/eli_phone_8.JPG', './chars/eli_phone_10.JPG', './chars/eli_phone_11.JPG'], imgD: './chars/Eli_desktop_1.JPG', imgsD: ['./chars/Eli_desktop_1.JPG', './chars/eli_desktop_2.JPG'], bgPos: 'center 20%',
+    name: 'Eli', emoji: '', img: './chars/eli_phone_2.webp', imgs: ['./chars/eli_phone_1.webp', './chars/eli_phone_2.webp', './chars/eli_phone_4.webp', './chars/eli_phone_5.webp', './chars/eli_phone_7.webp', './chars/eli_phone_8.webp', './chars/eli_phone_10.webp', './chars/eli_phone_11.webp'], imgD: './chars/Eli_desktop_1.webp', imgsD: ['./chars/Eli_desktop_1.webp', './chars/eli_desktop_2.webp'], bgPos: 'center 20%',
     quotes: [
       '啊，早上好。你吃早飯了嗎？我這裡還有一塊餅乾。',
       '啊，中午好。剛剛有一隻蒲絨絨一直跟著我……我想它可能比較喜歡你。',
@@ -905,7 +905,7 @@ const CHARS = [
     ],
   },
   {
-    name: 'Adrian', emoji: '', img: './chars/adrian_phone_2.JPG', imgs: ['./chars/adrian_phone_1.JPG', './chars/adrian_phone_2.JPG', './chars/adrian_phone_3.JPG', './chars/adrian_phone_4.JPG', './chars/adrian_phone_7.JPG', './chars/adrian_phone_8.JPG', './chars/adrian_phone_10.JPG'], imgD: './chars/Adrian_desktop_1.JPG', imgsD: ['./chars/Adrian_desktop_1.JPG', './chars/adrian_desktop_2.JPG', './chars/adrian_desktop_3.JPG'], bgPos: 'center top', bgPosDesktop: 'center 20%',
+    name: 'Adrian', emoji: '', img: './chars/adrian_phone_2.webp', imgs: ['./chars/adrian_phone_1.webp', './chars/adrian_phone_2.webp', './chars/adrian_phone_3.webp', './chars/adrian_phone_4.webp', './chars/adrian_phone_7.webp', './chars/adrian_phone_8.webp', './chars/adrian_phone_10.webp'], imgD: './chars/Adrian_desktop_1.webp', imgsD: ['./chars/Adrian_desktop_1.webp', './chars/adrian_desktop_2.webp', './chars/adrian_desktop_3.webp'], bgPos: 'center top', bgPosDesktop: 'center 20%',
     quotes: [
       '早上好。你今天沒繞遠路，看來心情不錯。',
       '中午好。當心，西側長廊今天別去。',
@@ -920,37 +920,42 @@ const CHARS = [
 // 無陽光(室內/暗水族箱/夜景/燭光)一律默認夜晚(不在下面兩集合的都算夜晚)。
 // 首頁時段：06:00–14:30 早晨＆中午、14:30–18:00 下午、其餘夜晚(見 renderGreeting)。
 const MORNING_COVERS = new Set([   // 早晨＆中午：一般日光/明亮
-  './chars/sean_phone_1.JPG',    // 水族箱：水面透亮、有日光
-  './chars/sean_phone_3.JPG',    // 雨天陰天日光
-  './chars/silas_phone_3.JPG',   // 窗邊明亮日光
-  './chars/silas_phone_5.JPG',   // 臥室柔和日光
-  './chars/eli_phone_1.JPG',     // 水族箱：偏亮有日光
-  './chars/eli_phone_2.JPG',     // 溫室陽光
-  './chars/eli_phone_5.JPG',     // 溫室日光（照料植物）
-  './chars/sean_phone_5.JPG',    // 床邊晨光
-  './chars/sean_phone_9.JPG',    // 鬱金香花田＋風車、藍天大晴（原 phone_5）
-  './chars/adrian_phone_1.JPG',  // 水族箱（使用者指定白天）
-  './chars/silas_phone_1.JPG',   // 水族箱（使用者指定白天）
-  './chars/silas_phone_9.JPG',   // 正氣師辦公室（使用者指定白天）
-  './chars/Silas_desktop_1.JPG', // 圖書館窗外日光（桌機）
-  './chars/Eli_desktop_1.JPG',   // 教室窗光（桌機）
-  './chars/eli_desktop_2.JPG',   // 溫室陽光（桌機）
-  './chars/sean_desktop_3.JPG',  // 鬱金香花田（桌機橫版）
+  './chars/sean_phone_1.webp',    // 水族箱：水面透亮、有日光
+  './chars/sean_phone_3.webp',    // 雨天陰天日光
+  './chars/silas_phone_3.webp',   // 窗邊明亮日光
+  './chars/silas_phone_5.webp',   // 臥室柔和日光
+  './chars/eli_phone_1.webp',     // 水族箱：偏亮有日光
+  './chars/eli_phone_2.webp',     // 溫室陽光
+  './chars/eli_phone_5.webp',     // 溫室日光（照料植物）
+  './chars/sean_phone_5.webp',    // 床邊晨光
+  './chars/sean_phone_9.webp',    // 鬱金香花田＋風車、藍天大晴（原 phone_5）
+  './chars/adrian_phone_1.webp',  // 水族箱（使用者指定白天）
+  './chars/silas_phone_1.webp',   // 水族箱（使用者指定白天）
+  './chars/silas_phone_9.webp',   // 正氣師辦公室（使用者指定白天）
+  './chars/Silas_desktop_1.webp', // 圖書館窗外日光（桌機）
+  './chars/Eli_desktop_1.webp',   // 教室窗光（桌機）
+  './chars/eli_desktop_2.webp',   // 溫室陽光（桌機）
+  './chars/sean_desktop_3.webp',  // 鬱金香花田（桌機橫版）
 ]);
 const AFTERNOON_COVERS = new Set([ // 下午：日落/黃昏金色光
-  './chars/sean_phone_6.JPG',    // 海邊日落（原 phone_4 改號）
-  './chars/silas_phone_4.JPG',   // 金色逆光/黃昏
-  './chars/adrian_phone_3.JPG',  // 佛羅倫斯日落
-  './chars/silas_phone_2.JPG',   // 水晶球燭光（使用者指定下午）
-  './chars/sean_phone_2.JPG',    // 書桌燭光（使用者指定下午）
-  './chars/adrian_desktop_3.JPG',// 佛羅倫斯日落（桌機橫版）
+  './chars/sean_phone_6.webp',    // 海邊日落（原 phone_4 改號）
+  './chars/silas_phone_4.webp',   // 金色逆光/黃昏
+  './chars/adrian_phone_3.webp',  // 佛羅倫斯日落
+  './chars/silas_phone_2.webp',   // 水晶球燭光（使用者指定下午）
+  './chars/sean_phone_2.webp',    // 書桌燭光（使用者指定下午）
+  './chars/adrian_desktop_3.webp',// 佛羅倫斯日落（桌機橫版）
 ]);
+// 照片識別鍵：去掉副檔名。封面 v3.49 從 .JPG 轉 .webp，但使用者帳號存的隱藏設定、
+// 肖像廊匯入時存下的 image_url 都還是 .JPG 路徑——所有比對一律用去副檔名 key，新舊通吃。
+function photoKey(u) { return String(u || '').replace(/\.(jpe?g|webp)$/i, ''); }
+const _MORNING_KEYS = new Set([...MORNING_COVERS].map(photoKey));
+const _AFTERNOON_KEYS = new Set([...AFTERNOON_COVERS].map(photoKey));
 // 傳回某封面的時段：am=早晨中午、pm=下午、night=夜晚(預設)。
-function coverSlot(img) { return MORNING_COVERS.has(img) ? 'am' : AFTERNOON_COVERS.has(img) ? 'pm' : 'night'; }
+function coverSlot(img) { const k = photoKey(img); return _MORNING_KEYS.has(k) ? 'am' : _AFTERNOON_KEYS.has(k) ? 'pm' : 'night'; }
 // 匯入肖像廊的心動封面：image_slot 空時，回退顯示它在心動的原始早/午/晚分類（只對「確實是封面」的 url 生效，
 // 一般作者投稿的圖不套用，避免被誤判成夜晚）。管理員按時段鈕仍可覆寫（存進 image_slot）。P2 心動池同樣用此回退。
-const _ALL_COVER_URLS = (() => { const s = new Set(); CHARS.forEach(ch => [...(ch.imgs || []), ...(ch.imgsD || [])].forEach(u => u && s.add(u))); return s; })();
-function coverSlotForUrl(url) { return _ALL_COVER_URLS.has(url) ? coverSlot(url) : ''; }
+const _ALL_COVER_URLS = (() => { const s = new Set(); CHARS.forEach(ch => [...(ch.imgs || []), ...(ch.imgsD || [])].forEach(u => u && s.add(photoKey(u)))); return s; })();
+function coverSlotForUrl(url) { return _ALL_COVER_URLS.has(photoKey(url)) ? coverSlot(url) : ''; }
 function effectiveImageSlot(work) { return (work && work.image_slot) || coverSlotForUrl(work && work.image_url) || ''; }
 
 // ── 角色設定頁 (beta) — 基本資料 + GitHub 圖庫。bio / gallery 由站長填寫；gallery 留空時自動用封面圖。
@@ -963,8 +968,9 @@ const CHAR_PROFILE = {
 let _homeChar = null;   // 目前顯示在心動封面的角色(給封面愛心 → 角色頁用)
 function excludedPhotos() {
   // beta：使用者逐張隱藏的心動封面照片(存照片路徑，含桌機版一起排除)。空 = 全部顯示。
+  // 一律正規化成 photoKey：帳號裡可能同時存著舊 .JPG 與新 .webp 的路徑。
   return new Set((currentUser && currentUser.home_chars ? String(currentUser.home_chars).split(',') : [])
-    .map(s => s.trim()).filter(Boolean));
+    .map(s => photoKey(s.trim())).filter(Boolean));
 }
 
 // ── 角色設定頁（公開，所有人可用）─────────────────────────────
@@ -991,7 +997,7 @@ function renderCharProfile(name) {
     const DL = `<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>`;
     html += `<div class="cp-cover-head"><h3>心動封面</h3><button class="cp-hint-btn" data-onclick="cpCoverHint()" aria-label="心動封面說明" title="心動封面說明">${ic('ic-help', 16)}</button><div class="cp-cover-note" id="cp-cover-note" hidden>點亮愛心即可加入心動封面；取消後不再出現。全部取消時，會恢復隨機輪替。</div></div>`;
     html += `<div class="cp-gallery">${photos.map((u, i) => {
-      const on = !excluded.has(u);
+      const on = !excluded.has(photoKey(u));
       const dl = photoWallpaperUrl(u) ? `<button class="cp-download" data-onclick="downloadPhoto('${u}','${escapeHtml(name)}')" aria-label="下載桌布" title="下載桌布">${DL}</button>` : '';
       const heart = `<button class="cp-cover-toggle${on ? ' on' : ''}" data-onclick="toggleCoverPhoto('${name}', ${i}, this)" role="checkbox" aria-checked="${on}" aria-label="心動封面顯示這張">${HEART}</button>`;
       return `<div class="cp-shot" style="background-image:url('${u}')">${heart}${dl}</div>`;
@@ -1010,7 +1016,7 @@ function renderCharProfile(name) {
 function cpCoverHint() { const n = document.getElementById('cp-cover-note'); if (n) n.hidden = !n.hidden; }
 async function toggleCoverPhoto(charName, index, btn) {
   const c = CHARS.find(x => x.name === charName) || {};
-  const ids = [(c.imgs || [c.img])[index], (c.imgsD || [])[index]].filter(Boolean);
+  const ids = [(c.imgs || [c.img])[index], (c.imgsD || [])[index]].filter(Boolean).map(photoKey);
   const ex = excludedPhotos();
   const nowShown = ex.has(ids[0]);          // 目前被隱藏 → 切換後變顯示
   ids.forEach(id => { if (nowShown) ex.delete(id); else ex.add(id); });
@@ -1038,10 +1044,10 @@ function officialCharTap(code, onFilter) {
 }
 
 // 下載桌布:把某張封面照片對應的「加浮水印桌布版」抓下來。
-// ./chars/sean_phone_2.JPG → ./wallpapers/sean_phone_2_wall.jpg
+// ./chars/sean_phone_2.webp → ./wallpapers/sean_phone_2_wall.jpg
 function photoWallpaperUrl(img) {
   if (!img) return null;
-  return img.replace('./chars/', './wallpapers/').replace(/\.(jpe?g)$/i, '_wall.jpg');
+  return img.replace('./chars/', './wallpapers/').replace(/\.(jpe?g|webp)$/i, '_wall.jpg');
 }
 async function downloadPhoto(img, charName) {
   const url = photoWallpaperUrl(img);
@@ -1082,7 +1088,7 @@ function renderGreeting() {
   // 以「照片」為單位建池：使用者未取消的照片(連同角色)都是候選。全被取消 → 退回全部隨機。
   const excluded = excludedPhotos();
   let selected = [];
-  CHARS.forEach(c => photosOf(c).forEach(img => { if (!excluded.has(img)) selected.push({ char: c, img }); }));
+  CHARS.forEach(c => photosOf(c).forEach(img => { if (!excluded.has(photoKey(img))) selected.push({ char: c, img }); }));
   if (!selected.length) CHARS.forEach(c => photosOf(c).forEach(img => selected.push({ char: c, img })));
   // 時段門檻：06:00–14:30 早晨＆中午(am)、14:30–18:00 下午(pm)、其餘夜晚(night；無陽光者默認夜晚)。
   const mins = h * 60 + new Date().getMinutes();
@@ -1124,7 +1130,7 @@ function renderGreeting() {
   // 0 秒先鋪線稿底稿（有的話），封面載到再蓋上。
   if (fbArt) { layers(null); emoji.style.display = 'none'; }
   // 候選圖：先用挑中的那張，載入失敗時退回同角色其他「未隱藏」的照片，最後才是全部(避免空白)。
-  let candidates = [pick.img, ...photosOf(char).filter(u => !excluded.has(u)), ...photosOf(char)];
+  let candidates = [pick.img, ...photosOf(char).filter(u => !excluded.has(photoKey(u))), ...photosOf(char)];
   candidates = [...new Set(candidates.filter(Boolean))];   // dedup, keep order
   const seq = ++_heroSeq;   // 防舊一輪回呼污染新渲染（切頁、整點換圖時 renderGreeting 會重跑）
   (function tryLoad(i) {
@@ -1187,10 +1193,10 @@ async function loadNovels() {
 // ── Classification (category + characters) ───────────────────
 const CATEGORIES = ['迷情劑', '吐真劑', '儲思盆'];
 const CHAR_LIST = [
-  { code: 'sean',   name: 'Sean',   img: './chars/sean_phone_2.JPG' },   /* phone_1 暫時下架 */
-  { code: 'silas',  name: 'Silas',  img: './chars/silas_phone_2.JPG' },  /* phone_1 暫時下架 */
-  { code: 'eli',    name: 'Eli',    img: './chars/eli_phone_2.JPG' },    /* phone_1 暫時下架 */
-  { code: 'adrian', name: 'Adrian', img: './chars/adrian_phone_2.JPG' }, /* phone_1 暫時下架 */
+  { code: 'sean',   name: 'Sean',   img: './chars/sean_phone_2.webp' },   /* phone_1 暫時下架 */
+  { code: 'silas',  name: 'Silas',  img: './chars/silas_phone_2.webp' },  /* phone_1 暫時下架 */
+  { code: 'eli',    name: 'Eli',    img: './chars/eli_phone_2.webp' },    /* phone_1 暫時下架 */
+  { code: 'adrian', name: 'Adrian', img: './chars/adrian_phone_2.webp' }, /* phone_1 暫時下架 */
 ];
 let shelfCat = '';        // '' = 全部
 let shelfChars = [];   // default: none lit = show everything; tap a character to filter to them (OR)
