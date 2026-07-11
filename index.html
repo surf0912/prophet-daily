@@ -198,6 +198,7 @@
         <h2 id="forum-title" style="margin:0"><svg width="20" height="20" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-scroll"/></svg> 匿名羊皮紙</h2>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
           <button id="forum-gallery-toggle" class="staff-only" data-onclick="toggleForumMode()" style="display:none;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 肖像廊</button>
+          <button id="gallery-hidden-btn" data-onclick="toggleGalleryHidden()" style="display:none;background:none;border:1px solid var(--ink-light);color:var(--ink-light);border-radius:16px;padding:5px 10px;font-size:13px;cursor:pointer" aria-label="已隱藏的畫作" title="已隱藏的畫作"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
           <button id="forum-fav-btn" data-onclick="toggleForumFav()" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-circle"/></svg> 收藏夾</button>
         </div>
       </div>
@@ -574,6 +575,7 @@
       <div id="gd-chars" class="row-tags" style="margin-top:8px"></div>
       <div id="gd-caption" class="gd-caption"></div>
       <div class="gd-hint">輕觸畫作可全螢幕欣賞</div>
+      <button id="gd-hide" data-onclick="toggleHideGalleryImage()" style="display:none;margin-top:12px;background:none;border:1px solid var(--ink-light);color:var(--ink-light);border-radius:6px;padding:7px 12px;font-size:12px;cursor:pointer;align-items:center;gap:6px"></button>
       <div id="gd-admin" class="admin-only" style="display:none;margin-top:12px"></div>
     </div>
   </div>

@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.71';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.72';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1030,11 +1030,19 @@ const CHAR_PROFILE = {
   Adrian: { bio: '', gallery: [] },
 };
 let _homeChar = null;   // 目前顯示在心動封面的角色(給封面愛心 → 角色頁用)
+// 從肖像廊隱藏的畫作（photoKey 集合）。隱藏 = 牆上與心動封面都不出現，只影響本人、跨裝置同步。
+function hiddenGallery() {
+  return new Set((currentUser && currentUser.hidden_gallery ? String(currentUser.hidden_gallery).split(',') : [])
+    .map(s => photoKey(s.trim())).filter(Boolean));
+}
 function excludedPhotos() {
   // beta：使用者逐張隱藏的心動封面照片(存照片路徑，含桌機版一起排除)。空 = 全部顯示。
   // 一律正規化成 photoKey：帳號裡可能同時存著舊 .JPG 與新 .webp 的路徑。
-  return new Set((currentUser && currentUser.home_chars ? String(currentUser.home_chars).split(',') : [])
-    .map(s => photoKey(s.trim())).filter(Boolean));
+  // 併入「肖像廊隱藏」的畫作——隱藏一張圖時，心動封面也一起不出現。
+  const s = new Set((currentUser && currentUser.home_chars ? String(currentUser.home_chars).split(',') : [])
+    .map(x => photoKey(x.trim())).filter(Boolean));
+  hiddenGallery().forEach(k => s.add(k));
+  return s;
 }
 
 // ── 角色設定頁（公開，所有人可用）─────────────────────────────
@@ -3303,6 +3311,8 @@ function setForumMode(mode) {
   if (isGallery) galleryView = 'all';   // 進肖像廊一律回「全部」檢視（與羊皮紙進頁行為一致）
   const fav = document.getElementById('forum-fav-btn');
   if (fav) fav.classList.toggle('on', isGallery ? false : forumView === 'liked');
+  const hidBtn = document.getElementById('gallery-hidden-btn');   // 「已隱藏」鈕只在肖像廊模式出現
+  if (hidBtn) { hidBtn.style.display = isGallery ? '' : 'none'; hidBtn.classList.remove('on'); }
   const title = document.getElementById('forum-title');
   if (title) title.innerHTML = isGallery
     ? ic('ic-gallery', 20).replace('-2px', '-3px') + ' 肖像廊'
@@ -3326,6 +3336,14 @@ function onGalleryFilter(type, val) {
 function toggleGalleryFav() {
   galleryView = galleryView === 'fav' ? 'all' : 'fav';
   const btn = document.getElementById('forum-fav-btn'); if (btn) btn.classList.toggle('on', galleryView === 'fav');
+  const hid = document.getElementById('gallery-hidden-btn'); if (hid) hid.classList.remove('on');   // 兩檢視互斥
+  renderGallery();
+}
+// 已隱藏檢視：回收站——把藏起來的畫作找回來（在詳情卡取消隱藏）。與收藏夾互斥。
+function toggleGalleryHidden() {
+  galleryView = galleryView === 'hidden' ? 'all' : 'hidden';
+  const hid = document.getElementById('gallery-hidden-btn'); if (hid) hid.classList.toggle('on', galleryView === 'hidden');
+  const fav = document.getElementById('forum-fav-btn'); if (fav) fav.classList.remove('on');
   renderGallery();
 }
 async function loadGallery() {
@@ -3341,10 +3359,12 @@ async function loadGallery() {
 function renderGallery() {
   const wall = document.getElementById('gallery-wall');
   const inFav = galleryView === 'fav';
+  const inHidden = galleryView === 'hidden';
+  const chromeOff = inFav || inHidden;   // 收藏夾／已隱藏檢視都收起角色列（同羊皮紙）
   const fb = document.getElementById('gallery-filter-bar');
   if (fb) {
-    fb.style.display = inFav ? 'none' : '';   // 收藏夾檢視收起角色列（同羊皮紙）
-    if (!inFav) {
+    fb.style.display = chromeOff ? 'none' : '';
+    if (!chromeOff) {
       const chipEl = document.getElementById('gallery-char-chips');
       chipEl.innerHTML = CHAR_LIST.map(ch =>
         `<div class="char-chip ${galleryChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}">
@@ -3354,14 +3374,20 @@ function renderGallery() {
       mountCharAndBtn('gallery-char-and');
     }
   }
-  const items = inFav
-    ? _galleryItems.filter(it => favIds.has(it.id))
-    : applyClassFilter(_galleryItems, '', galleryChars);
+  const hid = hiddenGallery();
+  const notHidden = it => !hid.has(photoKey(it.image_url));
+  const items = inHidden
+    ? _galleryItems.filter(it => hid.has(photoKey(it.image_url)))
+    : inFav
+      ? _galleryItems.filter(it => favIds.has(it.id)).filter(notHidden)
+      : applyClassFilter(_galleryItems, '', galleryChars).filter(notHidden);
   if (!items.length) {
     wall.style.columns = '1';
-    const msg = inFav
-      ? '你還沒收藏任何畫作<br><small>打開畫作詳情，點標題旁的 ☆ 就能收進這裡</small>'
-      : (_galleryItems.length ? '沒有符合篩選的畫作' : '肖像廊還空著，等待第一幅畫作掛上牆。');
+    const msg = inHidden
+      ? '沒有已隱藏的畫作<br><small>在畫作詳情點眼睛鈕，就能把不想看到的圖藏起來</small>'
+      : inFav
+        ? '你還沒收藏任何畫作<br><small>打開畫作詳情，點標題旁的 ☆ 就能收進這裡</small>'
+        : (_galleryItems.length ? '沒有符合篩選的畫作' : '肖像廊還空著，等待第一幅畫作掛上牆。');
     wall.innerHTML = `<div class="gwall-empty">${msg}</div>`;
     return;
   }
@@ -3395,6 +3421,7 @@ function openGalleryItem(id) {
   document.getElementById('gd-chars').innerHTML = (it.characters || []).map(c => `<span class="t-chr">${escapeHtml(charNames([c]))}</span>`).join('');
   const cap = document.getElementById('gd-caption');
   cap.textContent = it.image_caption || ''; cap.style.display = it.image_caption ? '' : 'none';
+  renderGdHideBtn();
   const adminBox = document.getElementById('gd-admin');
   const adminish = currentUser && ['admin', 'super_admin'].includes(currentUser.role);
   const isOwner = currentUser && (it.owners || []).includes(currentUser.id);
@@ -3412,6 +3439,38 @@ function openGalleryItem(id) {
       + `<button data-onclick="openCoverCrop('${escapeHtml(it.image_url)}')" style="width:100%;margin-top:${adminish ? '8px' : '0'};font-size:12px;padding:7px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:var(--parchment2);color:var(--ink-light)">調整心動封面顯示（裁切框）</button>`;
   } else { adminBox.style.display = 'none'; }
   document.getElementById('gallery-detail').style.display = 'flex';
+}
+// 詳情卡的「隱藏／取消隱藏」眼睛鈕：把不喜歡的畫作從肖像廊牆與心動封面一起藏起（只影響本人）。
+const _EYE_OFF = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+const _EYE_ON = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+function renderGdHideBtn() {
+  const b = document.getElementById('gd-hide');
+  if (!b) return;
+  const it = _galleryDetailItem;
+  if (!it || !it.image_url) { b.style.display = 'none'; return; }
+  const hidden = hiddenGallery().has(photoKey(it.image_url));
+  b.style.display = 'inline-flex';
+  b.innerHTML = hidden ? `${_EYE_ON} 取消隱藏` : `${_EYE_OFF} 從肖像廊隱藏`;
+  b.style.color = hidden ? 'var(--accent)' : 'var(--ink-light)';
+  b.style.borderColor = hidden ? 'var(--accent)' : 'var(--ink-light)';
+}
+async function toggleHideGalleryImage() {
+  const it = _galleryDetailItem;
+  if (!it || !it.image_url) return;
+  const key = photoKey(it.image_url);
+  const set = hiddenGallery();
+  const wasHidden = set.has(key);
+  if (wasHidden) set.delete(key); else set.add(key);
+  try {
+    const r = await api('/auth/me/hidden-gallery', { method: 'PATCH', body: JSON.stringify({ keys: [...set] }) });
+    if (currentUser) currentUser.hidden_gallery = (r && r.hidden_gallery) || '';
+    renderGdHideBtn();
+    toast(wasHidden ? '已取消隱藏' : '已從肖像廊隱藏');
+    // 隱藏一張圖 = 牆上與心動封面都要更新
+    renderGallery();
+    if (typeof renderGreeting === 'function') renderGreeting();
+    if (wasHidden ? false : galleryView !== 'hidden') closeGalleryDetail();   // 剛隱藏就關卡片（牆上已撤下）
+  } catch (e) { toast(e.message); }
 }
 // 詳情卡標題旁的 ☆：收藏整幅畫作，走與意若思鏡整篇收藏相同的 /novels/{id}/favorite。
 function updateGdFavBtn() {
