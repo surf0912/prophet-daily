@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.72';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.73';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4265,6 +4265,7 @@ async function openEditWork(id) {
   const n = (window._adminNovels || []).find(x => x.id === id) || {};
   editWork = { id, chapterId: null, chapterNum: 1, chapterTitle: null, kind: n.kind || 'novel' };
   const isForum = n.kind === 'forum';
+  const isImage = n.kind === 'image';   // 畫作：純圖片投稿，沒有頁首圖、也沒有內文／章節
   // 複製作品編號（admin-only）：給文首插圖 artwork/<id>.jpg 等「以編號對應」的用途
   { const cp = document.getElementById('editwork-copyid'); if (cp) cp.setAttribute('data-onclick', `copyText('${id}', '已複製作品編號')`); }
   document.getElementById('editwork-title').value = n.title || '';
@@ -4272,13 +4273,16 @@ async function openEditWork(id) {
   document.getElementById('editwork-date').value = (n.created_at || '').slice(0, 10);   // 發佈日期
   document.getElementById('editwork-content-label').textContent = isForum ? '主文（開場白）' : '內文';
   document.getElementById('editwork-comments-group').style.display = isForum ? '' : 'none';
-  // 頁首圖：僅小說；帶出目前的 image_url，可更換／移除（即時 PATCH）
-  { const hg = document.getElementById('editwork-header-group'); if (hg) hg.style.display = isForum ? 'none' : ''; }
-  if (!isForum) renderEditHeaderPreview(n.image_url || null);
+  // 內文：畫作沒有內文，整組收起（避免出現一個空的編輯框）
+  { const cg = document.getElementById('editwork-content-group'); if (cg) cg.style.display = isImage ? 'none' : ''; }
+  // 頁首圖：僅小說；論壇與畫作都沒有（畫作的 image_url 是作品本身，不是頁首圖）
+  { const hg = document.getElementById('editwork-header-group'); if (hg) hg.style.display = (isForum || isImage) ? 'none' : ''; }
+  if (!isForum && !isImage) renderEditHeaderPreview(n.image_url || null);
   document.getElementById('editwork-comments').value = '';
   const ct = document.getElementById('editwork-content');
-  ct.value = '載入中…'; ct.disabled = true;
   document.getElementById('editwork-modal').classList.add('open');
+  if (isImage) { ct.value = ''; return; }   // 畫作只編標題／署名／日期，無需抓章節
+  ct.value = '載入中…'; ct.disabled = true;
   try {
     const chs = await api(`/chapters/novel/${id}`) || [];
     const ch = chs[0];
