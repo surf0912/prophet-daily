@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.35';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.36';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2978,14 +2978,22 @@ async function submitImageWork() {
   finally { if (hint) hint.textContent = ''; }
 }
 
-// ── 羊皮紙頁：論壇 ⇄ 肖像廊 切換（僅管理員可見 toggle）──
+// ── 羊皮紙頁：收藏夾旁的小藥丸切換 論壇 ⇄ 肖像廊（僅管理員可見）──
+function toggleForumMode() {
+  const inGallery = document.getElementById('forum-gallery').style.display !== 'none';
+  setForumMode(inGallery ? 'forum' : 'gallery');
+}
 function setForumMode(mode) {
   const isGallery = mode === 'gallery';
   document.getElementById('forum-normal').style.display = isGallery ? 'none' : '';
   document.getElementById('forum-gallery').style.display = isGallery ? '' : 'none';
-  const paint = (btn, on) => { const b = document.getElementById(btn); if (!b) return;
-    b.style.background = on ? 'var(--scarlet)' : 'var(--parchment2)'; b.style.color = on ? 'var(--on-dark)' : 'var(--ink-light)'; };
-  paint('fmode-forum-btn', !isGallery); paint('fmode-gallery-btn', isGallery);
+  const fav = document.getElementById('forum-fav-btn'); if (fav) fav.style.display = isGallery ? 'none' : '';
+  const title = document.getElementById('forum-title');
+  if (title) title.innerHTML = isGallery
+    ? ic('ic-gallery', 20).replace('-2px', '-3px') + ' 肖像廊'
+    : ic('ic-scroll', 20).replace('-2px', '-3px') + ' 匿名羊皮紙';
+  const pill = document.getElementById('forum-gallery-toggle');
+  if (pill) pill.innerHTML = isGallery ? ic('ic-scroll', 15) + ' 羊皮紙' : ic('ic-gallery', 15) + ' 肖像廊';
   if (isGallery) loadGallery();
 }
 
