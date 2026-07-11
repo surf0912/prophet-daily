@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.34';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.35';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2871,13 +2871,14 @@ function resetClassPicker(catSelId, charDivId) {
 function setUploadKind(kind) {
   initClassPicker('forum-post-category', 'forum-post-chars');
   initClassPicker('new-novel-category', 'new-novel-chars');
-  const isNovel = kind === 'novel';
+  initImageUpload();
+  const isNovel = kind === 'novel', isForum = kind === 'forum', isImage = kind === 'image';
   document.getElementById('upload-kind-novel').style.display = isNovel ? '' : 'none';
-  document.getElementById('upload-kind-forum').style.display = isNovel ? 'none' : '';
-  document.getElementById('kind-novel-btn').style.background = isNovel ? 'var(--scarlet)' : 'var(--parchment2)';
-  document.getElementById('kind-novel-btn').style.color = isNovel ? 'var(--on-dark)' : 'var(--ink-light)';
-  document.getElementById('kind-forum-btn').style.background = isNovel ? 'var(--parchment2)' : 'var(--scarlet)';
-  document.getElementById('kind-forum-btn').style.color = isNovel ? 'var(--ink-light)' : 'var(--on-dark)';
+  document.getElementById('upload-kind-forum').style.display = isForum ? '' : 'none';
+  document.getElementById('upload-kind-image').style.display = isImage ? '' : 'none';
+  const paint = (btn, on) => { const b = document.getElementById(btn); if (!b) return;
+    b.style.background = on ? 'var(--scarlet)' : 'var(--parchment2)'; b.style.color = on ? 'var(--on-dark)' : 'var(--ink-light)'; };
+  paint('kind-novel-btn', isNovel); paint('kind-forum-btn', isForum); paint('kind-image-btn', isImage);
   // Default the novel author署名 to the uploader's nickname (still editable).
   const na = document.getElementById('new-novel-author');
   if (isNovel && na && !na.value) na.value = currentUser.nickname || currentUser.username || '';
@@ -2886,6 +2887,167 @@ function setUploadKind(kind) {
     : '';
   const fh = document.getElementById('forum-post-hint'); if (fh) fh.textContent = writerNote;
   const nh = document.getElementById('new-novel-hint'); if (nh) nh.textContent = writerNote;
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 肖像廊（Gallery）— 純圖像投稿，掛在羊皮紙頁；P1 僅管理員／超管可見。
+// ═══════════════════════════════════════════════════════════════════════════
+const GALLERY_FRAMES = [
+  ['ebony', '墨檀'], ['oak', '橡木'], ['oakmat', '橡木襯白'], ['gilt', '鎏金襯白'], ['none', '無框'],
+];
+const _imgWork = { data: null, frame: 'ebony' };
+
+function initImageUpload() {
+  const picker = document.getElementById('image-frame-picker');
+  if (picker && !picker.dataset.init) {
+    picker.innerHTML = GALLERY_FRAMES.map(([code, name]) => `
+      <div class="frame-swatch-wrap">
+        <div class="frame-swatch ${code === 'none' ? '' : 'gframe fr-' + code}${code === _imgWork.frame ? ' sel' : ''}" data-frame="${code}" data-onclick="pickFrame('${code}')"><div></div></div>
+        <small>${name}</small>
+      </div>`).join('');
+    picker.dataset.init = '1';
+  }
+  const chars = document.getElementById('new-image-chars');
+  if (chars && !chars.dataset.init) {
+    chars.innerHTML = CHAR_LIST.map(ch => `<span class="opt" data-ch="${ch.code}" data-onclick="this.classList.toggle('on')">${ch.name}</span>`).join('');
+    chars.dataset.init = '1';
+  }
+}
+
+function pickFrame(code) {
+  _imgWork.frame = code;
+  document.querySelectorAll('#image-frame-picker .frame-swatch').forEach(el => el.classList.toggle('sel', el.dataset.frame === code));
+}
+
+function pickImageFile() { const el = document.getElementById('image-file'); if (el) el.click(); }
+
+// 保留長寬比、限制最長邊，輸出 JPEG data URL（畫作無需透明背景）。
+function resizeImageContain(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let { width: w, height: h } = img;
+        if (Math.max(w, h) > maxDim) { const r = maxDim / Math.max(w, h); w = Math.round(w * r); h = Math.round(h * r); }
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject; img.src = reader.result;
+    };
+    reader.onerror = reject; reader.readAsDataURL(file);
+  });
+}
+
+async function onImagePick(input) {
+  const f = input.files[0]; input.value = '';
+  if (!f) return;
+  if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { toast('請選擇 JPG、PNG 或 WebP 圖片'); return; }
+  try {
+    const data = await resizeImageContain(f, 1400, 0.85);
+    _imgWork.data = data;
+    const wrap = document.getElementById('image-preview-wrap');
+    wrap.style.display = ''; wrap.innerHTML = `<img src="${data}" alt="" style="max-width:100%;max-height:300px;border-radius:6px" />`;
+    document.getElementById('image-drop').textContent = '已選擇畫作，點此可更換';
+  } catch (e) { toast('圖片讀取失敗'); }
+}
+
+async function submitImageWork() {
+  const title = document.getElementById('new-image-title').value.trim();
+  const author = document.getElementById('new-image-author').value.trim() || null;
+  const caption = document.getElementById('new-image-caption').value.trim() || null;
+  const characters = readChars('new-image-chars');
+  if (!_imgWork.data) { toast('請先選擇一幅畫作'); return; }
+  if (!title) { toast('請輸入畫作標題'); return; }
+  if (!characters.length) { toast('請至少為畫作選一位角色'); return; }
+  const hint = document.getElementById('new-image-hint');
+  if (hint) hint.textContent = '正在上傳畫作…';
+  try {
+    const res = await api('/novels/image', { method: 'POST', body: JSON.stringify({
+      title, author, caption, frame: _imgWork.frame, characters, image: _imgWork.data }) });
+    toast(res && res.status === 'pending' ? '已送出，待管理員審核' : '畫作已送出');
+    _imgWork.data = null; _imgWork.frame = 'ebony';
+    ['new-image-title', 'new-image-author', 'new-image-caption'].forEach(id => document.getElementById(id).value = '');
+    document.querySelectorAll('#new-image-chars .opt.on').forEach(el => el.classList.remove('on'));
+    document.querySelectorAll('#image-frame-picker .frame-swatch').forEach(el => el.classList.toggle('sel', el.dataset.frame === 'ebony'));
+    const wrap = document.getElementById('image-preview-wrap'); wrap.style.display = 'none'; wrap.innerHTML = '';
+    document.getElementById('image-drop').textContent = '選擇畫作';
+  } catch (e) { toast(e.message); }
+  finally { if (hint) hint.textContent = ''; }
+}
+
+// ── 羊皮紙頁：論壇 ⇄ 肖像廊 切換（僅管理員可見 toggle）──
+function setForumMode(mode) {
+  const isGallery = mode === 'gallery';
+  document.getElementById('forum-normal').style.display = isGallery ? 'none' : '';
+  document.getElementById('forum-gallery').style.display = isGallery ? '' : 'none';
+  const paint = (btn, on) => { const b = document.getElementById(btn); if (!b) return;
+    b.style.background = on ? 'var(--scarlet)' : 'var(--parchment2)'; b.style.color = on ? 'var(--on-dark)' : 'var(--ink-light)'; };
+  paint('fmode-forum-btn', !isGallery); paint('fmode-gallery-btn', isGallery);
+  if (isGallery) loadGallery();
+}
+
+let _galleryItems = [];
+async function loadGallery() {
+  const wall = document.getElementById('gallery-wall');
+  wall.innerHTML = '<div class="spinner"></div>';
+  try {
+    _galleryItems = (await api('/novels/gallery')) || [];
+    renderGallery();
+  } catch (e) { wall.innerHTML = '<div class="gwall-empty">載入失敗</div>'; }
+}
+
+function renderGallery() {
+  const wall = document.getElementById('gallery-wall');
+  if (!_galleryItems.length) { wall.innerHTML = '<div class="gwall-empty">肖像廊還空著，等待第一幅畫作掛上牆。</div>'; return; }
+  wall.innerHTML = _galleryItems.map(it => {
+    const fr = GALLERY_FRAMES.some(([c]) => c === it.image_frame) ? it.image_frame : 'ebony';
+    return `<div class="gwall-item" data-onclick="openGalleryItem('${it.id}')">
+      <div class="gframe fr-${fr}"><img src="${escapeHtml(it.image_url)}" alt="${escapeHtml(it.title || '')}" loading="lazy" /></div>
+    </div>`;
+  }).join('');
+}
+
+function openGalleryItem(id) {
+  const it = _galleryItems.find(x => x.id === id);
+  if (!it) return;
+  const fr = GALLERY_FRAMES.some(([c]) => c === it.image_frame) ? it.image_frame : 'ebony';
+  const frameEl = document.getElementById('gd-frame');
+  frameEl.className = 'gd-frame fr-' + fr;
+  document.getElementById('gd-img').src = it.image_url;
+  document.getElementById('gd-title').textContent = it.title || '';
+  document.getElementById('gd-author').textContent = it.author ? ('— ' + it.author) : '— 佚名';
+  document.getElementById('gd-chars').innerHTML = (it.characters || []).map(c => `<span class="t-chr">${escapeHtml(charNames([c]))}</span>`).join('');
+  const cap = document.getElementById('gd-caption');
+  cap.textContent = it.image_caption || ''; cap.style.display = it.image_caption ? '' : 'none';
+  const adminBox = document.getElementById('gd-admin');
+  const adminish = currentUser && ['admin', 'super_admin'].includes(currentUser.role);
+  if (adminish) {
+    const slots = [['am', '早晨'], ['pm', '下午'], ['night', '夜晚']];
+    adminBox.style.display = '';
+    adminBox.innerHTML = '<div style="font-size:12px;color:var(--ink-light);margin-bottom:6px">心動封面時段</div>'
+      + '<div style="display:flex;gap:8px">' + slots.map(([v, n]) =>
+        `<button data-onclick="setImageSlot('${it.id}','${v}')" style="flex:1;font-size:12px;padding:6px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:${it.image_slot === v ? 'var(--scarlet)' : 'var(--parchment2)'};color:${it.image_slot === v ? 'var(--on-dark)' : 'var(--ink-light)'}">${n}</button>`).join('') + '</div>';
+  } else { adminBox.style.display = 'none'; }
+  document.getElementById('gallery-detail').style.display = 'flex';
+}
+function closeGalleryDetail() { document.getElementById('gallery-detail').style.display = 'none'; }
+function openGalleryFull() {
+  const src = document.getElementById('gd-img').src;
+  document.getElementById('gf-img').src = src;
+  document.getElementById('gallery-full').style.display = 'flex';
+}
+function closeGalleryFull() { document.getElementById('gallery-full').style.display = 'none'; }
+
+async function setImageSlot(id, slot) {
+  try {
+    await api(`/novels/${id}/image-slot`, { method: 'PATCH', body: JSON.stringify({ slot }) });
+    const it = _galleryItems.find(x => x.id === id); if (it) it.image_slot = slot;
+    openGalleryItem(id);   // 重繪高亮
+    toast('已設定心動封面時段');
+  } catch (e) { toast(e.message); }
 }
 
 // Turn a <input type="date"> value (YYYY-MM-DD) into an instant anchored at NOON Taipei (UTC+8) of
@@ -3021,16 +3183,24 @@ async function loadReviewList() {
           </div>
         </div>`).join('');
 
+    const _kindTag = n => n.kind === 'image' ? ic('ic-gallery', 12) + ' 畫作'
+                        : n.kind === 'forum' ? ic('ic-scroll', 12) + ' 論壇貼文'
+                        : ic('ic-book', 12) + ' 小說';
+    const _slotBtns = n => { const slots = [['am', '早晨'], ['pm', '下午'], ['night', '夜晚']];
+      return '<div style="font-size:12px;color:var(--ink-light);margin:8px 0 4px">心動封面時段（選填）</div><div style="display:flex;gap:6px">'
+        + slots.map(([v, name]) => `<button data-onclick="setImageSlot('${n.id}','${v}')" style="flex:1;font-size:12px;padding:5px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:${n.image_slot === v ? 'var(--scarlet)' : 'var(--parchment2)'};color:${n.image_slot === v ? 'var(--on-dark)' : 'var(--ink-light)'}">${name}</button>`).join('') + '</div>'; };
     const novelBody = novelsPending.map(n => `
         <div style="padding:12px 0;border-bottom:1px solid rgba(26,10,0,.1)">
           <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)}</div>
-          <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${n.kind === 'forum' ? ic('ic-scroll', 12) + ' 論壇貼文' : ic('ic-book', 12) + ' 小說'}・${escapeHtml(n.author || '匿名')}・${fmtUpdated(n.created_at)}</div>
+          <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${_kindTag(n)}・${escapeHtml(n.author || '匿名')}・${fmtUpdated(n.created_at)}</div>
+          ${n.kind === 'image' && n.image_url ? `<div style="margin-top:8px"><img src="${escapeHtml(n.image_url)}" alt="" style="max-width:160px;max-height:180px;border-radius:6px" /></div>` : ''}
           <div class="row-tags" style="margin-top:6px">
             ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${escapeHtml(n.category)}</span>` : ''}
             ${(n.characters || []).map(c => `<span class="t-chr">${escapeHtml(charNames([c]))}</span>`).join('')}
           </div>
+          ${n.kind === 'image' ? _slotBtns(n) : ''}
           <div style="display:flex;gap:8px;margin-top:8px">
-            <button data-onclick="openNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">預覽</button>
+            ${n.kind === 'image' ? '' : `<button data-onclick="openNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">預覽</button>`}
             <button data-onclick="approveNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:#2d4a1e;border:none;color:#fff;border-radius:3px;cursor:pointer">${ic('ic-check',12)} 通過</button>
             <button data-onclick="deleteNovel('${n.id}', true)" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-x',12)} 退回</button>
           </div>

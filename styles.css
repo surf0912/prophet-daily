@@ -426,6 +426,36 @@
     .novel-card .meta p.upd { color: var(--accent); font-size: 12px; margin-top: 4px; }
     .empty-shelf { grid-column: 1 / -1; text-align: center; padding: 60px 24px; color: var(--ink-light); width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.8; }
 
+    /* ── 肖像廊（gallery，beta：管理員/超管可見）────────────────────────────── */
+    #forum-gallery { padding: 8px 12px 90px; }
+    .gallery-wall { columns: 2; column-gap: 12px; }
+    .gwall-item { break-inside: avoid; margin: 0 0 14px; cursor: pointer; box-shadow: 0 6px 14px rgba(26,10,0,.28); line-height: 0; }
+    .gwall-empty { columns: 1; text-align: center; color: var(--ink-light); font-size: 14px; padding: 60px 16px; }
+    /* 畫框：border-image 九宮格；框身樣式共用、粗細由所在情境決定 */
+    .gframe { border-style: solid; display: block; }
+    .gframe img { display: block; width: 100%; height: auto; }
+    .fr-ebony  { border-image: url('./gallery-frames/ebony.jpg')  72 stretch; }
+    .fr-oak    { border-image: url('./gallery-frames/oak.jpg')    82 stretch; }
+    .fr-oakmat { border-image: url('./gallery-frames/oakmat.jpg') 44 stretch; }
+    .fr-gilt   { border-image: url('./gallery-frames/gilt.jpg')   43 stretch; }
+    .fr-none   { border-width: 0 !important; }
+    .gwall-item .gframe { border-width: 13px; }
+    .gwall-item .gframe.fr-none img, .gwall-item > img.fr-none { display: block; width: 100%; }
+    /* 畫作詳情 */
+    .gd-card { width: 330px; max-width: 92vw; max-height: 88dvh; overflow-y: auto; background: var(--parchment); border-radius: 14px; padding: 18px; box-shadow: 0 22px 60px rgba(0,0,0,.45); }
+    .gd-frame { border-style: solid; border-width: 22px; display: block; cursor: zoom-in; line-height: 0; box-shadow: 0 4px 14px rgba(26,10,0,.3); }
+    .gd-frame img { display: block; width: 100%; height: auto; }
+    .gd-title { font-size: 16px; font-weight: bold; color: var(--ink); margin-top: 16px; }
+    .gd-author { font-size: 12px; color: var(--ink-light); margin-top: 3px; }
+    .gd-caption { font-size: 13px; color: var(--ink); margin-top: 12px; line-height: 1.75; }
+    .gd-hint { font-size: 11px; color: var(--ink-light); margin-top: 12px; text-align: center; letter-spacing: .04em; }
+    /* 投稿的畫框小樣 */
+    .frame-swatch { width: 52px; height: 52px; cursor: pointer; border-style: solid; border-width: 8px; line-height: 0; }
+    .frame-swatch > div { width: 100%; height: 100%; background: #cfc4ad; }
+    .frame-swatch.sel { outline: 2px solid var(--scarlet); outline-offset: 2px; }
+    .frame-swatch-wrap { text-align: center; }
+    .frame-swatch-wrap small { font-size: 11px; color: var(--ink-light); display: block; margin-top: 3px; }
+
     /* ── Reader ── */
     #reader-view {
       display: none; position: fixed; inset: 0; z-index: 50;
