@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.36';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.37';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3002,7 +3002,7 @@ async function loadGallery() {
   const wall = document.getElementById('gallery-wall');
   wall.innerHTML = '<div class="spinner"></div>';
   try {
-    _galleryItems = (await api('/novels/gallery')) || [];
+    _galleryItems = (await api('/novels/gallery', { background: true })) || [];
     renderGallery();
   } catch (e) { wall.innerHTML = '<div class="gwall-empty">載入失敗</div>'; }
 }
