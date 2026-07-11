@@ -44,15 +44,19 @@ def process(src):
     max_w = PHONE_MAX_W if is_phone else DESK_MAX_W
     disp = orig.resize((max_w, round(h * max_w / w)), Image.LANCZOS) if w > max_w else orig
     disp_path = os.path.join(CHARS_DIR, name + ".webp")
+    # 覆蓋同名封面 = 同一 URL 換內容。Service Worker 的常駐圖片快取是 cache-first 且永不清，
+    # 已把舊圖存起來的使用者會一直看到舊版，直到 STATIC_CACHE 版本進位。命名照序號遞增就不會踩到。
+    overwrote = os.path.exists(disp_path)
     disp.save(disp_path, "WEBP", quality=DISPLAY_Q, method=6)
-    msg = f"  ✓ chars/{name}.webp  {disp.size[0]}x{disp.size[1]}  {os.path.getsize(disp_path)//1024}KB"
+    flag = "  ⚠覆蓋" if overwrote else ""
+    msg = f"  ✓ chars/{name}.webp  {disp.size[0]}x{disp.size[1]}  {os.path.getsize(disp_path)//1024}KB{flag}"
     if is_phone:
         wm = overlay_logo(orig, Image.open(LOGO).convert("RGBA"))   # 浮水印疊在原圖上（下載版要清晰）
         wm_path = os.path.join(WALL_DIR, name + "_wall.jpg")
         wm.save(wm_path, "JPEG", quality=WALL_Q)
         msg += f"   +  wallpapers/{name}_wall.jpg  {os.path.getsize(wm_path)//1024}KB"
     print(msg)
-    return (name, "phone" if is_phone else "desktop")
+    return (name, "phone" if is_phone else "desktop", overwrote)
 
 
 def main():
@@ -69,8 +73,9 @@ def main():
         return
     print(f"處理 {len(files)} 張 →")
     done = [d for d in (process(f) for f in files) if d]
-    phones = [n for n, t in done if t == "phone"]
-    desks = [n for n, t in done if t == "desktop"]
+    phones = [n for n, t, _ in done if t == "phone"]
+    desks = [n for n, t, _ in done if t == "desktop"]
+    overwrote = [n for n, _, ov in done if ov]
     print("\n── 接著手動做（程式碼/判斷，工具不碰）──")
     if phones:
         print(f"  1) app.js CHARS：把 {', '.join(phones)} 加進對應角色的 imgs（手機）")
@@ -79,6 +84,10 @@ def main():
     print("  2) 日夜分類：有日光/明亮→MORNING_COVERS；日落黃昏→AFTERNOON_COVERS；無陽光不加(=夜晚)")
     print("  3) bump APP_VERSION + service-worker CACHE_NAME（兩者必須一致）")
     print("  4) esprima 驗語法 → git add/commit/push（main 推上去 Pages/Render 鏡像都會自動部署）")
+    if overwrote:
+        print(f"\n  ⚠ 覆蓋了既有封面（同 URL 換內容）：{', '.join(overwrote)}")
+        print("     這幾張已被使用者常駐快取存住，不進 service-worker.js 的 STATIC_CACHE 版本")
+        print("     （prophet-daily-static-vN 的 N）就不會更新。務必把 N 進位，否則舊圖會殘留。")
 
 
 if __name__ == "__main__":

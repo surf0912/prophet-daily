@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.49';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.50';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1157,8 +1157,10 @@ function warmCoverCache() {
   const photosOf = c => ((isWide ? (c.imgsD || [c.imgD]) : (c.imgs || [c.img])) || []).filter(Boolean);
   const mins = new Date().getHours() * 60 + new Date().getMinutes();
   const slot = (mins >= 360 && mins < 870) ? 'am' : (mins >= 870 && mins < 1080) ? 'pm' : 'night';
+  const excluded = excludedPhotos();   // 使用者已隱藏的封面不預抓（他永遠看不到，抓了純浪費流量）
   const urls = [];
   CHARS.forEach(c => photosOf(c).forEach(img => {
+    if (excluded.has(photoKey(img))) return;
     const s = coverSlot(img);
     if (s === slot || (slot === 'pm' && s === 'am')) urls.push(img);   // 下午池含早午圖，同 renderGreeting
   }));
@@ -1762,7 +1764,7 @@ function toggleCharAnd() {
   if (document.getElementById('page-scroll').classList.contains('active')) renderShelf();
   else if (document.getElementById('page-forum').classList.contains('active')) {
     // 羊皮紙頁有兩個檢視：肖像廊模式重畫牆面，論壇模式重畫貼文列表
-    if (document.getElementById('forum-gallery').style.display !== 'none') renderGallery();
+    if (forumTab === 'gallery') renderGallery();
     else renderForumList();
   }
   else if (document.getElementById('page-admin').classList.contains('active')) renderAdminNovels();
@@ -2582,7 +2584,8 @@ let forumView = 'all';   // 'all' | 'liked'
 let forumLiked = [];
 
 async function loadForumPosts() {
-  // entering the forum always resets to the 全部 view
+  // entering the forum always resets to the 論壇·全部 view（若上次停在肖像廊，切回論壇分頁）
+  if (forumTab === 'gallery') setForumMode('forum');
   forumView = 'all';
   const ffb = document.getElementById('forum-fav-btn'); if (ffb) ffb.classList.remove('on');
   const fb = document.querySelector('#forum-normal .filter-bar'); if (fb) fb.style.display = '';
@@ -2604,7 +2607,7 @@ function onForumFilter(type, val) {
 
 async function toggleForumFav() {
   // 羊皮紙頁的收藏夾鈕是兩用的：肖像廊模式下改為切換「已收藏畫作」檢視
-  if (document.getElementById('forum-gallery').style.display !== 'none') { toggleGalleryFav(); return; }
+  if (forumTab === 'gallery') { toggleGalleryFav(); return; }
   forumView = forumView === 'liked' ? 'all' : 'liked';
   const btn = document.getElementById('forum-fav-btn'); if (btn) btn.classList.toggle('on', forumView === 'liked');
   document.querySelector('#forum-normal .filter-bar').style.display = forumView === 'liked' ? 'none' : '';
@@ -3025,11 +3028,11 @@ async function submitImageWork() {
 
 // ── 羊皮紙頁：收藏夾旁的小藥丸切換 論壇 ⇄ 肖像廊（僅管理員可見）──
 function toggleForumMode() {
-  const inGallery = document.getElementById('forum-gallery').style.display !== 'none';
-  setForumMode(inGallery ? 'forum' : 'gallery');
+  setForumMode(forumTab === 'gallery' ? 'forum' : 'gallery');
 }
 function setForumMode(mode) {
   const isGallery = mode === 'gallery';
+  forumTab = mode;   // 唯一寫入點：之後 toggleForumFav / toggleCharAnd 都讀這個，不看 DOM
   document.getElementById('forum-normal').style.display = isGallery ? 'none' : '';
   document.getElementById('forum-gallery').style.display = isGallery ? '' : 'none';
   if (isGallery) galleryView = 'all';   // 進肖像廊一律回「全部」檢視（與羊皮紙進頁行為一致）
@@ -3047,6 +3050,8 @@ function setForumMode(mode) {
 let _galleryItems = [];
 let galleryChars = [];      // 肖像廊角色篩選（同羊皮紙：不亮 = 全部；亮 = OR，同框開啟 = AND）
 let galleryView = 'all';    // 'all' | 'fav'
+let forumTab = 'forum';     // 羊皮紙頁目前分頁：'forum' | 'gallery'。setForumMode 是唯一寫入點，
+                            // 其餘地方一律讀這個變數判斷模式，不再嗅探 DOM 的 display 狀態。
 
 function onGalleryFilter(type, val) {
   galleryChars = galleryChars.includes(val) ? galleryChars.filter(c => c !== val) : [...galleryChars, val];
