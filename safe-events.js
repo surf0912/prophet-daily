@@ -26,7 +26,7 @@
     'onImagePick', 'submitImageWork', 'pickFrame', 'pickImageFile', 'setForumMode', 'toggleForumMode',
     'openGalleryItem', 'closeGalleryDetail', 'openGalleryFull', 'closeGalleryFull', 'setImageSlot', 'downloadGalleryImage',
     'submitForumPost', 'submitNewNovel', 'switchAdminTab', 'tempBan', 'toggleCcShare', 'toggleCharAnd', 'toggleCoverPhoto',
-    'toggleDark', 'toggleFavOwl', 'toggleFont', 'toggleForumFav', 'toggleLike', 'toggleLock', 'toggleOwlAlways', 'togglePwEdit', 'toggleTapFx',
+    'toggleDark', 'toggleFavOwl', 'toggleFont', 'toggleForumFav', 'toggleGalleryFavorite', 'toggleLike', 'toggleLock', 'toggleOwlAlways', 'togglePwEdit', 'toggleTapFx',
     'toggleReaderDark', 'toggleReaderFavorite', 'toggleShelfFav', 'tourBack', 'tourNext',
     'updateBugCount', 'updateReaderDarkBtn', 'updateToLatest', 'updateWishCount', 'viewUserNovels',
   ]);

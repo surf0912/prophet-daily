@@ -434,6 +434,8 @@
 
     /* ── 肖像廊（gallery，beta：管理員/超管可見）────────────────────────────── */
     #forum-gallery { padding: 8px 12px 90px; }
+    /* 角色篩選列滿版貼齊標題列下緣（抵銷 #forum-gallery 內距），視覺與羊皮紙一致 */
+    #forum-gallery .filter-bar { margin: -8px -12px 10px; }
     .gallery-wall { columns: 2; column-gap: 12px; }
     .gwall-item { break-inside: avoid; margin: 0 0 14px; cursor: pointer; box-shadow: 0 6px 14px rgba(26,10,0,.28); line-height: 0; }
     .gwall-empty { columns: 1; text-align: center; color: var(--ink-light); font-size: 14px; padding: 60px 16px; }

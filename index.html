@@ -212,6 +212,10 @@
       <div class="forum-list" id="forum-list"></div>
       </div><!-- /forum-normal -->
       <div id="forum-gallery" style="display:none">
+        <div class="filter-bar" id="gallery-filter-bar">
+          <div class="filter-label" style="display:flex;align-items:center;gap:10px"><span><svg width="12" height="12" aria-hidden="true" style="vertical-align:-1px"><use href="#ic-sparkles"/></svg> 角色</span><span id="gallery-char-and"></span></div>
+          <div class="char-chips" id="gallery-char-chips"></div>
+        </div>
         <div class="gallery-wall" id="gallery-wall"></div>
       </div>
     </div>
@@ -546,7 +550,10 @@
   <div class="gd-card" data-onclick="event.stopPropagation()">
     <div id="gd-frame" class="gd-frame" data-onclick="openGalleryFull()"><img id="gd-img" alt="" /><button class="cp-download" data-onclick="downloadGalleryImage(); event.stopPropagation()" aria-label="下載畫作" title="下載畫作"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg></button></div>
     <div class="gd-meta">
-      <div id="gd-title" class="gd-title"></div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div id="gd-title" class="gd-title"></div>
+        <button id="gd-fav" data-onclick="toggleGalleryFavorite()" aria-label="收藏畫作" title="收藏畫作" style="background:none;border:none;cursor:pointer;padding:0;margin-top:14px;flex-shrink:0;line-height:1"></button>
+      </div>
       <div id="gd-author" class="gd-author"></div>
       <div id="gd-chars" class="row-tags" style="margin-top:8px"></div>
       <div id="gd-caption" class="gd-caption"></div>

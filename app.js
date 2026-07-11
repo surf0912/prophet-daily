@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.44';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.45';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1730,7 +1730,11 @@ function mountCharAndBtn(id) { const e = document.getElementById(id); if (e) e.i
 function toggleCharAnd() {
   charAnd = !charAnd;
   if (document.getElementById('page-scroll').classList.contains('active')) renderShelf();
-  else if (document.getElementById('page-forum').classList.contains('active')) renderForumList();
+  else if (document.getElementById('page-forum').classList.contains('active')) {
+    // 羊皮紙頁有兩個檢視：肖像廊模式重畫牆面，論壇模式重畫貼文列表
+    if (document.getElementById('forum-gallery').style.display !== 'none') renderGallery();
+    else renderForumList();
+  }
   else if (document.getElementById('page-admin').classList.contains('active')) renderAdminNovels();
 }
 
@@ -2551,7 +2555,7 @@ async function loadForumPosts() {
   // entering the forum always resets to the 全部 view
   forumView = 'all';
   const ffb = document.getElementById('forum-fav-btn'); if (ffb) ffb.classList.remove('on');
-  const fb = document.querySelector('#page-forum .filter-bar'); if (fb) fb.style.display = '';
+  const fb = document.querySelector('#forum-normal .filter-bar'); if (fb) fb.style.display = '';
   const el = document.getElementById('forum-list');
   el.innerHTML = '<div class="spinner"></div>';
   try {
@@ -2569,9 +2573,11 @@ function onForumFilter(type, val) {
 }
 
 async function toggleForumFav() {
+  // 羊皮紙頁的收藏夾鈕是兩用的：肖像廊模式下改為切換「已收藏畫作」檢視
+  if (document.getElementById('forum-gallery').style.display !== 'none') { toggleGalleryFav(); return; }
   forumView = forumView === 'liked' ? 'all' : 'liked';
   const btn = document.getElementById('forum-fav-btn'); if (btn) btn.classList.toggle('on', forumView === 'liked');
-  document.querySelector('#page-forum .filter-bar').style.display = forumView === 'liked' ? 'none' : '';
+  document.querySelector('#forum-normal .filter-bar').style.display = forumView === 'liked' ? 'none' : '';
   if (forumView === 'liked') {
     const el = document.getElementById('forum-list');
     el.innerHTML = '<div class="spinner"></div>';
@@ -2996,7 +3002,9 @@ function setForumMode(mode) {
   const isGallery = mode === 'gallery';
   document.getElementById('forum-normal').style.display = isGallery ? 'none' : '';
   document.getElementById('forum-gallery').style.display = isGallery ? '' : 'none';
-  const fav = document.getElementById('forum-fav-btn'); if (fav) fav.style.display = isGallery ? 'none' : '';
+  if (isGallery) galleryView = 'all';   // 進肖像廊一律回「全部」檢視（與羊皮紙進頁行為一致）
+  const fav = document.getElementById('forum-fav-btn');
+  if (fav) fav.classList.toggle('on', isGallery ? false : forumView === 'liked');
   const title = document.getElementById('forum-title');
   if (title) title.innerHTML = isGallery
     ? ic('ic-gallery', 20).replace('-2px', '-3px') + ' 肖像廊'
@@ -3007,6 +3015,19 @@ function setForumMode(mode) {
 }
 
 let _galleryItems = [];
+let galleryChars = [];      // 肖像廊角色篩選（同羊皮紙：不亮 = 全部；亮 = OR，同框開啟 = AND）
+let galleryView = 'all';    // 'all' | 'fav'
+
+function onGalleryFilter(type, val) {
+  galleryChars = galleryChars.includes(val) ? galleryChars.filter(c => c !== val) : [...galleryChars, val];
+  renderGallery();
+}
+
+function toggleGalleryFav() {
+  galleryView = galleryView === 'fav' ? 'all' : 'fav';
+  const btn = document.getElementById('forum-fav-btn'); if (btn) btn.classList.toggle('on', galleryView === 'fav');
+  renderGallery();
+}
 async function loadGallery() {
   const wall = document.getElementById('gallery-wall');
   wall.style.columns = '1';
@@ -3019,9 +3040,33 @@ async function loadGallery() {
 
 function renderGallery() {
   const wall = document.getElementById('gallery-wall');
-  if (!_galleryItems.length) { wall.style.columns = '1'; wall.innerHTML = '<div class="gwall-empty">肖像廊還空著，等待第一幅畫作掛上牆。</div>'; return; }
+  const inFav = galleryView === 'fav';
+  const fb = document.getElementById('gallery-filter-bar');
+  if (fb) {
+    fb.style.display = inFav ? 'none' : '';   // 收藏夾檢視收起角色列（同羊皮紙）
+    if (!inFav) {
+      const chipEl = document.getElementById('gallery-char-chips');
+      chipEl.innerHTML = CHAR_LIST.map(ch =>
+        `<div class="char-chip ${galleryChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}">
+           <img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span>
+         </div>`).join('');
+      chipEl.querySelectorAll('.char-chip').forEach(el => el.onclick = () => officialCharTap(el.dataset.ch, onGalleryFilter));
+      mountCharAndBtn('gallery-char-and');
+    }
+  }
+  const items = inFav
+    ? _galleryItems.filter(it => favIds.has(it.id))
+    : applyClassFilter(_galleryItems, '', galleryChars);
+  if (!items.length) {
+    wall.style.columns = '1';
+    const msg = inFav
+      ? '你還沒收藏任何畫作<br><small>打開畫作詳情，點標題旁的 ☆ 就能收進這裡</small>'
+      : (_galleryItems.length ? '沒有符合篩選的畫作' : '肖像廊還空著，等待第一幅畫作掛上牆。');
+    wall.innerHTML = `<div class="gwall-empty">${msg}</div>`;
+    return;
+  }
   wall.style.columns = '';   // 交回 CSS 的雙欄
-  wall.innerHTML = _galleryItems.map(it => {
+  wall.innerHTML = items.map(it => {
     const fr = GALLERY_FRAMES.some(([c]) => c === it.image_frame) ? it.image_frame : 'ebony';
     return `<div class="gwall-item" data-onclick="openGalleryItem('${it.id}')">
       <div class="gframe fr-${fr}"><img src="${escapeHtml(it.image_url)}" alt="${escapeHtml(it.title || '')}" loading="lazy" /></div>
@@ -3034,6 +3079,7 @@ function openGalleryItem(id) {
   const it = _galleryItems.find(x => x.id === id) || (window._adminNovels || []).find(x => x.id === id);
   if (!it) return;
   _galleryDetailItem = it;
+  updateGdFavBtn();
   const fr = GALLERY_FRAMES.some(([c]) => c === it.image_frame) ? it.image_frame : 'ebony';
   const frameEl = document.getElementById('gd-frame');
   frameEl.className = 'gd-frame fr-' + fr;
@@ -3054,6 +3100,25 @@ function openGalleryItem(id) {
         `<button data-onclick="setImageSlot('${it.id}','${v}')" style="flex:1;font-size:12px;padding:6px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:${cur === v ? 'var(--scarlet)' : 'var(--parchment2)'};color:${cur === v ? 'var(--on-dark)' : 'var(--ink-light)'}">${n}</button>`).join('') + '</div>';
   } else { adminBox.style.display = 'none'; }
   document.getElementById('gallery-detail').style.display = 'flex';
+}
+// 詳情卡標題旁的 ☆：收藏整幅畫作，走與意若思鏡整篇收藏相同的 /novels/{id}/favorite。
+function updateGdFavBtn() {
+  const b = document.getElementById('gd-fav');
+  if (!b || !_galleryDetailItem) return;
+  const fav = favIds.has(_galleryDetailItem.id);
+  b.innerHTML = fav ? ic('ic-starfill', 22) : ic('ic-starline', 22);
+  b.style.color = fav ? 'var(--gold)' : 'var(--gold-lt)';
+}
+async function toggleGalleryFavorite() {
+  if (!_galleryDetailItem) return;
+  try {
+    const r = await api(`/novels/${_galleryDetailItem.id}/favorite`, { method: 'POST' });
+    if (r.favorited) favIds.add(_galleryDetailItem.id); else favIds.delete(_galleryDetailItem.id);
+    updateGdFavBtn();
+    if (r.favorited) likeBurst(document.getElementById('gd-fav'));
+    toast(r.favorited ? '已加入收藏夾' : '已從收藏夾移除');
+    if (galleryView === 'fav') renderGallery();   // 收藏夾檢視中取消收藏 → 即時從牆上撤下
+  } catch (e) { toast(e.message); }
 }
 // 下載畫作：即時把金色徽記壓進圖檔（右下角、寬 40%、邊距 2%，與全螢幕觀看一致），
 // 再走與心動桌布相同的 分享/下載 流程。跨來源圖（Supabase Storage）需 crossOrigin。
