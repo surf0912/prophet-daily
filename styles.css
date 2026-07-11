@@ -436,8 +436,11 @@
     .empty-shelf { grid-column: 1 / -1; text-align: center; padding: 60px 24px; color: var(--ink-light); width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.8; }
 
     /* ── 肖像廊（gallery，beta：管理員/超管可見）────────────────────────────── */
+    /* 羊皮紙頁在肖像廊模式改 flex 直排，讓木牆區塊撐滿剩餘高度（空狀態才不會露出下方羊皮紙底） */
+    #page-forum.active { display: flex; flex-direction: column; }
     /* 牆面＝純 CSS 仿木紋（CSP 禁外部圖）：暖胡桃底＋直向板縫＋細木理，畫框掛在木牆上 */
     #forum-gallery {
+      flex: 1;
       padding: 8px 12px 90px;
       background-color: #5b3f29;
       background-image:
