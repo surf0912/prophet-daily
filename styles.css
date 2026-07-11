@@ -594,12 +594,14 @@
     .forum-search { padding: 12px 18px; }
     .search-wrap { position: relative; }
     .search-wrap .search-ic { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--ink-light); pointer-events: none; }
-    .forum-search input {
+    /* 綁在 .search-wrap（不是 .forum-search）：編輯部作品管理等其他頁的搜尋列也要同款外觀 */
+    .search-wrap input {
+      -webkit-appearance: none; appearance: none;
       width: 100%; padding: 10px 14px 10px 38px;
       border: 1px solid var(--gold-lt); border-radius: 20px;
       background: var(--parchment2); color: var(--ink); font-size: 14px; outline: none;
     }
-    .forum-search input:focus { border-color: var(--gold); }
+    .search-wrap input:focus { border-color: var(--gold); }
     .forum-list { padding: 0 18px 18px; }
     .forum-post-row {
       padding: 14px 4px; border-bottom: 1px solid rgba(26,10,0,.1); cursor: pointer;
