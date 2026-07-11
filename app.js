@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.75';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.76';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -691,7 +691,7 @@ function showPage(id, btn) {
 // ── Guided tour (新手導覽) ─────────────────────────────────────
 // Steps anchor to data-tour / stable ids; a missing target degrades to a
 // centered bubble (auto-skip look) instead of breaking. See infra notes.
-const TOUR_VERSION = '7';   // bump to re-show the (revised) tour to everyone
+const TOUR_VERSION = '7';   // tags which tour version a user last completed; NOT a re-show trigger — veterans (seen any version for their role) keep their 'seen' status across bumps
 const TOUR_READER = [
   { page: 'home', target: '[data-tour="nav-home"]',
     html: "<span class='tour-h'>歡迎來到《預言家日報》</span>這裡是心動頁。左上角若出現<b>貓頭鷹</b>，代表有信等你——追蹤的系列出了新作品、主編來信，或你的願望有了回音。" },
@@ -738,13 +738,10 @@ function tourSeenKey() { return 'pd_tour_seen_' + (currentUser?.id || 'anon'); }
 // to writer) complete 'w'+version — so a promoted reader re-sees the writer tour.
 function tourTag() { return (currentUser?.role === 'reader' ? 'r' : 'w') + TOUR_VERSION; }
 function _normTag(v) { return v === TOUR_VERSION ? 'r' + TOUR_VERSION : (v || ''); }  // legacy plain value = reader-seen
-function tourSeen() {
-  const need = tourTag();
-  return _normTag(currentUser?.tour_seen) === need || _normTag(localStorage.getItem(tourSeenKey())) === need;
-}
-// Has this account seen ANY version of the tour for its CURRENT role? Used so a content/version
-// bump doesn't force a full replay — auto-run only fires for genuinely new accounts (or a reader
-// freshly promoted to writer). Existing users get the optional home banner instead.
+// Has this account seen ANY version of the tour for its CURRENT role? BOTH the auto-run and the
+// home banner gate on this — so once someone has been through onboarding (any version), a later
+// content/version bump won't re-nudge them; only genuinely-new accounts (or a reader freshly
+// promoted to writer) are prompted. Completing or dismissing marks the current tag as seen.
 function tourSeenAnyForRole() {
   const roleChar = currentUser?.role === 'reader' ? 'r' : 'w';
   const stored = _normTag(currentUser?.tour_seen) || _normTag(localStorage.getItem(tourSeenKey())) || '';
@@ -855,7 +852,7 @@ function endTour(markSeen) {
 function renderTourBanner() {
   const b = document.getElementById('tour-banner');
   if (!b) return;
-  b.style.display = (currentUser && ['reader', 'writer'].includes(currentUser.role) && !tourSeen()) ? 'block' : 'none';
+  b.style.display = (currentUser && ['reader', 'writer'].includes(currentUser.role) && !tourSeenAnyForRole()) ? 'block' : 'none';
 }
 function dismissTourBanner() { markTourSeen(); renderTourBanner(); }
 
