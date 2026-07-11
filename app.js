@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.41';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.42';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1168,8 +1168,9 @@ const CHAR_LIST = [
 let shelfCat = '';        // '' = 全部
 let shelfChars = [];   // default: none lit = show everything; tap a character to filter to them (OR)
 // 作品管理 (admin works) filter. Type pills include 羊皮紙 (=forum) on top of the 3 novel categories.
-const ADMIN_CATS = ['迷情劑', '吐真劑', '儲思盆', '羊皮紙', '肖像'];
-let adminCat = '';        // '' | 迷情劑 | 吐真劑 | 儲思盆 | 羊皮紙
+const ADMIN_CATS = ['迷情劑', '吐真劑', '儲思盆'];   // 作品管理「分類」子篩，僅在種類=小說時出現
+let adminKind = '';       // 作品管理種類分頁：'' 全部 | 'novel' | 'forum' | 'image'
+let adminCat = '';        // '' | 迷情劑 | 吐真劑 | 儲思盆（僅小說種類下）
 let adminChars = [];
 let favIds = new Set();   // 意若思鏡 收藏夾: ids of whole works the user has favorited
 let favTimes = new Map();   // novel_id → 收藏時間（追蹤更新的伺服器端基準）
@@ -3299,7 +3300,8 @@ async function loadAdminNovelList() {
   const el = document.getElementById('admin-novel-list');
   const note = document.getElementById('admin-novel-scope-note');
   el.innerHTML = '<div class="spinner"></div>';
-  adminCat = ''; adminChars = [];   // fresh load → start unfiltered
+  adminKind = ''; adminCat = ''; adminChars = [];   // fresh load → start unfiltered
+  { const _s = document.getElementById('admin-novel-search'); if (_s) _s.value = ''; }
   document.getElementById('admin-novel-filters').style.display = 'none';
   const isAdmin = ['admin', 'super_admin'].includes(currentUser.role);
   try {
@@ -3378,17 +3380,24 @@ async function loadAdminNovelList() {
   } catch { el.innerHTML = '<p>載入失敗</p>'; }
 }
 
-// Type (含羊皮紙) + 角色 filter for 作品管理. 羊皮紙 = forum kind; the 3 categories are novels.
+// 作品管理篩選：種類分頁（全部/小說/羊皮紙/肖像）＋ 分類子篩（僅小說）＋ 標題/作者搜尋 ＋ 角色。
+function adminIsNovelKind(n) { return n.kind !== 'forum' && n.kind !== 'image'; }
 function applyAdminFilter(list) {
   const sel = adminChars.filter(Boolean);
   // 自創角色 joins the SAME 任一/同框 evaluation as the official chars (not a separate AND gate).
   const ccActive = isBeta() && !!_ccFilter;
   const ccSet = ccActive ? (_ccTags[_ccFilter] || new Set()) : null;
   const noFilter = (sel.length === 0 && !ccActive) || (!charAnd && sel.length === CHAR_LIST.length && !ccActive);
+  const q = ((document.getElementById('admin-novel-search') || {}).value || '').trim().toLowerCase();
   return list.filter(n => {
-    if (adminCat === '羊皮紙') { if (n.kind !== 'forum') return false; }
-    else if (adminCat === '肖像') { if (n.kind !== 'image') return false; }
-    else if (adminCat) { if (n.kind === 'forum' || n.kind === 'image' || n.category !== adminCat) return false; }
+    // 種類分頁
+    if (adminKind === 'forum') { if (n.kind !== 'forum') return false; }
+    else if (adminKind === 'image') { if (n.kind !== 'image') return false; }
+    else if (adminKind === 'novel') { if (!adminIsNovelKind(n)) return false; }
+    // 分類子篩（僅小說種類）
+    if (adminKind === 'novel' && adminCat && n.category !== adminCat) return false;
+    // 搜尋（標題／作者）
+    if (q && !(((n.title || '') + ' ' + (n.author || '')).toLowerCase().includes(q))) return false;
     if (!noFilter) {
       const have = n.characters || [];
       const checks = sel.map(c => have.includes(c));
@@ -3402,13 +3411,29 @@ function applyAdminFilter(list) {
 function renderAdminFilterBar(ns) {
   const wrap = document.getElementById('admin-novel-filters');
   if (!wrap) return;
-  if (!ns.length) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  const sbar = document.getElementById('admin-novel-searchbar');
+  if (!ns.length) { wrap.style.display = 'none'; wrap.innerHTML = ''; if (sbar) sbar.style.display = 'none'; return; }
+  if (sbar) sbar.style.display = '';
+  // 種類分頁（附件數，件數為名下總數、不受其他篩選影響）
+  const counts = { all: ns.length, novel: 0, forum: 0, image: 0 };
+  ns.forEach(n => { if (n.kind === 'forum') counts.forum++; else if (n.kind === 'image') counts.image++; else counts.novel++; });
+  const KINDS = [['', 'ic-books', '全部', counts.all], ['novel', 'ic-book', '小說', counts.novel], ['forum', 'ic-scroll', '羊皮紙', counts.forum], ['image', 'ic-gallery', '肖像', counts.image]];
+  const showCat = adminKind === 'novel';
   wrap.style.display = 'block';
-  wrap.innerHTML = `<div class="filter-label">${ic('ic-sparkles', 12)} 故事類型</div><div class="cat-pills" id="admin-cat-pills"></div>`
+  wrap.innerHTML = `<div class="admin-kind-row">${KINDS.map(([k, icn, label, cnt]) =>
+      `<button class="kind-pill ${adminKind === k ? 'active' : ''}" data-k="${k}">${ic(icn, 14)} ${label} <span class="cnt">${cnt}</span></button>`).join('')}</div>`
+    + (showCat ? `<div class="filter-label">${ic('ic-sparkles', 12)} 分類</div><div class="cat-pills" id="admin-cat-pills"></div>` : '')
     + `<div class="filter-label" style="margin-top:8px;display:flex;align-items:center;gap:10px"><span>${ic('ic-sparkles', 12)} 角色</span><span id="admin-char-and"></span></div><div class="char-chips" id="admin-char-chips"></div>`;
-  const catEl = document.getElementById('admin-cat-pills');
-  catEl.innerHTML = ADMIN_CATS.map(c => `<button class="cat-pill ${adminCat === c ? 'active' : ''}" data-c="${c}">${c}</button>`).join('');
-  catEl.querySelectorAll('.cat-pill').forEach(b => b.onclick = () => { adminCat = (adminCat === b.dataset.c) ? '' : b.dataset.c; renderAdminNovels(); });   // 再點同一顆 = 取消 = 全部
+  wrap.querySelectorAll('.kind-pill').forEach(b => b.onclick = () => {
+    adminKind = b.dataset.k;
+    if (adminKind !== 'novel') adminCat = '';   // 離開小說就清掉分類子篩
+    renderAdminNovels();
+  });
+  if (showCat) {
+    const catEl = document.getElementById('admin-cat-pills');
+    catEl.innerHTML = ADMIN_CATS.map(c => `<button class="cat-pill ${adminCat === c ? 'active' : ''}" data-c="${c}">${c}</button>`).join('');
+    catEl.querySelectorAll('.cat-pill').forEach(b => b.onclick = () => { adminCat = (adminCat === b.dataset.c) ? '' : b.dataset.c; renderAdminNovels(); });   // 再點同一顆 = 取消
+  }
   const chipEl = document.getElementById('admin-char-chips');
   chipEl.innerHTML = CHAR_LIST.map(ch =>
     `<div class="char-chip ${adminChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}"><img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span></div>`).join('')
