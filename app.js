@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.59';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.60';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -668,6 +668,8 @@ function ownerTag(work) {
 
 // ── Navigation ───────────────────────────────────────────────
 function showPage(id, btn) {
+  // 已經在這一頁又點同一個頁籤：只回到頂部，不重新抓資料（否則反覆點會一直閃 spinner 重刷）。
+  const already = document.getElementById('page-' + id)?.classList.contains('active');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
@@ -675,6 +677,7 @@ function showPage(id, btn) {
   // 所有頁面共用 #page-area 這個捲動容器；切頁時把它捲回頂部，否則在某頁往下滑後
   // 切走再切回，會停在上次的捲動位置（首頁自身鎖定不捲，不受影響）。
   { const pa = document.getElementById('page-area'); if (pa) pa.scrollTop = 0; }
+  if (already) return;   // 同頁再點＝只捲頂
   if (id !== 'admin') stopMonitor();   // leaving 編輯部 cancels the live monitor poll
   if (id === 'home') { renderContinueBar(); renderFavUpdates(); }
   if (id === 'scroll') loadNovels();
