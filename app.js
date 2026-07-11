@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.67';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.68';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2256,6 +2256,7 @@ function renderHomeNovels() {
 let _artSeq = 0;   // 文首插圖探測序號（防切章後舊回呼誤插）
 let currentNovelKind = 'novel';
 let currentNovelTitle = '';
+let currentNovelHeader = null;   // 目前作品的頁首圖 URL（image_url）；閱讀器優先用它，沒有才退回 artwork/<id>.jpg
 
 // Stable, obscure per-account watermark code (first 8 hex of the UUID). Nicknames can be
 // changed by the user, so they can't be used for attribution; the UUID can't. An admin maps
@@ -2301,6 +2302,7 @@ async function openNovel(novelId) {
   markSeriesSeenForWork(novel);   // opening a new series installment clears its 追蹤更新 flag
   currentNovelKind = (novel && novel.kind) || 'novel';
   currentNovelTitle = (novel && novel.title) || '';
+  currentNovelHeader = (novel && novel.kind === 'novel' && novel.image_url) || null;   // 頁首圖（僅小說）
   applyMqjGuard(true);   // personalized watermark + copy guard on EVERY work now (was 迷情劑-only)
   updateReaderFavBtn();   // show ☆/★ for 意若思鏡 works
   updateReaderDarkBtn();  // /reflects current 夜間模式
@@ -2510,10 +2512,10 @@ async function loadChapter(idx) {
     // 羊皮紙貼文沒有 sticky 上下篇導覽，不需 100px 底部留白（否則封存框下方一大片空）→ 收小
     el.classList.toggle('rc-forum', currentNovelKind === 'forum');
   } catch { document.getElementById('reader-content').textContent = '載入失敗'; }
-  // 文首插圖：管理員把圖放 repo 的 artwork/<作品id>.jpg（免上傳介面、不佔資料庫，走 Pages/鏡像
-  // 並被 SW 快取）。只在第一章文首顯示；檔案不存在＝探測失敗＝靜靜略過。
+  // 文首插圖：優先用上傳的頁首圖（image_url）；沒有才退回舊約定 artwork/<作品id>.jpg
+  // （管理員手放 repo、走 Pages/鏡像＋SW 快取）。只在第一章文首顯示；載入失敗＝靜靜略過。
   if (idx === 0) {
-    const artSrc = `./artwork/${currentNovelId}.jpg`;
+    const artSrc = currentNovelHeader || `./artwork/${currentNovelId}.jpg`;
     const artSeq = ++_artSeq, artNid = currentNovelId;
     const artIm = new Image();
     artIm.onload = () => {
@@ -3099,6 +3101,63 @@ function pickFrame(code) {
 
 function pickImageFile() { const el = document.getElementById('image-file'); if (el) el.click(); }
 
+// ── 小說頁首圖：新增小說時選圖，送出建立後再 PATCH 上傳 ─────────────────────
+const _novelHeader = { data: null };
+function pickNovelHeader() { const el = document.getElementById('nh-file'); if (el) el.click(); }
+async function onNovelHeaderPick(input) {
+  const f = input.files[0]; input.value = '';
+  if (!f) return;
+  if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { toast('請選擇 JPG、PNG 或 WebP 圖片'); return; }
+  try {
+    _novelHeader.data = await resizeImageContain(f, 1080, 0.82);   // 同 artwork 工具：≤1080 寬
+    const wrap = document.getElementById('nh-preview');
+    wrap.style.display = '';
+    wrap.innerHTML = `<img src="${_novelHeader.data}" alt="" style="max-width:100%;max-height:220px;border-radius:6px" /><div style="margin-top:6px"><button type="button" data-onclick="clearNovelHeader()" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">移除頁首圖</button></div>`;
+    document.getElementById('nh-drop').textContent = '已選擇頁首圖，點此可更換';
+  } catch (e) { toast('圖片讀取失敗'); }
+}
+function clearNovelHeader() {
+  _novelHeader.data = null;
+  const wrap = document.getElementById('nh-preview'); if (wrap) { wrap.style.display = 'none'; wrap.innerHTML = ''; }
+  const drop = document.getElementById('nh-drop'); if (drop) drop.textContent = '選擇頁首圖';
+}
+
+// ── 作品編輯視窗的頁首圖：即時 PATCH（換／移除），跟標題/內文的儲存分開 ─────────
+function renderEditHeaderPreview(url) {
+  const box = document.getElementById('editwork-header-preview');
+  const rm = document.getElementById('editwork-header-remove');
+  if (!box) return;
+  if (url) { box.innerHTML = `<img src="${escapeHtml(url)}" alt="" style="max-width:100%;max-height:180px;border-radius:6px" />`; if (rm) rm.style.display = ''; }
+  else { box.innerHTML = '<span style="font-size:12px;color:var(--ink-light)">尚無頁首圖</span>'; if (rm) rm.style.display = 'none'; }
+}
+function pickEditHeader() { const el = document.getElementById('editwork-header-file'); if (el) el.click(); }
+async function onEditHeaderPick(input) {
+  const f = input.files[0]; input.value = '';
+  if (!f || !editWork.id) return;
+  if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { toast('請選擇 JPG、PNG 或 WebP 圖片'); return; }
+  try {
+    const data = await resizeImageContain(f, 1080, 0.82);
+    const r = await api(`/novels/${editWork.id}/header-image`, { method: 'PATCH', body: JSON.stringify({ image: data }) });
+    renderEditHeaderPreview(r && r.image_url);
+    _syncAdminNovelField(editWork.id, 'image_url', r && r.image_url);
+    toast('頁首圖已更新');
+  } catch (e) { toast(e.message || '上傳失敗'); }
+}
+async function removeEditHeader() {
+  if (!editWork.id) return;
+  try {
+    await api(`/novels/${editWork.id}/header-image`, { method: 'PATCH', body: JSON.stringify({ image: null }) });
+    renderEditHeaderPreview(null);
+    _syncAdminNovelField(editWork.id, 'image_url', null);
+    toast('已移除頁首圖');
+  } catch (e) { toast(e.message || '移除失敗'); }
+}
+// 同步本地快取，讓重開編輯視窗／閱讀器立即反映（不必重抓整份清單）
+function _syncAdminNovelField(id, key, val) {
+  [...(window._adminNovels || []), ...(typeof novels !== 'undefined' ? novels : [])]
+    .forEach(o => { if (o && o.id === id) o[key] = val; });
+}
+
 // 保留長寬比、限制最長邊，輸出 JPEG data URL（畫作無需透明背景）。
 function resizeImageContain(file, maxDim, quality) {
   return new Promise((resolve, reject) => {
@@ -3580,9 +3639,12 @@ async function submitNewNovel() {
     }
     const _ccIds = readUploadCc();   // 把作品歸到選中的自創角色底下(私人)
     if (_ccIds.length) { try { await api('/custom-chars/tag', { method: 'POST', body: JSON.stringify({ novel_id: novel.id, char_ids: _ccIds }) }); await loadCustomChars(); } catch (e) {} }
+    // 頁首圖：作品建立後才有 id，補 PATCH 上傳（失敗不擋作品建立，提示即可）
+    if (_novelHeader.data) { try { await api(`/novels/${novel.id}/header-image`, { method: 'PATCH', body: JSON.stringify({ image: _novelHeader.data }) }); } catch (e) { toast('頁首圖上傳失敗：' + (e.message || '')); } }
     toast(novel.status === 'pending' ? '已送出，待管理員審核' : '小說已建立');
     ['new-novel-title', 'new-novel-author', 'new-novel-date', 'new-novel-content'].forEach(id => document.getElementById(id).value = '');
     prefillAuthor('new-novel-author');   // 清空後重新帶回暱稱：連續上傳系列時署名保持一致，免重打（避免手滑打錯）
+    clearNovelHeader();
     document.querySelectorAll('#new-novel-cc .cc-pick.on').forEach(b => b.classList.remove('on'));
     resetClassPicker('new-novel-category', 'new-novel-chars');
     clearUploadDraft();
@@ -3968,6 +4030,9 @@ async function openEditWork(id) {
   document.getElementById('editwork-date').value = (n.created_at || '').slice(0, 10);   // 發佈日期
   document.getElementById('editwork-content-label').textContent = isForum ? '主文（開場白）' : '內文';
   document.getElementById('editwork-comments-group').style.display = isForum ? '' : 'none';
+  // 頁首圖：僅小說；帶出目前的 image_url，可更換／移除（即時 PATCH）
+  { const hg = document.getElementById('editwork-header-group'); if (hg) hg.style.display = isForum ? 'none' : ''; }
+  if (!isForum) renderEditHeaderPreview(n.image_url || null);
   document.getElementById('editwork-comments').value = '';
   const ct = document.getElementById('editwork-content');
   ct.value = '載入中…'; ct.disabled = true;

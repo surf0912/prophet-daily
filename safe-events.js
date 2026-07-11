@@ -24,6 +24,7 @@
     'setFeedbackStatus', 'setMqjAccess', 'setUploadKind', 'setUserFilter', 'setUserRole', 'setUiScript', 'setWishReply', 'wishReplyOpen',
     'setWishFilter', 'showLoginForm', 'showPage', 'startTour', 'stepReaderFont', 'submitFeedback',
     'onImagePick', 'submitImageWork', 'pickFrame', 'pickImageFile', 'setForumMode', 'toggleForumMode',
+    'pickNovelHeader', 'onNovelHeaderPick', 'clearNovelHeader', 'setEditHeader', 'pickEditHeader', 'onEditHeaderPick', 'removeEditHeader',
     'openGalleryItem', 'closeGalleryDetail', 'openGalleryFull', 'closeGalleryFull', 'setImageSlot', 'downloadGalleryImage',
     'submitForumPost', 'submitNewNovel', 'switchAdminTab', 'tempBan', 'toggleCcShare', 'toggleCharAnd', 'toggleCoverPhoto',
     'toggleDark', 'toggleFavOwl', 'toggleFont', 'toggleForumFav', 'toggleGalleryFavorite', 'toggleLike', 'toggleLock', 'toggleOwlAlways', 'togglePwEdit', 'toggleTapFx',

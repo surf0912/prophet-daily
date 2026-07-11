@@ -424,6 +424,11 @@
           <div class="form-group"><label>作品名稱</label><input type="text" id="new-novel-title" placeholder="例：火焰杯後" /></div>
           <div class="form-group"><label>作者署名（選填）</label><input type="text" id="new-novel-author" placeholder="留空則佚名" /></div>
           <div class="form-group"><label>發佈日期（選填；填未來日期＝排程，到當天才自動公開）</label><input type="date" id="new-novel-date" /></div>
+          <div class="form-group"><label>頁首圖（選填；顯示在文章開頭）</label>
+            <div id="nh-drop" data-onclick="pickNovelHeader()" style="border:1.5px dashed var(--gold);border-radius:8px;padding:18px 12px;text-align:center;cursor:pointer;color:var(--ink-light);font-size:13px">選擇頁首圖</div>
+            <input type="file" id="nh-file" accept="image/jpeg,image/png,image/webp" style="display:none" data-onchange="onNovelHeaderPick(this)" />
+            <div id="nh-preview" style="display:none;margin-top:10px;text-align:center"></div>
+          </div>
           <div class="form-group"><label>故事類型</label><select id="new-novel-category"></select></div>
           <div class="form-group"><label>角色（可多選）</label><div id="new-novel-chars" class="char-picker"></div></div>
           <div class="form-group" id="new-novel-cc-group" style="display:none"><label>自創角色（私人，只有你看得到）</label><div id="new-novel-cc" class="char-picker"></div></div>
@@ -702,6 +707,15 @@
     <div class="form-group"><label>標題</label><input type="text" id="editwork-title" /></div>
     <div class="form-group"><label>作者署名</label><input type="text" id="editwork-author" placeholder="留空則佚名" /></div>
     <div class="form-group"><label>發佈日期</label><input type="date" id="editwork-date" /></div>
+    <div class="form-group" id="editwork-header-group">
+      <label>頁首圖</label>
+      <div id="editwork-header-preview" style="margin-bottom:6px"></div>
+      <div style="display:flex;gap:8px">
+        <button type="button" data-onclick="pickEditHeader()" style="flex:1;font-size:12px;padding:8px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 選擇／更換</button>
+        <button type="button" id="editwork-header-remove" data-onclick="removeEditHeader()" style="flex:1;font-size:12px;padding:8px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">移除頁首圖</button>
+      </div>
+      <input type="file" id="editwork-header-file" accept="image/jpeg,image/png,image/webp" style="display:none" data-onchange="onEditHeaderPick(this)" />
+    </div>
     <div class="form-group"><label id="editwork-content-label">內文</label><textarea id="editwork-content" rows="10"></textarea></div>
     <div class="form-group" id="editwork-comments-group" style="display:none">
       <label>留言區</label>
