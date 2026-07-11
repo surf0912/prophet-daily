@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.64';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.65';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -678,6 +678,7 @@ function showPage(id, btn) {
   // 切走再切回，會停在上次的捲動位置（首頁自身鎖定不捲，不受影響）。
   { const pa = document.getElementById('page-area'); if (pa) pa.scrollTop = 0; }
   if (already) return;   // 同頁再點＝只捲頂
+  { const pa = document.getElementById('page-area'); if (pa) pa.classList.remove('gallery-bg'); }   // 切頁先卸木紋底；進羊皮紙時 loadForumPosts 會依模式重設
   if (id !== 'admin') stopMonitor();   // leaving 編輯部 cancels the live monitor poll
   if (id === 'home') { renderContinueBar(); renderFavUpdates(); }
   if (id === 'scroll') loadNovels();
@@ -1117,7 +1118,12 @@ async function shareOrDownload(url, filename) {
 // P2：肖像廊已指定時段的畫作，登入後抓一次併入心動封面池（依角色分入 CHARS 輪替）。
 let _homeGalleryCovers = [];
 async function loadHomeGalleryCovers() {
-  try { _homeGalleryCovers = await api('/novels/home-covers', { background: true }) || []; }
+  try {
+    const raw = await api('/novels/home-covers', { background: true }) || [];
+    // 從肖像廊「批次匯入」的官方封面，其 image_url 就是 /chars/ 原圖，本來就已是心動封面（透過 CHARS）。
+    // 再從肖像廊併進來會與官方封面重複（角色頁出現兩張、輪播雙重計數）→ 濾掉。使用者投稿畫作(Supabase URL)保留。
+    _homeGalleryCovers = raw.filter(gc => !_ALL_COVER_URLS.has(photoKey(gc.image_url)));
+  }
   catch { _homeGalleryCovers = []; }
   // 抓到資料時，若正停在心動頁就重繪讓畫作即時登場
   if (_homeGalleryCovers.length && document.getElementById('page-home')?.classList.contains('active')) renderGreeting();
@@ -3020,6 +3026,11 @@ function resetClassPicker(catSelId, charDivId) {
   document.querySelectorAll(`#${charDivId} .opt.on`).forEach(el => el.classList.remove('on'));
 }
 
+// 作者署名預設＝作者在站內的暱稱（沒暱稱退回帳號）。只在欄位空時填，作者仍可改。
+// 羊皮紙貼文默認匿名（placeholder「留空則匿名」），故不套用。
+function defaultAuthorName() { return (currentUser && (currentUser.nickname || currentUser.username)) || ''; }
+function prefillAuthor(id) { const el = document.getElementById(id); if (el && !el.value) el.value = defaultAuthorName(); }
+
 function setUploadKind(kind) {
   initClassPicker('forum-post-category', 'forum-post-chars');
   initClassPicker('new-novel-category', 'new-novel-chars');
@@ -3031,9 +3042,9 @@ function setUploadKind(kind) {
   const paint = (btn, on) => { const b = document.getElementById(btn); if (!b) return;
     b.style.background = on ? 'var(--scarlet)' : 'var(--parchment2)'; b.style.color = on ? 'var(--on-dark)' : 'var(--ink-light)'; };
   paint('kind-novel-btn', isNovel); paint('kind-forum-btn', isForum); paint('kind-image-btn', isImage);
-  // Default the novel author署名 to the uploader's nickname (still editable).
-  const na = document.getElementById('new-novel-author');
-  if (isNovel && na && !na.value) na.value = currentUser.nickname || currentUser.username || '';
+  // 小說／畫作的作者署名預設帶入暱稱（仍可改）；羊皮紙維持匿名默認。
+  if (isNovel) prefillAuthor('new-novel-author');
+  if (isImage) prefillAuthor('new-image-author');
   const writerNote = (currentUser.role === 'writer')
     ? (currentUser.auto_publish ? '你已獲得自動審核，作品送出後直接公開、免等待' : '作品需經管理員審核通過才公開')
     : '';
@@ -3123,6 +3134,7 @@ async function submitImageWork() {
     toast(res && res.status === 'pending' ? '已送出，待管理員審核' : '畫作已送出');
     _imgWork.data = null; _imgWork.frame = 'ebony';
     ['new-image-title', 'new-image-author', 'new-image-caption'].forEach(id => document.getElementById(id).value = '');
+    prefillAuthor('new-image-author');   // 清空後重新帶回暱稱（同小說）
     document.querySelectorAll('#new-image-chars .opt.on').forEach(el => el.classList.remove('on'));
     document.querySelectorAll('#image-frame-picker .frame-swatch').forEach(el => el.classList.toggle('sel', el.dataset.frame === 'ebony'));
     const wrap = document.getElementById('image-preview-wrap'); wrap.style.display = 'none'; wrap.innerHTML = '';
@@ -3140,6 +3152,8 @@ function setForumMode(mode) {
   forumTab = mode;   // 唯一寫入點：之後 toggleForumFav / toggleCharAnd 都讀這個，不看 DOM
   document.getElementById('forum-normal').style.display = isGallery ? 'none' : '';
   document.getElementById('forum-gallery').style.display = isGallery ? '' : 'none';
+  // 木紋牆鋪到滾動容器：肖像廊模式下連 .page 底部留白與 overscroll 回彈都是木紋，不露羊皮紙底
+  const pa = document.getElementById('page-area'); if (pa) pa.classList.toggle('gallery-bg', isGallery);
   if (isGallery) galleryView = 'all';   // 進肖像廊一律回「全部」檢視（與羊皮紙進頁行為一致）
   const fav = document.getElementById('forum-fav-btn');
   if (fav) fav.classList.toggle('on', isGallery ? false : forumView === 'liked');
@@ -3553,6 +3567,7 @@ async function submitNewNovel() {
     if (_ccIds.length) { try { await api('/custom-chars/tag', { method: 'POST', body: JSON.stringify({ novel_id: novel.id, char_ids: _ccIds }) }); await loadCustomChars(); } catch (e) {} }
     toast(novel.status === 'pending' ? '已送出，待管理員審核' : '小說已建立');
     ['new-novel-title', 'new-novel-author', 'new-novel-date', 'new-novel-content'].forEach(id => document.getElementById(id).value = '');
+    prefillAuthor('new-novel-author');   // 清空後重新帶回暱稱：連續上傳系列時署名保持一致，免重打（避免手滑打錯）
     document.querySelectorAll('#new-novel-cc .cc-pick.on').forEach(b => b.classList.remove('on'));
     resetClassPicker('new-novel-category', 'new-novel-chars');
     clearUploadDraft();

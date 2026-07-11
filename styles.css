@@ -449,17 +449,17 @@
     /* ── 肖像廊（gallery，beta：管理員/超管可見）────────────────────────────── */
     /* 羊皮紙頁在肖像廊模式改 flex 直排，讓木牆區塊撐滿剩餘高度（空狀態才不會露出下方羊皮紙底） */
     #page-forum.active { display: flex; flex-direction: column; }
-    /* 牆面＝純 CSS 仿木紋（CSP 禁外部圖）：暖胡桃底＋直向板縫＋細木理，畫框掛在木牆上 */
-    #forum-gallery {
-      flex: 1;
-      padding: 8px 12px 90px;
+    /* 木紋牆鋪在滾動容器（#page-area.gallery-bg）：連 .page 底部留白與 overscroll 回彈都是木紋。
+       純 CSS 仿木紋（CSP 禁外部圖）：暖胡桃底＋直向板縫＋細木理。直向板縫是 X 座標無關 Y，
+       不加 180deg 縱向漸層 → 垂直方向可無縫延伸，不會出現色帶接縫。畫框直接掛在這片木牆上。 */
+    #page-area.gallery-bg {
       background-color: #5b3f29;
       background-image:
         repeating-linear-gradient(90deg, transparent 0 3px, rgba(0,0,0,.045) 3px 4px, transparent 4px 8px),
         repeating-linear-gradient(90deg, rgba(255,255,255,.022) 0 2px, transparent 2px 11px),
-        repeating-linear-gradient(90deg, #5b3f29 0 94px, #4a3220 94px 98px),
-        linear-gradient(180deg, #64472e, #523925);
+        repeating-linear-gradient(90deg, #5b3f29 0 94px, #4a3220 94px 98px);
     }
+    #forum-gallery { flex: 1; padding: 8px 12px 90px; }
     /* 角色篩選列滿版貼齊標題列下緣（抵銷 #forum-gallery 內距），視覺與羊皮紙一致 */
     #forum-gallery .filter-bar { margin: -8px -12px 10px; }
     .gallery-wall { columns: 2; column-gap: 20px; }
@@ -808,7 +808,8 @@
     .log-line:hover { background: rgba(128, 128, 128, .08); }
     .log-time { color: var(--ink-light); opacity: .85; flex-shrink: 0; }
     .log-actor { color: var(--gold); font-weight: bold; flex-shrink: 0; }
-    .log-act { color: var(--ink); }
+    /* 殼禁左右滑：log-act 必須能縮＋長英數串(access=rejected / AmeliaWang)要斷行，否則超出右界被切掉看不到 */
+    .log-act { color: var(--ink); flex: 1; min-width: 0; overflow-wrap: anywhere; }
     .log-tgt { color: var(--accent); }
 
     /* Tap sparkle — a burst of gold motes + a ring at every tap. Decorative only,
