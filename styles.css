@@ -278,7 +278,8 @@
     /* CSS 折角箭頭：收合時朝右，展開時朝下（旋轉 90°） */
     .series-chev { width: 0; height: 0; border-style: solid; border-width: 4px 0 4px 6px; border-color: transparent transparent transparent var(--series); flex-shrink: 0; transition: transform .18s ease; }
     .series-block.expanded .series-chev { transform: rotate(90deg); }
-    .series-count { margin-left: auto; font-size: 11px; font-weight: normal; color: var(--ink-light); background: rgba(45,74,30,.12); padding: 1px 8px; border-radius: 9px; }
+    .series-count { margin-left: auto; font-size: 11px; font-weight: normal; color: var(--ink-light); background: rgba(45,74,30,.12); padding: 1px 8px; border-radius: 9px; white-space: nowrap; flex-shrink: 0; }
+    .series-head .series-name { min-width: 0; }   /* 標題太長自己換行，別把篇數標籤壓成直排 */
     /* 默認收合：成員藏起來，只留系列標題一列；展開才顯示 */
     .series-members { display: none; }
     .series-block.expanded .series-members { display: block; }
