@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prophet-daily-v3.42';
+const CACHE_NAME = 'prophet-daily-v3.43';
 const ASSETS = [
   './index.html',
   './styles.css',

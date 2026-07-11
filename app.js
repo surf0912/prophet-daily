@@ -23,10 +23,13 @@
 }());
 
 // ── Config (update after deploy) ────────────────────────────
-const API = 'https://the-prophet-daily.onrender.com';
+// 鏡像用戶（*.onrender.com）一律打「自己同源」的 API：中國讀者不必跨到新加坡那台
+// （GFW 對個別 Render 區域的可達性不可靠，7/10 搬遷後全指新加坡曾造成鏡像用戶進不去）。
+// github.io（Pages）用戶照舊打新加坡主後端。兩台後端共用同一個 Supabase，JWT 通用。
+const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.42';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.43';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
