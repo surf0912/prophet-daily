@@ -273,7 +273,15 @@
     .t-chr { display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 10px; background: rgba(201,168,76,.2); color: var(--ink-light); }
     /* series grouping */
     .series-block { border-bottom: 1px solid rgba(26,10,0,.1); }
-    .series-head { padding: 12px 18px 2px; font-size: 13px; font-weight: bold; color: var(--series); }
+    .series-head { display: flex; align-items: center; gap: 6px; padding: 12px 18px; font-size: 13px; font-weight: bold; color: var(--series); cursor: pointer; user-select: none; }
+    .series-head:active { background: rgba(45,74,30,.06); }
+    /* CSS 折角箭頭：收合時朝右，展開時朝下（旋轉 90°） */
+    .series-chev { width: 0; height: 0; border-style: solid; border-width: 4px 0 4px 6px; border-color: transparent transparent transparent var(--series); flex-shrink: 0; transition: transform .18s ease; }
+    .series-block.expanded .series-chev { transform: rotate(90deg); }
+    .series-count { margin-left: auto; font-size: 11px; font-weight: normal; color: var(--ink-light); background: rgba(45,74,30,.12); padding: 1px 8px; border-radius: 9px; }
+    /* 默認收合：成員藏起來，只留系列標題一列；展開才顯示 */
+    .series-members { display: none; }
+    .series-block.expanded .series-members { display: block; }
     .novel-row.series-member { padding-left: 30px; border-bottom: 1px dashed rgba(26,10,0,.08); }
     .series-block .novel-row.series-member:last-child { border-bottom: none; }
     /* ── Category + character filter bar (卷軸 + 論壇) ── */

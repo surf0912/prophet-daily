@@ -27,7 +27,7 @@
     'openGalleryItem', 'closeGalleryDetail', 'openGalleryFull', 'closeGalleryFull', 'setImageSlot', 'downloadGalleryImage',
     'submitForumPost', 'submitNewNovel', 'switchAdminTab', 'tempBan', 'toggleCcShare', 'toggleCharAnd', 'toggleCoverPhoto',
     'toggleDark', 'toggleFavOwl', 'toggleFont', 'toggleForumFav', 'toggleGalleryFavorite', 'toggleLike', 'toggleLock', 'toggleOwlAlways', 'togglePwEdit', 'toggleTapFx',
-    'toggleReaderDark', 'toggleReaderFavorite', 'toggleShelfFav', 'toggleCoverGallery', 'tourBack', 'tourNext',
+    'toggleReaderDark', 'toggleReaderFavorite', 'toggleShelfFav', 'toggleCoverGallery', 'toggleSeries', 'tourBack', 'tourNext',
     'updateBugCount', 'updateReaderDarkBtn', 'updateToLatest', 'updateWishCount', 'viewUserNovels',
   ]);
 

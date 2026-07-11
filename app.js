@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.58';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.59';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2139,6 +2139,17 @@ function renderShelf() {
   renderNovelBlocks(list, grid, `<span style="display:block;margin-bottom:8px">${ic('ic-mirror', 30)}</span>沒有符合的作品`);
 }
 
+// 系列展開狀態（默認全收合）。點系列標題切換，不重繪整個書架——只翻該區塊的 class，保住捲動位置。
+let _expandedSeries = new Set();
+function toggleSeries(headEl) {
+  const block = headEl.closest('.series-block');
+  if (!block) return;
+  const name = block.dataset.series || '';
+  const nowExpanded = block.classList.toggle('expanded');
+  if (nowExpanded) _expandedSeries.add(name); else _expandedSeries.delete(name);
+  headEl.setAttribute('aria-expanded', nowExpanded);
+}
+
 // Render a list of novels into the grid, grouping series members under a header.
 function renderNovelBlocks(list, grid, emptyMsg) {
   if (!list.length) { grid.innerHTML = `<div class="empty-shelf">${emptyMsg}</div>`; return; }
@@ -2149,10 +2160,16 @@ function renderNovelBlocks(list, grid, emptyMsg) {
     if (n.series) {
       const members = list.filter(m => m.series === n.series).sort((a, b) => (a.series_order || 0) - (b.series_order || 0));
       members.forEach(m => seen.add(m.id));
+      // 系列默認收合成一列（只顯示系列名＋篇數），點標題展開／收合；展開狀態記在 _expandedSeries。
+      const expanded = _expandedSeries.has(n.series);
       blocks.push(`
-        <div class="series-block">
-          <div class="series-head">${ic('ic-books', 14)} ${escapeHtml(n.series)}</div>
-          ${members.map(m => shelfRow(m, true)).join('')}
+        <div class="series-block${expanded ? ' expanded' : ''}" data-series="${escapeHtml(n.series)}">
+          <div class="series-head" data-onclick="toggleSeries(this)" role="button" aria-expanded="${expanded}">
+            <span class="series-chev" aria-hidden="true"></span>
+            ${ic('ic-books', 14)} <span class="series-name">${escapeHtml(n.series)}</span>
+            <span class="series-count">${members.length} 篇</span>
+          </div>
+          <div class="series-members">${members.map(m => shelfRow(m, true)).join('')}</div>
         </div>`);
     } else {
       seen.add(n.id);
