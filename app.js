@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.62';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.63';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2178,13 +2178,17 @@ function renderNovelBlocks(list, grid, emptyMsg) {
       // 收合的系列列＝與單篇同款卡片，只靠三個訊號區分：《》書名號、副標「系列合集 · 共 N 篇」、列尾 chevron。
       // 標籤列＝成員的 類型＋角色 去重彙整（類型前、角色後，保持首次出現順序）。
       const expanded = _expandedSeries.has(n.series);
-      const cats = [], chars = [];
+      const cats = [], chars = [], authors = [];
       members.forEach(m => {
         if (m.category && !cats.includes(m.category)) cats.push(m.category);
         (m.characters || []).forEach(c => { if (!chars.includes(c)) chars.push(c); });
+        const a = m.author || '佚名'; if (!authors.includes(a)) authors.push(a);
       });
       const tags = cats.map(c => `<span class="t-cat${c === '吐真劑' ? ' t-cat-green' : ''}">${escapeHtml(c)}</span>`).join('')
         + chars.map(c => `<span class="t-chr">${escapeHtml(charNames([c]))}</span>`).join('');
+      // 作者列同單篇：作者（多位作者去重頓號相連）＋ 日期 = 系列最新更新那篇的日期
+      const newest = members.reduce((x, m) => (!x || new Date(m.created_at || 0) > new Date(x.created_at || 0)) ? m : x, null);
+      const meta = `${escapeHtml(authors.join('、'))}${ownerTag(newest)}${newest && newest.created_at ? ` · ${ic('ic-calendar',11)} ${fmtUpdated(newest.created_at)}` : ''}`;
       blocks.push(`
         <div class="series-block${expanded ? ' expanded' : ''}" data-series="${escapeHtml(n.series)}">
           <div class="novel-row series-head" data-onclick="toggleSeries(this)" role="button" aria-expanded="${expanded}">
@@ -2192,6 +2196,7 @@ function renderNovelBlocks(list, grid, emptyMsg) {
               <h4>《${escapeHtml(stripOuterBookQuotes(n.series))}》</h4>
               <span class="series-sub">系列合集 · 共 ${members.length} 篇 <span class="series-chev" aria-hidden="true"></span></span>
             </div>
+            <div class="row-meta">${meta}</div>
             <div class="row-tags">${tags}</div>
           </div>
           <div class="series-members">${members.map(m => shelfRow(m, true)).join('')}</div>
