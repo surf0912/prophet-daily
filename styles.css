@@ -706,6 +706,9 @@
     .admin-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
     .admin-pane { display: none; padding: 18px; }
     .admin-pane.active { display: block; }
+    /* 作品管理：頂部收緊。scope-note 空著時（非成員檢視）別佔位，搜尋列整體上提 */
+    #admin-novels { padding-top: 8px; }
+    #admin-novel-scope-note:empty { display: none; }
     .form-group { margin-bottom: 14px; }
     .form-group label { display: block; font-size: 12px; color: var(--accent); margin-bottom: 4px; letter-spacing: .05em; }
     .form-group input, .form-group textarea, .form-group select {
