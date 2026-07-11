@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.56';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.57';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1002,12 +1002,21 @@ function renderCharProfile(name) {
     const HEART = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.7l-1.45-1.32C5.4 14.74 2 11.66 2 7.9 2 5.1 4.2 3 7 3c1.6 0 3.14.74 4.13 1.9L12 5.9l.87-1C13.86 3.74 15.4 3 17 3c2.8 0 5 2.1 5 4.9 0 3.76-3.4 6.84-8.55 11.49L12 20.7z"/></svg>`;
     const DL = `<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>`;
     html += `<div class="cp-cover-head"><h3>心動封面</h3><button class="cp-hint-btn" data-onclick="cpCoverHint()" aria-label="心動封面說明" title="心動封面說明">${ic('ic-help', 16)}</button><div class="cp-cover-note" id="cp-cover-note" hidden>點亮愛心即可加入心動封面；取消後不再出現。全部取消時，會恢復隨機輪替。</div></div>`;
-    html += `<div class="cp-gallery">${photos.map((u, i) => {
+    const charShots = photos.map((u, i) => {
       const on = !excluded.has(photoKey(u));
       const dl = photoWallpaperUrl(u) ? `<button class="cp-download" data-onclick="downloadPhoto('${u}','${escapeHtml(name)}')" aria-label="下載桌布" title="下載桌布">${DL}</button>` : '';
       const heart = `<button class="cp-cover-toggle${on ? ' on' : ''}" data-onclick="toggleCoverPhoto('${name}', ${i}, this)" role="checkbox" aria-checked="${on}" aria-label="心動封面顯示這張">${HEART}</button>`;
       return `<div class="cp-shot" style="background-image:url('${u}')">${heart}${dl}</div>`;
-    }).join('')}</div>`;
+    }).join('');
+    // P2：這個角色「已排時段」的肖像廊畫作也列進來（傳全域索引給 toggle，避免把 URL 塞進宣告式 handler）
+    const galShots = (_homeGalleryCovers || []).map((gc, gi) => ({ gc, gi }))
+      .filter(x => (x.gc.characters || []).includes(code))
+      .map(({ gc, gi }) => {
+        const on = !excluded.has(photoKey(gc.image_url));
+        const heart = `<button class="cp-cover-toggle${on ? ' on' : ''}" data-onclick="toggleCoverGallery(${gi}, this)" role="checkbox" aria-checked="${on}" aria-label="心動封面顯示這張">${HEART}</button>`;
+        return `<div class="cp-shot" style="background-image:url('${escapeHtml(gc.image_url)}')">${heart}</div>`;
+      }).join('');
+    html += `<div class="cp-gallery">${charShots}${galShots}</div>`;
   }
   html += `<div class="cp-section"><h3>基本資料</h3><p class="cp-bio">${prof.bio ? escapeHtml(prof.bio) : '（基本資料待補充）'}</p></div>`;
   html += `<div class="cp-section"><h3>我為 ${escapeHtml(name)} 寫的文章</h3>`;
@@ -1032,6 +1041,25 @@ async function toggleCoverPhoto(charName, index, btn) {
     if (currentUser) currentUser.home_chars = (r && r.home_chars) || '';
   } catch (e) {
     ids.forEach(id => { if (nowShown) ex.add(id); else ex.delete(id); });   // 還原
+    btn.classList.toggle('on', !nowShown);
+    toast(e.message || '儲存失敗');
+  }
+}
+// 肖像廊畫作的心動封面開關（角色頁）：用全域索引取回該張，以 photoKey 加入／移出隱藏集。
+// renderGreeting 的併池已用同一個 excluded 判斷，所以隱藏後那張立刻退出心動輪播。
+async function toggleCoverGallery(idx, btn) {
+  const gc = (_homeGalleryCovers || [])[idx];
+  if (!gc) return;
+  const key = photoKey(gc.image_url);
+  const ex = excludedPhotos();
+  const nowShown = ex.has(key);             // 目前被隱藏 → 切換後變顯示
+  if (nowShown) ex.delete(key); else ex.add(key);
+  btn.classList.toggle('on', nowShown);
+  try {
+    const r = await api('/auth/me/home-chars', { method: 'PATCH', body: JSON.stringify({ chars: [...ex] }) });
+    if (currentUser) currentUser.home_chars = (r && r.home_chars) || '';
+  } catch (e) {
+    if (nowShown) ex.add(key); else ex.delete(key);   // 還原
     btn.classList.toggle('on', !nowShown);
     toast(e.message || '儲存失敗');
   }
