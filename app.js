@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.40';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.41';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3052,7 +3052,24 @@ function openGalleryItem(id) {
 function closeGalleryDetail() { document.getElementById('gallery-detail').style.display = 'none'; }
 function openGalleryFull() {
   const src = document.getElementById('gd-img').src;
-  document.getElementById('gf-img').src = src;
+  const img = document.getElementById('gf-img');
+  const stage = document.getElementById('gf-stage');
+  // 橫幅圖＋直式螢幕：把整個 stage（圖＋右下角浮水印）旋 90° 填滿螢幕（旋轉後 pre-rotation 寬對到螢幕高、高對到螢幕寬）
+  const applyRot = () => {
+    const landscape = img.naturalWidth > img.naturalHeight;
+    const portraitScreen = window.innerHeight > window.innerWidth;
+    if (landscape && portraitScreen) {
+      img.style.maxWidth = '100vh'; img.style.maxHeight = '100vw';
+      stage.style.transform = 'rotate(90deg)';
+    } else {
+      img.style.maxWidth = '100vw'; img.style.maxHeight = '100vh';
+      stage.style.transform = '';
+    }
+  };
+  img.style.maxWidth = '100vw'; img.style.maxHeight = '100vh'; stage.style.transform = '';
+  img.onload = applyRot;
+  img.src = src;
+  if (img.complete && img.naturalWidth) applyRot();
   document.getElementById('gallery-full').style.display = 'flex';
 }
 function closeGalleryFull() { document.getElementById('gallery-full').style.display = 'none'; }
