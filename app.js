@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.73';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.74';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -691,26 +691,24 @@ function showPage(id, btn) {
 // ── Guided tour (新手導覽) ─────────────────────────────────────
 // Steps anchor to data-tour / stable ids; a missing target degrades to a
 // centered bubble (auto-skip look) instead of breaking. See infra notes.
-const TOUR_VERSION = '6';   // bump to re-show the (revised) tour to everyone
+const TOUR_VERSION = '7';   // bump to re-show the (revised) tour to everyone
 const TOUR_READER = [
   { page: 'home', target: '[data-tour="nav-home"]',
-    html: "<span class='tour-h'>歡迎來到《預言家日報》</span>這裡是心動頁，封面會隨晨昏時段輪替登場。左上角若出現<b>貓頭鷹</b>，代表有信等你——追蹤的系列出了新作品、主編來信，或你的願望有了回音。" },
+    html: "<span class='tour-h'>歡迎來到《預言家日報》</span>這裡是心動頁。左上角若出現<b>貓頭鷹</b>，代表有信等你——追蹤的系列出了新作品、主編來信，或你的願望有了回音。" },
   { page: 'home', target: '#hero-heart',
-    html: "<span class='tour-h'>他是誰？</span>點封面右上的<b>愛心</b>，走進角色設定頁——挑選你想在心動頁遇見的封面，也能下載帶浮水印的桌布。" },
+    html: "<span class='tour-h'>他是誰？</span>點封面右上的<b>愛心</b>，走進角色設定頁——挑選你想在心動頁遇見的封面，也能下載作為個人桌布使用。" },
   { page: 'scroll', target: '[data-tour="nav-scroll"]',
-    html: "<span class='tour-h'>意若思鏡</span>這面鏡子映照出大家所有的作品——點這裡就能走進書架找文。成套的<b>系列合集</b>會收合成一張卡（標題帶《》書名號、標「共 N 篇」），<b>點一下就展開</b>看齊全套上下集。" },
-  { page: 'scroll', target: '#shelf-search-input',
-    html: "<span class='tour-h'>召喚你想看的</span>輸入<b>篇名、作者或角色名</b>，想找的文章就會自己浮現，不必翻遍整座書庫。" },
+    html: "<span class='tour-h'>意若思鏡</span>這面鏡子映照出大家所有的念想——點這裡就能走進書架找文。" },
   { page: 'scroll', target: '#shelf-char-chips',
     html: "<span class='tour-h'>只看某個人</span>點角色頭像，就只顯示有那位角色的故事，再點一次即可取消；選好兩個頭像再點「同框」，就只看兩人<b>同框</b>的文。<b>雙擊頭像</b>可直接開啟角色設定頁。" },
-  { page: 'scroll', target: '#shelf-cat-pills',
-    html: "<span class='tour-h'>故事分類</span><b>迷情劑</b>為受限內容、<b>吐真劑</b>為全年齡向、<b>儲思盆</b>是人物小傳與背景故事。迷情劑需先向管理員<b>申請開放</b>才看得到。" },
   { page: 'scroll', target: '#shelf-wish-btn',
-    html: "<span class='tour-h'>許願池</span>想看的主題、主角，或想加的網站功能，都能在這裡許願——一律匿名，放心許。<b>被回覆時，貓頭鷹會叼信通知你</b>，點通知就能跳回那則願望。" },
+    html: "<span class='tour-h'>許願池</span>想看的主題、主角，或想加的網站功能，都能在這裡許願——一律匿名，放心許。<b>被回覆時，貓頭鷹會叼信通知你</b>。" },
   { page: 'forum', target: '[data-tour="nav-forum"]',
-    html: "<span class='tour-h'>匿名羊皮紙</span>從這裡進入論壇體文章，看看大家都在討論些什麼——傳閱時小心點，別被級長抓到！讀文時點留言上的<b>羽毛筆</b>就能收藏，右上角「<b>收藏夾</b>」隨時找回來。" },
+    html: "<span class='tour-h'>匿名羊皮紙</span>從這裡進入論壇體文章，看看大家都在討論些什麼——傳閱時小心點，別被級長抓到！讀文時點留言上的<b>星星</b>就能收藏，右上角「<b>收藏夾</b>」隨時找回來。" },
+  { page: 'forum', target: '#forum-gallery-toggle', showIf: () => currentUser && currentUser.role !== 'reader',
+    html: "<span class='tour-h'>肖像廊</span>點右上角的「<b>肖像廊</b>」，就從羊皮紙切到畫作牆，欣賞大家投稿的圖。" },
   { page: 'settings', target: '[data-tour="nav-settings"]',
-    html: "<span class='tour-h'>個人檔案</span>字體大小、夜間模式、<b>語言選擇（原文／繁體／簡體）</b>都在閱讀偏好；頁面最下方能查看你手上的日報是否為最新一期。想<b>重看這份導覽</b>，到「檔案 → 小工具 → 新手導覽」。若哪天<b>連線不順、載不出圖</b>，同一區的「<b>站台入口</b>」有主要與備用兩個網址可切換。" },
+    html: "<span class='tour-h'>個人檔案</span>字體大小、夜間模式、<b>語言選擇</b>都在閱讀偏好；頁面最下方能查看你手上的日報是否為最新一期。想<b>重看這份導覽</b>，到「檔案 → 小工具 → 新手導覽」。" },
 ];
 const TOUR_WRITER_EXTRA = [
   { page: 'admin', target: '[data-tour="nav-admin"]',
@@ -718,9 +716,9 @@ const TOUR_WRITER_EXTRA = [
   { page: 'admin', before: () => switchAdminTab('upload'), target: '.admin-tab[data-tab="upload"]',
     html: "<span class='tour-h'>發表作品</span>點「上傳」就能開始發表你的故事。" },
   { page: 'admin', before: () => switchAdminTab('upload'), target: '[data-tour="upload-kind"]',
-    html: "<span class='tour-h'>先選類型</span>先決定要發<b>小說</b>、<b>論壇貼文</b>還是<b>畫作</b>——三種的欄位與格式不一樣,選錯了排版會怪怪的。" },
+    html: "<span class='tour-h'>先選類型</span>先決定要發<b>小說</b>、<b>論壇貼文</b>還是<b>畫作</b>——三種的欄位與格式各不相同,先選對類型再往下填。" },
   { page: 'admin', before: () => { switchAdminTab('upload'); setUploadKind('image'); }, target: '#image-drop',
-    html: "<span class='tour-h'>投稿畫作</span>會畫圖的你,也能把作品掛上<b>肖像廊</b>。選「畫作」後上傳圖檔、標好角色送出,審核通過就會出現在牆上;若管理員替它排了時段,還會輪到<b>心動封面</b>。" },
+    html: "<span class='tour-h'>投稿畫作</span>會畫圖的你,也能把作品掛上<b>肖像廊</b>。選「畫作」後上傳圖檔、標好角色送出,審核通過就會出現在牆上。" },
   { page: 'admin', before: () => { switchAdminTab('upload'); setUploadKind('novel'); }, target: '#new-novel-category',
     html: "<span class='tour-h'>分類與角色</span>填好標題後,選<b>故事類型</b>和<b>角色標籤</b>——標好讀者才搜得到、篩得到你的文。" },
   { page: 'admin', before: () => { switchAdminTab('upload'); setUploadKind('novel'); }, target: '[data-tour="upload-submit"]',
@@ -729,8 +727,6 @@ const TOUR_WRITER_EXTRA = [
     html: "<span class='tour-h'>作品管理</span>送出後可在這裡編輯、分系列、改分類。提醒,作品需<b>等管理員審核</b>通過才會公開。" },
   { page: 'admin', before: () => switchAdminTab('novels'), target: '#admin-novel-list',
     html: "<span class='tour-h'>拿範例練手</span>系統在這放了一篇《作家入職指南》當範例,點開讀一遍,並在它上面試<b>編輯、分類、系列</b>(把上下集連在一起)。讀完想刪就刪,不影響你的身份。" },
-  { page: 'forum', target: '#forum-gallery-toggle',
-    html: "<span class='tour-h'>肖像廊</span>身為作家,你也能逛<b>肖像廊</b>——點這顆藥丸就從羊皮紙切到畫作牆,欣賞大家投稿的圖。" },
 ];
 let _tour = { steps: [], i: 0, on: false };
 
@@ -769,8 +765,10 @@ function maybeAutoTour() {
 }
 
 function startTour() {
-  const steps = TOUR_READER.slice();
-  if (currentUser && currentUser.role !== 'reader') steps.push(...TOUR_WRITER_EXTRA);
+  // showIf 讓某步依身份出現／略過（例：肖像廊只給作家以上）——在此就濾掉，步數編號才乾淨
+  const pass = s => !s.showIf || s.showIf();
+  const steps = TOUR_READER.filter(pass);
+  if (currentUser && currentUser.role !== 'reader') steps.push(...TOUR_WRITER_EXTRA.filter(pass));
   _tour = { steps, i: 0, on: true };
   document.getElementById('tour-overlay').classList.add('open');
   window.addEventListener('resize', _tourReposition);
