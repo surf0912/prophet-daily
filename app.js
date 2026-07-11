@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.65';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.66';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1033,6 +1033,7 @@ function renderCharProfile(name) {
 // 逐張開關：勾 = 這張出現在心動封面，取消 = 隱藏。連同同一序的桌機版一起排除(照顧桌機讀者)。
 // 封面愛心說明(收進 tooltip:點 ⓘ 才出現,不直接佔版面)
 function cpCoverHint() { const n = document.getElementById('cp-cover-note'); if (n) n.hidden = !n.hidden; }
+function toggleEntryNote() { const n = document.getElementById('entry-note'); if (n) n.hidden = !n.hidden; }
 async function toggleCoverPhoto(charName, index, btn) {
   const c = CHARS.find(x => x.name === charName) || {};
   const ids = [(c.imgs || [c.img])[index], (c.imgsD || [])[index]].filter(Boolean).map(photoKey);
@@ -2495,6 +2496,8 @@ async function loadChapter(idx) {
       el.style.whiteSpace = 'pre-wrap';
       el.textContent = full.content;
     }
+    // 羊皮紙貼文沒有 sticky 上下篇導覽，不需 100px 底部留白（否則封存框下方一大片空）→ 收小
+    el.classList.toggle('rc-forum', currentNovelKind === 'forum');
   } catch { document.getElementById('reader-content').textContent = '載入失敗'; }
   // 文首插圖：管理員把圖放 repo 的 artwork/<作品id>.jpg（免上傳介面、不佔資料庫，走 Pages/鏡像
   // 並被 SW 快取）。只在第一章文首顯示；檔案不存在＝探測失敗＝靜靜略過。

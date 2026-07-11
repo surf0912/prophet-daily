@@ -28,7 +28,7 @@
     'submitForumPost', 'submitNewNovel', 'switchAdminTab', 'tempBan', 'toggleCcShare', 'toggleCharAnd', 'toggleCoverPhoto',
     'toggleDark', 'toggleFavOwl', 'toggleFont', 'toggleForumFav', 'toggleGalleryFavorite', 'toggleLike', 'toggleLock', 'toggleOwlAlways', 'togglePwEdit', 'toggleTapFx',
     'toggleReaderDark', 'toggleReaderFavorite', 'toggleShelfFav', 'toggleCoverGallery', 'toggleSeries', 'tourBack', 'tourNext',
-    'updateBugCount', 'updateReaderDarkBtn', 'updateToLatest', 'updateWishCount', 'viewUserNovels',
+    'toggleEntryNote', 'updateBugCount', 'updateReaderDarkBtn', 'updateToLatest', 'updateWishCount', 'viewUserNovels',
   ]);
 
   const EVENT_ATTRIBUTES = {

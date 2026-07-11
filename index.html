@@ -331,6 +331,17 @@
               <span class="slider"></span>
             </label>
           </div>
+          <div class="entry-block">
+            <div class="entry-head">
+              <svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-link"/></svg> 站台入口
+              <button class="entry-hint-btn" data-onclick="toggleEntryNote()" aria-label="站台入口說明" title="站台入口說明"><svg width="14" height="14" aria-hidden="true"><use href="#ic-help"/></svg></button>
+            </div>
+            <div class="entry-note" id="entry-note" hidden>主要入口打不開、或所在地區連線不穩時，改用<b>備用入口</b>（新加坡伺服器，部分地區更順）。點一下即複製連結，可貼到瀏覽器、加入主畫面，或分享給進不去的朋友。</div>
+            <div class="entry-btns">
+              <button class="entry-main" data-onclick="copyText('https://surf0912.github.io/prophet-daily/','已複製 主要入口連結')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-link"/></svg> 主要入口</button>
+              <button class="entry-backup" data-onclick="copyText('https://the-prophet-daily.onrender.com/','已複製 備用入口連結')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-link"/></svg> 備用入口</button>
+            </div>
+          </div>
           <div class="settings-row super-only" style="display:none">
             <label><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" style="vertical-align:-2px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></svg> 通知保留天數</label>
             <input type="number" id="notice-days" min="1" max="365" value="30" data-onchange="saveNoticeDays(this.value)" style="width:64px;padding:6px 8px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink);font-size:14px;text-align:center" />

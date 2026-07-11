@@ -546,6 +546,8 @@
       box-shadow: 0 6px 16px rgba(26,10,0,.28);
     }
     .reader-content { padding: 24px 20px 100px; font-size: var(--reader-font, 15px); line-height: 2; color: var(--ink); user-select: none; flex: 1 0 auto; }
+    /* 羊皮紙貼文沒有底部 sticky 導覽，收小底部留白，封存框下方不留一大片空白 */
+    .reader-content.rc-forum { padding-bottom: 28px; }
     .reader-content p { font-size: inherit; }
     /* ── Forum post layout (post body separated from comments) ── */
     .fp-intro {
@@ -691,6 +693,15 @@
     .review-sec .rv-body { padding: 0 14px 4px; }
     .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(26,10,0,.07); }
     .settings-row label { font-size: 14px; }
+    /* 站台入口（小工具，全體可見）：主要/備用入口複製鈕＋? 說明 */
+    .entry-block { padding: 12px 0; border-bottom: 1px solid rgba(26,10,0,.07); }
+    .entry-head { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink); }
+    .entry-hint-btn { width: 20px; height: 20px; border-radius: 50%; border: 1px dashed var(--gold); background: none; color: var(--ink-light); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0; }
+    .entry-note { font-size: 12px; color: var(--ink-light); line-height: 1.7; background: var(--parchment2); border-radius: 6px; padding: 8px 10px; margin-top: 8px; }
+    .entry-btns { display: flex; gap: 8px; margin-top: 8px; }
+    .entry-btns button { flex: 1; padding: 9px 4px; font-size: 13px; white-space: nowrap; border-radius: 6px; cursor: pointer; border: 1px solid var(--gold); }
+    .entry-main { background: var(--parchment2); color: var(--ink); }
+    .entry-backup { background: var(--chrome); color: var(--gold-lt); border-color: var(--chrome); }
     /* 完全自訂：去掉原生外觀＋鎖死文字色與自訂箭頭，否則部分 iOS 會把原生 select 畫成系統藍字/藍箭頭。 */
     .settings-row select {
       -webkit-appearance: none; -moz-appearance: none; appearance: none;
