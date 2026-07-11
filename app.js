@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.74';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.75';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -705,8 +705,8 @@ const TOUR_READER = [
     html: "<span class='tour-h'>許願池</span>想看的主題、主角，或想加的網站功能，都能在這裡許願——一律匿名，放心許。<b>被回覆時，貓頭鷹會叼信通知你</b>。" },
   { page: 'forum', target: '[data-tour="nav-forum"]',
     html: "<span class='tour-h'>匿名羊皮紙</span>從這裡進入論壇體文章，看看大家都在討論些什麼——傳閱時小心點，別被級長抓到！讀文時點留言上的<b>星星</b>就能收藏，右上角「<b>收藏夾</b>」隨時找回來。" },
-  { page: 'forum', target: '#forum-gallery-toggle', showIf: () => currentUser && currentUser.role !== 'reader',
-    html: "<span class='tour-h'>肖像廊</span>點右上角的「<b>肖像廊</b>」，就從羊皮紙切到畫作牆，欣賞大家投稿的圖。" },
+  { page: 'forum', target: '#forum-gallery-toggle',
+    html: "<span class='tour-h'>肖像廊</span>《預言家日報》還有一座<b>肖像廊</b>，掛著大家投稿的角色畫作，可以進去慢慢欣賞。" },
   { page: 'settings', target: '[data-tour="nav-settings"]',
     html: "<span class='tour-h'>個人檔案</span>字體大小、夜間模式、<b>語言選擇</b>都在閱讀偏好；頁面最下方能查看你手上的日報是否為最新一期。想<b>重看這份導覽</b>，到「檔案 → 小工具 → 新手導覽」。" },
 ];
@@ -795,8 +795,10 @@ function showTourStep(i) {
 function _placeTour(s) {
   const spot = document.getElementById('tour-spot');
   const bub = document.getElementById('tour-bubble');
-  const el = s.target ? document.querySelector(s.target) : null;
-  if (!el) {  // missing target → centered bubble, no spotlight
+  const el0 = s.target ? document.querySelector(s.target) : null;
+  // 目標不存在，或對這個身份是隱藏的（display:none，如讀者看不到的肖像廊鈕）→ 當成沒有目標，置中泡泡、不打光
+  const el = (el0 && el0.offsetParent !== null) ? el0 : null;
+  if (!el) {  // missing/hidden target → centered bubble, no spotlight
     spot.classList.add('nohole');
     bub.style.transform = 'translate(-50%,-50%)';
     bub.style.left = '50%'; bub.style.top = '50%';
