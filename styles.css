@@ -449,7 +449,7 @@
     .gwall-item .gframe.fr-none img, .gwall-item > img.fr-none { display: block; width: 100%; }
     /* 畫作詳情 */
     .gd-card { width: 330px; max-width: 92vw; max-height: 88dvh; overflow-y: auto; background: var(--parchment); border-radius: 14px; padding: 18px; box-shadow: 0 22px 60px rgba(0,0,0,.45); }
-    .gd-frame { border-style: solid; border-width: 22px; display: block; cursor: zoom-in; line-height: 0; box-shadow: 0 4px 14px rgba(26,10,0,.3); }
+    .gd-frame { position: relative; border-style: solid; border-width: 22px; display: block; cursor: zoom-in; line-height: 0; box-shadow: 0 4px 14px rgba(26,10,0,.3); }
     .gd-frame img { display: block; width: 100%; height: auto; }
     .gd-title { font-size: 16px; font-weight: bold; color: var(--ink); margin-top: 16px; }
     .gd-author { font-size: 12px; color: var(--ink-light); margin-top: 3px; }

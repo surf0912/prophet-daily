@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.43';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.44';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3029,9 +3029,11 @@ function renderGallery() {
   }).join('');
 }
 
+let _galleryDetailItem = null;   // 詳情卡目前開的畫作（下載鈕用）
 function openGalleryItem(id) {
   const it = _galleryItems.find(x => x.id === id) || (window._adminNovels || []).find(x => x.id === id);
   if (!it) return;
+  _galleryDetailItem = it;
   const fr = GALLERY_FRAMES.some(([c]) => c === it.image_frame) ? it.image_frame : 'ebony';
   const frameEl = document.getElementById('gd-frame');
   frameEl.className = 'gd-frame fr-' + fr;
@@ -3053,6 +3055,39 @@ function openGalleryItem(id) {
   } else { adminBox.style.display = 'none'; }
   document.getElementById('gallery-detail').style.display = 'flex';
 }
+// 下載畫作：即時把金色徽記壓進圖檔（右下角、寬 40%、邊距 2%，與全螢幕觀看一致），
+// 再走與心動桌布相同的 分享/下載 流程。跨來源圖（Supabase Storage）需 crossOrigin。
+function _loadImgCors(src) {
+  return new Promise((resolve, reject) => {
+    const im = new Image();
+    im.crossOrigin = 'anonymous';
+    im.onload = () => resolve(im); im.onerror = reject;
+    im.src = src;
+  });
+}
+async function downloadGalleryImage() {
+  const it = _galleryDetailItem;
+  if (!it || !it.image_url) return;
+  try {
+    const [img, logo] = await Promise.all([_loadImgCors(it.image_url), _loadImgCors('./assets/watermark_logo.png')]);
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const lw = Math.max(40, Math.round(c.width * 0.30));
+    const lh = Math.round(logo.naturalHeight * lw / logo.naturalWidth);
+    const pad = Math.round(c.width * 0.02);
+    ctx.globalAlpha = 0.95;
+    ctx.drawImage(logo, c.width - lw - pad, c.height - lh - pad, lw, lh);
+    ctx.globalAlpha = 1;
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+    if (!blob) throw new Error('no blob');
+    const url = URL.createObjectURL(blob);
+    try { await shareOrDownload(url, '預言家日報-' + (it.title || '畫作') + '.jpg'); }
+    finally { setTimeout(() => URL.revokeObjectURL(url), 30000); }
+  } catch (e) { toast('下載失敗，請稍後再試'); }
+}
+
 function closeGalleryDetail() { document.getElementById('gallery-detail').style.display = 'none'; }
 function openGalleryFull() {
   const src = document.getElementById('gd-img').src;
