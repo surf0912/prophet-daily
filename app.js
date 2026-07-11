@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.52';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.53';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -152,7 +152,12 @@ async function api(path, opts = {}, _retried) {
     }
     if (!res.ok) {
       const e = await res.json().catch(() => ({}));
-      throw new Error(e.detail || 'Request failed');
+      // FastAPI 422 的 detail 是「驗證錯誤陣列」[{loc,msg,...}]，直接丟給 Error 會變成 [object Object]。
+      // 攤平成可讀訊息（陣列取各 msg、物件取 msg），一般字串照舊。
+      let d = e.detail;
+      if (Array.isArray(d)) d = d.map(x => (x && x.msg) || '').filter(Boolean).join('；') || '輸入格式有誤';
+      else if (d && typeof d === 'object') d = d.msg || JSON.stringify(d);
+      throw new Error(d || 'Request failed');
     }
     return await res.json();
   } finally {
@@ -3004,8 +3009,9 @@ async function onImagePick(input) {
 
 async function submitImageWork() {
   const title = document.getElementById('new-image-title').value.trim();
-  const author = document.getElementById('new-image-author').value.trim() || null;
-  const caption = document.getElementById('new-image-caption').value.trim() || null;
+  // 後端 author/caption 型別是 str（非 Optional），留白時送 '' 而非 null，否則 422（後端一樣把 '' 當佚名）
+  const author = document.getElementById('new-image-author').value.trim();
+  const caption = document.getElementById('new-image-caption').value.trim();
   const characters = readChars('new-image-chars');
   if (!_imgWork.data) { toast('請先選擇一幅畫作'); return; }
   if (!title) { toast('請輸入畫作標題'); return; }
