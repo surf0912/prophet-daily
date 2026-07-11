@@ -26,7 +26,7 @@
 const API = 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.37';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.38';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1163,7 +1163,7 @@ const CHAR_LIST = [
 let shelfCat = '';        // '' = 全部
 let shelfChars = [];   // default: none lit = show everything; tap a character to filter to them (OR)
 // 作品管理 (admin works) filter. Type pills include 羊皮紙 (=forum) on top of the 3 novel categories.
-const ADMIN_CATS = ['迷情劑', '吐真劑', '儲思盆', '羊皮紙'];
+const ADMIN_CATS = ['迷情劑', '吐真劑', '儲思盆', '羊皮紙', '肖像'];
 let adminCat = '';        // '' | 迷情劑 | 吐真劑 | 儲思盆 | 羊皮紙
 let adminChars = [];
 let favIds = new Set();   // 意若思鏡 收藏夾: ids of whole works the user has favorited
@@ -3000,6 +3000,7 @@ function setForumMode(mode) {
 let _galleryItems = [];
 async function loadGallery() {
   const wall = document.getElementById('gallery-wall');
+  wall.style.columns = '1';
   wall.innerHTML = '<div class="spinner"></div>';
   try {
     _galleryItems = (await api('/novels/gallery', { background: true })) || [];
@@ -3009,7 +3010,8 @@ async function loadGallery() {
 
 function renderGallery() {
   const wall = document.getElementById('gallery-wall');
-  if (!_galleryItems.length) { wall.innerHTML = '<div class="gwall-empty">肖像廊還空著，等待第一幅畫作掛上牆。</div>'; return; }
+  if (!_galleryItems.length) { wall.style.columns = '1'; wall.innerHTML = '<div class="gwall-empty">肖像廊還空著，等待第一幅畫作掛上牆。</div>'; return; }
+  wall.style.columns = '';   // 交回 CSS 的雙欄
   wall.innerHTML = _galleryItems.map(it => {
     const fr = GALLERY_FRAMES.some(([c]) => c === it.image_frame) ? it.image_frame : 'ebony';
     return `<div class="gwall-item" data-onclick="openGalleryItem('${it.id}')">
@@ -3019,7 +3021,7 @@ function renderGallery() {
 }
 
 function openGalleryItem(id) {
-  const it = _galleryItems.find(x => x.id === id);
+  const it = _galleryItems.find(x => x.id === id) || (window._adminNovels || []).find(x => x.id === id);
   if (!it) return;
   const fr = GALLERY_FRAMES.some(([c]) => c === it.image_frame) ? it.image_frame : 'ebony';
   const frameEl = document.getElementById('gd-frame');
@@ -3048,6 +3050,23 @@ function openGalleryFull() {
   document.getElementById('gallery-full').style.display = 'flex';
 }
 function closeGalleryFull() { document.getElementById('gallery-full').style.display = 'none'; }
+
+async function importCoverGallery() {
+  const covers = [];
+  const seen = new Set();
+  CHARS.forEach(ch => {
+    const code = (ch.name || '').toLowerCase();
+    [...(ch.imgs || []), ...(ch.imgsD || [])].forEach(u => {
+      if (u && !seen.has(u)) { seen.add(u); covers.push({ image_url: u, character: code, title: ch.name }); }
+    });
+  });
+  if (!covers.length) { toast('沒有可匯入的封面'); return; }
+  try {
+    const res = await api('/novels/gallery/import-covers', { method: 'POST', body: JSON.stringify({ covers, author: '主編' }) });
+    toast(`已匯入 ${res.inserted} 張，略過 ${res.skipped} 張`);
+    if (document.getElementById('forum-gallery') && document.getElementById('forum-gallery').style.display !== 'none') loadGallery();
+  } catch (e) { toast(e.message); }
+}
 
 async function setImageSlot(id, slot) {
   try {
@@ -3362,7 +3381,8 @@ function applyAdminFilter(list) {
   const noFilter = (sel.length === 0 && !ccActive) || (!charAnd && sel.length === CHAR_LIST.length && !ccActive);
   return list.filter(n => {
     if (adminCat === '羊皮紙') { if (n.kind !== 'forum') return false; }
-    else if (adminCat) { if (n.kind === 'forum' || n.category !== adminCat) return false; }
+    else if (adminCat === '肖像') { if (n.kind !== 'image') return false; }
+    else if (adminCat) { if (n.kind === 'forum' || n.kind === 'image' || n.category !== adminCat) return false; }
     if (!noFilter) {
       const have = n.characters || [];
       const checks = sel.map(c => have.includes(c));
@@ -3425,8 +3445,11 @@ function renderAdminNovels() {
       <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
         <div style="margin-bottom:3px;display:flex;gap:5px;flex-wrap:wrap">${n.kind === 'forum'
           ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-scroll', 12) + ' 論壇體</span>'
+          : n.kind === 'image'
+          ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-gallery', 12) + ' 畫作</span>'
           : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-book', 12) + ' 小說</span>'}${statusTag}${n.is_guide ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-book', 12) + ' 範例·可刪除</span>' : ''}${n.locked ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.2);color:var(--accent)">' + ic('ic-key',11) + ' 已鎖 · 唯你可見</span>' : ''}</div>
-        <div data-onclick="openNovel('${n.id}')" style="font-size:14px;font-weight:bold;cursor:pointer">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>
+        ${n.kind === 'image' ? `<div data-onclick="openGalleryItem('${n.id}')" style="display:flex;align-items:center;gap:10px;cursor:pointer"><img src="${escapeHtml(n.image_url || '')}" alt="" style="width:46px;height:46px;object-fit:cover;border-radius:5px;flex-shrink:0" /><div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div></div>`
+          : `<div data-onclick="openNovel('${n.id}')" style="font-size:14px;font-weight:bold;cursor:pointer">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>`}
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
           ${n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : ''}
           ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${escapeHtml(n.category)}</span>` : ''}
