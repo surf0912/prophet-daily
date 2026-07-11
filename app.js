@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.61';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.62';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2153,6 +2153,18 @@ function toggleSeries(headEl) {
   headEl.setAttribute('aria-expanded', nowExpanded);
 }
 
+// 書名號剝除：只在「整個字串正好被一對外層《》包住、且中間沒有其他書名號」時剝掉外層那對。
+// 《枕边夜话》→ 枕边夜话；重讀《小王子》的午後 → 原樣；《A》與《B》→ 原樣。
+// 《》是系列的專屬訊號（顯示層自動加），單篇標題預設剝掉、系列名存檔前剝乾淨，避免《《》》。
+function stripOuterBookQuotes(title) {
+  const t = String(title || '').trim();
+  if (t.length >= 2 && t.startsWith('《') && t.endsWith('》')) {
+    const inner = t.slice(1, -1);
+    if (inner && !inner.includes('《') && !inner.includes('》')) return inner;   // inner 非空才剝，避免《》變空標題
+  }
+  return t;
+}
+
 // Render a list of novels into the grid, grouping series members under a header.
 function renderNovelBlocks(list, grid, emptyMsg) {
   if (!list.length) { grid.innerHTML = `<div class="empty-shelf">${emptyMsg}</div>`; return; }
@@ -2163,14 +2175,24 @@ function renderNovelBlocks(list, grid, emptyMsg) {
     if (n.series) {
       const members = list.filter(m => m.series === n.series).sort((a, b) => (a.series_order || 0) - (b.series_order || 0));
       members.forEach(m => seen.add(m.id));
-      // 系列默認收合成一列（只顯示系列名＋篇數），點標題展開／收合；展開狀態記在 _expandedSeries。
+      // 收合的系列列＝與單篇同款卡片，只靠三個訊號區分：《》書名號、副標「系列合集 · 共 N 篇」、列尾 chevron。
+      // 標籤列＝成員的 類型＋角色 去重彙整（類型前、角色後，保持首次出現順序）。
       const expanded = _expandedSeries.has(n.series);
+      const cats = [], chars = [];
+      members.forEach(m => {
+        if (m.category && !cats.includes(m.category)) cats.push(m.category);
+        (m.characters || []).forEach(c => { if (!chars.includes(c)) chars.push(c); });
+      });
+      const tags = cats.map(c => `<span class="t-cat${c === '吐真劑' ? ' t-cat-green' : ''}">${escapeHtml(c)}</span>`).join('')
+        + chars.map(c => `<span class="t-chr">${escapeHtml(charNames([c]))}</span>`).join('');
       blocks.push(`
         <div class="series-block${expanded ? ' expanded' : ''}" data-series="${escapeHtml(n.series)}">
-          <div class="series-head" data-onclick="toggleSeries(this)" role="button" aria-expanded="${expanded}">
-            <span class="series-chev" aria-hidden="true"></span>
-            ${ic('ic-books', 14)} <span class="series-name">${escapeHtml(n.series)}</span>
-            <span class="series-count">${members.length} 篇</span>
+          <div class="novel-row series-head" data-onclick="toggleSeries(this)" role="button" aria-expanded="${expanded}">
+            <div class="series-title-line">
+              <h4>《${escapeHtml(stripOuterBookQuotes(n.series))}》</h4>
+              <span class="series-sub">系列合集 · 共 ${members.length} 篇 <span class="series-chev" aria-hidden="true"></span></span>
+            </div>
+            <div class="row-tags">${tags}</div>
           </div>
           <div class="series-members">${members.map(m => shelfRow(m, true)).join('')}</div>
         </div>`);
@@ -2185,7 +2207,7 @@ function renderNovelBlocks(list, grid, emptyMsg) {
 function shelfRow(n, inSeries) {
   return `
     <div class="novel-row${inSeries ? ' series-member' : ''}" data-onclick="openNovel('${n.id}')">
-      <h4>${inSeries && n.series_order ? `<span style="color:var(--ink-light);font-weight:normal">#${n.series_order}　</span>` : ''}${escapeHtml(n.title)}</h4>
+      <h4>${inSeries && n.series_order ? `<span style="color:var(--ink-light);font-weight:normal">#${n.series_order}　</span>` : ''}${escapeHtml(stripOuterBookQuotes(n.title))}</h4>
       <div class="row-meta">${escapeHtml(n.author || '佚名')}${ownerTag(n)}${n.created_at ? ` · ${ic('ic-calendar',11)} ${fmtUpdated(n.created_at)}` : ''}</div>
       <div class="row-tags">
         ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${escapeHtml(n.category)}</span>` : ''}
@@ -3827,7 +3849,8 @@ function openSeries(novelId) {
 }
 
 async function saveSeries() {
-  const series = document.getElementById('series-name-input').value.trim();
+  // 存乾淨的名字（外層《》剝掉）：《》由列表顯示層統一加，存了會變《《…》》
+  const series = stripOuterBookQuotes(document.getElementById('series-name-input').value);
   const series_order = parseInt(document.getElementById('series-order-input').value) || 0;
   try {
     await api(`/novels/${seriesNovelId}/series`, { method: 'PATCH', body: JSON.stringify({ series: series || null, series_order }) });
