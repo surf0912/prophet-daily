@@ -1,4 +1,7 @@
-const CACHE_NAME = 'prophet-daily-v3.47';
+const CACHE_NAME = 'prophet-daily-v3.48';
+// 圖片與字型的常駐快取：跨版本保留（activate 不清），避免每次發版把使用者存好的
+// ~10MB 心動封面全部作廢重抓。內容物都是不改內容的靜態檔；若真要強制換新，把 -v1 進位。
+const STATIC_CACHE = 'prophet-daily-static-v1';
 const ASSETS = [
   './index.html',
   './styles.css',
@@ -26,7 +29,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(keys.map((key) => {
-      if (key !== CACHE_NAME) return caches.delete(key);
+      if (key !== CACHE_NAME && key !== STATIC_CACHE) return caches.delete(key);
     })))
   );
   self.clients.claim();
@@ -75,6 +78,11 @@ self.addEventListener('fetch', (event) => {
   );
   if (!isStaticAsset) return;   // API & everything dynamic: straight to network, no SW cache
 
+  // 圖片/字型（內容不變的檔案）→ 常駐快取；js/css/json（隨版本更新）→ 版本快取，升版時照舊作廢。
+  const persistent = /\.(?:woff2?|ttf|otf|jpe?g|png|gif|svg|webp|ico)$/i.test(url.pathname)
+    || url.pathname.startsWith('/chars/');
+  const bucket = persistent ? STATIC_CACHE : CACHE_NAME;
+
   // Static assets: cache-first + store on first fetch so refreshes are instant/offline.
   event.respondWith(
     caches.match(req).then((cached) => {
@@ -82,7 +90,7 @@ self.addEventListener('fetch', (event) => {
       return fetch(req).then((res) => {
         if (res && res.ok) {
           const copy = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(req, copy));
+          caches.open(bucket).then((c) => c.put(req, copy));
         }
         return res;
       });

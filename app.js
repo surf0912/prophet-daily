@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.47';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.48';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1138,6 +1138,30 @@ function renderGreeting() {
   const now = new Date();
   const db = document.getElementById('date-banner');   // element was removed; guard so renderGreeting can't throw
   if (db) db.textContent = `${now.getFullYear()} 年 ${now.getMonth()+1} 月 ${now.getDate()} 日 · 巫師界頭條`;
+  setTimeout(warmCoverCache, 3000);   // 當前封面穩定後，閒置預抓本時段封面池（SW 存進常駐快取）
+}
+
+// 背景預熱心動封面：把「當前時段會輪到」的封面一張張慢慢抓進 Service Worker 常駐快取，
+// 之後隨機輪到哪張都是秒開。每個 session 只跑一次；使用者開省流量模式就不預抓。
+let _coverWarmed = false;
+function warmCoverCache() {
+  if (_coverWarmed) return; _coverWarmed = true;
+  if (navigator.connection && navigator.connection.saveData) return;
+  const isWide = window.matchMedia('(min-width: 600px)').matches;
+  const photosOf = c => ((isWide ? (c.imgsD || [c.imgD]) : (c.imgs || [c.img])) || []).filter(Boolean);
+  const mins = new Date().getHours() * 60 + new Date().getMinutes();
+  const slot = (mins >= 360 && mins < 870) ? 'am' : (mins >= 870 && mins < 1080) ? 'pm' : 'night';
+  const urls = [];
+  CHARS.forEach(c => photosOf(c).forEach(img => {
+    const s = coverSlot(img);
+    if (s === slot || (slot === 'pm' && s === 'am')) urls.push(img);   // 下午池含早午圖，同 renderGreeting
+  }));
+  (function next(i) {   // 序列式、每張間隔 300ms——不跟當前畫面搶頻寬
+    if (i >= urls.length) return;
+    const im = new Image();
+    im.onload = im.onerror = () => setTimeout(() => next(i + 1), 300);
+    im.src = urls[i];
+  })(0);
 }
 
 // ── Novels ───────────────────────────────────────────────────
@@ -3072,6 +3096,12 @@ function renderGallery() {
       <div class="gframe fr-${fr}"><img src="${escapeHtml(it.image_url)}" alt="${escapeHtml(it.title || '')}" loading="lazy" /></div>
     </div>`;
   }).join('');
+  // 圖載到才淡入（配 CSS 的 3:4 佔位畫框）；載失敗也解除佔位，避免永遠空框
+  wall.querySelectorAll('.gframe img').forEach(img => {
+    const done = () => img.classList.add('g-ld');
+    if (img.complete && img.naturalWidth) done();
+    else { img.addEventListener('load', done); img.addEventListener('error', done); }
+  });
 }
 
 let _galleryDetailItem = null;   // 詳情卡目前開的畫作（下載鈕用）

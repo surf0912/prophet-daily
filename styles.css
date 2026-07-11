@@ -438,6 +438,11 @@
     #forum-gallery .filter-bar { margin: -8px -12px 10px; }
     .gallery-wall { columns: 2; column-gap: 12px; }
     .gwall-item { break-inside: avoid; margin: 0 0 14px; cursor: pointer; box-shadow: 0 6px 14px rgba(26,10,0,.28); line-height: 0; }
+    /* 掛畫式載入：畫框先以 3:4 佔位掛滿牆（框內深色空畫布），圖載到才淡入、比例回歸原圖 */
+    .gwall-item .gframe { background: rgba(26,10,0,.12); }
+    .gwall-item .gframe img { opacity: 0; transition: opacity .45s ease; }
+    .gwall-item .gframe img:not(.g-ld) { aspect-ratio: 3 / 4; }
+    .gwall-item .gframe img.g-ld { opacity: 1; }
     .gwall-empty { columns: 1; text-align: center; color: var(--ink-light); font-size: 14px; padding: 60px 16px; }
     /* 畫框：border-image 九宮格；框身樣式共用、粗細由所在情境決定 */
     .gframe { border-style: solid; display: block; }
