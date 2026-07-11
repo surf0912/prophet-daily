@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.66';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.67';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1010,7 +1010,7 @@ function renderCharProfile(name) {
       const on = !excluded.has(photoKey(u));
       const dl = photoWallpaperUrl(u) ? `<button class="cp-download" data-onclick="downloadPhoto('${u}','${escapeHtml(name)}')" aria-label="下載桌布" title="下載桌布">${DL}</button>` : '';
       const heart = `<button class="cp-cover-toggle${on ? ' on' : ''}" data-onclick="toggleCoverPhoto('${name}', ${i}, this)" role="checkbox" aria-checked="${on}" aria-label="心動封面顯示這張">${HEART}</button>`;
-      return `<div class="cp-shot" style="background-image:url('${u}')">${heart}${dl}</div>`;
+      return `<div class="cp-shot" data-full="${escapeHtml(u)}" style="background-image:url('${u}')">${heart}${dl}</div>`;
     }).join('');
     // P2：這個角色「已排時段」的肖像廊畫作也列進來（傳全域索引給 toggle，避免把 URL 塞進宣告式 handler）
     const galShots = (_homeGalleryCovers || []).map((gc, gi) => ({ gc, gi }))
@@ -1018,7 +1018,7 @@ function renderCharProfile(name) {
       .map(({ gc, gi }) => {
         const on = !excluded.has(photoKey(gc.image_url));
         const heart = `<button class="cp-cover-toggle${on ? ' on' : ''}" data-onclick="toggleCoverGallery(${gi}, this)" role="checkbox" aria-checked="${on}" aria-label="心動封面顯示這張">${HEART}</button>`;
-        return `<div class="cp-shot" style="background-image:url('${escapeHtml(gc.image_url)}')">${heart}</div>`;
+        return `<div class="cp-shot" data-full="${escapeHtml(gc.image_url)}" style="background-image:url('${escapeHtml(gc.image_url)}')">${heart}</div>`;
       }).join('');
     html += `<div class="cp-gallery">${charShots}${galShots}</div>`;
   }
@@ -1028,7 +1028,18 @@ function renderCharProfile(name) {
     ? myWorks.map(n => `<a class="cp-work" href="#" data-onclick="closeCharProfile();openNovel('${n.id}');return false;">${ic('ic-book', 14)} ${escapeHtml(n.title)}</a>`).join('')
     : `<p class="cp-hint">還沒有你為這個角色寫的文章。</p>`;
   html += `</div>`;
-  document.getElementById('cp-body').innerHTML = html;
+  const body = document.getElementById('cp-body');
+  body.innerHTML = html;
+  // 封面雙擊 → 全螢幕帶浮水印大圖（同肖像廊）。手動雙擊偵測，避免與愛心／下載鈕的單擊誤觸。
+  body.querySelectorAll('.cp-shot').forEach(el => {
+    let t = 0;
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;   // 點在愛心／下載鈕上不算
+      const now = Date.now();
+      if (now - t < 320) { t = 0; const u = el.dataset.full; if (u) openImageFull(u); }
+      else t = now;
+    });
+  });
 }
 // 逐張開關：勾 = 這張出現在心動封面，取消 = 隱藏。連同同一序的桌機版一起排除(照顧桌機讀者)。
 // 封面愛心說明(收進 tooltip:點 ⓘ 才出現,不直接佔版面)
@@ -3328,8 +3339,9 @@ async function downloadGalleryImage() {
 }
 
 function closeGalleryDetail() { document.getElementById('gallery-detail').style.display = 'none'; }
-function openGalleryFull() {
-  const src = document.getElementById('gd-img').src;
+function openGalleryFull() { openImageFull(document.getElementById('gd-img').src); }
+// 任意圖片全螢幕（右下角金色徽記浮水印，即時疊、不改檔案）；肖像廊詳情與角色頁封面共用。
+function openImageFull(src) {
   const img = document.getElementById('gf-img');
   const stage = document.getElementById('gf-stage');
   // 橫幅圖＋直式螢幕：把整個 stage（圖＋右下角浮水印）旋 90° 填滿螢幕（旋轉後 pre-rotation 寬對到螢幕高、高對到螢幕寬）
