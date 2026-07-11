@@ -433,17 +433,33 @@
     .empty-shelf { grid-column: 1 / -1; text-align: center; padding: 60px 24px; color: var(--ink-light); width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.8; }
 
     /* ── 肖像廊（gallery，beta：管理員/超管可見）────────────────────────────── */
-    #forum-gallery { padding: 8px 12px 90px; }
+    /* 牆面＝純 CSS 仿木紋（CSP 禁外部圖）：暖胡桃底＋直向板縫＋細木理，畫框掛在木牆上 */
+    #forum-gallery {
+      padding: 8px 12px 90px;
+      background-color: #5b3f29;
+      background-image:
+        repeating-linear-gradient(90deg, transparent 0 3px, rgba(0,0,0,.045) 3px 4px, transparent 4px 8px),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.022) 0 2px, transparent 2px 11px),
+        repeating-linear-gradient(90deg, #5b3f29 0 94px, #4a3220 94px 98px),
+        linear-gradient(180deg, #64472e, #523925);
+    }
     /* 角色篩選列滿版貼齊標題列下緣（抵銷 #forum-gallery 內距），視覺與羊皮紙一致 */
     #forum-gallery .filter-bar { margin: -8px -12px 10px; }
-    .gallery-wall { columns: 2; column-gap: 12px; }
-    .gwall-item { break-inside: avoid; margin: 0 0 14px; cursor: pointer; box-shadow: 0 6px 14px rgba(26,10,0,.28); line-height: 0; }
+    .gallery-wall { columns: 2; column-gap: 20px; }
+    .gwall-item { break-inside: avoid; margin: 0 0 22px; cursor: pointer; box-shadow: 0 7px 16px rgba(0,0,0,.45); line-height: 0; }
     /* 掛畫式載入：畫框先以 3:4 佔位掛滿牆（框內深色空畫布），圖載到才淡入、比例回歸原圖 */
     .gwall-item .gframe { background: rgba(26,10,0,.12); }
     .gwall-item .gframe img { opacity: 0; transition: opacity .45s ease; }
     .gwall-item .gframe img:not(.g-ld) { aspect-ratio: 3 / 4; }
     .gwall-item .gframe img.g-ld { opacity: 1; }
-    .gwall-empty { columns: 1; text-align: center; color: var(--ink-light); font-size: 14px; padding: 60px 16px; }
+    /* 空狀態文字在深木底上要看得清 */
+    .gwall-empty { columns: 1; text-align: center; color: rgba(247,240,220,.9); font-size: 14px; padding: 60px 16px; }
+    /* 防長按存原圖（畫作只允許經下載鈕壓浮水印後取得）：關掉 iOS 長按選單＋拖曳＋選取。
+       點擊仍由外層容器接手（img 設 pointer-events:none 不影響開圖/開全螢幕/關閉）。 */
+    .gwall-item .gframe img, .gd-frame img, #gf-img {
+      -webkit-touch-callout: none; -webkit-user-select: none; -moz-user-select: none; user-select: none;
+      -webkit-user-drag: none; user-drag: none; pointer-events: none;
+    }
     /* 畫框：border-image 九宮格；框身樣式共用、粗細由所在情境決定 */
     .gframe { border-style: solid; display: block; }
     .gframe img { display: block; width: 100%; height: auto; }

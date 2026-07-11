@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.50';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.51';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3152,14 +3152,25 @@ function updateGdFavBtn() {
 }
 async function toggleGalleryFavorite() {
   if (!_galleryDetailItem) return;
+  const id = _galleryDetailItem.id;
+  // 樂觀更新：先翻星星＋火花，讓點擊即時有反應；失敗再回滾（不然等 API 來回感覺很鈍）
+  const wasFav = favIds.has(id);
+  const nowFav = !wasFav;
+  if (nowFav) favIds.add(id); else favIds.delete(id);
+  updateGdFavBtn();
+  if (nowFav) likeBurst(document.getElementById('gd-fav'));
   try {
-    const r = await api(`/novels/${_galleryDetailItem.id}/favorite`, { method: 'POST' });
-    if (r.favorited) favIds.add(_galleryDetailItem.id); else favIds.delete(_galleryDetailItem.id);
+    const r = await api(`/novels/${id}/favorite`, { method: 'POST' });
+    // 以伺服器實際結果為準（極少數與樂觀值不一致時校正）
+    if (r.favorited) favIds.add(id); else favIds.delete(id);
     updateGdFavBtn();
-    if (r.favorited) likeBurst(document.getElementById('gd-fav'));
     toast(r.favorited ? '已加入收藏夾' : '已從收藏夾移除');
     if (galleryView === 'fav') renderGallery();   // 收藏夾檢視中取消收藏 → 即時從牆上撤下
-  } catch (e) { toast(e.message); }
+  } catch (e) {
+    if (wasFav) favIds.add(id); else favIds.delete(id);   // 回滾
+    updateGdFavBtn();
+    toast(e.message);
+  }
 }
 // 下載畫作：即時把金色徽記壓進圖檔（右下角、寬 40%、邊距 2%，與全螢幕觀看一致），
 // 再走與心動桌布相同的 分享/下載 流程。跨來源圖（Supabase Storage）需 crossOrigin。
@@ -3617,10 +3628,11 @@ function renderAdminNovels() {
       // 鎖上：作者本人(owner)或超管才有；鎖住後其他人完全看不到這篇存在。
       const canLock = !adminNovelScope || currentUser.role === 'super_admin';
       const lockBtn = canLock ? `<button data-onclick="toggleLock('${n.id}', ${!n.locked})" style="font-size:12px;padding:3px 10px;background:none;border:1px solid ${n.locked ? 'var(--series)' : 'var(--accent)'};color:${n.locked ? 'var(--series)' : 'var(--accent)'};border-radius:3px;cursor:pointer">${ic('ic-key',12)} ${n.locked ? '解鎖' : '鎖上'}</button>` : '';
+      // 種類徽章配色：小說=紅、羊皮紙(論壇體)=黃、畫作=綠
       const badges = (n.kind === 'forum'
           ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-scroll', 12) + ' 論壇體</span>'
           : n.kind === 'image'
-          ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-gallery', 12) + ' 畫作</span>'
+          ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">' + ic('ic-gallery', 12) + ' 畫作</span>'
           : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-book', 12) + ' 小說</span>')
         + statusTag
         + (n.is_guide ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-book', 12) + ' 範例·可刪除</span>' : '')
