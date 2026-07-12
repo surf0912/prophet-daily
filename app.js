@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.88';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.89';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1970,8 +1970,9 @@ function renderShelfForum(grid) {
   let posts = [...forumPosts].sort((x, y) => new Date(y.created_at) - new Date(x.created_at));
   posts = applyClassFilter(posts, '', shelfChars);   // 共用意若思鏡的角色篩選
   if (q) posts = posts.filter(p => matchesQuery(p, q));
-  grid.innerHTML = posts.length ? forumPostsHTML(posts)
-    : `<p style="padding:40px 8px;color:#888;text-align:center">${q ? '找不到符合的貼文' : '目前還沒有論壇貼文'}</p>`;
+  // 包一層 .forum-list：沿用羊皮紙頁的左右留白（novel-list 是 padding:0，直接放會貼邊）
+  grid.innerHTML = `<div class="forum-list">${posts.length ? forumPostsHTML(posts)
+    : `<p style="padding:40px 8px;color:#888;text-align:center">${q ? '找不到符合的貼文' : '目前還沒有論壇貼文'}</p>`}</div>`;
 }
 
 function onShelfFilter(type, val) {
