@@ -716,6 +716,11 @@
     <div class="form-group"><label>標題</label><input type="text" id="editwork-title" /></div>
     <div class="form-group"><label>作者署名</label><input type="text" id="editwork-author" placeholder="留空則佚名" /></div>
     <div class="form-group"><label>發佈日期</label><input type="date" id="editwork-date" /></div>
+    <div id="editwork-image-group" style="display:none">
+      <div class="form-group"><label>說明（選填）</label><input type="text" id="editwork-caption" maxlength="50" placeholder="給這幅畫留一句話（至多五十字）" /></div>
+      <div class="form-group"><label>畫框</label><div id="editwork-frame-picker" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
+      <div class="form-group"><button type="button" id="editwork-crop-btn" style="width:100%;font-size:12px;padding:8px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:var(--parchment2);color:var(--ink-light)">調整心動封面顯示（裁切框）</button></div>
+    </div>
     <div class="form-group" id="editwork-header-group">
       <label>頁首圖</label>
       <div id="editwork-header-preview" style="margin-bottom:6px"></div>

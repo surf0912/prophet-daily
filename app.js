@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.98';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.99';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4415,11 +4415,19 @@ async function openEditWork(id) {
   { const cg = document.getElementById('editwork-content-group'); if (cg) cg.style.display = isImage ? 'none' : ''; }
   // 頁首圖：僅小說；論壇與畫作都沒有（畫作的 image_url 是作品本身，不是頁首圖）
   { const hg = document.getElementById('editwork-header-group'); if (hg) hg.style.display = (isForum || isImage) ? 'none' : ''; }
+  { const ig = document.getElementById('editwork-image-group'); if (ig) ig.style.display = isImage ? '' : 'none'; }
   if (!isForum && !isImage) renderEditHeaderPreview(n.image_url || null);
   document.getElementById('editwork-comments').value = '';
   const ct = document.getElementById('editwork-content');
   document.getElementById('editwork-modal').classList.add('open');
-  if (isImage) { ct.value = ''; return; }   // 畫作只編標題／署名／日期，無需抓章節
+  if (isImage) {
+    ct.value = '';
+    editWork.imageFrame = GALLERY_FRAMES.some(([c]) => c === n.image_frame) ? n.image_frame : 'ebony';
+    renderEditFramePicker();
+    document.getElementById('editwork-caption').value = n.image_caption || '';
+    { const cb = document.getElementById('editwork-crop-btn'); if (cb) cb.setAttribute('data-onclick', `openCoverCrop('${escapeHtml(n.image_url || '')}')`); }
+    return;   // 畫作：標題／署名／日期／說明／畫框／裁切框，無章節
+  }
   ct.value = '載入中…'; ct.disabled = true;
   try {
     const chs = await api(`/chapters/novel/${id}`) || [];
@@ -4437,9 +4445,34 @@ async function openEditWork(id) {
   ct.disabled = false;
 }
 
+function renderEditFramePicker() {
+  const picker = document.getElementById('editwork-frame-picker');
+  if (!picker) return;
+  picker.innerHTML = GALLERY_FRAMES.map(([code, name]) => `
+    <div class="frame-swatch-wrap">
+      <div class="frame-swatch ${code === 'none' ? '' : 'gframe fr-' + code}${code === editWork.imageFrame ? ' sel' : ''}" data-frame="${code}" data-onclick="pickEditFrame('${code}')"><div></div></div>
+      <small>${name}</small>
+    </div>`).join('');
+}
+function pickEditFrame(code) {
+  editWork.imageFrame = code;
+  document.querySelectorAll('#editwork-frame-picker .frame-swatch').forEach(el => el.classList.toggle('sel', el.dataset.frame === code));
+}
 async function saveEditWork() {
   const title = document.getElementById('editwork-title').value.trim();
   const author = document.getElementById('editwork-author').value.trim();
+  if (editWork.kind === 'image') {
+    if (!title) { toast('請輸入標題'); return; }
+    const caption = document.getElementById('editwork-caption').value.trim().slice(0, 50);
+    const published_at = dateToIso(document.getElementById('editwork-date').value);
+    try {
+      await api(`/novels/${editWork.id}`, { method: 'PATCH', body: JSON.stringify({ title, author, published_at, image_frame: editWork.imageFrame, image_caption: caption }) });
+      toast('作品已更新');
+      document.getElementById('editwork-modal').classList.remove('open');
+      loadAdminNovelList(); loadNovels();
+    } catch (e) { toast(e.message); }
+    return;
+  }
   let content;
   if (editWork.kind === 'forum') {
     const main = document.getElementById('editwork-content').value.trim();
