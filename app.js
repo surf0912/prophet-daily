@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.76';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.77';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -635,7 +635,7 @@ async function initApp() {
   adminNovelScope = null;
   loadOwnerNames();   // super_admin only: map owner uuid → 巫師全名 for the owner hint
   loadFavIds().then(renderFavUpdates);   // 意若思鏡 收藏夾 ids + 追蹤更新 alert
-  loadHomeGalleryCovers();   // P2：肖像廊已排時段的畫作併入心動封面池
+  loadHomeGalleryCovers();   // P2：留影走廊已排時段的畫作併入心動封面池
   loadCoverCrops().then(() => renderGreeting());   // 封面裁切框：載完重繪一次心動，讓已設定的框立即生效
   loadAppSettings();   // 全域設定（通知保留天數等）→ 載入後重算貓頭鷹
   renderSettings();
@@ -706,7 +706,7 @@ const TOUR_READER = [
   { page: 'forum', target: '[data-tour="nav-forum"]',
     html: "<span class='tour-h'>匿名羊皮紙</span>從這裡進入論壇體文章，看看大家都在討論些什麼——傳閱時小心點，別被級長抓到！讀文時點留言上的<b>星星</b>就能收藏，右上角「<b>收藏夾</b>」隨時找回來。" },
   { page: 'forum', target: '#forum-gallery-toggle',
-    html: "<span class='tour-h'>肖像廊</span>《預言家日報》還有一座<b>肖像廊</b>，掛著大家投稿的角色畫作，可以進去慢慢欣賞。" },
+    html: "<span class='tour-h'>留影走廊</span>《預言家日報》還有一座<b>留影走廊</b>，掛著大家投稿的角色畫作，可以進去慢慢欣賞。" },
   { page: 'settings', target: '[data-tour="nav-settings"]',
     html: "<span class='tour-h'>個人檔案</span>字體大小、夜間模式、<b>語言選擇</b>都在閱讀偏好；頁面最下方能查看你手上的日報是否為最新一期。想<b>重看這份導覽</b>，到「檔案 → 小工具 → 新手導覽」。" },
 ];
@@ -718,7 +718,7 @@ const TOUR_WRITER_EXTRA = [
   { page: 'admin', before: () => switchAdminTab('upload'), target: '[data-tour="upload-kind"]',
     html: "<span class='tour-h'>先選類型</span>先決定要發<b>小說</b>、<b>論壇貼文</b>還是<b>畫作</b>——三種的欄位與格式各不相同,先選對類型再往下填。" },
   { page: 'admin', before: () => { switchAdminTab('upload'); setUploadKind('image'); }, target: '#image-drop',
-    html: "<span class='tour-h'>投稿畫作</span>會畫圖的你,也能把作品掛上<b>肖像廊</b>。選「畫作」後上傳圖檔、標好角色送出,審核通過就會出現在牆上。" },
+    html: "<span class='tour-h'>投稿畫作</span>會畫圖的你,也能把作品掛上<b>留影走廊</b>。選「畫作」後上傳圖檔、標好角色送出,審核通過就會出現在牆上。" },
   { page: 'admin', before: () => { switchAdminTab('upload'); setUploadKind('novel'); }, target: '#new-novel-category',
     html: "<span class='tour-h'>分類與角色</span>填好標題後,選<b>故事類型</b>和<b>角色標籤</b>——標好讀者才搜得到、篩得到你的文。" },
   { page: 'admin', before: () => { switchAdminTab('upload'); setUploadKind('novel'); }, target: '[data-tour="upload-submit"]',
@@ -762,7 +762,7 @@ function maybeAutoTour() {
 }
 
 function startTour() {
-  // showIf 讓某步依身份出現／略過（例：肖像廊只給作家以上）——在此就濾掉，步數編號才乾淨
+  // showIf 讓某步依身份出現／略過（例：留影走廊只給作家以上）——在此就濾掉，步數編號才乾淨
   const pass = s => !s.showIf || s.showIf();
   const steps = TOUR_READER.filter(pass);
   if (currentUser && currentUser.role !== 'reader') steps.push(...TOUR_WRITER_EXTRA.filter(pass));
@@ -793,7 +793,7 @@ function _placeTour(s) {
   const spot = document.getElementById('tour-spot');
   const bub = document.getElementById('tour-bubble');
   const el0 = s.target ? document.querySelector(s.target) : null;
-  // 目標不存在，或對這個身份是隱藏的（display:none，如讀者看不到的肖像廊鈕）→ 當成沒有目標，置中泡泡、不打光
+  // 目標不存在，或對這個身份是隱藏的（display:none，如讀者看不到的留影走廊鈕）→ 當成沒有目標，置中泡泡、不打光
   const el = (el0 && el0.offsetParent !== null) ? el0 : null;
   if (!el) {  // missing/hidden target → centered bubble, no spotlight
     spot.classList.add('nohole');
@@ -958,13 +958,13 @@ const AFTERNOON_COVERS = new Set([ // 下午：日落/黃昏金色光
   './chars/adrian_desktop_3.webp',// 佛羅倫斯日落（桌機橫版）
 ]);
 // 照片識別鍵：去掉副檔名。封面 v3.49 從 .JPG 轉 .webp，但使用者帳號存的隱藏設定、
-// 肖像廊匯入時存下的 image_url 都還是 .JPG 路徑——所有比對一律用去副檔名 key，新舊通吃。
+// 留影走廊匯入時存下的 image_url 都還是 .JPG 路徑——所有比對一律用去副檔名 key，新舊通吃。
 function photoKey(u) { return String(u || '').replace(/\.(jpe?g|webp)$/i, ''); }
 const _MORNING_KEYS = new Set([...MORNING_COVERS].map(photoKey));
 const _AFTERNOON_KEYS = new Set([...AFTERNOON_COVERS].map(photoKey));
 // 傳回某封面的時段：am=早晨中午、pm=下午、night=夜晚(預設)。
 function coverSlot(img) { const k = photoKey(img); return _MORNING_KEYS.has(k) ? 'am' : _AFTERNOON_KEYS.has(k) ? 'pm' : 'night'; }
-// 匯入肖像廊的心動封面：image_slot 空時，回退顯示它在心動的原始早/午/晚分類（只對「確實是封面」的 url 生效，
+// 匯入留影走廊的心動封面：image_slot 空時，回退顯示它在心動的原始早/午/晚分類（只對「確實是封面」的 url 生效，
 // 一般作者投稿的圖不套用，避免被誤判成夜晚）。管理員按時段鈕仍可覆寫（存進 image_slot）。P2 心動池同樣用此回退。
 const _ALL_COVER_URLS = (() => { const s = new Set(); CHARS.forEach(ch => [...(ch.imgs || []), ...(ch.imgsD || [])].forEach(u => u && s.add(photoKey(u)))); return s; })();
 function coverSlotForUrl(url) { return _ALL_COVER_URLS.has(photoKey(url)) ? coverSlot(url) : ''; }
@@ -1027,7 +1027,7 @@ const CHAR_PROFILE = {
   Adrian: { bio: '', gallery: [] },
 };
 let _homeChar = null;   // 目前顯示在心動封面的角色(給封面愛心 → 角色頁用)
-// 從肖像廊隱藏的畫作（photoKey 集合）。隱藏 = 牆上與心動封面都不出現，只影響本人、跨裝置同步。
+// 從留影走廊隱藏的畫作（photoKey 集合）。隱藏 = 牆上與心動封面都不出現，只影響本人、跨裝置同步。
 function hiddenGallery() {
   return new Set((currentUser && currentUser.hidden_gallery ? String(currentUser.hidden_gallery).split(',') : [])
     .map(s => photoKey(s.trim())).filter(Boolean));
@@ -1035,7 +1035,7 @@ function hiddenGallery() {
 function excludedPhotos() {
   // beta：使用者逐張隱藏的心動封面照片(存照片路徑，含桌機版一起排除)。空 = 全部顯示。
   // 一律正規化成 photoKey：帳號裡可能同時存著舊 .JPG 與新 .webp 的路徑。
-  // 併入「肖像廊隱藏」的畫作——隱藏一張圖時，心動封面也一起不出現。
+  // 併入「留影走廊隱藏」的畫作——隱藏一張圖時，心動封面也一起不出現。
   const s = new Set((currentUser && currentUser.home_chars ? String(currentUser.home_chars).split(',') : [])
     .map(x => photoKey(x.trim())).filter(Boolean));
   hiddenGallery().forEach(k => s.add(k));
@@ -1064,7 +1064,7 @@ function renderCharProfile(name) {
     // 每張照片右上角一個開關：勾 = 這張出現在心動封面，取消 = 隱藏這張(連同桌機同序版)
     const HEART = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.7l-1.45-1.32C5.4 14.74 2 11.66 2 7.9 2 5.1 4.2 3 7 3c1.6 0 3.14.74 4.13 1.9L12 5.9l.87-1C13.86 3.74 15.4 3 17 3c2.8 0 5 2.1 5 4.9 0 3.76-3.4 6.84-8.55 11.49L12 20.7z"/></svg>`;
     const DL = `<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>`;
-    // 裁切框（心動顯示焦點）：官方封面只有管理員能框；肖像廊畫作作者(gc.mine)或管理員能框。
+    // 裁切框（心動顯示焦點）：官方封面只有管理員能框；留影走廊畫作作者(gc.mine)或管理員能框。
     const CROP = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>`;
     const adminish = currentUser && ['admin', 'super_admin'].includes(currentUser.role);
     const cropBtn = (u) => `<button class="cp-crop" data-onclick="openCoverCrop('${escapeHtml(u)}')" aria-label="調整心動封面顯示" title="調整心動封面顯示">${CROP}</button>`;
@@ -1075,7 +1075,7 @@ function renderCharProfile(name) {
       const heart = `<button class="cp-cover-toggle${on ? ' on' : ''}" data-onclick="toggleCoverPhoto('${name}', ${i}, this)" role="checkbox" aria-checked="${on}" aria-label="心動封面顯示這張">${HEART}</button>`;
       return `<div class="cp-shot" data-full="${escapeHtml(u)}" style="background-image:url('${u}')">${heart}${dl}${adminish ? cropBtn(u) : ''}</div>`;
     }).join('');
-    // P2：這個角色「已排時段」的肖像廊畫作也列進來（傳全域索引給 toggle，避免把 URL 塞進宣告式 handler）
+    // P2：這個角色「已排時段」的留影走廊畫作也列進來（傳全域索引給 toggle，避免把 URL 塞進宣告式 handler）
     const galShots = (_homeGalleryCovers || []).map((gc, gi) => ({ gc, gi }))
       .filter(x => (x.gc.characters || []).includes(code))
       .map(({ gc, gi }) => {
@@ -1096,7 +1096,7 @@ function renderCharProfile(name) {
   body.innerHTML = html;
   // 每張縮圖套用自己的裁切框（有設定才動，否則維持 cover 預設）。
   body.querySelectorAll('.cp-shot[data-full]').forEach(el => applyCoverCropToEl(el, el.dataset.full));
-  // 封面雙擊 → 全螢幕帶浮水印大圖（同肖像廊）。手動雙擊偵測，避免與愛心／下載鈕的單擊誤觸。
+  // 封面雙擊 → 全螢幕帶浮水印大圖（同留影走廊）。手動雙擊偵測，避免與愛心／下載鈕的單擊誤觸。
   body.querySelectorAll('.cp-shot').forEach(el => {
     let t = 0;
     el.addEventListener('click', (e) => {
@@ -1127,7 +1127,7 @@ async function toggleCoverPhoto(charName, index, btn) {
     toast(e.message || '儲存失敗');
   }
 }
-// 肖像廊畫作的心動封面開關（角色頁）：用全域索引取回該張，以 photoKey 加入／移出隱藏集。
+// 留影走廊畫作的心動封面開關（角色頁）：用全域索引取回該張，以 photoKey 加入／移出隱藏集。
 // renderGreeting 的併池已用同一個 excluded 判斷，所以隱藏後那張立刻退出心動輪播。
 async function toggleCoverGallery(idx, btn) {
   const gc = (_homeGalleryCovers || [])[idx];
@@ -1193,13 +1193,13 @@ async function shareOrDownload(url, filename) {
 
 
 
-// P2：肖像廊已指定時段的畫作，登入後抓一次併入心動封面池（依角色分入 CHARS 輪替）。
+// P2：留影走廊已指定時段的畫作，登入後抓一次併入心動封面池（依角色分入 CHARS 輪替）。
 let _homeGalleryCovers = [];
 async function loadHomeGalleryCovers() {
   try {
     const raw = await api('/novels/home-covers', { background: true }) || [];
-    // 從肖像廊「批次匯入」的官方封面，其 image_url 就是 /chars/ 原圖，本來就已是心動封面（透過 CHARS）。
-    // 再從肖像廊併進來會與官方封面重複（角色頁出現兩張、輪播雙重計數）→ 濾掉。使用者投稿畫作(Supabase URL)保留。
+    // 從留影走廊「批次匯入」的官方封面，其 image_url 就是 /chars/ 原圖，本來就已是心動封面（透過 CHARS）。
+    // 再從留影走廊併進來會與官方封面重複（角色頁出現兩張、輪播雙重計數）→ 濾掉。使用者投稿畫作(Supabase URL)保留。
     _homeGalleryCovers = raw.filter(gc => !_ALL_COVER_URLS.has(photoKey(gc.image_url)));
   }
   catch { _homeGalleryCovers = []; }
@@ -1220,7 +1220,7 @@ function renderGreeting() {
   let selected = [];
   CHARS.forEach(c => photosOf(c).forEach(img => { if (!excluded.has(photoKey(img))) selected.push({ char: c, img }); }));
   if (!selected.length) CHARS.forEach(c => photosOf(c).forEach(img => selected.push({ char: c, img })));
-  // P2：併入肖像廊已指定時段的畫作。依角色代碼對回 CHARS（一張多角色 → 每個角色都當候選），
+  // P2：併入留影走廊已指定時段的畫作。依角色代碼對回 CHARS（一張多角色 → 每個角色都當候選），
   // 候選帶著自己的 slot（Supabase URL 無法用 coverSlot 推時段，靠後端給的 image_slot）。
   (_homeGalleryCovers || []).forEach(gc => {
     (gc.characters || []).forEach(code => {
@@ -1916,7 +1916,7 @@ function toggleCharAnd() {
   charAnd = !charAnd;
   if (document.getElementById('page-scroll').classList.contains('active')) renderShelf();
   else if (document.getElementById('page-forum').classList.contains('active')) {
-    // 羊皮紙頁有兩個檢視：肖像廊模式重畫牆面，論壇模式重畫貼文列表
+    // 羊皮紙頁有兩個檢視：留影走廊模式重畫牆面，論壇模式重畫貼文列表
     if (forumTab === 'gallery') renderGallery();
     else renderForumList();
   }
@@ -2788,7 +2788,7 @@ let forumView = 'all';   // 'all' | 'liked'
 let forumLiked = [];
 
 async function loadForumPosts() {
-  // entering the forum always resets to the 論壇·全部 view（若上次停在肖像廊，切回論壇分頁）
+  // entering the forum always resets to the 論壇·全部 view（若上次停在留影走廊，切回論壇分頁）
   if (forumTab === 'gallery') setForumMode('forum');
   forumView = 'all';
   const ffb = document.getElementById('forum-fav-btn'); if (ffb) ffb.classList.remove('on');
@@ -2810,7 +2810,7 @@ function onForumFilter(type, val) {
 }
 
 async function toggleForumFav() {
-  // 羊皮紙頁的收藏夾鈕是兩用的：肖像廊模式下改為切換「已收藏畫作」檢視
+  // 羊皮紙頁的收藏夾鈕是兩用的：留影走廊模式下改為切換「已收藏畫作」檢視
   if (forumTab === 'gallery') { toggleGalleryFav(); return; }
   forumView = forumView === 'liked' ? 'all' : 'liked';
   const btn = document.getElementById('forum-fav-btn'); if (btn) btn.classList.toggle('on', forumView === 'liked');
@@ -3148,7 +3148,7 @@ function setUploadKind(kind) {
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 肖像廊（Gallery）— 純圖像投稿，掛在羊皮紙頁；P1 僅管理員／超管可見。
+// 留影走廊（Gallery）— 純圖像投稿，掛在羊皮紙頁；P1 僅管理員／超管可見。
 // ═══════════════════════════════════════════════════════════════════════════
 const GALLERY_FRAMES = [
   ['ebony', '墨檀'], ['oak', '橡木'], ['oakmat', '橡木襯白'], ['gilt', '鎏金襯白'], ['none', '無框'],
@@ -3294,7 +3294,7 @@ async function submitImageWork() {
   finally { if (hint) hint.textContent = ''; }
 }
 
-// ── 羊皮紙頁：收藏夾旁的小藥丸切換 論壇 ⇄ 肖像廊（僅管理員可見）──
+// ── 羊皮紙頁：收藏夾旁的小藥丸切換 論壇 ⇄ 留影走廊（僅管理員可見）──
 function toggleForumMode() {
   setForumMode(forumTab === 'gallery' ? 'forum' : 'gallery');
 }
@@ -3303,24 +3303,24 @@ function setForumMode(mode) {
   forumTab = mode;   // 唯一寫入點：之後 toggleForumFav / toggleCharAnd 都讀這個，不看 DOM
   document.getElementById('forum-normal').style.display = isGallery ? 'none' : '';
   document.getElementById('forum-gallery').style.display = isGallery ? '' : 'none';
-  // 木紋牆鋪到滾動容器：肖像廊模式下連 .page 底部留白與 overscroll 回彈都是木紋，不露羊皮紙底
+  // 木紋牆鋪到滾動容器：留影走廊模式下連 .page 底部留白與 overscroll 回彈都是木紋，不露羊皮紙底
   const pa = document.getElementById('page-area'); if (pa) pa.classList.toggle('gallery-bg', isGallery);
-  if (isGallery) galleryView = 'all';   // 進肖像廊一律回「全部」檢視（與羊皮紙進頁行為一致）
+  if (isGallery) galleryView = 'all';   // 進留影走廊一律回「全部」檢視（與羊皮紙進頁行為一致）
   const fav = document.getElementById('forum-fav-btn');
   if (fav) fav.classList.toggle('on', isGallery ? false : forumView === 'liked');
-  const hidBtn = document.getElementById('gallery-hidden-btn');   // 「已隱藏」鈕只在肖像廊模式出現
+  const hidBtn = document.getElementById('gallery-hidden-btn');   // 「已隱藏」鈕只在留影走廊模式出現
   if (hidBtn) { hidBtn.style.display = isGallery ? '' : 'none'; hidBtn.classList.remove('on'); }
   const title = document.getElementById('forum-title');
   if (title) title.innerHTML = isGallery
-    ? ic('ic-gallery', 20).replace('-2px', '-3px') + ' 肖像廊'
+    ? ic('ic-gallery', 20).replace('-2px', '-3px') + ' 留影走廊'
     : ic('ic-scroll', 20).replace('-2px', '-3px') + ' 匿名羊皮紙';
   const pill = document.getElementById('forum-gallery-toggle');
-  if (pill) pill.innerHTML = isGallery ? ic('ic-scroll', 15) + ' 羊皮紙' : ic('ic-gallery', 15) + ' 肖像廊';
+  if (pill) pill.innerHTML = isGallery ? ic('ic-scroll', 15) + ' 羊皮紙' : ic('ic-gallery', 15) + ' 留影走廊';
   if (isGallery) loadGallery();
 }
 
 let _galleryItems = [];
-let galleryChars = [];      // 肖像廊角色篩選（同羊皮紙：不亮 = 全部；亮 = OR，同框開啟 = AND）
+let galleryChars = [];      // 留影走廊角色篩選（同羊皮紙：不亮 = 全部；亮 = OR，同框開啟 = AND）
 let galleryView = 'all';    // 'all' | 'fav'
 let forumTab = 'forum';     // 羊皮紙頁目前分頁：'forum' | 'gallery'。setForumMode 是唯一寫入點，
                             // 其餘地方一律讀這個變數判斷模式，不再嗅探 DOM 的 display 狀態。
@@ -3384,7 +3384,7 @@ function renderGallery() {
       ? '沒有已隱藏的畫作<br><small>在畫作詳情點眼睛鈕，就能把不想看到的圖藏起來</small>'
       : inFav
         ? '你還沒收藏任何畫作<br><small>打開畫作詳情，點標題旁的 ☆ 就能收進這裡</small>'
-        : (_galleryItems.length ? '沒有符合篩選的畫作' : '肖像廊還空著，等待第一幅畫作掛上牆。');
+        : (_galleryItems.length ? '沒有符合篩選的畫作' : '留影走廊還空著，等待第一幅畫作掛上牆。');
     wall.innerHTML = `<div class="gwall-empty">${msg}</div>`;
     return;
   }
@@ -3437,7 +3437,7 @@ function openGalleryItem(id) {
   } else { adminBox.style.display = 'none'; }
   document.getElementById('gallery-detail').style.display = 'flex';
 }
-// 詳情卡的「隱藏／取消隱藏」眼睛鈕：把不喜歡的畫作從肖像廊牆與心動封面一起藏起（只影響本人）。
+// 詳情卡的「隱藏／取消隱藏」眼睛鈕：把不喜歡的畫作從留影走廊牆與心動封面一起藏起（只影響本人）。
 const _EYE_OFF = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
 const _EYE_ON = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
 function renderGdHideBtn() {
@@ -3447,7 +3447,7 @@ function renderGdHideBtn() {
   if (!it || !it.image_url) { b.style.display = 'none'; return; }
   const hidden = hiddenGallery().has(photoKey(it.image_url));
   b.style.display = 'inline-flex';
-  b.innerHTML = hidden ? `${_EYE_ON} 取消隱藏` : `${_EYE_OFF} 從肖像廊隱藏`;
+  b.innerHTML = hidden ? `${_EYE_ON} 取消隱藏` : `${_EYE_OFF} 從留影走廊隱藏`;
   b.style.color = hidden ? 'var(--accent)' : 'var(--ink-light)';
   b.style.borderColor = hidden ? 'var(--accent)' : 'var(--ink-light)';
 }
@@ -3462,7 +3462,7 @@ async function toggleHideGalleryImage() {
     const r = await api('/auth/me/hidden-gallery', { method: 'PATCH', body: JSON.stringify({ keys: [...set] }) });
     if (currentUser) currentUser.hidden_gallery = (r && r.hidden_gallery) || '';
     renderGdHideBtn();
-    toast(wasHidden ? '已取消隱藏' : '已從肖像廊隱藏');
+    toast(wasHidden ? '已取消隱藏' : '已從留影走廊隱藏');
     // 隱藏一張圖 = 牆上與心動封面都要更新
     renderGallery();
     if (typeof renderGreeting === 'function') renderGreeting();
@@ -3534,7 +3534,7 @@ async function downloadGalleryImage() {
 
 function closeGalleryDetail() { document.getElementById('gallery-detail').style.display = 'none'; }
 function openGalleryFull() { openImageFull(document.getElementById('gd-img').src); }
-// 任意圖片全螢幕（右下角金色徽記浮水印，即時疊、不改檔案）；肖像廊詳情與角色頁封面共用。
+// 任意圖片全螢幕（右下角金色徽記浮水印，即時疊、不改檔案）；留影走廊詳情與角色頁封面共用。
 function openImageFull(src) {
   const img = document.getElementById('gf-img');
   const stage = document.getElementById('gf-stage');
@@ -3665,7 +3665,7 @@ function _afterCropChange(url) {
 async function setImageSlot(id, slot) {
   try {
     await api(`/novels/${id}/image-slot`, { method: 'PATCH', body: JSON.stringify({ slot }) });
-    // 詳情卡可能從肖像廊(_galleryItems)或作品管理(_adminNovels)開啟——兩份快取＋當前詳情物件都更新，
+    // 詳情卡可能從留影走廊(_galleryItems)或作品管理(_adminNovels)開啟——兩份快取＋當前詳情物件都更新，
     // 否則從作品管理開的那張重繪時讀到舊值，按鈕不高亮（看起來像「沒反應」）。
     [_galleryDetailItem, ...(_galleryItems || []), ...(window._adminNovels || [])]
       .forEach(o => { if (o && o.id === id) o.image_slot = slot; });
@@ -3975,7 +3975,7 @@ async function loadAdminNovelList() {
   } catch { el.innerHTML = '<p>載入失敗</p>'; }
 }
 
-// 作品管理篩選：種類分頁（全部/小說/羊皮紙/肖像）＋ 分類子篩（僅小說）＋ 標題/作者搜尋 ＋ 角色。
+// 作品管理篩選：種類分頁（全部/小說/羊皮紙/留影）＋ 分類子篩（僅小說）＋ 標題/作者搜尋 ＋ 角色。
 function adminIsNovelKind(n) { return n.kind !== 'forum' && n.kind !== 'image'; }
 function applyAdminFilter(list) {
   const sel = adminChars.filter(Boolean);
@@ -4013,7 +4013,7 @@ function renderAdminFilterBar(ns) {
   const counts = { novel: 0, forum: 0, image: 0 };
   ns.forEach(n => { if (n.kind === 'forum') counts.forum++; else if (n.kind === 'image') counts.image++; else counts.novel++; });
   // 沒有「全部」pill：不選任何種類 = 全部；再點亮著的 pill 取消回全部
-  const KINDS = [['novel', 'ic-book', '小說', counts.novel], ['forum', 'ic-scroll', '羊皮紙', counts.forum], ['image', 'ic-gallery', '肖像', counts.image]];
+  const KINDS = [['novel', 'ic-book', '小說', counts.novel], ['forum', 'ic-scroll', '羊皮紙', counts.forum], ['image', 'ic-gallery', '留影', counts.image]];
   const showCat = adminKind === 'novel';
   wrap.style.display = 'block';
   wrap.innerHTML = `<div class="admin-kind-row">${KINDS.map(([k, icn, label, cnt]) =>
