@@ -314,12 +314,12 @@
     .char-chip.active { opacity: 1; }
     .char-chip img {
       width: 44px; height: 44px; border-radius: 50%; object-fit: cover; object-position: center top;
-      border: 2px solid transparent;
+      border: 3px solid transparent;
       /* 防長按存原圖：關 iOS 長按選單＋拖曳＋選取（點擊由外層 .char-chip 接手，故 pointer-events:none 不影響篩選） */
       -webkit-touch-callout: none; -webkit-user-select: none; -moz-user-select: none; user-select: none;
       -webkit-user-drag: none; user-drag: none; pointer-events: none;
     }
-    .char-chip.active img { border-color: var(--scarlet); }   /* 淺底：酒紅框，對比強、與選中的類型膠囊同色 */
+    .char-chip.active img { border-color: var(--gold); }
     .char-chip span { font-size: 12px; color: var(--ink-light); }
     .char-chip.char-add { opacity: .7; }
     .char-chip.char-add .add-circle {
@@ -479,7 +479,6 @@
         repeating-linear-gradient(90deg, #7d5a3a 0 94px, #6a4a30 94px 98px); }
     #page-area.gallery-bg #forum-gallery .filter-bar .filter-label { color: #f0dcae; }
     #page-area.gallery-bg #forum-gallery .filter-bar .char-chip span { color: #f7edcf; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
-    #page-area.gallery-bg .char-chip.active img { border-color: var(--gold); }   /* 深木牌底：金框，呼應金框畫作 */
     .gallery-wall { columns: 2; column-gap: 20px; }
     .gwall-item { break-inside: avoid; margin: 0 0 22px; cursor: pointer; box-shadow: 0 7px 16px rgba(0,0,0,.45); line-height: 0; }
     /* 掛畫式載入：畫框先以 3:4 佔位掛滿牆（框內深色空畫布），圖載到才淡入、比例回歸原圖 */
