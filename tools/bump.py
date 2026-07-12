@@ -4,7 +4,7 @@
 兩處必須一致（自我修復邏輯靠比對這兩個），手動分開改容易忘一個。用這支就不會漏。
 
 用法：
-    python3 tools/bump.py            # 自動把尾數 +1（v2.90 → v2.91）
+    python3 tools/bump.py            # 次號 +1、滿 100 進位主號（v3.103 → v4.04；v4.99 → v5.00）
     python3 tools/bump.py 2.95       # 指定版本
     python3 tools/bump.py v2.95      # v 前綴可有可無
     python3 tools/bump.py --check    # 只檢查兩處是否一致，不改
@@ -43,8 +43,12 @@ def main():
         newv = arg.lstrip("v")
     else:
         parts = (av or "0.0").split(".")
-        parts[-1] = str(int(parts[-1]) + 1)
-        newv = ".".join(parts)
+        major, minor = int(parts[0]), int(parts[1])
+        minor += 1
+        if minor >= 100:            # 次號滿 100 → 進位主號、次號歸零（v4.99 → v5.00）
+            major += minor // 100
+            minor %= 100
+        newv = f"{major}.{minor:02d}"   # 次號固定兩位數（v4.04，不是 v4.4）
     set_version(newv)
     av2, sv2 = read_versions()
     ok = av2 == sv2 == newv
