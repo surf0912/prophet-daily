@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.91';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.92';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -625,6 +625,9 @@ async function initApp() {
   const staff = ['writer', 'admin', 'super_admin'].includes(currentUser.role);
   const adminish = ['admin', 'super_admin'].includes(currentUser.role);
   document.getElementById('admin-nav-btn').style.display = staff ? '' : 'none';  // readers: no 後台
+  { const _beta = isBeta();   // beta：羊皮紙併入意若思鏡，nav 那格改成「留影」
+    const _fn = document.getElementById('forum-nav-btn'); if (_fn) _fn.style.display = _beta ? 'none' : '';
+    const _gn = document.getElementById('gallery-nav-btn'); if (_gn) _gn.style.display = _beta ? '' : 'none'; }
   document.querySelectorAll('.staff-only').forEach(el => el.style.display = staff ? '' : 'none');  // readers: no 防窺工坊
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = adminish ? '' : 'none');  // writers: only 作品管理 + 上傳
   document.querySelectorAll('.super-only').forEach(el => el.style.display = currentUser.role === 'super_admin' ? '' : 'none');  // 監看面板 + 實驗功能開關：只給 SA
@@ -3347,6 +3350,10 @@ async function submitImageWork() {
 function toggleForumMode() {
   setForumMode(forumTab === 'gallery' ? 'forum' : 'gallery');
 }
+function showGalleryPage(btn) {
+  showPage('forum', btn);      // 進羊皮紙頁容器 + nav 高亮到「留影」
+  setForumMode('gallery');     // 立刻切留影（同步隱藏論壇部分，不閃）
+}
 function setForumMode(mode) {
   const isGallery = mode === 'gallery';
   forumTab = mode;   // 唯一寫入點：之後 toggleForumFav / toggleCharAnd 都讀這個，不看 DOM
@@ -3362,7 +3369,10 @@ function setForumMode(mode) {
     ? ic('ic-gallery', 20).replace('-2px', '-3px') + ' 留影走廊'
     : ic('ic-scroll', 20).replace('-2px', '-3px') + ' 匿名羊皮紙';
   const pill = document.getElementById('forum-gallery-toggle');
-  if (pill) pill.innerHTML = isGallery ? ic('ic-scroll', 15) + ' 羊皮紙' : ic('ic-gallery', 15) + ' 留影走廊';
+  if (pill) {
+    pill.innerHTML = isGallery ? ic('ic-scroll', 15) + ' 羊皮紙' : ic('ic-gallery', 15) + ' 留影走廊';
+    pill.style.display = isBeta() ? 'none' : '';   // beta：留影是獨立 nav 入口，頁頂藥丸不再需要
+  }
   if (isGallery) loadGallery();
 }
 

@@ -22,7 +22,7 @@
     'saveCustomChar', 'saveEditClass', 'saveEditWork', 'saveFaqEditor', 'saveMyPassword',
     'saveNickname', 'saveNoticeDays', 'saveOwners', 'saveSeries', 'setAutoPublish', 'setBetaFlag',
     'setFeedbackStatus', 'setMqjAccess', 'setUploadKind', 'setUserFilter', 'setUserRole', 'setUiScript', 'setWishReply', 'wishReplyOpen',
-    'setWishFilter', 'showLoginForm', 'showPage', 'startTour', 'stepReaderFont', 'submitFeedback',
+    'setWishFilter', 'showLoginForm', 'showPage', 'showGalleryPage', 'startTour', 'stepReaderFont', 'submitFeedback',
     'onImagePick', 'submitImageWork', 'pickFrame', 'pickImageFile', 'setForumMode', 'toggleForumMode',
     'pickNovelHeader', 'onNovelHeaderPick', 'clearNovelHeader', 'setEditHeader', 'pickEditHeader', 'onEditHeaderPick', 'removeEditHeader',
     'openGalleryItem', 'closeGalleryDetail', 'openGalleryFull', 'closeGalleryFull', 'setImageSlot', 'downloadGalleryImage',
