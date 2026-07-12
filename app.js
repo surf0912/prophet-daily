@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.90';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.91';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1941,7 +1941,7 @@ function renderFilterBar(catEl, chipEl, curCat, curChars, onChange) {
   catEl.innerHTML =
     CATEGORIES.map(c => `<button class="cat-pill ${curCat === c ? 'active' : ''}" data-c="${c}">${c}</button>`).join('')
     // beta：羊皮紙（論壇）併入意若思鏡，與故事類型並列；只有開了實驗功能的人看得到
-    + (catEl.id === 'shelf-cat-pills' && isBeta() ? `<button class="cat-pill ${curCat === '羊皮紙' ? 'active' : ''}" data-c="羊皮紙">${ic('ic-scroll', 12)} 羊皮紙</button>` : '');
+    + (catEl.id === 'shelf-cat-pills' && isBeta() ? `<button class="cat-pill ${curCat === '羊皮紙' ? 'active' : ''}" data-c="羊皮紙">羊皮紙</button>` : '');
   catEl.querySelectorAll('.cat-pill').forEach(b => b.onclick = () => onChange('cat', b.dataset.c));
   chipEl.innerHTML = CHAR_LIST.map(ch =>
     `<div class="char-chip ${curChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}">
@@ -2905,7 +2905,7 @@ function forumPostsHTML(posts) {
     <div class="forum-post-row" data-onclick="openNovel('${p.id}')">
       <h4>${escapeHtml(p.title)}</h4>
       <div class="meta">
-        <span>${escapeHtml(p.author || '匿名')}${ownerTag(p)}</span>
+        <span>${escapeHtml(p.author || '匿名')}</span>
         <span>${ic('ic-calendar',11)} ${fmtUpdated(p.created_at)}</span>
         ${p.liked_count ? `<span style="color:var(--accent)">${ic('ic-feather', 11)} 收藏了 ${p.liked_count} 則</span>` : ''}
         ${p.status === 'pending' ? '<span class="pending-tag">' + ic('ic-clock',11) + ' 待審核</span>' : ''}

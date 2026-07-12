@@ -680,7 +680,7 @@
     }
     .forum-post-row:active { background: rgba(201,168,76,.08); }
     .forum-post-row h4 { font-size: 15px; color: var(--ink); line-height: 1.35; }
-    .forum-post-row .meta { font-size: 12px; color: var(--ink-light); margin-top: 5px; display: flex; gap: 10px; }
+    .forum-post-row .meta { font-size: 12px; color: var(--ink-light); margin-top: 5px; display: flex; gap: 10px; flex-wrap: wrap; white-space: nowrap; }
     .forum-post-row .pending-tag { color: var(--accent); }
     .comment-thread { padding: 0 18px; }
     .comment-item { padding: 12px 0; border-bottom: 1px solid rgba(26,10,0,.08); }
