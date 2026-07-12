@@ -270,7 +270,13 @@
     .row-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
     .t-cat { display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 10px; background: rgba(138,45,45,.12); color: var(--accent); }
     .t-cat.t-cat-green { background: rgba(45,74,30,.15); color: var(--series); }   /* 吐真劑 = 墨綠 (夜間轉亮綠) */
-    .t-chr { display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 10px; background: rgba(201,168,76,.2); color: var(--ink-light); }
+    .t-chr { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 2px 9px 2px 8px; border-radius: 10px; background: rgba(201,168,76,.2); color: var(--ink-light); }
+    /* 學院用名字前的小圓點識別（分類標籤是整顆染色，角色是金底＋圓點——形狀語言不同，不會與紅/綠分類撞色） */
+    .t-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .t-dot.h-gry { background: #a83232; }  /* 葛來分多・猩紅 */
+    .t-dot.h-rav { background: #345f9e; }  /* 雷文克勞・靛藍 */
+    .t-dot.h-huf { background: #b07d10; }  /* 赫夫帕夫・金褐 */
+    .t-dot.h-sly { background: #2f7d4f; }  /* 史萊哲林・翡翠 */
     /* series grouping */
     .series-block { border-bottom: 1px solid rgba(26,10,0,.1); }
     /* 收合的系列列＝單篇同款卡片（.novel-row 供字級/內距/分隔線），僅靠《》、副標、chevron 區分 */

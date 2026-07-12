@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.06';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.07';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1359,11 +1359,18 @@ async function loadNovels() {
 // ── Classification (category + characters) ───────────────────
 const CATEGORIES = ['迷情劑', '吐真劑', '儲思盆'];
 const CHAR_LIST = [
-  { code: 'sean',   name: 'Sean',   img: './chars/sean_phone_2.webp' },   /* phone_1 暫時下架 */
-  { code: 'silas',  name: 'Silas',  img: './chars/silas_phone_2.webp' },  /* phone_1 暫時下架 */
-  { code: 'eli',    name: 'Eli',    img: './chars/eli_phone_2.webp' },    /* phone_1 暫時下架 */
-  { code: 'adrian', name: 'Adrian', img: './chars/adrian_phone_2.webp' }, /* phone_1 暫時下架 */
+  { code: 'sean',   name: 'Sean',   house: 'gry', img: './chars/sean_phone_2.webp' },   /* 葛來分多 / phone_1 暫時下架 */
+  { code: 'silas',  name: 'Silas',  house: 'rav', img: './chars/silas_phone_2.webp' },  /* 雷文克勞 / phone_1 暫時下架 */
+  { code: 'eli',    name: 'Eli',    house: 'huf', img: './chars/eli_phone_2.webp' },    /* 赫夫帕夫 / phone_1 暫時下架 */
+  { code: 'adrian', name: 'Adrian', house: 'sly', img: './chars/adrian_phone_2.webp' }, /* 史萊哲林 / phone_1 暫時下架 */
 ];
+// 角色 pill：依角色所屬學院上邊框色。統一從這裡產生，各處呼叫 charPill(code) 不再手寫 span。
+function charPill(code) {
+  const c = CHAR_LIST.find(x => x.code === code);
+  const name = c ? c.name : code;
+  const dot = c && c.house ? `<span class="t-dot h-${c.house}"></span>` : '';
+  return `<span class="t-chr">${dot}${escapeHtml(name)}</span>`;
+}
 let shelfCat = '';        // '' = 全部
 let shelfChars = [];   // default: none lit = show everything; tap a character to filter to them (OR)
 // 作品管理 (admin works) filter. Type pills include 羊皮紙 (=forum) on top of the 3 novel categories.
@@ -2383,7 +2390,7 @@ function renderNovelBlocks(list, grid, emptyMsg) {
         const a = m.author || '佚名'; authorCount.set(a, (authorCount.get(a) || 0) + 1);   // 依「篇數」統計署名
       });
       const tags = cats.map(c => `<span class="t-cat${c === '吐真劑' ? ' t-cat-green' : ''}">${escapeHtml(c)}</span>`).join('')
-        + chars.map(c => `<span class="t-chr">${escapeHtml(charNames([c]))}</span>`).join('');
+        + chars.map(c => charPill(c)).join('');
       // 系列作者：一般同一人。取成員署名中「最多篇用的那個」（Map 保插入序，平手取序號最小的那篇），
       // 避免個別篇署名打錯字（例：利/莉）被誤湊成「共同作者」。日期 = 系列最新更新那篇的日期。
       let author = '佚名', _best = -1;
@@ -2417,7 +2424,7 @@ function shelfRow(n, inSeries) {
       <div class="row-meta">${escapeHtml(n.author || '佚名')}${ownerTag(n)}${n.created_at ? ` · ${ic('ic-calendar',11)} ${fmtUpdated(n.created_at)}` : ''}</div>
       <div class="row-tags">
         ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${escapeHtml(n.category)}</span>` : ''}
-        ${(n.characters || []).map(c => `<span class="t-chr">${escapeHtml(charNames([c]))}</span>`).join('')}
+        ${(n.characters || []).map(c => charPill(c)).join('')}
       </div>
     </div>`;
 }
@@ -2986,7 +2993,7 @@ function forumPostsHTML(posts) {
         ${p.liked_count ? `<span style="color:var(--accent)">${ic('ic-feather', 11)} 收藏了 ${p.liked_count} 則</span>` : ''}
         ${p.status === 'pending' ? '<span class="pending-tag">' + ic('ic-clock',11) + ' 待審核</span>' : ''}
       </div>
-      ${(p.characters || []).length ? `<div class="row-tags" style="margin-top:7px">${(p.characters || []).map(c => `<span class="t-chr">${escapeHtml(charNames([c]))}</span>`).join('')}</div>` : ''}
+      ${(p.characters || []).length ? `<div class="row-tags" style="margin-top:7px">${(p.characters || []).map(c => charPill(c)).join('')}</div>` : ''}
     </div>`).join('');
 }
 
@@ -3851,7 +3858,7 @@ function openGalleryItem(id, fromAdmin) {
   document.getElementById('gd-img').src = it.image_url;
   document.getElementById('gd-title').textContent = it.title || '';
   document.getElementById('gd-author').textContent = it.author ? ('— ' + it.author) : '— 佚名';
-  document.getElementById('gd-chars').innerHTML = (it.characters || []).map(c => `<span class="t-chr">${escapeHtml(charNames([c]))}</span>`).join('');
+  document.getElementById('gd-chars').innerHTML = (it.characters || []).map(c => charPill(c)).join('');
   const cap = document.getElementById('gd-caption');
   cap.textContent = it.image_caption || ''; cap.style.display = it.image_caption ? '' : 'none';
   renderGdAuth(it);   // 授權信：請求授權鈕＋「授權予／源自」連結
@@ -4290,7 +4297,7 @@ async function loadReviewList() {
           ${n.kind === 'image' && n.image_url ? `<div style="margin-top:8px"><img src="${escapeHtml(n.image_url)}" alt="" style="max-width:160px;max-height:180px;border-radius:6px" /></div>` : ''}
           <div class="row-tags" style="margin-top:6px">
             ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${escapeHtml(n.category)}</span>` : ''}
-            ${(n.characters || []).map(c => `<span class="t-chr">${escapeHtml(charNames([c]))}</span>`).join('')}
+            ${(n.characters || []).map(c => charPill(c)).join('')}
           </div>
           ${n.kind === 'image' ? _slotBtns(n) : ''}
           <div style="display:flex;gap:8px;margin-top:8px">
