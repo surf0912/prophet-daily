@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.80';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.81';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3398,9 +3398,11 @@ function renderGallery() {
     cells = [];
     items.forEach(it => {
       if (it.series) {
-        if (seen.has(it.series)) return;
-        seen.add(it.series);
-        const members = items.filter(x => x.series === it.series).sort((x, y) => (x.series_order || 0) - (y.series_order || 0));
+        // 綁原投稿者(created_by)：同名系列但不同投稿者不混組（擋撞名）
+        const gkey = it.series + '\u0000' + (it.created_by || '');
+        if (seen.has(gkey)) return;
+        seen.add(gkey);
+        const members = items.filter(x => x.series === it.series && x.created_by === it.created_by).sort((x, y) => (x.series_order || 0) - (y.series_order || 0));
         cells.push({ rep: members[0], count: members.length });
       } else {
         cells.push({ rep: it, count: 1 });
@@ -3435,7 +3437,7 @@ function openGalleryItem(id) {
   // 組圖：同系列成員（依 series_order；隱藏的不算入組），供詳情卡左右切換
   const hid = hiddenGallery();
   _galleryGroup = it.series
-    ? _galleryItems.filter(x => x.series === it.series && !hid.has(photoKey(x.image_url))).sort((x, y) => (x.series_order || 0) - (y.series_order || 0))
+    ? _galleryItems.filter(x => x.series === it.series && x.created_by === it.created_by && !hid.has(photoKey(x.image_url))).sort((x, y) => (x.series_order || 0) - (y.series_order || 0))
     : [it];
   _galleryGroupIdx = Math.max(0, _galleryGroup.findIndex(x => x.id === it.id));
   const sEl = document.getElementById('gd-series');
