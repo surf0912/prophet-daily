@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.102';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.103';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -625,9 +625,9 @@ async function initApp() {
   const staff = ['writer', 'admin', 'super_admin'].includes(currentUser.role);
   const adminish = ['admin', 'super_admin'].includes(currentUser.role);
   document.getElementById('admin-nav-btn').style.display = staff ? '' : 'none';  // readers: no 後台
-  { const _beta = isBeta();   // beta：羊皮紙併入意若思鏡，nav 那格改成「留影」
-    const _fn = document.getElementById('forum-nav-btn'); if (_fn) _fn.style.display = _beta ? 'none' : '';
-    const _gn = document.getElementById('gallery-nav-btn'); if (_gn) _gn.style.display = _beta ? '' : 'none'; }
+  { // 羊皮紙已併入意若思鏡、留影升上導覽列（正式版）：nav 一律顯示留影、隱藏羊皮紙
+    const _fn = document.getElementById('forum-nav-btn'); if (_fn) _fn.style.display = 'none';
+    const _gn = document.getElementById('gallery-nav-btn'); if (_gn) _gn.style.display = ''; }
   document.querySelectorAll('.staff-only').forEach(el => el.style.display = staff ? '' : 'none');  // readers: no 防窺工坊
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = adminish ? '' : 'none');  // writers: only 作品管理 + 上傳
   document.querySelectorAll('.super-only').forEach(el => el.style.display = currentUser.role === 'super_admin' ? '' : 'none');  // 監看面板 + 實驗功能開關：只給 SA
@@ -706,15 +706,10 @@ const TOUR_READER = [
     html: "<span class='tour-h'>只看某個人</span>點角色頭像，就只顯示有那位角色的故事，再點一次即可取消；選好兩個頭像再點「同框」，就只看兩人<b>同框</b>的文。<b>雙擊頭像</b>可直接開啟角色設定頁。" },
   { page: 'scroll', target: '#shelf-wish-btn',
     html: "<span class='tour-h'>許願池</span>想看的主題、主角，或想加的網站功能，都能在這裡許願——一律匿名，放心許。<b>被回覆時，貓頭鷹會叼信通知你</b>。" },
-  // 非 beta（穩定版）：羊皮紙在 nav、留影在羊皮紙頁的藥丸
-  { page: 'forum', target: '[data-tour="nav-forum"]', showIf: () => !isBeta(),
-    html: "<span class='tour-h'>匿名羊皮紙</span>從這裡進入論壇體文章，看看大家都在討論些什麼——傳閱時小心點，別被級長抓到！讀文時點留言上的<b>星星</b>就能收藏，右上角「<b>收藏夾</b>」隨時找回來。" },
-  { page: 'forum', target: '#forum-gallery-toggle', showIf: () => !isBeta(),
-    html: "<span class='tour-h'>留影走廊</span>《預言家日報》還有一座<b>留影走廊</b>，掛著大家投稿的角色畫作，可以進去慢慢欣賞。" },
-  // beta（重構版）：羊皮紙併入意若思鏡、留影升上導覽列
-  { page: 'scroll', target: '#shelf-cat-pills', showIf: () => isBeta(),
+  // 羊皮紙已併入意若思鏡、留影升上導覽列（正式版）
+  { page: 'scroll', target: '#shelf-cat-pills',
     html: "<span class='tour-h'>羊皮紙在這裡</span>論壇體文章併進了意若思鏡——故事類型多一格「<b>羊皮紙</b>」，點它就能看大家的論壇貼文，跟小說一起逛；讀文時點<b>星星</b>收藏，收藏夾也通用。" },
-  { target: '#gallery-nav-btn', showIf: () => isBeta(),
+  { target: '#gallery-nav-btn',
     html: "<span class='tour-h'>留影走廊</span>導覽列這一格就是<b>留影走廊</b>，掛著大家投稿的角色畫作，點進去慢慢欣賞。" },
   { page: 'settings', target: '[data-tour="nav-settings"]',
     html: "<span class='tour-h'>個人檔案</span>字體大小、夜間模式、<b>語言選擇</b>都在閱讀偏好；頁面最下方能查看你手上的日報是否為最新一期。想<b>重看這份導覽</b>，到「檔案 → 小工具 → 新手導覽」。" },
@@ -1950,7 +1945,7 @@ function renderFilterBar(catEl, chipEl, curCat, curChars, onChange) {
   catEl.innerHTML =
     CATEGORIES.map(c => `<button class="cat-pill ${curCat === c ? 'active' : ''}" data-c="${c}">${c}</button>`).join('')
     // beta：羊皮紙（論壇）併入意若思鏡，與故事類型並列；只有開了實驗功能的人看得到
-    + (catEl.id === 'shelf-cat-pills' && isBeta() ? `<button class="cat-pill ${curCat === '羊皮紙' ? 'active' : ''}" data-c="羊皮紙">羊皮紙</button>` : '');
+    + (catEl.id === 'shelf-cat-pills' ? `<button class="cat-pill ${curCat === '羊皮紙' ? 'active' : ''}" data-c="羊皮紙">羊皮紙</button>` : '');
   catEl.querySelectorAll('.cat-pill').forEach(b => b.onclick = () => onChange('cat', b.dataset.c));
   chipEl.innerHTML = CHAR_LIST.map(ch =>
     `<div class="char-chip ${curChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}">
@@ -2074,16 +2069,7 @@ function isBeta() {
 function setBetaFlag(on) {
   if (on) localStorage.setItem('pd_beta', '1'); else localStorage.removeItem('pd_beta');
   toast(on ? '實驗功能已開啟' : '實驗功能已關閉');
-  // 即時切換 nav 的羊皮紙⇄留影走廊（原本要重整才更新）
-  const _b = isBeta();
-  { const fn = document.getElementById('forum-nav-btn'); if (fn) fn.style.display = _b ? 'none' : ''; }
-  { const gn = document.getElementById('gallery-nav-btn'); if (gn) gn.style.display = _b ? '' : 'none'; }
-  // 若當下正停在羊皮紙頁（beta 開後那格會消失、active 會落空），導回意若思鏡避免懸空
-  if (_b && document.getElementById('page-forum')?.classList.contains('active')) {
-    const sc = document.querySelector('.nav-btn[data-onclick="showPage(\'scroll\',this)"]');
-    showPage('scroll', sc);
-  }
-  loadCustomChars().then(() => { if (typeof renderShelf === 'function') renderShelf(); });   // 角色列出現/隱藏自創角色 + ＋
+  loadCustomChars().then(() => { if (typeof renderShelf === 'function') renderShelf(); });   // 自創角色 UI（仍是 beta）出現/隱藏
 }
 
 // ── 自創角色 (beta) — private custom characters: name + avatar, edit/delete ────────
@@ -2262,7 +2248,7 @@ function renderShelf() {
     shelfCat, shelfChars, onShelfFilter);
   const grid = document.getElementById('novel-grid');
   // beta：選到「羊皮紙」類型 → 下方書架改渲染論壇貼文（收藏檢視留給階段 1b）
-  if (isBeta() && shelfCat === '羊皮紙') { renderShelfForum(grid, shelfFav); return; }
+  if (shelfCat === '羊皮紙') { renderShelfForum(grid, shelfFav); return; }
   if (novelsError && !novels.length) {
     grid.innerHTML = '<div class="empty-shelf" style="color:var(--accent);cursor:pointer" data-onclick="loadNovels()">載入失敗，點此重試</div>';
     return;
@@ -3386,7 +3372,7 @@ function setForumMode(mode) {
   const pill = document.getElementById('forum-gallery-toggle');
   if (pill) {
     pill.innerHTML = isGallery ? ic('ic-scroll', 15) + ' 羊皮紙' : ic('ic-gallery', 15) + ' 留影走廊';
-    pill.style.display = isBeta() ? 'none' : '';   // beta：留影是獨立 nav 入口，頁頂藥丸不再需要
+    pill.style.display = 'none';   // 留影已是獨立 nav 入口（正式版），頁頂藥丸不再需要
   }
   if (isGallery) loadGallery();
 }
