@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.94';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.95';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3489,9 +3489,11 @@ function renderGallery() {
 let _galleryDetailItem = null;   // 詳情卡目前開的畫作（下載鈕用）
 let _galleryGroup = [];        // 目前詳情卡所屬系列的成員（依 series_order）；單張時就一個元素
 let _galleryGroupIdx = 0;
-function openGalleryItem(id) {
+let _gdFromAdmin = false;   // 詳情卡是不是從作品管理開的（決定要不要顯示時段/裁切等策展工具）
+function openGalleryItem(id, fromAdmin) {
   const it = _galleryItems.find(x => x.id === id) || (window._adminNovels || []).find(x => x.id === id);
   if (!it) return;
+  _gdFromAdmin = !!fromAdmin;
   _galleryDetailItem = it;
   // 組圖：同系列成員（依 series_order；隱藏的不算入組），供詳情卡左右切換
   const hid = hiddenGallery();
@@ -3523,7 +3525,7 @@ function openGalleryItem(id) {
   const adminish = currentUser && ['admin', 'super_admin'].includes(currentUser.role);
   const isOwner = currentUser && (it.owners || []).includes(currentUser.id);
   // 時段是策展動作，只有管理員能排；裁切框是作者對自己作品的顯示調整，作者或管理員都能開。
-  if (adminish || isOwner) {
+  if (_gdFromAdmin && (adminish || isOwner)) {
     const cur = effectiveImageSlot(it);
     const slots = [['am', '早晨'], ['pm', '下午'], ['night', '夜晚']];
     const slotBox = adminish
@@ -3636,7 +3638,7 @@ function galleryGroupNav(dir) {
   const g = _galleryGroup;
   if (!g || g.length < 2) return;
   const i = (_galleryGroupIdx + dir + g.length) % g.length;   // 循環
-  openGalleryItem(g[i].id);
+  openGalleryItem(g[i].id, _gdFromAdmin);
 }
 function closeGalleryDetail() { document.getElementById('gallery-detail').style.display = 'none'; }
 let _fullGroupOn = false;   // 這次全螢幕是不是留影走廊組圖（決定要不要顯示左右箭頭）
@@ -3647,7 +3649,7 @@ function galleryFullNav(dir) {
   const g = _galleryGroup;
   if (!g || g.length < 2) return;
   const i = (_galleryGroupIdx + dir + g.length) % g.length;
-  openGalleryItem(g[i].id);   // 更新詳情卡與 _galleryGroupIdx
+  openGalleryItem(g[i].id, _gdFromAdmin);   // 更新詳情卡與 _galleryGroupIdx
   openGalleryFull();          // 用新的 gd-img 重繪全螢幕（維持組模式＝箭頭續顯示）
 }
 // 任意圖片全螢幕（右下角金色徽記浮水印，即時疊、不改檔案）；留影走廊詳情與角色頁封面共用。
@@ -3799,7 +3801,7 @@ async function setImageSlot(id, slot) {
     });
     // 留影走廊詳情卡若正開著這件作品 → 重繪它的高亮（審核清單的項目不在詳情卡快取裡，不會誤開浮層）。
     if (_galleryDetailItem && _galleryDetailItem.id === id && document.getElementById('gallery-detail')?.style.display === 'flex') {
-      openGalleryItem(id);
+      openGalleryItem(id, _gdFromAdmin);
     }
     loadHomeGalleryCovers();   // 立刻反映到心動封面池
     toast('已設定心動封面時段');
@@ -3997,6 +3999,7 @@ async function submitNewNovel() {
   if (!title) { toast('請輸入作品名稱'); return; }
   if (!category) { toast('請選擇故事類型'); return; }
   if (!content) { toast('請輸入內文'); return; }
+  if (!readChars('new-novel-chars').length) { toast('請至少為作品選一位角色'); return; }
   try {
     const novel = await api('/novels/', { method: 'POST', body: JSON.stringify({
       title,
@@ -4232,10 +4235,10 @@ function renderAdminNovels() {
         return `
       <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
         <div style="display:flex;gap:10px;align-items:flex-start">
-          <img src="${escapeHtml(n.image_url || '')}" alt="" data-onclick="openGalleryItem('${n.id}')" style="width:84px;height:84px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:pointer" />
+          <img src="${escapeHtml(n.image_url || '')}" alt="" data-onclick="openGalleryItem('${n.id}', true)" style="width:84px;height:84px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:pointer" />
           <div style="flex:1;min-width:0">
             <div style="display:flex;gap:5px;flex-wrap:wrap">${badges}</div>
-            <div data-onclick="openGalleryItem('${n.id}')" style="font-size:14px;font-weight:bold;cursor:pointer;margin-top:3px">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>
+            <div data-onclick="openGalleryItem('${n.id}', true)" style="font-size:14px;font-weight:bold;cursor:pointer;margin-top:3px">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>
             <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">${tags}</div>
             <div style="font-size:12px;color:var(--ink-light);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(n.author || '佚名')}${ownerTag(n)}${n.created_at ? ' · ' + ic('ic-calendar',11) + ' ' + fmtUpdated(n.created_at) : ''}</div>
           </div>
