@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.89';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.90';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1956,23 +1956,31 @@ function renderFilterBar(catEl, chipEl, curCat, curChars, onChange) {
   mountCharAndBtn('shelf-char-and');
 }
 
-let _shelfForumLoaded = false;
-function renderShelfForum(grid) {
-  // 論壇資料尚未載入 → 先載一次（羊皮紙 nav 頁進過就已有）
-  if (!_shelfForumLoaded && !forumPosts.length) {
+let _shelfForumLoaded = false, _shelfForumFavLoaded = false;
+function renderShelfForum(grid, fav) {
+  // 論壇資料尚未載入 → 先載一次（全部貼文用 kind=forum；收藏用 my-liked，與羊皮紙頁同一套）
+  const err = () => { grid.innerHTML = '<p style="padding:40px 8px;color:var(--accent);text-align:center;cursor:pointer" data-onclick="renderShelf()">載入失敗，點此重試</p>'; };
+  if (fav ? (!_shelfForumFavLoaded && !forumLiked.length) : (!_shelfForumLoaded && !forumPosts.length)) {
     grid.innerHTML = '<div class="spinner"></div>';
-    _shelfForumLoaded = true;
-    api('/novels/?kind=forum').then(d => { forumPosts = d || []; if (shelfCat === '羊皮紙') renderShelf(); })
-      .catch(() => { grid.innerHTML = '<p style="padding:40px 8px;color:var(--accent);text-align:center;cursor:pointer" data-onclick="renderShelf()">載入失敗，點此重試</p>'; });
+    if (fav) {
+      _shelfForumFavLoaded = true;
+      api('/novels/my-liked').then(d => { forumLiked = d || []; if (shelfCat === '羊皮紙' && shelfFav) renderShelf(); }).catch(err);
+    } else {
+      _shelfForumLoaded = true;
+      api('/novels/?kind=forum').then(d => { forumPosts = d || []; if (shelfCat === '羊皮紙' && !shelfFav) renderShelf(); }).catch(err);
+    }
     return;
   }
   const q = (document.getElementById('shelf-search-input')?.value || '').trim().toLowerCase();
-  let posts = [...forumPosts].sort((x, y) => new Date(y.created_at) - new Date(x.created_at));
+  let posts = fav ? [...forumLiked] : [...forumPosts].sort((x, y) => new Date(y.created_at) - new Date(x.created_at));
   posts = applyClassFilter(posts, '', shelfChars);   // 共用意若思鏡的角色篩選
   if (q) posts = posts.filter(p => matchesQuery(p, q));
+  const empty = fav
+    ? (q ? '找不到符合的貼文' : '你還沒收藏任何羊皮紙<br><small>在喜歡的留言點羽毛筆就會收進這裡</small>')
+    : (q ? '找不到符合的貼文' : '目前還沒有論壇貼文');
   // 包一層 .forum-list：沿用羊皮紙頁的左右留白（novel-list 是 padding:0，直接放會貼邊）
   grid.innerHTML = `<div class="forum-list">${posts.length ? forumPostsHTML(posts)
-    : `<p style="padding:40px 8px;color:#888;text-align:center">${q ? '找不到符合的貼文' : '目前還沒有論壇貼文'}</p>`}</div>`;
+    : `<p style="padding:40px 8px;color:#888;text-align:center">${empty}</p>`}</div>`;
 }
 
 function onShelfFilter(type, val) {
@@ -2236,7 +2244,7 @@ function renderShelf() {
     shelfCat, shelfChars, onShelfFilter);
   const grid = document.getElementById('novel-grid');
   // beta：選到「羊皮紙」類型 → 下方書架改渲染論壇貼文（收藏檢視留給階段 1b）
-  if (isBeta() && shelfCat === '羊皮紙' && !shelfFav) { renderShelfForum(grid); return; }
+  if (isBeta() && shelfCat === '羊皮紙') { renderShelfForum(grid, shelfFav); return; }
   if (novelsError && !novels.length) {
     grid.innerHTML = '<div class="empty-shelf" style="color:var(--accent);cursor:pointer" data-onclick="loadNovels()">載入失敗，點此重試</div>';
     return;
