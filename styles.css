@@ -582,6 +582,8 @@
     .reader-font-ctrl span { color: var(--gold-lt); font-size: 12px; min-width: 18px; text-align: center; }
     /* 文首插圖（artwork/<作品id>.jpg）：深木框＋內圈金髮絲線（V2），像掛在牆上的一幅畫。
        --chrome/--gold 不隨夜間翻轉，日夜模式都成立。 */
+    /* 授權畫作的雙署名：文首圖下方一行「文／X　圖／Y」 */
+    .reader-byline { text-align: center; font-size: 12.5px; color: var(--ink-light); margin: -14px 0 20px; letter-spacing: .04em; }
     .reader-artwork {
       display: block; width: 100%; height: auto; margin: 0 0 22px;
       border: 12px solid var(--chrome);

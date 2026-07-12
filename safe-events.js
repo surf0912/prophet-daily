@@ -28,6 +28,8 @@
     'openGalleryItem', 'closeGalleryDetail', 'openGalleryFull', 'closeGalleryFull', 'setImageSlot', 'downloadGalleryImage',
     'openCoverCrop', 'closeCoverCrop', 'saveCoverCrop', 'clearCoverCrop', 'ccrDragStart', 'ccrZoom',
     'setGalleryView', 'galleryGroupNav', 'galleryFullNav', 'toggleHideGalleryImage',
+    'setReviewMode', 'galleryAuthAsk', 'sendAuthRequest', 'openAuthDecide', 'saveAuthDecide',
+    'withdrawAuth', 'adminResetAuth', 'applyAuthArt', 'galleryOpenWork', 'readerAuthClick', 'owlOpenAuth',
     'submitForumPost', 'submitNewNovel', 'switchAdminTab', 'tempBan', 'toggleCcShare', 'toggleCharAnd', 'toggleCoverPhoto',
     'toggleDark', 'toggleFavOwl', 'toggleFont', 'toggleForumFav', 'toggleGalleryFavorite', 'toggleLike', 'toggleLock', 'toggleOwlAlways', 'togglePwEdit', 'toggleTapFx',
     'toggleReaderDark', 'toggleReaderFavorite', 'toggleShelfFav', 'toggleCoverGallery', 'toggleSeries', 'tourBack', 'tourNext',

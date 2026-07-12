@@ -392,6 +392,7 @@
       <div class="admin-tabs">
         <button class="admin-tab active" data-tab="novels" data-onclick="resetAdminNovelScope('novels')">作品管理</button>
         <button class="admin-tab" data-tab="upload" data-onclick="switchAdminTab('upload')">上傳</button>
+        <button class="admin-tab" id="auths-tab-btn" data-tab="auths" data-onclick="switchAdminTab('auths')" style="display:none">授權</button>
         <button class="admin-tab admin-only" data-tab="review" data-onclick="switchAdminTab('review')">審核</button>
         <button class="admin-tab admin-only" data-tab="users" data-onclick="switchAdminTab('users')">用戶管理</button>
         <button class="admin-tab admin-only" data-tab="invites" data-onclick="switchAdminTab('invites')">邀請連結</button>
@@ -419,6 +420,7 @@
           <div class="form-group"><label>標題</label><input type="text" id="new-image-title" placeholder="畫作標題" /></div>
           <div class="form-group"><label>作者署名（選填）</label><input type="text" id="new-image-author" placeholder="留空則佚名" /></div>
           <div class="form-group"><label>說明（選填）</label><input type="text" id="new-image-caption" maxlength="50" placeholder="給這幅畫留一句話（至多五十字，可留白）" /></div>
+          <div class="form-group" id="new-image-source-row" style="display:none"><label>源自（經授權的文章，選填）</label><select id="new-image-source" style="width:100%;padding:9px 10px;font-family:inherit;font-size:13px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></select></div>
           <div class="form-group"><label>畫框</label><div id="image-frame-picker" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
           <div class="form-group"><label>角色（至少選一位）</label><div id="new-image-chars" class="char-picker"></div></div>
           <button class="btn-primary" data-onclick="submitImageWork()" style="width:100%"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-send"/></svg> 送出畫作</button>
@@ -479,8 +481,17 @@
         </div>
       </div>
       <div id="admin-review" class="admin-pane">
-        <p style="font-size:12px;color:var(--ink-light);margin-bottom:12px">作者上傳的內容需審核通過才會公開給所有人。</p>
+        <div id="review-mode-pills" style="display:flex;gap:6px;margin-bottom:10px">
+          <button class="cat-pill active" id="review-pill-works" data-onclick="setReviewMode('works')">待審作品</button>
+          <button class="cat-pill" id="review-pill-auths" data-onclick="setReviewMode('auths')">授權信</button>
+        </div>
+        <p id="review-works-note" style="font-size:12px;color:var(--ink-light);margin-bottom:12px">作者上傳的內容需審核通過才會公開給所有人。</p>
         <div id="admin-review-list"></div>
+        <div id="admin-review-auths" style="display:none"></div>
+      </div>
+      <div id="admin-auths" class="admin-pane">
+        <p style="font-size:12px;color:var(--ink-light);margin-bottom:12px">授權信一來一回即封緘：對方回覆前可撤回；被婉拒的信無法重寄。</p>
+        <div id="auth-mailbox"></div>
       </div>
       <div id="admin-novels" class="admin-pane">
         <p id="admin-novel-scope-note" style="font-size:12px;color:var(--ink-light);margin-bottom:10px"></p>
@@ -579,6 +590,8 @@
       <div id="gd-author" class="gd-author"></div>
       <div id="gd-chars" class="row-tags" style="margin-top:8px"></div>
       <div id="gd-caption" class="gd-caption"></div>
+      <div id="gd-authlinks" style="display:none;font-size:12px;margin-top:8px;text-align:center"></div>
+      <button id="gd-auth" style="display:none;margin-top:12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer"></button>
       <div class="gd-hint">輕觸畫作可全螢幕欣賞</div>
       <button id="gd-hide" data-onclick="toggleHideGalleryImage()" style="display:none;margin-top:12px;background:none;border:1px solid var(--ink-light);color:var(--ink-light);border-radius:6px;padding:7px 12px;font-size:12px;cursor:pointer;align-items:center;gap:6px"></button>
       <div id="gd-admin" class="admin-only" style="display:none;margin-top:12px"></div>
@@ -623,6 +636,10 @@
     <button id="prev-ch-btn" data-onclick="navigateChapter(-1)" disabled>← 上一章</button>
     <span id="reader-ch-label" style="font-size:12px;color:var(--ink-light);align-self:center">—</span>
     <button id="next-ch-btn" data-onclick="navigateChapter(1)">下一章 →</button>
+  </div>
+  <!-- 授權信：篇末的衍生創作入口（writer 以上、非本篇作者才顯示） -->
+  <div id="reader-auth-wrap" style="display:none;text-align:center;padding:4px 16px 16px">
+    <button id="reader-auth-btn" data-onclick="readerAuthClick()" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;padding:8px 16px;font-size:12.5px;cursor:pointer;font-family:inherit"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 想為這篇作畫？向作者請求授權</button>
   </div>
   <!-- 系列(上下集)導覽：在同系列的「不同作品」之間切換 -->
   <div class="chapter-nav" id="reader-series-nav" style="display:none">
@@ -695,6 +712,39 @@
   </div>
 </div>
 
+<!-- 授權信：寫信彈窗（從留影詳情卡 z1000 之上疊開，需更高層級） -->
+<div class="perm-modal" id="auth-request-modal" style="z-index:1100">
+  <div class="perm-modal-inner">
+    <h3><svg width="17" height="17" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-edit"/></svg> 寄一封授權信</h3>
+    <p id="auth-req-target" style="font-size:13px;margin:6px 0 10px"></p>
+    <div id="auth-req-work-row">
+      <p style="font-size:12px;color:var(--ink-light);margin:0 0 6px">用於哪篇文章（僅列出已完成、尚未發佈的）</p>
+      <select id="auth-req-work" style="width:100%;padding:9px 10px;font-family:inherit;font-size:13px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></select>
+      <p id="auth-req-work-hint" style="display:none;font-size:12px;color:var(--accent);margin:6px 0 0">請先完成文章並上傳，再回來請求授權。</p>
+    </div>
+    <p style="font-size:12px;color:var(--ink-light);margin:12px 0 6px">附言（至多 140 字，只此一句）</p>
+    <textarea id="auth-req-note" rows="3" maxlength="140" placeholder="……" style="width:100%;box-sizing:border-box;resize:vertical;min-height:70px;padding:10px 12px;font-family:inherit;font-size:13.5px;line-height:1.7;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('auth-request-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" id="auth-req-send" style="flex:1;padding:12px;font-size:13px" data-onclick="sendAuthRequest()">寄出授權信</button>
+    </div>
+  </div>
+</div>
+
+<!-- 授權信：同意／婉拒彈窗 -->
+<div class="perm-modal" id="auth-decide-modal" style="z-index:1100">
+  <div class="perm-modal-inner">
+    <h3 id="auth-decide-title">回覆授權信</h3>
+    <p id="auth-decide-sub" style="font-size:13px;margin:6px 0 10px;color:var(--ink-light)"></p>
+    <p style="font-size:12px;color:var(--ink-light);margin:0 0 6px">留一句話給對方（可留白）</p>
+    <textarea id="auth-decide-note" rows="3" maxlength="140" placeholder="……" style="width:100%;box-sizing:border-box;resize:vertical;min-height:70px;padding:10px 12px;font-family:inherit;font-size:13.5px;line-height:1.7;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('auth-decide-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" id="auth-decide-confirm" style="flex:1;padding:12px;font-size:13px" data-onclick="saveAuthDecide()">確定</button>
+    </div>
+  </div>
+</div>
+
 <!-- Series binding modal -->
 <div class="perm-modal" id="series-modal">
   <div class="perm-modal-inner">
@@ -738,6 +788,7 @@
     <div class="form-group" id="editwork-header-group">
       <label>頁首圖</label>
       <div id="editwork-header-preview" style="margin-bottom:6px"></div>
+      <div id="editwork-auth-arts" style="display:none;margin-bottom:8px"></div>
       <div style="display:flex;gap:8px">
         <button type="button" data-onclick="pickEditHeader()" style="flex:1;font-size:12px;padding:8px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 選擇／更換</button>
         <button type="button" id="editwork-header-remove" data-onclick="removeEditHeader()" style="flex:1;font-size:12px;padding:8px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">移除頁首圖</button>
