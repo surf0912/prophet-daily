@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.103';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.04';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1813,11 +1813,30 @@ async function setFeedbackStatus(id, kind, status) {
   try { await api(`/feedback/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }); loadFeedback(kind); }
   catch (e) { toast(e.message); }
 }
-async function replyFeedback(id, kind) {
-  const reply = prompt('回覆內容(留白可清除):');
-  if (reply === null) return;
-  try { await api(`/feedback/${id}`, { method: 'PATCH', body: JSON.stringify({ admin_reply: reply || ' ' }) }); loadFeedback(kind); }
-  catch (e) { toast(e.message); }
+let _replyCtx = null;
+function replyFeedback(id, kind) {
+  _replyCtx = { id, kind };
+  const ta = document.getElementById('fb-reply-text');
+  const cnt = document.getElementById('fb-reply-count');
+  if (ta) {
+    ta.value = '';
+    if (cnt) cnt.textContent = '0';
+    ta.oninput = () => { if (cnt) cnt.textContent = String(ta.value.length); };
+  }
+  document.getElementById('fb-reply-modal').classList.add('open');
+  if (ta) setTimeout(() => ta.focus(), 50);
+}
+async function saveFeedbackReply() {
+  if (!_replyCtx) return;
+  const { id, kind } = _replyCtx;
+  const ta = document.getElementById('fb-reply-text');
+  const reply = ta ? ta.value.trim() : '';
+  try {
+    await api(`/feedback/${id}`, { method: 'PATCH', body: JSON.stringify({ admin_reply: reply || ' ' }) });
+    document.getElementById('fb-reply-modal').classList.remove('open');
+    _replyCtx = null;
+    loadFeedback(kind);
+  } catch (e) { toast(e.message); }
 }
 async function deleteFeedbackItem(id, kind) {
   if (!confirm('確定刪除?')) return;
