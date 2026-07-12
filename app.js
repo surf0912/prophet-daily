@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.85';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.86';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -636,7 +636,7 @@ async function initApp() {
   loadOwnerNames();   // super_admin only: map owner uuid → 巫師全名 for the owner hint
   loadFavIds().then(renderFavUpdates);   // 意若思鏡 收藏夾 ids + 追蹤更新 alert
   loadHomeGalleryCovers();   // P2：留影走廊已排時段的畫作併入心動封面池
-  loadCoverCrops().then(() => renderGreeting());   // 封面裁切框：載完重繪一次心動，讓已設定的框立即生效
+  loadCoverCrops().then(() => renderGreeting(false));   // 封面裁切框：載完把框貼到「同一張」封面上，不重抽
   loadAppSettings();   // 全域設定（通知保留天數等）→ 載入後重算貓頭鷹
   renderSettings();
   renderGreeting();
@@ -1027,6 +1027,7 @@ const CHAR_PROFILE = {
   Adrian: { bio: '', gallery: [] },
 };
 let _homeChar = null;   // 目前顯示在心動封面的角色(給封面愛心 → 角色頁用)
+let _homePick = null;   // 目前這輪選中的封面 {char,img,slot}；載完裁切框／畫作等「重貼」時沿用同一張，不重抽（避免人物跳動）
 // 從留影走廊隱藏的畫作（photoKey 集合）。隱藏 = 牆上與心動封面都不出現，只影響本人、跨裝置同步。
 function hiddenGallery() {
   return new Set((currentUser && currentUser.hidden_gallery ? String(currentUser.hidden_gallery).split(',') : [])
@@ -1204,11 +1205,12 @@ async function loadHomeGalleryCovers() {
   }
   catch { _homeGalleryCovers = []; }
   // 抓到資料時，若正停在心動頁就重繪讓畫作即時登場
-  if (_homeGalleryCovers.length && document.getElementById('page-home')?.classList.contains('active')) renderGreeting();
+  if (_homeGalleryCovers.length && document.getElementById('page-home')?.classList.contains('active')) renderGreeting(false);
 }
 
 let _heroSeq = 0;   // 心動封面載入的渲染序號（防舊計時器/回呼蓋掉新一輪）
-function renderGreeting() {
+// repick=true 才重抽封面；載入資料後的「重貼」(裁切框/畫作/暱稱)傳 false，沿用上一張，避免整頁人物一直跳。
+function renderGreeting(repick = true) {
   const h = new Date().getHours();
   // 時段 index：0=早上(5-11) 1=中午(12-13) 2=下午(14-17) 3=晚上/深夜(18-4)
   const timeIdx = h >= 5 && h < 12 ? 0 : h >= 12 && h < 14 ? 1 : h >= 14 && h < 18 ? 2 : 3;
@@ -1240,7 +1242,10 @@ function renderGreeting() {
     : slotOf(x) === slot);
   // 保底：使用者的選取在當前時段沒有任何圖 → 忽略時段，改在他選的那幾張裡隨機輪轉(不留白)。
   if (!pool.length) pool = selected;
-  const pick = pool[Math.floor(Math.random() * pool.length)] || { char: CHARS[0], img: CHARS[0].img };
+  // 「重貼」時沿用上一張(仍在候選池裡才用，否則退回重抽)，讓載入資料的回呼不會把人物換掉。
+  const reusable = !repick && _homePick && pool.some(x => photoKey(x.img) === photoKey(_homePick.img));
+  const pick = reusable ? _homePick : (pool[Math.floor(Math.random() * pool.length)] || { char: CHARS[0], img: CHARS[0].img });
+  _homePick = pick;
   const char = pick.char;
   _homeChar = char;
   const heart = document.getElementById('hero-heart');
@@ -1631,10 +1636,19 @@ async function renderVersionStatus() {
 async function updateToLatest() {
   try {
     if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.unregister()));
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        // 抓最新 service-worker.js → 安裝新版 SW（它會用版本戳 no-store 預抓，拿到「真的」新檔，
+        // 不受鏡像／CDN 舊快取影響）。等它 activated 再重載，讓它 cache-first 供應剛預抓的新檔。
+        // 不再 unregister＋清全部快取——那會退回瀏覽器的舊 HTTP 快取，正是鏡像一直換不動的原因。
+        await reg.update();
+        const sw = reg.installing || reg.waiting;
+        if (sw) await new Promise((res) => {
+          sw.addEventListener('statechange', () => { if (sw.state === 'activated') res(); });
+          setTimeout(res, 4000);   // 保底：等不到就直接重載
+        });
+      }
     }
-    if (window.caches) { const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); }
   } catch (e) { /* best effort */ }
   location.reload();
 }
@@ -3721,7 +3735,7 @@ function _afterCropChange(url) {
   document.querySelectorAll('#cp-body .cp-shot[data-full]').forEach(el => {
     if (photoKey(el.dataset.full) === photoKey(url)) applyCoverCropToEl(el, el.dataset.full);
   });
-  if (typeof renderGreeting === 'function') renderGreeting();   // 心動 hero 依新框重繪
+  if (typeof renderGreeting === 'function') renderGreeting(false);   // 心動 hero 依新框重繪同一張，不重抽
 }
 
 async function setImageSlot(id, slot) {
@@ -4676,7 +4690,7 @@ async function saveNickname() {
     currentUser.nickname = updated.nickname || nickname;
     toast('巫師暱稱已更新');
     renderSettings();
-    renderGreeting();
+    renderGreeting(false);   // 只更新問候語，不重抽封面
   } catch (e) { toast('' + e.message); }
 }
 
@@ -4773,13 +4787,18 @@ async function selfHealIfStale() {
     const m = (await res.text()).match(/prophet-daily-(v[\d.]+)/);
     if (!m || m[1] === APP_VERSION) return;             // up to date (or can't tell) → carry on
     sessionStorage.setItem('pd_healed', m[1]);          // guard against reload loops
+    // 讓新版 SW（cache-busting 預抓到真新檔）上線後由它 cache-first 供應；不再 unregister＋清全部快取——
+    // 那會把剛裝好的新版 SW 砍掉、退回鏡像的舊 HTTP 快取，反而讓裝置永遠卡在舊版更新不了。
     if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.unregister()));
-    }
-    if (window.caches) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        await reg.update();
+        const sw = reg.installing || reg.waiting;
+        if (sw) await new Promise((r) => {
+          sw.addEventListener('statechange', () => { if (sw.state === 'activated') r(); });
+          setTimeout(r, 3000);   // 保底：等不到就直接重載
+        });
+      }
     }
     location.reload();
     await new Promise(() => {});   // freeze the rest of boot; the reload takes over

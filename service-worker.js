@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prophet-daily-v3.85';
+const CACHE_NAME = 'prophet-daily-v3.86';
 // 圖片與字型的常駐快取：跨版本保留（activate 不清），避免每次發版把使用者存好的
 // ~10MB 心動封面全部作廢重抓。內容物都是不改內容的靜態檔；若真要強制換新，把 -v1 進位。
 const STATIC_CACHE = 'prophet-daily-static-v1';
@@ -22,7 +22,17 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
+  // Precache each asset with a version-stamped, no-store fetch, then store it under its BARE url.
+  // Why: the Render mirror (and any CDN/HTTP cache) can hand a plain `addAll` a STALE app.js, so the
+  // new version's cache ends up holding old code — APP_VERSION never advances and the update button
+  // loops forever. The ?swv=<version> query is a guaranteed cache-miss → the real new file from
+  // origin; storing under the bare url means the fetch handler (which matches bare requests) serves
+  // it. Per-asset catch so one 404 can't fail the whole install.
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => Promise.all(
+    ASSETS.map((u) => fetch(new Request(u + (u.includes('?') ? '&' : '?') + 'swv=' + CACHE_NAME, { cache: 'no-store' }))
+      .then((res) => (res && res.ok) ? cache.put(u, res) : undefined)
+      .catch(() => undefined))
+  )));
   self.skipWaiting();
 });
 
