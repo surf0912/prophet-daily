@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.100';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.101';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2068,6 +2068,15 @@ function isBeta() {
 function setBetaFlag(on) {
   if (on) localStorage.setItem('pd_beta', '1'); else localStorage.removeItem('pd_beta');
   toast(on ? '實驗功能已開啟' : '實驗功能已關閉');
+  // 即時切換 nav 的羊皮紙⇄留影走廊（原本要重整才更新）
+  const _b = isBeta();
+  { const fn = document.getElementById('forum-nav-btn'); if (fn) fn.style.display = _b ? 'none' : ''; }
+  { const gn = document.getElementById('gallery-nav-btn'); if (gn) gn.style.display = _b ? '' : 'none'; }
+  // 若當下正停在羊皮紙頁（beta 開後那格會消失、active 會落空），導回意若思鏡避免懸空
+  if (_b && document.getElementById('page-forum')?.classList.contains('active')) {
+    const sc = document.querySelector('.nav-btn[data-onclick="showPage(\'scroll\',this)"]');
+    showPage('scroll', sc);
+  }
   loadCustomChars().then(() => { if (typeof renderShelf === 'function') renderShelf(); });   // 角色列出現/隱藏自創角色 + ＋
 }
 
