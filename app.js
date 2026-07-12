@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.81';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.82';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3580,9 +3580,24 @@ function galleryGroupNav(dir) {
   openGalleryItem(g[i].id);
 }
 function closeGalleryDetail() { document.getElementById('gallery-detail').style.display = 'none'; }
-function openGalleryFull() { openImageFull(document.getElementById('gd-img').src); }
+let _fullGroupOn = false;   // 這次全螢幕是不是留影走廊組圖（決定要不要顯示左右箭頭）
+function openGalleryFull() { openImageFull(document.getElementById('gd-img').src, true); }
+// 組內切換（左右按鈕，非滑動——與全站慣例一致）：切到同組上一/下一幅，循環。
+function galleryFullNav(dir) {
+  if (!_fullGroupOn) return;
+  const g = _galleryGroup;
+  if (!g || g.length < 2) return;
+  const i = (_galleryGroupIdx + dir + g.length) % g.length;
+  openGalleryItem(g[i].id);   // 更新詳情卡與 _galleryGroupIdx
+  openGalleryFull();          // 用新的 gd-img 重繪全螢幕（維持組模式＝箭頭續顯示）
+}
 // 任意圖片全螢幕（右下角金色徽記浮水印，即時疊、不改檔案）；留影走廊詳情與角色頁封面共用。
-function openImageFull(src) {
+// fromGallery=true 且該畫屬於多幅組圖時，顯示組內切換箭頭；角色頁封面等直接呼叫（無箭頭）。
+function openImageFull(src, fromGallery) {
+  _fullGroupOn = !!fromGallery && Array.isArray(_galleryGroup) && _galleryGroup.length > 1;
+  const prev = document.getElementById('gf-prev'), next = document.getElementById('gf-next');
+  if (prev) prev.style.display = _fullGroupOn ? 'flex' : 'none';
+  if (next) next.style.display = _fullGroupOn ? 'flex' : 'none';
   const img = document.getElementById('gf-img');
   const stage = document.getElementById('gf-stage');
   // 橫幅圖＋直式螢幕：把整個 stage（圖＋右下角浮水印）旋 90° 填滿螢幕（旋轉後 pre-rotation 寬對到螢幕高、高對到螢幕寬）
