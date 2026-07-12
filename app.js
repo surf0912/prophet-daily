@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.86';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.87';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3741,11 +3741,21 @@ function _afterCropChange(url) {
 async function setImageSlot(id, slot) {
   try {
     await api(`/novels/${id}/image-slot`, { method: 'PATCH', body: JSON.stringify({ slot }) });
-    // 詳情卡可能從留影走廊(_galleryItems)或作品管理(_adminNovels)開啟——兩份快取＋當前詳情物件都更新，
-    // 否則從作品管理開的那張重繪時讀到舊值，按鈕不高亮（看起來像「沒反應」）。
-    [_galleryDetailItem, ...(_galleryItems || []), ...(window._adminNovels || [])]
+    // 更新所有可能持有這件作品的快取，讓高亮即時反映（含審核清單 _reviewPending——沒更新它，
+    // 審核頁選了時段按鈕不會高亮，看起來像沒反應；approveNovel 的必選檢查也會讀到舊值）。
+    [_galleryDetailItem, ...(_galleryItems || []), ...(window._adminNovels || []), ...(window._reviewPending || [])]
       .forEach(o => { if (o && o.id === id) o.image_slot = slot; });
-    openGalleryItem(id);   // 重繪高亮
+    // 審核清單：就地重刷這列三顆時段鈕的高亮（不整個重載、不閃 spinner）。
+    document.querySelectorAll(`#admin-review-list button[data-onclick^="setImageSlot('${id}'"]`).forEach(btn => {
+      const m = (btn.getAttribute('data-onclick') || '').match(/,'(\w+)'\)/);
+      const on = m && m[1] === slot;
+      btn.style.background = on ? 'var(--scarlet)' : 'var(--parchment2)';
+      btn.style.color = on ? 'var(--on-dark)' : 'var(--ink-light)';
+    });
+    // 留影走廊詳情卡若正開著這件作品 → 重繪它的高亮（審核清單的項目不在詳情卡快取裡，不會誤開浮層）。
+    if (_galleryDetailItem && _galleryDetailItem.id === id && document.getElementById('gallery-detail')?.style.display === 'flex') {
+      openGalleryItem(id);
+    }
     loadHomeGalleryCovers();   // 立刻反映到心動封面池
     toast('已設定心動封面時段');
   } catch (e) { toast(e.message); }
