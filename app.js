@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.77';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.78';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3308,8 +3308,6 @@ function setForumMode(mode) {
   if (isGallery) galleryView = 'all';   // 進留影走廊一律回「全部」檢視（與羊皮紙進頁行為一致）
   const fav = document.getElementById('forum-fav-btn');
   if (fav) fav.classList.toggle('on', isGallery ? false : forumView === 'liked');
-  const hidBtn = document.getElementById('gallery-hidden-btn');   // 「已隱藏」鈕只在留影走廊模式出現
-  if (hidBtn) { hidBtn.style.display = isGallery ? '' : 'none'; hidBtn.classList.remove('on'); }
   const title = document.getElementById('forum-title');
   if (title) title.innerHTML = isGallery
     ? ic('ic-gallery', 20).replace('-2px', '-3px') + ' 留影走廊'
@@ -3331,18 +3329,12 @@ function onGalleryFilter(type, val) {
 }
 
 function toggleGalleryFav() {
-  galleryView = galleryView === 'fav' ? 'all' : 'fav';
-  const btn = document.getElementById('forum-fav-btn'); if (btn) btn.classList.toggle('on', galleryView === 'fav');
-  const hid = document.getElementById('gallery-hidden-btn'); if (hid) hid.classList.remove('on');   // 兩檢視互斥
+  // 收藏夾鈕：不在收藏夾 → 進「已收藏」；已在收藏夾（含已隱藏子分頁）→ 回全部
+  galleryView = (galleryView === 'fav' || galleryView === 'hidden') ? 'all' : 'fav';
   renderGallery();
 }
-// 已隱藏檢視：回收站——把藏起來的畫作找回來（在詳情卡取消隱藏）。與收藏夾互斥。
-function toggleGalleryHidden() {
-  galleryView = galleryView === 'hidden' ? 'all' : 'hidden';
-  const hid = document.getElementById('gallery-hidden-btn'); if (hid) hid.classList.toggle('on', galleryView === 'hidden');
-  const fav = document.getElementById('forum-fav-btn'); if (fav) fav.classList.remove('on');
-  renderGallery();
-}
+// 收藏夾內的小分頁：已收藏 ⇄ 已隱藏（已隱藏＝回收站，在詳情卡取消隱藏可找回）。高亮交給 renderGallery。
+function setGalleryView(v) { galleryView = v; renderGallery(); }
 async function loadGallery() {
   const wall = document.getElementById('gallery-wall');
   wall.style.columns = '1';
@@ -3358,6 +3350,13 @@ function renderGallery() {
   const inFav = galleryView === 'fav';
   const inHidden = galleryView === 'hidden';
   const chromeOff = inFav || inHidden;   // 收藏夾／已隱藏檢視都收起角色列（同羊皮紙）
+  const favBtn = document.getElementById('forum-fav-btn'); if (favBtn) favBtn.classList.toggle('on', chromeOff);
+  const favTabs = document.getElementById('gallery-fav-tabs');
+  if (favTabs) {
+    favTabs.style.display = chromeOff ? 'flex' : 'none';
+    const gf = document.getElementById('gtab-fav'); if (gf) gf.classList.toggle('on', inFav);
+    const gh = document.getElementById('gtab-hidden'); if (gh) gh.classList.toggle('on', inHidden);
+  }
   const fb = document.getElementById('gallery-filter-bar');
   if (fb) {
     fb.style.display = chromeOff ? 'none' : '';

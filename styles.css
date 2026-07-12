@@ -293,6 +293,10 @@
     .cat-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
     /* 作品管理：種類分頁膠囊（附件數） */
     .admin-kind-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    /* 留影走廊收藏夾內的小分頁：已收藏 ⇄ 已隱藏（木紋牆上，用淺色藥丸） */
+    #gallery-fav-tabs { display: flex; }
+    .gfav-tab { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; font-size: 13px; border: 1px solid var(--gold); border-radius: 16px; background: rgba(244,232,193,.92); color: var(--ink-light); cursor: pointer; }
+    .gfav-tab.on { background: var(--scarlet); color: var(--on-dark); border-color: var(--accent); }
     .kind-pill { display: inline-flex; align-items: center; gap: 5px; padding: 7px 13px; font-size: 13px; border: 1px solid var(--gold); border-radius: 16px; background: var(--parchment2); color: var(--ink-light); cursor: pointer; }
     .kind-pill.active { background: var(--scarlet); color: var(--on-dark); border-color: var(--accent); }
     .kind-pill .cnt { font-size: 12px; opacity: .62; font-weight: 600; }
