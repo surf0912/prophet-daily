@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.79';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.80';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3388,10 +3388,33 @@ function renderGallery() {
     return;
   }
   wall.style.columns = '';   // 交回 CSS 的雙欄
-  wall.innerHTML = items.map(it => {
+  // 組圖：all 檢視下同系列收成一組，只露首圖（series_order 最小）當封面、角標顯示張數。
+  // 收藏／已隱藏檢視不分組（那是個人挑選，可能只含組內部分），一張張列。
+  let cells;
+  if (chromeOff) {
+    cells = items.map(it => ({ rep: it, count: 1 }));
+  } else {
+    const seen = new Set();
+    cells = [];
+    items.forEach(it => {
+      if (it.series) {
+        if (seen.has(it.series)) return;
+        seen.add(it.series);
+        const members = items.filter(x => x.series === it.series).sort((x, y) => (x.series_order || 0) - (y.series_order || 0));
+        cells.push({ rep: members[0], count: members.length });
+      } else {
+        cells.push({ rep: it, count: 1 });
+      }
+    });
+  }
+  const _stackBadge = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-5 4 4"/></svg>`;
+  wall.innerHTML = cells.map(cell => {
+    const it = cell.rep;
     const fr = GALLERY_FRAMES.some(([c]) => c === it.image_frame) ? it.image_frame : 'ebony';
-    return `<div class="gwall-item" data-onclick="openGalleryItem('${it.id}')">
+    const grp = cell.count > 1;
+    return `<div class="gwall-item${grp ? ' gwall-stack' : ''}" data-onclick="openGalleryItem('${it.id}')">
       <div class="gframe fr-${fr}"><img src="${escapeHtml(it.image_url)}" alt="${escapeHtml(it.title || '')}" loading="lazy" /></div>
+      ${grp ? `<div class="gstack-badge">${_stackBadge}${cell.count}</div>` : ''}
     </div>`;
   }).join('');
   // 圖載到才淡入（配 CSS 的 3:4 佔位畫框）；載失敗也解除佔位，避免永遠空框
@@ -3403,10 +3426,27 @@ function renderGallery() {
 }
 
 let _galleryDetailItem = null;   // 詳情卡目前開的畫作（下載鈕用）
+let _galleryGroup = [];        // 目前詳情卡所屬系列的成員（依 series_order）；單張時就一個元素
+let _galleryGroupIdx = 0;
 function openGalleryItem(id) {
   const it = _galleryItems.find(x => x.id === id) || (window._adminNovels || []).find(x => x.id === id);
   if (!it) return;
   _galleryDetailItem = it;
+  // 組圖：同系列成員（依 series_order；隱藏的不算入組），供詳情卡左右切換
+  const hid = hiddenGallery();
+  _galleryGroup = it.series
+    ? _galleryItems.filter(x => x.series === it.series && !hid.has(photoKey(x.image_url))).sort((x, y) => (x.series_order || 0) - (y.series_order || 0))
+    : [it];
+  _galleryGroupIdx = Math.max(0, _galleryGroup.findIndex(x => x.id === it.id));
+  const sEl = document.getElementById('gd-series');
+  if (sEl) {
+    if (_galleryGroup.length > 1) {
+      sEl.style.display = 'flex';
+      sEl.innerHTML = `<button class="gd-snav" data-onclick="galleryGroupNav(-1)" aria-label="上一幅">‹</button>`
+        + `<span class="gd-stxt">系列《<b>${escapeHtml(it.series)}</b>》· 第 <b>${_galleryGroupIdx + 1}</b> / ${_galleryGroup.length} 幅</span>`
+        + `<button class="gd-snav" data-onclick="galleryGroupNav(1)" aria-label="下一幅">›</button>`;
+    } else { sEl.style.display = 'none'; sEl.innerHTML = ''; }
+  }
   updateGdFavBtn();
   const fr = GALLERY_FRAMES.some(([c]) => c === it.image_frame) ? it.image_frame : 'ebony';
   const frameEl = document.getElementById('gd-frame');
@@ -3531,6 +3571,12 @@ async function downloadGalleryImage() {
   } catch (e) { toast('下載失敗，請稍後再試'); }
 }
 
+function galleryGroupNav(dir) {
+  const g = _galleryGroup;
+  if (!g || g.length < 2) return;
+  const i = (_galleryGroupIdx + dir + g.length) % g.length;   // 循環
+  openGalleryItem(g[i].id);
+}
 function closeGalleryDetail() { document.getElementById('gallery-detail').style.display = 'none'; }
 function openGalleryFull() { openImageFull(document.getElementById('gd-img').src); }
 // 任意圖片全螢幕（右下角金色徽記浮水印，即時疊、不改檔案）；留影走廊詳情與角色頁封面共用。
