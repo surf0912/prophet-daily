@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.78';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.79';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1435,7 +1435,7 @@ async function renderFavUpdates() {
         if (t && (!since.has(n.series) || new Date(t) < new Date(since.get(n.series)))) since.set(n.series, t);
       });
       all.forEach(n => {
-        if (!n.series || !n.created_at || !since.has(n.series)) return;
+        if (!n.series || !n.created_at || !since.has(n.series) || n.kind === 'image') return;   // 畫作系列走留影走廊組圖，不推閱讀器式通知
         const c = new Date(n.created_at).getTime();
         if (c > new Date(since.get(n.series)).getTime() && c >= cutoff) {
           items.push({ kind: 'work', id: n.id, key: `work:${n.id}`, title: `系列《${n.series}》新作品`, sub: n.title, at: n.created_at, unread: !read.has(n.id) });
@@ -2406,7 +2406,7 @@ async function updateSeriesNav(novel) {
   // Only for 小說 that belong to a series. The server returns the FULL part list — including 迷情劑
   // parts the reader can't open yet (as locked stubs) — so 上下篇 surfaces an access gate for them
   // instead of silently skipping. Fall back to the visible shelf list if the call fails.
-  if (novel && novel.series && novel.kind !== 'forum') {
+  if (novel && novel.series && novel.kind !== 'forum' && novel.kind !== 'image') {
     let sibs = null;
     try { sibs = await api(`/novels/${novel.id}/siblings`); } catch {}
     if (sibs && sibs.length > 1) {
