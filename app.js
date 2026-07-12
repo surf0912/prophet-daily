@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.83';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.84';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3853,6 +3853,7 @@ async function loadReviewList() {
     ]);
     const mqjReqs = (users || []).filter(u => u.mqj_access === 'pending');
     const novelsPending = pending || [];
+    window._reviewPending = novelsPending;
     const arrow = `<svg class="rv-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>`;
     const section = (icon, title, count, bodyHtml, open) => `
       <details class="review-sec"${open ? ' open' : ''}>
@@ -3874,7 +3875,7 @@ async function loadReviewList() {
                         : n.kind === 'forum' ? ic('ic-scroll', 12) + ' 論壇貼文'
                         : ic('ic-book', 12) + ' 小說';
     const _slotBtns = n => { const slots = [['am', '早晨'], ['pm', '下午'], ['night', '夜晚']]; const cur = effectiveImageSlot(n);
-      return '<div style="font-size:12px;color:var(--ink-light);margin:8px 0 4px">心動封面時段（選填）</div><div style="display:flex;gap:6px">'
+      return '<div style="font-size:12px;color:var(--ink-light);margin:8px 0 4px">心動封面時段（必選）</div><div style="display:flex;gap:6px">'
         + slots.map(([v, name]) => `<button data-onclick="setImageSlot('${n.id}','${v}')" style="flex:1;font-size:12px;padding:5px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:${cur === v ? 'var(--scarlet)' : 'var(--parchment2)'};color:${cur === v ? 'var(--on-dark)' : 'var(--ink-light)'}">${name}</button>`).join('') + '</div>'; };
     const novelBody = novelsPending.map(n => `
         <div style="padding:12px 0;border-bottom:1px solid rgba(26,10,0,.1)">
@@ -3910,6 +3911,11 @@ async function reviewMqj(userId, approve) {
 }
 
 async function approveNovel(id) {
+  const n = (window._reviewPending || []).find(x => x.id === id);
+  if (n && n.kind === 'image' && !['am', 'pm', 'night'].includes(n.image_slot)) {
+    toast('請先為這幅畫作選擇心動封面時段，再通過');
+    return;
+  }
   try { await api(`/novels/${id}/approve`, { method: 'PATCH' }); toast('已通過審核'); loadReviewList(); }
   catch (e) { toast(e.message); }
 }
