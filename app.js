@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.101';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.102';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -706,10 +706,16 @@ const TOUR_READER = [
     html: "<span class='tour-h'>只看某個人</span>點角色頭像，就只顯示有那位角色的故事，再點一次即可取消；選好兩個頭像再點「同框」，就只看兩人<b>同框</b>的文。<b>雙擊頭像</b>可直接開啟角色設定頁。" },
   { page: 'scroll', target: '#shelf-wish-btn',
     html: "<span class='tour-h'>許願池</span>想看的主題、主角，或想加的網站功能，都能在這裡許願——一律匿名，放心許。<b>被回覆時，貓頭鷹會叼信通知你</b>。" },
-  { page: 'forum', target: '[data-tour="nav-forum"]',
+  // 非 beta（穩定版）：羊皮紙在 nav、留影在羊皮紙頁的藥丸
+  { page: 'forum', target: '[data-tour="nav-forum"]', showIf: () => !isBeta(),
     html: "<span class='tour-h'>匿名羊皮紙</span>從這裡進入論壇體文章，看看大家都在討論些什麼——傳閱時小心點，別被級長抓到！讀文時點留言上的<b>星星</b>就能收藏，右上角「<b>收藏夾</b>」隨時找回來。" },
-  { page: 'forum', target: '#forum-gallery-toggle',
+  { page: 'forum', target: '#forum-gallery-toggle', showIf: () => !isBeta(),
     html: "<span class='tour-h'>留影走廊</span>《預言家日報》還有一座<b>留影走廊</b>，掛著大家投稿的角色畫作，可以進去慢慢欣賞。" },
+  // beta（重構版）：羊皮紙併入意若思鏡、留影升上導覽列
+  { page: 'scroll', target: '#shelf-cat-pills', showIf: () => isBeta(),
+    html: "<span class='tour-h'>羊皮紙在這裡</span>論壇體文章併進了意若思鏡——故事類型多一格「<b>羊皮紙</b>」，點它就能看大家的論壇貼文，跟小說一起逛；讀文時點<b>星星</b>收藏，收藏夾也通用。" },
+  { target: '#gallery-nav-btn', showIf: () => isBeta(),
+    html: "<span class='tour-h'>留影走廊</span>導覽列這一格就是<b>留影走廊</b>，掛著大家投稿的角色畫作，點進去慢慢欣賞。" },
   { page: 'settings', target: '[data-tour="nav-settings"]',
     html: "<span class='tour-h'>個人檔案</span>字體大小、夜間模式、<b>語言選擇</b>都在閱讀偏好；頁面最下方能查看你手上的日報是否為最新一期。想<b>重看這份導覽</b>，到「檔案 → 小工具 → 新手導覽」。" },
 ];
