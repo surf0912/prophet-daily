@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.82';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.83';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3969,6 +3969,7 @@ async function loadAdminNovelList() {
       ns = all.filter(n => (n.owners || []).includes(adminNovelScope.id));
       const sc = adminNovelScope;
       let head = `${ic('ic-books', 16)} <b>${escapeHtml(sc.name)}</b> 的作品　<a data-onclick="resetAdminNovelScope('users')" style="color:var(--accent);cursor:pointer">← 返回成員名單</a>`;
+      if (sc.joined) head += `<div style="font-size:12px;color:var(--ink-light);margin-top:4px">${ic('ic-calendar',12)} 加入日期 ${fmtUpdated(sc.joined)}</div>`;
       if (sc.role === 'reader' || sc.role === 'writer') {
         const approved = sc.mqj === 'approved';
         const statusLabel = sc.mqj === 'pending' ? '（' + ic('ic-clock',11) + ' 申請中）' : sc.mqj === 'rejected' ? '（' + ic('ic-ban',11) + ' 未通過）' : '';
@@ -4497,7 +4498,8 @@ function renderUserRows(q) {
       const banTag = u.banned ? '<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(138,45,45,.18);color:var(--accent);margin-left:6px">' + ic(isTempBan ? 'ic-clock' : 'ic-ban',10) + (isTempBan ? ' 臨時封禁' : ' 已封禁') + '</span>' : '';
       const flagBadge = (u.flag_note && isSuper) ? '<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(201,168,76,.3);color:var(--ink);margin-left:6px">' + ic('ic-shield',10) + ' 疑似回鍋</span>' : '';
       const flagRow = (u.flag_note && isSuper) ? `<div style="margin-top:5px;font-size:12px;color:var(--accent);background:rgba(138,45,45,.10);padding:6px 8px;border-radius:6px;display:flex;align-items:center;gap:8px;justify-content:space-between"><span>${escapeHtml(u.flag_note)}</span><button data-onclick="clearUserFlag('${u.id}')" style="flex-shrink:0;font-size:11px;padding:3px 9px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:4px;cursor:pointer;white-space:nowrap">已審</button></div>` : '';
-      const seen = `<div style="font-size:11px;color:var(--ink-light);font-weight:normal;opacity:.8">${lastSeenLabel(u)}</div>`;
+      const _joined = u.created_at ? `加入 ${fmtUpdated(u.created_at)}・` : '';
+      const seen = `<div style="font-size:11px;color:var(--ink-light);font-weight:normal;opacity:.8">${_joined}${lastSeenLabel(u)}</div>`;
       // In an inactivity view, super_admin gets an inline 刪除 for quick manual cleanup (never automatic).
       const delBtn = (isSuper && !isSelf && userActivityFilter)
         ? `<button class="uf-del" data-onclick="deleteUser('${u.id}')">${ic('ic-trash', 11)} 刪除</button>`
@@ -4519,7 +4521,7 @@ function renderUserRows(q) {
 // Admin taps a member's name → their detail (scoped 作品管理 + 迷情劑 toggle for readers).
 function viewUserNovels(id) {
   const u = (window._adminUsers || []).find(x => x.id === id) || {};
-  adminNovelScope = { id, name: u.nickname || u.username || '', role: u.role, mqj: u.mqj_access, banned: u.banned, ban_until: u.ban_until || null, auto: !!u.auto_publish, wish: !!u.wish_reply };
+  adminNovelScope = { id, name: u.nickname || u.username || '', role: u.role, mqj: u.mqj_access, banned: u.banned, ban_until: u.ban_until || null, auto: !!u.auto_publish, wish: !!u.wish_reply, joined: u.created_at || null };
   switchAdminTab('novels');
 }
 
@@ -4640,7 +4642,7 @@ function renderSettings() {
     av.textContent = nick[0].toUpperCase();
   }
   document.getElementById('settings-username').textContent = nick;
-  document.getElementById('settings-email').textContent = '';
+  document.getElementById('settings-email').textContent = currentUser.created_at ? '加入於 ' + fmtUpdated(currentUser.created_at) : '';
   document.getElementById('settings-role').innerHTML = roleBadge(currentUser.role, 15);
   document.getElementById('app-version').textContent = '版本 ' + APP_VERSION;
   renderVersionStatus();   // 檔案頁的「最新一期／已過時」狀態按鈕
