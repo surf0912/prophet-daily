@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v3.99';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v3.100';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2062,8 +2062,8 @@ function mqjGateBody() {
 })();
 function isBeta() {
   if (!currentUser) return false;
-  if (currentUser.role === 'admin') return true;   // admins: feature is just on, no toggle
-  return currentUser.role === 'super_admin' && localStorage.getItem('pd_beta') === '1';   // super: behind their 實驗功能 switch
+  // beta 只給超管一人：開了「實驗功能」開關才算。admin/作家/讀者一律看不到未完成的實驗。
+  return currentUser.role === 'super_admin' && localStorage.getItem('pd_beta') === '1';
 }
 function setBetaFlag(on) {
   if (on) localStorage.setItem('pd_beta', '1'); else localStorage.removeItem('pd_beta');
