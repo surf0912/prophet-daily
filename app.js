@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.21';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.22';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3467,7 +3467,7 @@ async function submitImageWork() {
   const characters = readChars('new-image-chars');
   if (!_imgWork.data) { toast('請先選擇一幅畫作'); return; }
   if (!title) { toast('請輸入畫作標題'); return; }
-  if (!characters.length) { toast('請至少為畫作選一位角色'); return; }
+  if (!characters.length && currentUser.role !== 'super_admin') { toast('請至少為畫作選一位角色'); return; }
   const hint = document.getElementById('new-image-hint');
   if (hint) hint.textContent = '正在上傳畫作…';
   try {
@@ -4409,7 +4409,7 @@ async function submitNewNovel() {
   if (!title) { toast('請輸入作品名稱'); return; }
   if (!category) { toast('請選擇故事類型'); return; }
   if (!content) { toast('請輸入內文'); return; }
-  if (!readChars('new-novel-chars').length) { toast('請至少為作品選一位角色'); return; }
+  if (!readChars('new-novel-chars').length && currentUser.role !== 'super_admin') { toast('請至少為作品選一位角色'); return; }
   try {
     const novel = await api('/novels/', { method: 'POST', body: JSON.stringify({
       title,
