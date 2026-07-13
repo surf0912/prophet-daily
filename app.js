@@ -7,7 +7,7 @@
   document.addEventListener('touchend', function (e) {
     const t = e.target;
     // .char-custom needs its real double-tap (= edit character); don't swallow the 2nd tap there.
-    if (t && (t.closest('input, textarea, select, [contenteditable], .char-custom, .char-chip'))) { lastTap = 0; return; }
+    if (t && (t.closest('input, textarea, select, [contenteditable], .char-chip'))) { lastTap = 0; return; }
     const now = Date.now();
     if (now - lastTap <= 350) e.preventDefault();   // cancels the zoom gesture on the 2nd tap
     lastTap = now;
@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.25';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.26';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -298,11 +298,6 @@ async function saveAvatarCrop() {
   const dataUrl = c.toDataURL('image/jpeg', 0.82);
   document.getElementById('avatar-crop-modal').classList.remove('open');
   if (_crop.url) { URL.revokeObjectURL(_crop.url); _crop.url = null; }
-  if (_crop.target === 'customchar') {   // 自創角色頭像：存記憶體，等存角色時一起送
-    _ccAvatar = dataUrl;
-    setCcAvatarPreview(dataUrl);
-    return;
-  }
   try {
     const updated = await api('/auth/me/avatar', { method: 'PATCH', body: JSON.stringify({ avatar: dataUrl }) });
     currentUser.avatar_url = (updated && updated.avatar_url) || dataUrl;
@@ -636,7 +631,7 @@ async function initApp() {
   { const _bt = document.getElementById('beta-toggle'); if (_bt) _bt.checked = localStorage.getItem('pd_beta') === '1'; }
   { const _fx = document.getElementById('tapfx-toggle'); if (_fx) _fx.checked = localStorage.getItem('pd_tap_fx') !== '0'; }   // 點擊特效預設開
   { const _ow = document.getElementById('owl-toggle'); if (_ow) _ow.checked = localStorage.getItem('pd_owl_always') === '1'; }   // 貓頭鷹常駐預設關
-  loadCustomChars().then(() => { if (typeof renderShelf === 'function') renderShelf(); });   // beta 自創角色載入後刷新角色列
+  if (typeof renderShelf === 'function') renderShelf();   // 載入身分後刷新書架
   adminNovelScope = null;
   loadOwnerNames();   // super_admin only: map owner uuid → 巫師全名 for the owner hint
   loadFavIds().then(renderFavUpdates);   // 意若思鏡 收藏夾 ids + 追蹤更新 alert
@@ -1976,16 +1971,14 @@ let charAnd = false;   // false = 任一角色 (OR); true = 同框 (AND — ever
 // ccSet: when a 自創角色 is selected, its tagged-novel Set. It joins the SAME 任一/同框 (OR/AND)
 // evaluation as the official characters — it is NOT a separate AND gate (that made 自創+官方 an
 // impossible intersection in OR mode).
-function applyClassFilter(list, cat, chars, ccSet) {
+function applyClassFilter(list, cat, chars) {
   const sel = (chars || []).filter(Boolean);
-  const ccActive = !!ccSet;
-  const noFilter = (sel.length === 0 && !ccActive) || (!charAnd && sel.length === CHAR_LIST.length && !ccActive);
+  const noFilter = sel.length === 0 || (!charAnd && sel.length === CHAR_LIST.length);
   return list.filter(n => {
     if (cat && n.category !== cat) return false;
     if (!noFilter) {
       const have = n.characters || [];
       const checks = sel.map(c => have.includes(c));
-      if (ccActive) checks.push(ccSet.has(n.id));
       const ok = charAnd ? checks.every(Boolean) : checks.some(Boolean);
       if (!ok) return false;
     }
@@ -2018,12 +2011,7 @@ function renderFilterBar(catEl, chipEl, curCat, curChars, onChange) {
   chipEl.innerHTML = CHAR_LIST.map(ch =>
     `<div class="char-chip ${curChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}">
        <img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span>
-     </div>`).join('') +
-    // 自創角色(意若思鏡篩選列)：有角色就顯示 chip 可篩選(含他人分享給讀者/作家的)；建立鈕只給管理員(isBeta)
-    (chipEl.id === 'shelf-char-chips'
-      ? _customChars.map(c => { const av = safeAvatarDataUrl(c.avatar); const sh = c.mine === false; return `<div class="char-chip char-custom${_ccFilter === c.id ? ' cc-on' : ''}${sh ? ' cc-shared' : ''}" data-onclick="ccTap('${c.id}')" title="${sh ? '他人分享（唯讀，可篩選）' : '單擊篩選・雙擊編輯'}"><div class="cc-ava"${av ? ` style="background-image:url(&quot;${av}&quot;)"` : ''}>${av ? '' : ic('ic-wand', 20)}</div><span>${escapeHtml(c.name)}${sh ? ' ' + ic('ic-users', 10) : ''}</span></div>`; }).join('')
-        + (isBeta() ? `<div class="char-chip char-add" data-onclick="openCreateChar()" role="button" tabindex="0" aria-label="建立角色" title="建立自創角色"><div class="add-circle">＋</div></div>` : '')
-      : '');
+     </div>`).join('');
   chipEl.querySelectorAll('.char-chip[data-ch]').forEach(el => el.onclick = () => officialCharTap(el.dataset.ch, onChange));
   mountCharAndBtn('shelf-char-and');
 }
@@ -2129,157 +2117,8 @@ function mqjGateBody() {
   if (b === '1' || b === '') localStorage.setItem('pd_beta', '1');
   else if (b === '0') localStorage.removeItem('pd_beta');
 })();
-function isBeta() { return false; }   // 自創角色功能已移除；此 gate 不再開放任何 UI（開關留著但無作用）
-function setBetaFlag(on) {
-  if (on) localStorage.setItem('pd_beta', '1'); else localStorage.removeItem('pd_beta');
-  toast(on ? '實驗功能已開啟' : '實驗功能已關閉');
-  loadCustomChars().then(() => { if (typeof renderShelf === 'function') renderShelf(); });   // 自創角色 UI（仍是 beta）出現/隱藏
-}
+// 自創角色（custom character）功能與實驗開關已下架 2026-07-13：相關函式、狀態、isBeta/setBetaFlag 全移除。
 
-// ── 自創角色 (beta) — private custom characters: name + avatar, edit/delete ────────
-let _customChars = [], _ccEditId = null, _ccAvatar = null, _ccTags = {}, _ccFilter = '', _ccTapTimer = null;
-let _ccMembers = null, _ccShareInit = new Set();   // 分享：成員名單(快取) + 編輯時的初始分享對象
-async function loadCustomChars() {
-  // 自創角色功能已移除：不再載入、不打 /custom-chars API。清空狀態即可（相關 UI 由 isBeta()=false 隱藏）。
-  _customChars = []; _ccTags = {}; _ccFilter = '';
-}
-// 單擊 = 選取(篩選作品)；雙擊 = 打開編輯
-function ccTap(id, rerender) {
-  const draw = rerender || renderShelf;   // 意若思鏡用 renderShelf；作品管理傳 renderAdminNovels
-  if (_ccTapTimer) {
-    clearTimeout(_ccTapTimer); _ccTapTimer = null;
-    const c = _customChars.find(x => x.id === id);
-    if (c && c.mine !== false) editCustomChar(id);   // 只有擁有者能編輯；他人分享的 = 只能篩選
-  } else {
-    _ccTapTimer = setTimeout(() => { _ccTapTimer = null; _ccFilter = (_ccFilter === id) ? '' : id; draw(); }, 320);
-  }
-}
-function setCcAvatarPreview(url) {
-  const el = document.getElementById('cc-avatar-preview');
-  const safe = safeAvatarDataUrl(url);
-  if (safe) { el.style.backgroundImage = `url("${safe}")`; el.innerHTML = ''; }
-  else { el.style.backgroundImage = 'none'; el.innerHTML = ic('ic-camera', 24); }
-}
-function openCreateChar() {
-  _ccEditId = null; _ccAvatar = null;
-  document.getElementById('cc-modal-title').textContent = '建立角色';
-  document.getElementById('cc-name').value = '';
-  setCcAvatarPreview('');
-  _ccShareInit = new Set();
-  document.getElementById('cc-share-toggle').checked = false;
-  toggleCcShare(false);
-  document.getElementById('cc-delete-btn').style.display = 'none';
-  document.getElementById('custom-char-modal').classList.add('open');
-}
-function editCustomChar(id) {
-  const c = _customChars.find(x => x.id === id);
-  if (!c || c.mine === false) return;   // 他人分享的角色唯讀，不開編輯
-  _ccEditId = id; _ccAvatar = c.avatar || null;
-  document.getElementById('cc-modal-title').textContent = '編輯角色';
-  document.getElementById('cc-name').value = c.name || '';
-  setCcAvatarPreview(c.avatar || '');
-  _ccShareInit = new Set(c.shared_with || []);
-  const on = _ccShareInit.size > 0;
-  document.getElementById('cc-share-toggle').checked = on;
-  toggleCcShare(on);   // 有分享就展開名單(勾好現有對象)
-  document.getElementById('cc-delete-btn').style.display = '';
-  document.getElementById('custom-char-modal').classList.add('open');
-}
-// 取得全體成員(快取)，按身分高→低排序，給分享名單用
-async function ensureCcMembers() {
-  if (_ccMembers) return;
-  try {
-    const list = await api('/permissions/users') || [];
-    const RANK = { super_admin: 3, admin: 2, writer: 1, reader: 0 };
-    _ccMembers = list.slice().sort((a, b) =>
-      (RANK[b.role] || 0) - (RANK[a.role] || 0)
-      || (a.nickname || a.username || '').localeCompare(b.nickname || b.username || ''));
-  } catch (e) { _ccMembers = []; }
-}
-function renderCcShareList(selected) {
-  const el = document.getElementById('cc-share-list');
-  const rows = (_ccMembers || []).filter(u => u.id !== currentUser.id).map(u => {
-    const checked = selected.has(u.id) ? 'checked' : '';
-    const role = ROLE_NAME[u.role] || u.role;
-    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:13px;border-top:1px solid rgba(26,10,0,.05)">
-      <input type="checkbox" class="cc-share-cb" value="${u.id}" ${checked} style="flex-shrink:0;width:16px;height:16px" />
-      <span style="flex:1;color:var(--ink)">${escapeHtml(u.nickname || u.username || '')}</span>
-      <span style="font-size:11px;color:var(--ink-light)">${escapeHtml(role)}</span>
-    </label>`;
-  }).join('');
-  el.innerHTML = rows || '<p style="font-size:12px;color:var(--ink-light);padding:8px 12px;margin:0">沒有其他成員</p>';
-}
-async function toggleCcShare(on) {
-  const list = document.getElementById('cc-share-list');
-  if (!on) { list.style.display = 'none'; return; }
-  await ensureCcMembers();
-  renderCcShareList(_ccShareInit);
-  list.style.display = 'block';
-}
-function ccPickAvatar(input) {
-  const f = input.files && input.files[0];
-  input.value = '';
-  if (!f) return;
-  if (!f.type.startsWith('image/')) { toast('請選擇圖片檔'); return; }
-  if (_crop.url) URL.revokeObjectURL(_crop.url);
-  _crop.url = URL.createObjectURL(f);
-  _crop.target = 'customchar';   // 裁切結果存到自創角色，不是個人頭像
-  const img = new Image();
-  img.onload = () => openAvatarCrop(img);
-  img.onerror = () => toast('圖片讀取失敗');
-  img.src = _crop.url;
-}
-async function saveCustomChar() {
-  const name = document.getElementById('cc-name').value.trim();
-  if (!name) { toast('請輸入角色名稱'); return; }
-  // 分享對象：開了開關才分享。名單已展開 → 讀勾選；沒展開 → 沿用原本(_ccShareInit)。關閉 → 不分享([])。
-  let shared_with = [];
-  if (document.getElementById('cc-share-toggle').checked) {
-    const cbs = document.querySelectorAll('#cc-share-list .cc-share-cb');
-    shared_with = cbs.length ? [...cbs].filter(cb => cb.checked).map(cb => cb.value) : [..._ccShareInit];
-  }
-  try {
-    const body = JSON.stringify({ name, avatar: _ccAvatar, shared_with });
-    if (_ccEditId) await api('/custom-chars/' + _ccEditId, { method: 'PATCH', body });
-    else await api('/custom-chars/', { method: 'POST', body });
-    toast('已儲存');
-    document.getElementById('custom-char-modal').classList.remove('open');
-    await loadCustomChars();
-    renderShelf();
-  } catch (e) { toast(e.message || '儲存失敗'); }
-}
-async function deleteCustomChar() {
-  if (!_ccEditId || !confirm('刪除這個角色？')) return;
-  try {
-    await api('/custom-chars/' + _ccEditId, { method: 'DELETE' });
-    document.getElementById('custom-char-modal').classList.remove('open');
-    await loadCustomChars();
-    renderShelf();
-  } catch (e) { toast(e.message); }
-}
-// 後台上傳：自創角色選擇器(只在 beta 顯示),上傳時把作品歸到選中的自創角色底下
-// Shared 自創角色 picker — used by 上傳 and the 分類 editor. Only the user's OWN chars (shared-in
-// ones are read-only). `selected` pre-lights the chars a work is already filed under.
-function renderCcPickerInto(boxId, groupId, selected) {
-  const group = document.getElementById(groupId);
-  const box = document.getElementById(boxId);
-  if (!group || !box) return;
-  const mine = _customChars.filter(c => c.mine !== false);
-  if (!isBeta() || !mine.length) { group.style.display = 'none'; return; }
-  group.style.display = '';
-  box.innerHTML = mine.map(c =>
-    `<button type="button" class="cc-pick${selected && selected.has(c.id) ? ' on' : ''}" data-cc="${c.id}" data-onclick="this.classList.toggle('on')">${escapeHtml(c.name)}</button>`).join('');
-}
-function renderUploadCcPicker() { renderCcPickerInto('new-novel-cc', 'new-novel-cc-group', null); }
-// Which custom chars a work is currently filed under (from the cached private tag map).
-function ccTaggedSet(novelId) {
-  const s = new Set();
-  for (const cid in _ccTags) { if (_ccTags[cid] && _ccTags[cid].has(novelId)) s.add(cid); }
-  return s;
-}
-function readUploadCc() {
-  return [...document.querySelectorAll('#new-novel-cc .cc-pick.on')].map(b => b.dataset.cc);
-}
 // 後台上傳：讀一個 .txt 進內文框(取代原本暫不支持的圖片辨識）
 function loadTxtIntoUpload(input) {
   const f = input.files && input.files[0];
@@ -2324,12 +2163,12 @@ function renderShelf() {
     grid.innerHTML = `<div class="empty-shelf"><span style="display:block;margin-bottom:8px">${ic('ic-books', 30)}</span>目前沒有作品<br><small>等管理員上傳作品</small></div>`;
     return;
   }
-  let list = applyClassFilter(novels, shelfCat, shelfChars, _ccFilter ? (_ccTags[_ccFilter] || new Set()) : null);
+  let list = applyClassFilter(novels, shelfCat, shelfChars);
   const q = (document.getElementById('shelf-search-input')?.value || '').trim().toLowerCase();
   if (q) list = list.filter(n => matchesQuery(n, q));
   // Only on the plain default view (no search, 全部, no character filter), float the 24h hot
   // works to the front — silently, no label.
-  const noCharFilter = (shelfChars.length === 0 || shelfChars.length === CHAR_LIST.length) && !_ccFilter;
+  const noCharFilter = (shelfChars.length === 0 || shelfChars.length === CHAR_LIST.length);
   if (!q && shelfCat === '' && noCharFilter && hotIds.length) {
     const hot = hotIds.map(id => list.find(n => n.id === id)).filter(Boolean);
     if (hot.length) {
@@ -4420,8 +4259,6 @@ async function submitNewNovel() {
       try { await api(`/novels/${novel.id}`, { method: 'DELETE' }); } catch (_e) {}
       throw chErr;
     }
-    const _ccIds = readUploadCc();   // 把作品歸到選中的自創角色底下(私人)
-    if (_ccIds.length) { try { await api('/custom-chars/tag', { method: 'POST', body: JSON.stringify({ novel_id: novel.id, char_ids: _ccIds }) }); await loadCustomChars(); } catch (e) {} }
     // 頁首圖：作品建立後才有 id，補 PATCH 上傳（失敗不擋作品建立，提示即可）
     if (_novelHeader.data) { try { await api(`/novels/${novel.id}/header-image`, { method: 'PATCH', body: JSON.stringify({ image: _novelHeader.data }) }); } catch (e) { toast('頁首圖上傳失敗：' + (e.message || '')); } }
     toast(novel.status === 'pending' ? '已送出，待管理員審核' : '小說已建立');
@@ -4524,10 +4361,7 @@ async function loadAdminNovelList() {
 function adminIsNovelKind(n) { return n.kind !== 'forum' && n.kind !== 'image'; }
 function applyAdminFilter(list) {
   const sel = adminChars.filter(Boolean);
-  // 自創角色 joins the SAME 任一/同框 evaluation as the official chars (not a separate AND gate).
-  const ccActive = isBeta() && !!_ccFilter;
-  const ccSet = ccActive ? (_ccTags[_ccFilter] || new Set()) : null;
-  const noFilter = (sel.length === 0 && !ccActive) || (!charAnd && sel.length === CHAR_LIST.length && !ccActive);
+  const noFilter = sel.length === 0 || (!charAnd && sel.length === CHAR_LIST.length);
   const q = ((document.getElementById('admin-novel-search') || {}).value || '').trim().toLowerCase();
   return list.filter(n => {
     // 種類分頁
@@ -4541,7 +4375,6 @@ function applyAdminFilter(list) {
     if (!noFilter) {
       const have = n.characters || [];
       const checks = sel.map(c => have.includes(c));
-      if (ccActive) checks.push(ccSet.has(n.id));
       const ok = charAnd ? checks.every(Boolean) : checks.some(Boolean);
       if (!ok) return false;
     }
@@ -4577,9 +4410,7 @@ function renderAdminFilterBar(ns) {
   }
   const chipEl = document.getElementById('admin-char-chips');
   chipEl.innerHTML = CHAR_LIST.map(ch =>
-    `<div class="char-chip ${adminChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}"><img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span></div>`).join('')
-    // beta：官方角色之後接自創角色(單擊篩選・雙擊編輯)，與意若思鏡一致
-    + (isBeta() ? _customChars.map(c => { const av = safeAvatarDataUrl(c.avatar); const sh = c.mine === false; return `<div class="char-chip char-custom${_ccFilter === c.id ? ' cc-on' : ''}${sh ? ' cc-shared' : ''}" data-onclick="ccTap('${c.id}', renderAdminNovels)" title="${sh ? '他人分享（唯讀，可篩選）' : '單擊篩選・雙擊編輯'}"><div class="cc-ava"${av ? ` style="background-image:url(&quot;${av}&quot;)"` : ''}>${av ? '' : ic('ic-wand', 20)}</div><span>${escapeHtml(c.name)}${sh ? ' ' + ic('ic-users', 10) : ''}</span></div>`; }).join('') : '');
+    `<div class="char-chip ${adminChars.includes(ch.code) ? 'active' : ''}" data-ch="${ch.code}"><img src="${ch.img}" alt="${ch.name}" /><span>${ch.name}</span></div>`).join('');
   chipEl.querySelectorAll('.char-chip[data-ch]').forEach(el => el.onclick = () => {
     adminChars = adminChars.includes(el.dataset.ch) ? adminChars.filter(c => c !== el.dataset.ch) : [...adminChars, el.dataset.ch];
     renderAdminNovels();
@@ -4769,7 +4600,6 @@ function openEditClass(id) {
   sel.value = category || '';
   const have = new Set(characters || []);
   div.querySelectorAll('.opt').forEach(el => el.classList.toggle('on', have.has(el.dataset.ch)));
-  renderCcPickerInto('editclass-cc', 'editclass-cc-group', ccTaggedSet(id));   // 自創角色標記(私人)
   document.getElementById('editclass-modal').classList.add('open');
 }
 
@@ -4781,11 +4611,6 @@ async function saveEditClass() {
   if (category) body.category = category;
   try {
     await api(`/novels/${editClassNovelId}`, { method: 'PATCH', body: JSON.stringify(body) });
-    // 更新自創角色標記(私人)。只在 picker 有顯示時(beta + 有自己的角色)才動，避免誤刪。
-    if (document.getElementById('editclass-cc-group').style.display !== 'none') {
-      const ccIds = [...document.querySelectorAll('#editclass-cc .cc-pick.on')].map(b => b.dataset.cc);
-      try { await api('/custom-chars/tag', { method: 'POST', body: JSON.stringify({ novel_id: editClassNovelId, char_ids: ccIds }) }); await loadCustomChars(); } catch (e) {}
-    }
     toast('分類已更新');
     document.getElementById('editclass-modal').classList.remove('open');
     loadAdminNovelList(); loadNovels();

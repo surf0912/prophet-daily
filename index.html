@@ -354,13 +354,6 @@
             <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-compass"/></svg> 新手導覽</label>
             <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" data-onclick="startTour()">重看導覽</button>
           </div>
-          <div class="settings-row super-only" style="display:none">
-            <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-sparkles"/></svg> 實驗功能（beta）</label>
-            <label class="toggle">
-              <input type="checkbox" id="beta-toggle" data-onchange="setBetaFlag(this.checked)" />
-              <span class="slider"></span>
-            </label>
-          </div>
           <div class="settings-row staff-only" style="display:none">
             <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-shield"/></svg> 防窺工坊</label>
             <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" data-onclick="showPage('protect')">進入</button>
@@ -437,7 +430,6 @@
           </div>
           <div class="form-group"><label>故事類型</label><select id="new-novel-category"></select></div>
           <div class="form-group"><label>角色（可多選）</label><div id="new-novel-chars" class="char-picker"></div></div>
-          <div class="form-group" id="new-novel-cc-group" style="display:none"><label>自創角色（私人，只有你看得到）</label><div id="new-novel-cc" class="char-picker"></div></div>
           <div class="form-group">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
               <label style="margin:0">內文</label>
@@ -661,30 +653,7 @@
 </div>
 
 <!-- 自創角色 modal (beta, super_admin only) -->
-<div class="perm-modal" id="custom-char-modal">
-  <div class="perm-modal-inner">
-    <h3 id="cc-modal-title">建立角色</h3>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin:12px 0">
-      <div id="cc-avatar-preview" data-onclick="document.getElementById('cc-avatar-input').click()" style="width:76px;height:76px;border-radius:50%;border:2px dashed var(--ink-light);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-light);background-size:cover;background-position:center"></div>
-      <input type="file" id="cc-avatar-input" accept="image/*" style="display:none" data-onchange="ccPickAvatar(this)" />
-      <small style="color:var(--ink-light)">點上方上傳頭像</small>
-    </div>
-    <input id="cc-name" placeholder="角色名稱" maxlength="20" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px" />
-    <div class="settings-row" style="margin-top:12px;padding:8px 0;border-top:1px solid rgba(26,10,0,.08)">
-      <label style="font-size:14px"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-users"/></svg> 分享給其他人</label>
-      <label class="toggle">
-        <input type="checkbox" id="cc-share-toggle" data-onchange="toggleCcShare(this.checked)" />
-        <span class="slider"></span>
-      </label>
-    </div>
-    <div id="cc-share-list" style="display:none;max-height:200px;overflow:auto;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2)"></div>
-    <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:14px" data-onclick="document.getElementById('custom-char-modal').classList.remove('open')">取消</button>
-      <button class="btn-primary" style="flex:1;padding:10px;font-size:14px" data-onclick="saveCustomChar()">儲存</button>
-    </div>
-    <button id="cc-delete-btn" data-onclick="deleteCustomChar()" style="display:none;width:100%;margin-top:8px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:8px;font-size:13px;cursor:pointer">刪除這個角色</button>
-  </div>
-</div>
+
 
 
 <!-- Manage owners (co-authors) modal -->
@@ -766,7 +735,6 @@
     <h3><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-edit"/></svg> 編輯分類 — <span id="editclass-novel-title" style="font-size:14px"></span></h3>
     <div class="form-group" id="editclass-cat-group"><label>故事類型</label><select id="editclass-category"></select></div>
     <div class="form-group"><label>角色（可多選）</label><div id="editclass-chars" class="char-picker"></div></div>
-    <div class="form-group" id="editclass-cc-group" style="display:none"><label>自創角色（私人，只有你看得到）</label><div id="editclass-cc" class="char-picker"></div></div>
     <div style="display:flex;gap:8px;margin-top:6px">
       <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('editclass-modal').classList.remove('open')">取消</button>
       <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" data-onclick="saveEditClass()">儲存</button>
