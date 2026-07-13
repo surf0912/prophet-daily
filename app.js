@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.26';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.27';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3014,15 +3014,20 @@ async function runDbLatency() {
     const coldPenalty = warm ? first / warm : 1;
     const coldExtra = Math.max(0, Math.round(first - warm));
     const fastest = s.length ? Math.min(...s) : warm;   // 最快那次≈連線暖了的真穩態
-    // 判讀順序：先抓「暖機曲線」（有次很快、但中位偏高＝剛冷啟動、連線還在暖，不是真慢）——否則冷啟動
-    // 會誤報「該搬 region」。再看單次是否真貴（連最快的都慢），再看連線建立成本，最後才是穩定。
-    const verdict = (fastest < 200 && warm >= 250)
-      ? ['#a8761f', `樣本忽快忽慢（最快 ${fastest}、中位 ${warm} ms）→ 後端剛冷啟動、Supabase 連線還在暖機（keep-alive 未建、反覆 TLS 握手）。穩態接近最快值 ~${fastest} ms，等跑穩幾分鐘再測，別被暖機數字誤導成要搬 region。`]
-      : warm >= 300
-      ? ['var(--scarlet)', `連最快的往返都要 ${fastest} ms → 單次往返本身就貴，這才真的可考慮把 Supabase 搬到新加坡（與 Render 同區）。`]
+    // 穩態暖往返在 ~120 ms 上下（歷史多次量測確立）。單一 burst 整組偏高，多半是剛部署／低流量
+    // 連線閒置掉、還在反覆 TLS 握手，不是 region 問題——所以「搬 region」只在「暖機後多次量測仍穩定
+    // 偏高」時才用條件句提，絕不從一次冷 burst 下斷言（那正是每次部署都誤報搬家的老毛病）。
+    // 判讀順序：真穩態快 → 從沒落回穩態（冷／低流量）→ 有暖有冷的暖機曲線 → 連線建立成本 → 穩定。
+    const warmedUp = fastest < 200;   // 這組裡有沒有出現過一次接近穩態的暖往返
+    const verdict = (fastest < 160 && warm < 220)
+      ? ['#2d4a1e', `Supabase 連線穩定，單次小型查詢約 ${warm} ms（首發僅多 ${coldExtra} ms）。慢是慢在「多次連續查詢」與較大回傳的累積——優化方向是把 sequential 合成一次，不必搬 region。`]
+      : !warmedUp
+      ? ['#a8761f', `整組偏高（最快 ${fastest}、首發 ${first} ms）且沒有一次落回穩態 → 多半是剛部署／低流量下連線閒置、還在暖機（反覆 TLS 握手），不是 region。穩態應在 ~120 ms；隔幾分鐘、有點流量後再測一次。若多次量測都穩定這麼高，才需要考慮把 Supabase 搬到與 Render 同區。`]
+      : (warm >= 250)
+      ? ['#a8761f', `樣本忽快忽慢（最快 ${fastest}、中位 ${warm} ms）→ 連線還在暖機（keep-alive 未建、反覆 TLS 握手）。穩態接近最快值 ~${fastest} ms，等跑穩幾分鐘再測，別被暖機數字誤導成要搬 region。`]
       : coldPenalty >= 2
       ? ['#a8761f', `首發 ${first} 明顯比熱查詢 ${warm} 慢 → 往返稅來自連線建立（TLS 握手），修連線重用即可，不必搬。`]
-      : ['#2d4a1e', `Supabase 連線穩定，單次小型查詢約 ${warm} ms（首發僅多 ${coldExtra} ms）。慢是慢在「多次連續查詢」與較大 select(*) 回傳的累積——優化方向是把 sequential 合成一次，不必搬 region。`];
+      : ['#2d4a1e', `Supabase 連線穩定，單次小型查詢約 ${warm} ms（首發僅多 ${coldExtra} ms）。慢是慢在「多次連續查詢」與較大回傳的累積——優化方向是把 sequential 合成一次，不必搬 region。`];
     el.innerHTML = `<div style="font-size:12px;color:var(--ink-light);margin-bottom:4px">${ic('ic-gear', 12)} Supabase 往返（連續 6 次撈一行，ms；首發粗體）</div>
       <div style="font-size:14px;color:var(--ink);font-family:monospace">${s.map((v, i) => i === 0 ? `<b>${v}</b>` : v).join('　·　')}</div>
       <div style="font-size:12px;margin-top:6px;color:var(--ink-light)">首發 <b style="color:var(--ink)">${first}</b> ms　｜　熱查詢中位數 <b style="color:var(--ink)">${warm}</b> ms</div>
