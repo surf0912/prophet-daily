@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.08';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.09';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3520,7 +3520,7 @@ function setReviewMode(mode) {
 // 寫信彈窗
 let _authReqCtx = null;
 async function openAuthRequest(direction, targetId, targetTitle, targetOwnerName) {
-  const mine = await loadMyAuths();
+  const mine = await loadMyAuths(true);   // 強制重抓：對方同意/婉拒發生在別的 session，快取不會自己更新
   const dupe = (mine.sent || []).find(a => a.direction === direction
     && (direction === 'use_image' ? a.artwork_id === targetId : a.work_id === targetId));
   if (dupe) {
@@ -3623,7 +3623,7 @@ async function renderGdAuth(it) {
   b.style.display = '';
   b.disabled = true; b.textContent = '請求授權';
   b.setAttribute('data-onclick', '');
-  const mine = await loadMyAuths();
+  const mine = await loadMyAuths(true);   // 強制重抓：對方同意/婉拒發生在別的 session，快取不會自己更新
   if (!_galleryDetailItem || _galleryDetailItem.id !== it.id) return;   // 已切到別幅
   const dupe = (mine.sent || []).find(a => a.direction === 'use_image' && a.artwork_id === it.id);
   if (dupe) {
@@ -3649,7 +3649,7 @@ async function renderEditAuthArts() {
   const box = document.getElementById('editwork-auth-arts'); if (!box) return;
   box.style.display = 'none'; box.innerHTML = '';
   if (!editWork.id || editWork.kind !== 'novel') return;
-  const mine = await loadMyAuths();
+  const mine = await loadMyAuths(true);   // 強制重抓：對方同意/婉拒發生在別的 session，快取不會自己更新
   const grants = (mine.sent || []).filter(a => a.direction === 'use_image' && a.status === 'approved' && a.work_id === editWork.id);
   if (!grants.length) return;
   box.style.display = '';
@@ -3681,7 +3681,7 @@ async function applyAuthArt(authId) {
 async function renderImageSourceRow() {
   const row = document.getElementById('new-image-source-row'); if (!row) return;
   row.style.display = 'none';
-  const mine = await loadMyAuths();
+  const mine = await loadMyAuths(true);   // 強制重抓：對方同意/婉拒發生在別的 session，快取不會自己更新
   const opts = (mine.sent || []).filter(a => a.direction === 'derive_art' && a.status === 'approved' && !a.artwork_id);
   if (!opts.length) return;
   row.style.display = '';
