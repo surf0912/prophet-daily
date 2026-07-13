@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.22';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.23';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2123,11 +2123,7 @@ function mqjGateBody() {
   if (b === '1' || b === '') localStorage.setItem('pd_beta', '1');
   else if (b === '0') localStorage.removeItem('pd_beta');
 })();
-function isBeta() {
-  if (!currentUser) return false;
-  // beta 只給超管一人：開了「實驗功能」開關才算。admin/作家/讀者一律看不到未完成的實驗。
-  return currentUser.role === 'super_admin' && localStorage.getItem('pd_beta') === '1';
-}
+function isBeta() { return false; }   // 自創角色功能已移除；此 gate 不再開放任何 UI（開關留著但無作用）
 function setBetaFlag(on) {
   if (on) localStorage.setItem('pd_beta', '1'); else localStorage.removeItem('pd_beta');
   toast(on ? '實驗功能已開啟' : '實驗功能已關閉');
@@ -2138,19 +2134,8 @@ function setBetaFlag(on) {
 let _customChars = [], _ccEditId = null, _ccAvatar = null, _ccTags = {}, _ccFilter = '', _ccTapTimer = null;
 let _ccMembers = null, _ccShareInit = new Set();   // 分享：成員名單(快取) + 編輯時的初始分享對象
 async function loadCustomChars() {
-  // Load for EVERY member: admins get their own + shared; readers/writers get only chars shared
-  // with them (read-only). Creating/managing still gates on isBeta() in the UI + backend.
-  if (!currentUser) { _customChars = []; _ccTags = {}; _ccFilter = ''; return; }
-  try {
-    _customChars = await api('/custom-chars/') || [];
-    const tags = await api('/custom-chars/tags') || [];
-    _ccTags = {};   // char_id -> Set(novel_id)
-    tags.forEach(t => { (_ccTags[t.char_id] = _ccTags[t.char_id] || new Set()).add(t.novel_id); });
-  } catch (e) { _customChars = []; _ccTags = {}; }
-  // if the active filter points at a character that no longer exists (e.g. just deleted),
-  // drop it — otherwise renderShelf keeps filtering to an empty set and "沒有符合的作品" sticks.
-  if (_ccFilter && !_customChars.some(c => c.id === _ccFilter)) _ccFilter = '';
-  renderUploadCcPicker();
+  // 自創角色功能已移除：不再載入、不打 /custom-chars API。清空狀態即可（相關 UI 由 isBeta()=false 隱藏）。
+  _customChars = []; _ccTags = {}; _ccFilter = '';
 }
 // 單擊 = 選取(篩選作品)；雙擊 = 打開編輯
 function ccTap(id, rerender) {
