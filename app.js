@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.14';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.15';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3169,6 +3169,28 @@ function _fmtUptime(s) {
   if (s < 3600) return Math.floor(s / 60) + ' 分 ' + (s % 60) + ' 秒';
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
   return h + ' 小時 ' + m + ' 分';
+}
+async function runDbLatency() {
+  const el = document.getElementById('db-latency-out');
+  if (!el) return;
+  el.style.display = 'block';
+  el.innerHTML = '<div class="spinner" style="margin:8px auto"></div>';
+  try {
+    const r = await api('/permissions/db-latency', { background: true });
+    const s = r.samples_ms || [];
+    const first = r.first_ms, warm = r.warm_median_ms || 0;
+    const coldPenalty = warm ? first / warm : 1;
+    // 首發明顯比熱查詢慢 → 連線建立成本（可修）；否則看熱查詢本身快不快。
+    const verdict = coldPenalty >= 1.8
+      ? ['#a8761f', '首次明顯比後續慢 → 往返稅來自「連線建立」（TLS 握手／連線沒重用）。修連線重用即可，不必搬 region。']
+      : warm >= 250
+      ? ['var(--scarlet)', `連熱查詢都要 ${warm} ms → 純跨區網路 RTT。把 Supabase 搬到新加坡（與 Render 同區）才會根治。`]
+      : ['#2d4a1e', `熱查詢其實只要 ${warm} ms → 穩態不慢，先前的高延遲多半是冷啟動／連線首發，別急著搬。`];
+    el.innerHTML = `<div style="font-size:12px;color:var(--ink-light);margin-bottom:4px">${ic('ic-gear', 12)} Supabase 往返（連續 6 次撈一行，ms；首發粗體）</div>
+      <div style="font-size:14px;color:var(--ink);font-family:monospace">${s.map((v, i) => i === 0 ? `<b>${v}</b>` : v).join('　·　')}</div>
+      <div style="font-size:12px;margin-top:6px;color:var(--ink-light)">首發 <b style="color:var(--ink)">${first}</b> ms　｜　熱查詢中位數 <b style="color:var(--ink)">${warm}</b> ms</div>
+      <div style="font-size:12.5px;color:${verdict[0]};margin-top:7px;line-height:1.55">${verdict[1]}</div>`;
+  } catch (e) { el.innerHTML = `<span style="color:var(--scarlet)">測試失敗：${escapeHtml(e.message || '')}</span>`; }
 }
 async function loadMonitor() {
   const el = document.getElementById('monitor-body');
