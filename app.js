@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.07';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.08';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1371,6 +1371,8 @@ function charPill(code) {
   const dot = c && c.house ? `<span class="t-dot h-${c.house}"></span>` : '';
   return `<span class="t-chr">${dot}${escapeHtml(name)}</span>`;
 }
+// 分類標籤色：迷情劑紅（預設）、吐真劑綠、儲思盆靛藍。
+function catCls(c) { return c === '吐真劑' ? ' t-cat-green' : c === '儲思盆' ? ' t-cat-blue' : ''; }
 let shelfCat = '';        // '' = 全部
 let shelfChars = [];   // default: none lit = show everything; tap a character to filter to them (OR)
 // 作品管理 (admin works) filter. Type pills include 羊皮紙 (=forum) on top of the 3 novel categories.
@@ -2389,7 +2391,7 @@ function renderNovelBlocks(list, grid, emptyMsg) {
         (m.characters || []).forEach(c => { if (!chars.includes(c)) chars.push(c); });
         const a = m.author || '佚名'; authorCount.set(a, (authorCount.get(a) || 0) + 1);   // 依「篇數」統計署名
       });
-      const tags = cats.map(c => `<span class="t-cat${c === '吐真劑' ? ' t-cat-green' : ''}">${escapeHtml(c)}</span>`).join('')
+      const tags = cats.map(c => `<span class="t-cat${catCls(c)}">${escapeHtml(c)}</span>`).join('')
         + chars.map(c => charPill(c)).join('');
       // 系列作者：一般同一人。取成員署名中「最多篇用的那個」（Map 保插入序，平手取序號最小的那篇），
       // 避免個別篇署名打錯字（例：利/莉）被誤湊成「共同作者」。日期 = 系列最新更新那篇的日期。
@@ -2423,7 +2425,7 @@ function shelfRow(n, inSeries) {
       <h4>${inSeries && n.series_order ? `<span style="color:var(--ink-light);font-weight:normal">#${n.series_order}　</span>` : ''}${escapeHtml(stripOuterBookQuotes(n.title))}</h4>
       <div class="row-meta">${escapeHtml(n.author || '佚名')}${ownerTag(n)}${n.created_at ? ` · ${ic('ic-calendar',11)} ${fmtUpdated(n.created_at)}` : ''}</div>
       <div class="row-tags">
-        ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${escapeHtml(n.category)}</span>` : ''}
+        ${n.category ? `<span class="t-cat${catCls(n.category)}">${escapeHtml(n.category)}</span>` : ''}
         ${(n.characters || []).map(c => charPill(c)).join('')}
       </div>
     </div>`;
@@ -4296,7 +4298,7 @@ async function loadReviewList() {
           <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${_kindTag(n)}・${escapeHtml(n.author || '匿名')}・${fmtUpdated(n.created_at)}</div>
           ${n.kind === 'image' && n.image_url ? `<div style="margin-top:8px"><img src="${escapeHtml(n.image_url)}" alt="" style="max-width:160px;max-height:180px;border-radius:6px" /></div>` : ''}
           <div class="row-tags" style="margin-top:6px">
-            ${n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${escapeHtml(n.category)}</span>` : ''}
+            ${n.category ? `<span class="t-cat${catCls(n.category)}">${escapeHtml(n.category)}</span>` : ''}
             ${(n.characters || []).map(c => charPill(c)).join('')}
           </div>
           ${n.kind === 'image' ? _slotBtns(n) : ''}
@@ -4561,7 +4563,7 @@ function renderAdminNovels() {
         + (n.is_guide ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-book', 12) + ' 範例·可刪除</span>' : '')
         + (n.locked ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.2);color:var(--accent)">' + ic('ic-key',11) + ' 已鎖 · 唯你可見</span>' : '');
       const tags = (n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : '')
-        + (n.category ? `<span class="t-cat${n.category === '吐真劑' ? ' t-cat-green' : ''}">${escapeHtml(n.category)}</span>` : '')
+        + (n.category ? `<span class="t-cat${catCls(n.category)}">${escapeHtml(n.category)}</span>` : '')
         + (n.characters || []).map(c => `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.18);color:var(--ink-light)">${escapeHtml(charNames([c]))}</span>`).join('');
       // 畫作：緊湊橫排卡 — 大縮圖靠左，資訊集中右側，動作列一排圖示圓鈕（省一半以上高度）
       if (n.kind === 'image') {

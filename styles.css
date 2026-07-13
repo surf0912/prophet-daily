@@ -270,6 +270,7 @@
     .row-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
     .t-cat { display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 10px; background: rgba(138,45,45,.12); color: var(--accent); }
     .t-cat.t-cat-green { background: rgba(45,74,30,.15); color: var(--series); }   /* 吐真劑 = 墨綠 (夜間轉亮綠) */
+    .t-cat.t-cat-blue { background: rgba(44,84,136,.13); color: #2c5488; }   /* 儲思盆 = 記憶靛藍 */
     .t-chr { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 2px 9px 2px 8px; border-radius: 10px; background: rgba(201,168,76,.2); color: var(--ink-light); }
     /* 學院用名字前的小圓點識別（分類標籤是整顆染色，角色是金底＋圓點——形狀語言不同，不會與紅/綠分類撞色） */
     .t-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
