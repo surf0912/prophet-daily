@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.13';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.14';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3197,6 +3197,28 @@ async function loadMonitor() {
         <div style="font-size:22px;font-weight:bold;color:var(--ink);line-height:1.3">${val}</div>
         ${sub ? `<div style="font-size:11px;color:var(--ink-light);opacity:.85;margin-top:3px;line-height:1.5">${sub}</div>` : ''}
       </div>`;
+    // 效能定位：最慢 Endpoint／Supabase 查詢（15 分鐘窗，p95 由高到低）。p95 上色：紅≥1s、橙≥500ms。
+    const slowTable = (title, rows, col1) => {
+      if (!rows || !rows.length) return '';
+      const cell = v => `<td style="padding:3px 7px;text-align:right;color:${v >= 1000 ? 'var(--scarlet)' : v >= 500 ? '#a8761f' : 'inherit'}">${v}</td>`;
+      return `<div style="margin-top:14px">
+        <div style="font-size:12px;font-weight:bold;color:var(--ink);margin-bottom:5px">${title}</div>
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="color:var(--ink-light)">
+            <th style="text-align:left;padding:3px 7px;font-weight:normal">${col1}</th>
+            <th style="text-align:right;padding:3px 7px;font-weight:normal">次數</th>
+            <th style="text-align:right;padding:3px 7px;font-weight:normal">p50</th>
+            <th style="text-align:right;padding:3px 7px;font-weight:normal">p95</th>
+            <th style="text-align:right;padding:3px 7px;font-weight:normal">max</th>
+          </tr></thead>
+          <tbody>${rows.map(r => `<tr style="border-top:1px solid var(--gold-lt)">
+            <td style="padding:3px 7px;color:var(--ink)">${escapeHtml(r.name)}</td>
+            <td style="padding:3px 7px;text-align:right;color:var(--ink-light)">${r.count}</td>
+            <td style="padding:3px 7px;text-align:right">${r.p50}</td>${cell(r.p95)}
+            <td style="padding:3px 7px;text-align:right;color:var(--ink-light)">${r.max}</td>
+          </tr>`).join('')}</tbody>
+        </table></div></div>`;
+    };
     const rtSub = warming
       ? `<span style="color:${health[0]};font-weight:bold">● 暖機中</span>　剛啟動，數據穩定前先不評級`
       : insufficient
@@ -3221,7 +3243,9 @@ async function loadMonitor() {
       ${jwtPct === null ? '' : (jwtPct >= 80
         ? `<div style="font-size:11px;color:#2d4a1e;margin-top:10px">${ic('ic-shield', 11)} JWT 本機驗證：<b>啟用中</b>（${jwtPct}%）— 已省去每次請求對 Supabase 的一次往返</div>`
         : `<div style="font-size:12px;color:var(--scarlet);margin-top:10px;line-height:1.5">${ic('ic-shield', 11)} JWT 本機驗證：<b>未啟用</b>（本機僅 ${jwtPct}%）— 請把 Render 的 <b>JWT_SECRET</b> 設成你的 Supabase JWT 密鑰，回應時間才會降下來</div>`)}
-      <div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:10px">※「在線」以近 5 分鐘有送出請求的登入用戶計；純閱讀時前端不送請求，故為活躍下限值。</div>`;
+      ${slowTable(ic('ic-clock', 12) + ' 最慢 Endpoint（近 15 分鐘）', s.endpoints, 'Endpoint')}
+      ${slowTable(ic('ic-gear', 12) + ' 最慢 Supabase 查詢', s.queries, '查詢')}
+      <div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:10px">※「在線」以近 5 分鐘有送出請求的登入用戶計；純閱讀時前端不送請求，故為活躍下限值。Endpoint／查詢表用 15 分鐘窗，樣本累積後才有代表性。</div>`;
   } catch (e) {
     el.innerHTML = `<p style="color:var(--scarlet);padding:14px">載入失敗：${escapeHtml(e.message || '')}</p>`;
   }
