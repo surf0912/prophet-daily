@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.23';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.24';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1349,11 +1349,17 @@ function fmtUpdated(ts) {
 let novelsError = false;
 let hotIds = [];   // top-3 works (last 24h) floated to the front of the default shelf, silently
 async function loadNovels() {
+  // 書架先顯示：novels 一回來就 render，不再 sequential 等 /novels/hot（那讓首屏疊加成 ~1.2s）。
+  // hot 只是把 24h top-3 靜默浮頂，屬錦上添花——背景載入，回來後若有再重排一次即可。
+  hotIds = [];
   try { novels = await api('/novels/?kind=novel') || []; novelsError = false; }
   catch { novels = []; novelsError = true; }
-  try { hotIds = await api('/novels/hot') || []; } catch { hotIds = []; }
-  renderShelf();
+  renderShelf();              // 立即顯示（此時純發佈日期序，尚無 hot 浮頂）
   renderContinueBar();
+  api('/novels/hot').then(ids => {   // hot 背景回來 → 重排把 top-3 浮頂（renderShelf 內部自判浮頂條件）
+    hotIds = ids || [];
+    if (hotIds.length) renderShelf();
+  }).catch(() => {});
 }
 
 // ── Classification (category + characters) ───────────────────
