@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.12';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.13';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4005,8 +4005,10 @@ function galleryFullNav(dir) {
 }
 // 任意圖片全螢幕（右下角金色徽記浮水印，即時疊、不改檔案）；留影走廊詳情與角色頁封面共用。
 // fromGallery=true 且該畫屬於多幅組圖時，顯示組內切換箭頭；角色頁封面等直接呼叫（無箭頭）。
-function openImageFull(src, fromGallery) {
+function openImageFull(src, fromGallery, hideMark) {
   _fullGroupOn = !!fromGallery && Array.isArray(_galleryGroup) && _galleryGroup.length > 1;
+  const mark = document.getElementById('gf-mark');   // 審核看大圖時隱藏浮水印，看清畫作
+  if (mark) mark.style.display = hideMark ? 'none' : '';
   const prev = document.getElementById('gf-prev'), next = document.getElementById('gf-next');
   if (prev) prev.style.display = _fullGroupOn ? 'flex' : 'none';
   if (next) next.style.display = _fullGroupOn ? 'flex' : 'none';
@@ -4031,6 +4033,13 @@ function openImageFull(src, fromGallery) {
   document.getElementById('gallery-full').style.display = 'flex';
 }
 function closeGalleryFull() { document.getElementById('gallery-full').style.display = 'none'; }
+// 審核畫作：點縮圖看全螢幕大圖（單張、無組導覽、無浮水印，方便看清品質再決定通過）
+function openReviewImage(id) {
+  const n = (window._reviewPending || []).find(x => x.id === id);
+  if (!n || !n.image_url) return;
+  _galleryGroup = [];
+  openImageFull(n.image_url, false, true);
+}
 
 // ── 心動封面裁切框編輯器 ────────────────────────────────────────────────────
 // 拖動＋縮放（同頭像裁切的手感，但方框、非破壞性）。存的是 z,x,y（見 loadCoverCrops 註解）。
@@ -4303,7 +4312,7 @@ async function loadReviewList() {
         <div style="padding:12px 0;border-bottom:1px solid rgba(26,10,0,.1)">
           <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)}</div>
           <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${_kindTag(n)}・${escapeHtml(n.author || '匿名')}・${fmtUpdated(n.created_at)}</div>
-          ${n.kind === 'image' && n.image_url ? `<div style="margin-top:8px"><img src="${escapeHtml(n.image_url)}" alt="" style="max-width:160px;max-height:180px;border-radius:6px" /></div>` : ''}
+          ${n.kind === 'image' && n.image_url ? `<div style="margin-top:8px"><img src="${escapeHtml(n.image_url)}" alt="" data-onclick="openReviewImage('${n.id}')" style="max-width:160px;max-height:180px;border-radius:6px;cursor:zoom-in" title="點擊看大圖" /></div>` : ''}
           <div class="row-tags" style="margin-top:6px">
             ${n.category ? `<span class="t-cat${catCls(n.category)}">${escapeHtml(n.category)}</span>` : ''}
             ${(n.characters || []).map(c => charPill(c)).join('')}
