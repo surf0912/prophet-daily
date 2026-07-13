@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.11';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.12';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3548,7 +3548,7 @@ async function openAuthRequest(direction, targetId, targetTitle, targetOwnerName
     let works = [];
     try { works = await api('/authorizations/eligible-works') || []; } catch (e) {}
     if (!works.length) { sel.style.display = 'none'; hint.style.display = ''; send.disabled = true; return; }
-    sel.innerHTML = works.map(w => `<option value="${w.id}">《${escapeHtml(w.title)}》（待發佈）</option>`).join('');
+    sel.innerHTML = works.map(w => `<option value="${w.id}">《${escapeHtml(w.title)}》${w.status === 'approved' ? '' : '（待發佈）'}</option>`).join('');
     send.disabled = false;
   } else {
     row.style.display = 'none'; send.disabled = false;
