@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.10';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.11';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4799,7 +4799,7 @@ async function openEditWork(id) {
         ct.value = intro; document.getElementById('editwork-comments').value = comments;
       } else { ct.value = raw; }
     } else { ct.value = ''; }
-  } catch (e) { ct.value = ''; toast('內文載入失敗'); }
+  } catch (e) { ct.value = ''; toast('內文載入失敗：' + ((e && e.message) || e || '未知錯誤')); }   // 顯示後端實際錯誤，方便診斷
   ct.disabled = false;
 }
 
