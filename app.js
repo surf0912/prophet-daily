@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.24';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.25';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3174,10 +3174,13 @@ async function runDbLatency() {
     const first = r.first_ms, warm = r.warm_median_ms || 0;
     const coldPenalty = warm ? first / warm : 1;
     const coldExtra = Math.max(0, Math.round(first - warm));
-    // 判讀順序：先看單次往返本身貴不貴（>300ms 才可能值得搬），再看是不是連線建立成本（首發≫熱查詢），
-    // 其餘＝連線穩定、單次不慢，慢是慢在「多次連續查詢／大 select(*) 回傳」的累積——合併 round trip 才是解。
-    const verdict = warm >= 300
-      ? ['var(--scarlet)', `連熱查詢都要 ${warm} ms → 單次往返本身就貴，可考慮把 Supabase 搬到新加坡（與 Render 同區）。`]
+    const fastest = s.length ? Math.min(...s) : warm;   // 最快那次≈連線暖了的真穩態
+    // 判讀順序：先抓「暖機曲線」（有次很快、但中位偏高＝剛冷啟動、連線還在暖，不是真慢）——否則冷啟動
+    // 會誤報「該搬 region」。再看單次是否真貴（連最快的都慢），再看連線建立成本，最後才是穩定。
+    const verdict = (fastest < 200 && warm >= 250)
+      ? ['#a8761f', `樣本忽快忽慢（最快 ${fastest}、中位 ${warm} ms）→ 後端剛冷啟動、Supabase 連線還在暖機（keep-alive 未建、反覆 TLS 握手）。穩態接近最快值 ~${fastest} ms，等跑穩幾分鐘再測，別被暖機數字誤導成要搬 region。`]
+      : warm >= 300
+      ? ['var(--scarlet)', `連最快的往返都要 ${fastest} ms → 單次往返本身就貴，這才真的可考慮把 Supabase 搬到新加坡（與 Render 同區）。`]
       : coldPenalty >= 2
       ? ['#a8761f', `首發 ${first} 明顯比熱查詢 ${warm} 慢 → 往返稅來自連線建立（TLS 握手），修連線重用即可，不必搬。`]
       : ['#2d4a1e', `Supabase 連線穩定，單次小型查詢約 ${warm} ms（首發僅多 ${coldExtra} ms）。慢是慢在「多次連續查詢」與較大 select(*) 回傳的累積——優化方向是把 sequential 合成一次，不必搬 region。`];
