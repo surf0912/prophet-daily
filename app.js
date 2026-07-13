@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.15';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.16';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3180,12 +3180,14 @@ async function runDbLatency() {
     const s = r.samples_ms || [];
     const first = r.first_ms, warm = r.warm_median_ms || 0;
     const coldPenalty = warm ? first / warm : 1;
-    // 首發明顯比熱查詢慢 → 連線建立成本（可修）；否則看熱查詢本身快不快。
-    const verdict = coldPenalty >= 1.8
-      ? ['#a8761f', '首次明顯比後續慢 → 往返稅來自「連線建立」（TLS 握手／連線沒重用）。修連線重用即可，不必搬 region。']
-      : warm >= 250
-      ? ['var(--scarlet)', `連熱查詢都要 ${warm} ms → 純跨區網路 RTT。把 Supabase 搬到新加坡（與 Render 同區）才會根治。`]
-      : ['#2d4a1e', `熱查詢其實只要 ${warm} ms → 穩態不慢，先前的高延遲多半是冷啟動／連線首發，別急著搬。`];
+    const coldExtra = Math.max(0, Math.round(first - warm));
+    // 判讀順序：先看單次往返本身貴不貴（>300ms 才可能值得搬），再看是不是連線建立成本（首發≫熱查詢），
+    // 其餘＝連線穩定、單次不慢，慢是慢在「多次連續查詢／大 select(*) 回傳」的累積——合併 round trip 才是解。
+    const verdict = warm >= 300
+      ? ['var(--scarlet)', `連熱查詢都要 ${warm} ms → 單次往返本身就貴，可考慮把 Supabase 搬到新加坡（與 Render 同區）。`]
+      : coldPenalty >= 2
+      ? ['#a8761f', `首發 ${first} 明顯比熱查詢 ${warm} 慢 → 往返稅來自連線建立（TLS 握手），修連線重用即可，不必搬。`]
+      : ['#2d4a1e', `Supabase 連線穩定，單次小型查詢約 ${warm} ms（首發僅多 ${coldExtra} ms）。慢是慢在「多次連續查詢」與較大 select(*) 回傳的累積——優化方向是把 sequential 合成一次，不必搬 region。`];
     el.innerHTML = `<div style="font-size:12px;color:var(--ink-light);margin-bottom:4px">${ic('ic-gear', 12)} Supabase 往返（連續 6 次撈一行，ms；首發粗體）</div>
       <div style="font-size:14px;color:var(--ink);font-family:monospace">${s.map((v, i) => i === 0 ? `<b>${v}</b>` : v).join('　·　')}</div>
       <div style="font-size:12px;margin-top:6px;color:var(--ink-light)">首發 <b style="color:var(--ink)">${first}</b> ms　｜　熱查詢中位數 <b style="color:var(--ink)">${warm}</b> ms</div>
