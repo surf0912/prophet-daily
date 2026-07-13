@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.17';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.18';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2486,7 +2486,6 @@ function applyMqjGuard(on) {
 
 async function openNovel(novelId) {
   currentNovelId = novelId;
-  api(`/novels/${novelId}/view`, { method: 'POST' }).catch(() => {});   // log a view (best-effort) for the hot ranking
   let novel = [...forumPosts, ...novels].find(n => n.id === novelId);
   if (!novel) { try { novel = await api(`/novels/${novelId}`); } catch {} }
   markSeriesSeenForWork(novel);   // opening a new series installment clears its 追蹤更新 flag
@@ -2520,6 +2519,7 @@ async function openNovel(novelId) {
     updateSeriesNav(novel);                                     // 上一篇/下一篇 only after the content is in
     const aw = document.getElementById('reader-auth-wrap');     // 篇末「想為這篇作畫」也等內容進來才浮現
     if (aw) aw.style.display = window._readerAuthTarget ? '' : 'none';
+    api(`/novels/${novelId}/view`, { method: 'POST' }).catch(() => {});   // 記 view 移到首屏顯示後，不跟章節請求搶連線
   });
 }
 
