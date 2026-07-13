@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.19';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.20';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4630,7 +4630,7 @@ function renderAdminNovels() {
         + (n.locked ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.2);color:var(--accent)">' + ic('ic-key',11) + ' 已鎖 · 唯你可見</span>' : '');
       const tags = (n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : '')
         + (n.category ? `<span class="t-cat${catCls(n.category)}">${escapeHtml(n.category)}</span>` : '')
-        + (n.characters || []).map(c => `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.18);color:var(--ink-light)">${escapeHtml(charNames([c]))}</span>`).join('');
+        + (n.characters || []).map(c => charPill(c)).join('');
       // 畫作：緊湊橫排卡 — 大縮圖靠左，資訊集中右側，動作列一排圖示圓鈕（省一半以上高度）
       if (n.kind === 'image') {
         // handler 必須寫成字面量（安全測試靜態掃 data-onclick），所以只抽共用的圓鈕樣式
