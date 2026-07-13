@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.16';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.17';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2496,14 +2496,12 @@ async function openNovel(novelId) {
   // 雙署名：文首圖來自授權畫作時（image_caption＝畫師署名），標題圖下顯示「文／X　圖／Y」
   currentNovelByline = (currentNovelHeader && novel.image_caption)
     ? { text: novel.author || '佚名', art: novel.image_caption } : null;
-  // 授權信：篇末「想為這篇作畫」入口（writer 以上、非本篇作者、已發佈的小說）
-  { const aw = document.getElementById('reader-auth-wrap');
-    if (aw) {
-      const canAsk = _isWriterPlus() && novel && novel.kind === 'novel'
-        && novel.status === 'approved' && !(novel.owners || []).includes(currentUser.id);
-      aw.style.display = canAsk ? '' : 'none';
-      window._readerAuthTarget = canAsk ? { id: novel.id, title: novel.title, author: novel.author || '佚名' } : null;
-    } }
+  // 授權信：篇末「想為這篇作畫」入口（writer 以上、非本篇作者、已發佈的小說）。先算好目標但「不顯示」，
+  // 等內容載入完成才浮現，否則會在 spinner 還在轉時就飄在讀取畫面上（同 reader-series-nav 的處理）。
+  { const aw = document.getElementById('reader-auth-wrap'); if (aw) aw.style.display = 'none';
+    const canAsk = _isWriterPlus() && novel && novel.kind === 'novel'
+      && novel.status === 'approved' && !(novel.owners || []).includes(currentUser.id);
+    window._readerAuthTarget = canAsk ? { id: novel.id, title: novel.title, author: novel.author || '佚名' } : null; }
   applyMqjGuard(true);   // personalized watermark + copy guard on EVERY work now (was 迷情劑-only)
   updateReaderFavBtn();   // show ☆/★ for 意若思鏡 works
   updateReaderDarkBtn();  // /reflects current 夜間模式
@@ -2518,7 +2516,11 @@ async function openNovel(novelId) {
   renderToc();
   document.getElementById('reader-series-nav').style.display = 'none';   // hide until content loads (don't float over the spinner)
   document.getElementById('reader-view').classList.add('open');
-  loadChapter(0).then(() => updateSeriesNav(novel));   // show 上一篇/下一篇 only after the content is in
+  loadChapter(0).then(() => {
+    updateSeriesNav(novel);                                     // 上一篇/下一篇 only after the content is in
+    const aw = document.getElementById('reader-auth-wrap');     // 篇末「想為這篇作畫」也等內容進來才浮現
+    if (aw) aw.style.display = window._readerAuthTarget ? '' : 'none';
+  });
 }
 
 // ── 系列(上下集)導覽 ─────────────────────────────────────────
