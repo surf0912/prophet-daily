@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.27';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.28';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2896,7 +2896,7 @@ function updateReaderDarkBtn() {
 
 // ── Admin ────────────────────────────────────────────────────
 const AUDIT_LABELS = {
-  approve_novel: '核准作品', delete_novel: '刪除作品', lock: '鎖上作品', unlock: '解鎖作品',
+  approve_novel: '核准作品', retract_novel: '退件作品', delete_novel: '刪除作品', lock: '鎖上作品', unlock: '解鎖作品',
   ban: '封禁帳號', unban: '解除封禁', temp_ban: '臨時封禁', temp_unban: '解除臨時封禁',
   change_role: '變更身份', reset_password: '重設密碼',
   delete_user: '刪除帳號', auto_publish: '自動審核', wish_reply: '許願池回覆權', mqj: '迷情劑權限', clear_flag: '已審回鍋標記',
@@ -3760,6 +3760,7 @@ function openGalleryItem(id, fromAdmin) {
   cap.textContent = it.image_caption || ''; cap.style.display = it.image_caption ? '' : 'none';
   renderGdAuth(it);   // 授權信：請求授權鈕＋「授權予／源自」連結
   renderGdHideBtn();
+  renderGdRetractBtn();   // 超管退件鈕（退回待審）
   const adminBox = document.getElementById('gd-admin');
   const adminish = currentUser && ['admin', 'super_admin'].includes(currentUser.role);
   const isOwner = currentUser && (it.owners || []).includes(currentUser.id);
@@ -3791,6 +3792,21 @@ function renderGdHideBtn() {
   b.innerHTML = hidden ? `${_EYE_ON} 取消隱藏` : `${_EYE_OFF} 從留影走廊隱藏`;
   b.style.color = hidden ? 'var(--accent)' : 'var(--ink-light)';
   b.style.borderColor = hidden ? 'var(--accent)' : 'var(--ink-light)';
+}
+// 超管退件鈕：把這幅已通過的畫作退回待審（下架＋回審核佇列，作者可修改重送）。只有超管看得到；
+// 牆上的圖都是已審核（/novels/gallery 只回 approved、item 無 status 欄），從作品管理開的則看 status。
+function renderGdRetractBtn() {
+  const b = document.getElementById('gd-retract');
+  if (!b) return;
+  const it = _galleryDetailItem;
+  const isSuper = currentUser && currentUser.role === 'super_admin';
+  const approved = it && (it.status === undefined || it.status === 'approved');
+  if (isSuper && it && approved) {
+    b.style.display = 'inline-flex';
+    b.innerHTML = `${ic('ic-clock', 13)} 退件（退回待審）`;
+  } else {
+    b.style.display = 'none';
+  }
 }
 async function toggleHideGalleryImage() {
   const it = _galleryDetailItem;
@@ -4449,6 +4465,9 @@ function renderAdminNovels() {
       // 鎖上：作者本人(owner)或超管才有；鎖住後其他人完全看不到這篇存在。
       const canLock = !adminNovelScope || currentUser.role === 'super_admin';
       const lockBtn = canLock ? `<button data-onclick="toggleLock('${n.id}', ${!n.locked})" style="font-size:12px;padding:3px 10px;background:none;border:1px solid ${n.locked ? 'var(--series)' : 'var(--accent)'};color:${n.locked ? 'var(--series)' : 'var(--accent)'};border-radius:3px;cursor:pointer">${ic('ic-key',12)} ${n.locked ? '解鎖' : '鎖上'}</button>` : '';
+      // 退件：僅超管、且作品已通過（覆核其他管理員放行的作品，退回待審而非刪除）。
+      const canRetract = currentUser.role === 'super_admin' && n.status === 'approved';
+      const retractBtn = canRetract ? `<button data-onclick="retractNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-clock',12)} 退件</button>` : '';
       // 種類徽章配色：小說=紅、羊皮紙(論壇體)=黃、畫作=綠
       const badges = (n.kind === 'forum'
           ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-scroll', 12) + ' 論壇體</span>'
@@ -4471,6 +4490,7 @@ function renderAdminNovels() {
             <button data-onclick="openSeries('${n.id}')" aria-label="系列" title="系列" style="${ibs('var(--series)', 'var(--series)')}">${ic('ic-link', 15)}</button>` : '')
           + (isAdmin ? `<button data-onclick="openOwners('${n.id}')" aria-label="作者" title="作者" style="${ibs('var(--gold)', 'var(--ink-light)')}">${ic('ic-users', 15)}</button>` : '')
           + (canLock ? `<button data-onclick="toggleLock('${n.id}', ${!n.locked})" aria-label="${n.locked ? '解鎖' : '鎖上'}" title="${n.locked ? '解鎖' : '鎖上'}" style="${ibs(lockCol, lockCol)}">${ic('ic-key', 15)}</button>` : '')
+          + (canRetract ? `<button data-onclick="retractNovel('${n.id}')" aria-label="退件" title="退件（退回待審）" style="${ibs('var(--accent)', 'var(--accent)')}">${ic('ic-clock', 15)}</button>` : '')
           + (canManage ? `<button data-onclick="deleteNovel('${n.id}')" aria-label="刪除" title="刪除" style="${ibs('var(--accent)', 'var(--accent)')}">${ic('ic-trash', 15)}</button>` : '');
         return `
       <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
@@ -4493,7 +4513,7 @@ function renderAdminNovels() {
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">${tags}</div>
         <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${escapeHtml(n.author || '佚名')}${ownerTag(n)}</div>
         ${n.created_at ? `<div style="font-size:12px;color:var(--ink-light);margin-top:2px">${ic('ic-calendar',11)} 發佈日期 ${fmtUpdated(n.created_at)}</div>` : ''}
-        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${editBtn}${manageBtns}${ownerAssignBtn}${lockBtn}${delBtn}</div>
+        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${editBtn}${manageBtns}${ownerAssignBtn}${lockBtn}${retractBtn}${delBtn}</div>
       </div>`;
     }).join('') || `<p style="color:#888;padding:14px;text-align:center">${ns.length ? '此篩選沒有作品' : '尚無作品'}</p>`;
 }
@@ -4748,6 +4768,24 @@ async function deleteNovel(id, isReject) {
     toast(isReject ? '已退回' : '已刪除');
     if (isReject) loadReviewList(); else { loadAdminNovelList(); loadNovels(); }
   } catch (e) { toast(e.message); }
+}
+
+// 超管退件：把已通過的作品退回待審——從公開處下架、回到審核佇列，作者可在作品管理修改後重送。
+// 不刪除、不動內容（與 deleteNovel 的「退回並刪除」不同）。留影走廊詳情頁與作品管理卡片都有此鈕。
+async function retractNovel(id) {
+  if (!id) id = _galleryDetailItem && _galleryDetailItem.id;   // 詳情頁的鈕無參呼叫，讀目前開啟的畫作
+  if (!id) return;
+  const it = (_galleryDetailItem && _galleryDetailItem.id === id) ? _galleryDetailItem : adminWorkById(id);
+  const title = (it && it.title) || '這件作品';
+  if (!confirm(`退件《${title}》？\n\n退件後會從公開書架與留影走廊下架、退回待審，作者可在「作品管理」修改後重新送審。作品與內容不會刪除。`)) return;
+  try {
+    await api(`/novels/${id}/retract`, { method: 'PATCH' });
+    toast('已退件，退回待審');
+    if (typeof closeGalleryDetail === 'function') closeGalleryDetail();
+    if (typeof loadGallery === 'function') loadGallery();
+    if (typeof loadAdminNovelList === 'function') loadAdminNovelList();
+    if (typeof loadNovels === 'function') loadNovels();
+  } catch (e) { toast(e.message || '退件失敗'); }
 }
 
 async function loadAdminUsers() {
