@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.30';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.31';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2896,7 +2896,7 @@ function updateReaderDarkBtn() {
 
 // ── Admin ────────────────────────────────────────────────────
 const AUDIT_LABELS = {
-  approve_novel: '核准作品', retract_novel: '退件作品', delete_novel: '刪除作品', lock: '鎖上作品', unlock: '解鎖作品',
+  approve_novel: '核准作品', retract_novel: '退件作品', reject_novel: '退回修改', resubmit_novel: '重新送審', delete_novel: '刪除作品', lock: '鎖上作品', unlock: '解鎖作品',
   ban: '封禁帳號', unban: '解除封禁', temp_ban: '臨時封禁', temp_unban: '解除臨時封禁',
   archive: '封存帳號', unarchive: '取消封存',
   change_role: '變更身份', reset_password: '重設密碼',
@@ -4243,7 +4243,8 @@ async function loadReviewList() {
           <div style="display:flex;gap:8px;margin-top:8px">
             ${n.kind === 'image' ? '' : `<button data-onclick="openNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">預覽</button>`}
             <button data-onclick="approveNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:#2d4a1e;border:none;color:#fff;border-radius:3px;cursor:pointer">${ic('ic-check',12)} 通過</button>
-            <button data-onclick="deleteNovel('${n.id}', true)" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-x',12)} 退回</button>
+            <button data-onclick="rejectNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-x',12)} 退回修改</button>
+            <button data-onclick="deleteNovel('${n.id}', true)" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-trash',12)} 刪除</button>
           </div>
         </div>`).join('');
 
@@ -4271,6 +4272,24 @@ async function approveNovel(id) {
   }
   try { await api(`/novels/${id}/approve`, { method: 'PATCH' }); toast('已通過審核'); loadReviewList(); }
   catch (e) { toast(e.message); }
+}
+// 退回修改（不刪除）：標記 rejected，退回作者的作品管理讓他改後重送。垃圾稿才用「刪除」。
+async function rejectNovel(id) {
+  const n = (window._reviewPending || []).find(x => x.id === id);
+  const title = (n && n.title) || '這篇稿件';
+  if (!confirm(`退回《${title}》讓作者修改？\n\n稿件不會刪除，會退回作者的「作品管理」並標示「已退回」，作者可修改後重新送審。若是垃圾內容請改用「刪除」。`)) return;
+  try { await api(`/novels/${id}/reject`, { method: 'PATCH' }); toast('已退回作者修改'); loadReviewList(); }
+  catch (e) { toast(e.message); }
+}
+// 作者把已退回的稿重新送審（rejected→pending）。
+async function resubmitNovel(id) {
+  const title = (adminWorkById(id).title) || '這篇作品';
+  if (!confirm(`把《${title}》重新送審？\n\n將回到審核佇列，等管理員再次審核。`)) return;
+  try {
+    await api(`/novels/${id}/resubmit`, { method: 'PATCH' });
+    toast('已重新送審，等待審核');
+    loadAdminNovelList();
+  } catch (e) { toast(e.message || '重送失敗'); }
 }
 
 // Create a single-piece novel: work metadata + body text in one shot (body becomes chapter 1).
@@ -4479,7 +4498,9 @@ function renderAdminNovels() {
   const list = applyAdminFilter(ns);
   el.innerHTML = list.map(n => {
       const statusTag = (n.status === 'pending'
-        ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-clock',11) + ' 待審核</span>' : '')
+        ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-clock',11) + ' 待審核</span>'
+        : n.status === 'rejected'
+        ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.28);color:var(--ink-light)">' + ic('ic-x',11) + ' 已退回·可修改重送</span>' : '')
         + (isFutureIso(n.created_at) ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">' + ic('ic-clock',11) + ' 排程·' + fmtUpdated(n.created_at) + '公開</span>' : '');
       // 編輯 is for everyone here (the list only shows works the viewer owns, or an admin's scoped view).
       const editBtn = `<button data-onclick="openEditWork('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-edit',12)} 編輯</button>`;
@@ -4498,6 +4519,9 @@ function renderAdminNovels() {
       // 退件：僅超管、且作品已通過（覆核其他管理員放行的作品，退回待審而非刪除）。
       const canRetract = currentUser.role === 'super_admin' && n.status === 'approved';
       const retractBtn = canRetract ? `<button data-onclick="retractNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-clock',12)} 退件</button>` : '';
+      // 重新送審：已退回的稿，作者（owner）或管理員可送回審核佇列（rejected→pending）。
+      const canResubmit = n.status === 'rejected' && canManage;
+      const resubmitBtn = canResubmit ? `<button data-onclick="resubmitNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:#2d4a1e;border:none;color:#fff;border-radius:3px;cursor:pointer">${ic('ic-check',12)} 重新送審</button>` : '';
       // 種類徽章配色：小說=紅、羊皮紙(論壇體)=黃、畫作=綠
       const badges = (n.kind === 'forum'
           ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-scroll', 12) + ' 論壇體</span>'
@@ -4520,6 +4544,7 @@ function renderAdminNovels() {
             <button data-onclick="openSeries('${n.id}')" aria-label="系列" title="系列" style="${ibs('var(--series)', 'var(--series)')}">${ic('ic-link', 15)}</button>` : '')
           + (isAdmin ? `<button data-onclick="openOwners('${n.id}')" aria-label="作者" title="作者" style="${ibs('var(--gold)', 'var(--ink-light)')}">${ic('ic-users', 15)}</button>` : '')
           + (canLock ? `<button data-onclick="toggleLock('${n.id}', ${!n.locked})" aria-label="${n.locked ? '解鎖' : '鎖上'}" title="${n.locked ? '解鎖' : '鎖上'}" style="${ibs(lockCol, lockCol)}">${ic('ic-key', 15)}</button>` : '')
+          + (canResubmit ? `<button data-onclick="resubmitNovel('${n.id}')" aria-label="重新送審" title="重新送審" style="${ibs('var(--series)', 'var(--series)')}">${ic('ic-check', 15)}</button>` : '')
           + (canRetract ? `<button data-onclick="retractNovel('${n.id}')" aria-label="退件" title="退件（退回待審）" style="${ibs('var(--accent)', 'var(--accent)')}">${ic('ic-clock', 15)}</button>` : '')
           + (canManage ? `<button data-onclick="deleteNovel('${n.id}')" aria-label="刪除" title="刪除" style="${ibs('var(--accent)', 'var(--accent)')}">${ic('ic-trash', 15)}</button>` : '');
         return `
@@ -4543,7 +4568,7 @@ function renderAdminNovels() {
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">${tags}</div>
         <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${escapeHtml(n.author || '佚名')}${ownerTag(n)}</div>
         ${n.created_at ? `<div style="font-size:12px;color:var(--ink-light);margin-top:2px">${ic('ic-calendar',11)} 發佈日期 ${fmtUpdated(n.created_at)}</div>` : ''}
-        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${editBtn}${manageBtns}${ownerAssignBtn}${lockBtn}${retractBtn}${delBtn}</div>
+        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${resubmitBtn}${editBtn}${manageBtns}${ownerAssignBtn}${lockBtn}${retractBtn}${delBtn}</div>
       </div>`;
     }).join('') || `<p style="color:#888;padding:14px;text-align:center">${ns.length ? '此篩選沒有作品' : '尚無作品'}</p>`;
 }
