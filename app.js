@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.33';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.34';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -60,8 +60,6 @@ function applyFont() {
     document.head.appendChild(el);
   }
   el.textContent = magicFont ? MAGIC_FONT_CSS : SYSTEM_FONT_CSS;
-  const btn = document.getElementById('font-toggle-btn');
-  if (btn) btn.innerHTML = magicFont ? ic('ic-sparkles',13)+' 魔法字體' : ic('ic-sparkles',13)+' 系統字體';
   const cb = document.getElementById('magic-font-toggle');
   if (cb) cb.checked = magicFont;
 }
@@ -628,7 +626,6 @@ async function initApp() {
   document.querySelectorAll('.super-only').forEach(el => el.style.display = currentUser.role === 'super_admin' ? '' : 'none');  // 監看面板 + 實驗功能開關：只給 SA
   // 授權信箱：writer 用獨立「授權」分頁；admin 併入「審核」分頁的授權信膠囊，不重複顯示
   { const _au = document.getElementById('auths-tab-btn'); if (_au) _au.style.display = currentUser.role === 'writer' ? '' : 'none'; }
-  { const _bt = document.getElementById('beta-toggle'); if (_bt) _bt.checked = localStorage.getItem('pd_beta') === '1'; }
   { const _fx = document.getElementById('tapfx-toggle'); if (_fx) _fx.checked = localStorage.getItem('pd_tap_fx') !== '0'; }   // 點擊特效預設開
   { const _ow = document.getElementById('owl-toggle'); if (_ow) _ow.checked = localStorage.getItem('pd_owl_always') === '1'; }   // 貓頭鷹常駐預設關
   if (typeof renderShelf === 'function') renderShelf();   // 載入身分後刷新書架
@@ -1300,9 +1297,6 @@ function renderGreeting(repick = true) {
     im.onerror = () => tryLoad(i + 1);
     im.src = candidates[i];
   })(0);
-  const now = new Date();
-  const db = document.getElementById('date-banner');   // element was removed; guard so renderGreeting can't throw
-  if (db) db.textContent = `${now.getFullYear()} 年 ${now.getMonth()+1} 月 ${now.getDate()} 日 · 巫師界頭條`;
   setTimeout(warmCoverCache, 3000);   // 當前封面穩定後，閒置預抓本時段封面池（SW 存進常駐快取）
 }
 
@@ -2106,18 +2100,7 @@ function mqjGateBody() {
   return `${eIc('ic-key')}「迷情劑」分類需開放才能閱讀<br><small style="display:block;margin-bottom:14px">點下方按鈕申請，並至微信群私訊客服完成年齡驗證</small>${applyBtn('要求管理員開放')}`;
 }
 
-// ── EXPERIMENTAL feature gate ──────────────────────────────────────────────
-// isBeta() gates the 自創角色 (custom-character) beta UI only — the 心動 profile / cover-photo
-// preference / wallpaper download are now public. Admins always have it (no toggle); the
-// super_admin gates their own view with the pd_beta flag (the 實驗功能 switch, super-only). The flag
-// lives in localStorage so it survives PWA launches; toggle in 檔案 → 小工具 → 實驗功能 or ?beta=1/0.
-// Backend stays the real gate (require_admin).
-(function () {
-  const b = new URLSearchParams(location.search).get('beta');
-  if (b === '1' || b === '') localStorage.setItem('pd_beta', '1');
-  else if (b === '0') localStorage.removeItem('pd_beta');
-})();
-// 自創角色（custom character）功能與實驗開關已下架 2026-07-13：相關函式、狀態、isBeta/setBetaFlag 全移除。
+// 自創角色（custom character）功能與實驗開關（isBeta/setBetaFlag/?beta/pd_beta）已於 2026-07-13 全數下架。
 
 // 後台上傳：讀一個 .txt 進內文框(取代原本暫不支持的圖片辨識）
 function loadTxtIntoUpload(input) {
@@ -2259,16 +2242,6 @@ function shelfRow(n, inSeries) {
         ${(n.characters || []).map(c => charPill(c)).join('')}
       </div>
     </div>`;
-}
-
-function renderHomeNovels() {
-  const el = document.getElementById('home-novels');
-  if (!novels.length) { el.innerHTML = '<p style="font-size:13px;color:#888">尚無已授權作品</p>'; return; }
-  el.innerHTML = novels.slice(0, 3).map(n => `
-    <div class="novel-card-sm" data-onclick="openNovel('${n.id}')">
-      <div class="cover">${ic('ic-book', 40)}</div>
-      <div class="info"><h4>${escapeHtml(n.title)}</h4><p>${escapeHtml(n.author || '佚名')}</p></div>
-    </div>`).join('');
 }
 
 // ── Reader ───────────────────────────────────────────────────

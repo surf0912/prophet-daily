@@ -24,7 +24,7 @@
     'setFeedbackStatus', 'setMqjAccess', 'setUploadKind', 'setUserFilter', 'setUserRole', 'setUiScript', 'setWishReply', 'wishReplyOpen',
     'setWishFilter', 'showLoginForm', 'showPage', 'showGalleryPage', 'startTour', 'stepReaderFont', 'submitFeedback',
     'onImagePick', 'submitImageWork', 'pickFrame', 'pickEditFrame', 'pickImageFile', 'setForumMode', 'toggleForumMode',
-    'pickNovelHeader', 'onNovelHeaderPick', 'clearNovelHeader', 'setEditHeader', 'pickEditHeader', 'onEditHeaderPick', 'removeEditHeader',
+    'pickNovelHeader', 'onNovelHeaderPick', 'clearNovelHeader', 'pickEditHeader', 'onEditHeaderPick', 'removeEditHeader',
     'openGalleryItem', 'closeGalleryDetail', 'openGalleryFull', 'closeGalleryFull', 'setImageSlot', 'downloadGalleryImage',
     'openCoverCrop', 'closeCoverCrop', 'saveCoverCrop', 'clearCoverCrop', 'ccrDragStart', 'ccrZoom',
     'setGalleryView', 'galleryGroupNav', 'galleryFullNav', 'toggleHideGalleryImage',
