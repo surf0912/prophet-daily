@@ -20,7 +20,7 @@
     'rejectNovel', 'replyFeedback', 'requestMqj', 'resetAdminNovelScope', 'resubmitNovel', 'retractNovel',
     'resetPassword', 'resumeReading', 'reviewMqj', 'revokeInvite', 'saveAvatarCrop',
     'saveEditClass', 'saveEditWork', 'saveFaqEditor', 'saveFeedbackReply', 'saveMyPassword',
-    'saveNickname', 'saveNoticeDays', 'saveOwners', 'saveSeries', 'setAutoPublish', 
+    'saveNickname', 'saveNoticeDays', 'saveOwners', 'saveRejectNote', 'saveSeries', 'setAutoPublish', 'updateRejectCount',
     'setFeedbackStatus', 'setMqjAccess', 'setUploadKind', 'setUserFilter', 'setUserRole', 'setUiScript', 'setWishReply', 'wishReplyOpen',
     'setWishFilter', 'showLoginForm', 'showPage', 'showGalleryPage', 'startTour', 'stepReaderFont', 'submitFeedback',
     'onImagePick', 'submitImageWork', 'pickFrame', 'pickEditFrame', 'pickImageFile', 'setForumMode', 'toggleForumMode',

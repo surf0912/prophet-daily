@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.32';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.33';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2928,12 +2928,41 @@ async function loadAuditLog() {
   } catch (e) { el.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${escapeHtml((e && e.message) || '')}</p>`; }
 }
 
+// 監看：全站授權信一覽（超管）——誰向誰借圖／求畫、同意與否，以及雙方留給對方的話。
+async function loadAuthMonitor() {
+  const el = document.getElementById('admin-auth-list');
+  if (!el) return;
+  el.innerHTML = '<div class="spinner"></div>';
+  try {
+    const rows = await api('/authorizations/all', { background: true });
+    if (!rows || !rows.length) { el.innerHTML = '<p style="font-size:13px;color:var(--ink-light)">尚無授權往來</p>'; return; }
+    const DIR = { use_image: '借圖', derive_art: '求畫' };
+    const STAT = { pending: ['待回覆', 'var(--ink-light)'], approved: ['已同意', 'var(--series)'], declined: ['已婉拒', 'var(--accent)'] };
+    el.innerHTML = rows.map(a => {
+      const dir = DIR[a.direction] || a.direction;
+      const st = STAT[a.status] || [a.status, 'var(--ink-light)'];
+      const when = a.created_at ? new Date(a.created_at).toLocaleString('zh-TW', { hour12: false }) : '';
+      const target = a.direction === 'use_image'
+        ? `借《${escapeHtml(a.artwork_title || '畫作')}》用於《${escapeHtml(a.work_title || '文章')}》`
+        : `為《${escapeHtml(a.work_title || '文章')}》作畫`;
+      const noteLine = a.note ? `<div style="font-size:12.5px;color:var(--ink);margin-top:4px">${escapeHtml(a.requester_name)}：「${escapeHtml(a.note)}」</div>` : '';
+      const replyLine = a.reply_note ? `<div style="font-size:12.5px;color:var(--ink);margin-top:2px">${escapeHtml(a.recipient_name)}：「${escapeHtml(a.reply_note)}」</div>` : '';
+      return `<div style="padding:9px 2px;border-bottom:1px solid rgba(26,10,0,.07)">
+        <div style="font-size:13px;color:var(--ink)"><b>${escapeHtml(a.requester_name)}</b> <span style="color:var(--gold)">→</span> <b>${escapeHtml(a.recipient_name)}</b>　<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(201,168,76,.2);color:var(--ink-light)">${dir}</span> <span style="font-size:11px;color:${st[1]}">${st[0]}</span></div>
+        <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${target}</div>
+        ${noteLine}${replyLine}
+        <div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:3px">${escapeHtml(when)}</div>
+      </div>`;
+    }).join('');
+  } catch (e) { el.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${escapeHtml((e && e.message) || '')}</p>`; }
+}
+
 function switchAdminTab(tab) {
   document.querySelectorAll('.admin-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.admin-pane').forEach(p => p.classList.remove('active'));
   document.getElementById('admin-' + tab).classList.add('active');
   stopMonitor();                       // leaving any tab cancels the live monitor poll
-  if (tab === 'monitor') { startMonitor(); loadAuditLog(); }   // 操作紀錄 lives at the bottom of 監看
+  if (tab === 'monitor') { startMonitor(); loadAuthMonitor(); loadAuditLog(); }   // 作品互授＋操作紀錄 lives at the bottom of 監看
   if (tab === 'novels') loadAdminNovelList();
   if (tab === 'users') loadAdminUsers();
   if (tab === 'upload') { setUploadKind('novel'); initUploadDraftWatch(); restoreUploadDraft(); }
@@ -4273,13 +4302,31 @@ async function approveNovel(id) {
   try { await api(`/novels/${id}/approve`, { method: 'PATCH' }); toast('已通過審核'); loadReviewList(); }
   catch (e) { toast(e.message); }
 }
-// 退回修改（不刪除）：標記 rejected，退回作者的作品管理讓他改後重送。垃圾稿才用「刪除」。
-async function rejectNovel(id) {
+// 退回修改（不刪除）：開彈窗讓管理員留一段修改建議給作者，標記 rejected 退回作者的作品管理。
+let _rejectingId = null;
+function rejectNovel(id) {
   const n = (window._reviewPending || []).find(x => x.id === id);
-  const title = (n && n.title) || '這篇稿件';
-  if (!confirm(`退回《${title}》讓作者修改？\n\n稿件不會刪除，會退回作者的「作品管理」並標示「已退回」，作者可修改後重新送審。若是垃圾內容請改用「刪除」。`)) return;
-  try { await api(`/novels/${id}/reject`, { method: 'PATCH' }); toast('已退回作者修改'); loadReviewList(); }
-  catch (e) { toast(e.message); }
+  _rejectingId = id;
+  document.getElementById('reject-note-work').textContent = `《${(n && n.title) || '這篇稿件'}》`;
+  const ta = document.getElementById('reject-note-text'); ta.value = '';
+  document.getElementById('reject-note-count').textContent = '0';
+  document.getElementById('reject-note-modal').classList.add('open');
+  setTimeout(() => ta.focus(), 50);
+}
+function updateRejectCount() {
+  const ta = document.getElementById('reject-note-text');
+  document.getElementById('reject-note-count').textContent = ta ? ta.value.length : 0;
+}
+async function saveRejectNote() {
+  if (!_rejectingId) return;
+  const note = document.getElementById('reject-note-text').value.trim();
+  try {
+    await api(`/novels/${_rejectingId}/reject`, { method: 'PATCH', body: JSON.stringify({ note }) });
+    document.getElementById('reject-note-modal').classList.remove('open');
+    toast(note ? '已退回，並附上修改建議' : '已退回作者修改');
+    _rejectingId = null;
+    loadReviewList();
+  } catch (e) { toast(e.message); }
 }
 // 作者把已退回的稿重新送審（rejected→pending）。
 async function resubmitNovel(id) {
@@ -4502,6 +4549,10 @@ function renderAdminNovels() {
         : n.status === 'rejected'
         ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.28);color:var(--ink-light)">' + ic('ic-x',11) + ' 已退回·可修改重送</span>' : '')
         + (isFutureIso(n.created_at) ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">' + ic('ic-clock',11) + ' 排程·' + fmtUpdated(n.created_at) + '公開</span>' : '');
+      // 退件說明：管理員退回時留給作者的修改建議（只在已退回且有留言時顯示）。
+      const rejectNoteRow = (n.status === 'rejected' && n.reject_note)
+        ? `<div style="margin-top:6px;font-size:12.5px;color:var(--ink-light);background:rgba(201,168,76,.14);border-left:3px solid var(--gold);border-radius:4px;padding:7px 10px;line-height:1.7"><b style="color:var(--accent)">${ic('ic-edit',11)} 退件說明</b>　${escapeHtml(n.reject_note)}</div>`
+        : '';
       // 編輯 is for everyone here (the list only shows works the viewer owns, or an admin's scoped view).
       const editBtn = `<button data-onclick="openEditWork('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-edit',12)} 編輯</button>`;
       // Owners manage their own works (mine view) — admins also in the scoped member view.
@@ -4558,6 +4609,7 @@ function renderAdminNovels() {
             <div style="font-size:12px;color:var(--ink-light);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(n.author || '佚名')}${ownerTag(n)}${n.created_at ? ' · ' + ic('ic-calendar',11) + ' ' + fmtUpdated(n.created_at) : ''}</div>
           </div>
         </div>
+        ${rejectNoteRow}
         <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">${acts}</div>
       </div>`;
       }
@@ -4568,6 +4620,7 @@ function renderAdminNovels() {
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">${tags}</div>
         <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${escapeHtml(n.author || '佚名')}${ownerTag(n)}</div>
         ${n.created_at ? `<div style="font-size:12px;color:var(--ink-light);margin-top:2px">${ic('ic-calendar',11)} 發佈日期 ${fmtUpdated(n.created_at)}</div>` : ''}
+        ${rejectNoteRow}
         <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${resubmitBtn}${editBtn}${manageBtns}${ownerAssignBtn}${lockBtn}${retractBtn}${delBtn}</div>
       </div>`;
     }).join('') || `<p style="color:#888;padding:14px;text-align:center">${ns.length ? '此篩選沒有作品' : '尚無作品'}</p>`;
