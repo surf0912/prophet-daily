@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.29';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.30';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2898,6 +2898,7 @@ function updateReaderDarkBtn() {
 const AUDIT_LABELS = {
   approve_novel: '核准作品', retract_novel: '退件作品', delete_novel: '刪除作品', lock: '鎖上作品', unlock: '解鎖作品',
   ban: '封禁帳號', unban: '解除封禁', temp_ban: '臨時封禁', temp_unban: '解除臨時封禁',
+  archive: '封存帳號', unarchive: '取消封存',
   change_role: '變更身份', reset_password: '重設密碼',
   delete_user: '刪除帳號', auto_publish: '自動審核', wish_reply: '許願池回覆權', mqj: '迷情劑權限', clear_flag: '已審回鍋標記',
   generate_invite: '產生邀請', revoke_invite: '撤銷邀請',
@@ -4381,12 +4382,20 @@ async function loadAdminNovelList() {
             + `<button data-onclick="tempBan('${sc.id}',1,72)" style="${sTemp}">${ic('ic-clock',12)} 臨時封禁 72 小時</button>`
             + (isSuper ? `<button data-onclick="banUser('${sc.id}',0)" style="${sBan}">${ic('ic-ban',12)} 永久封禁</button>` : '');
         }
+        // 封存：非懲罰、可復原（gold 邊框，與 scarlet 刪除區分）。作者不玩了時優雅停用、保留作品。
+        const archiveBtn = isSuper
+          ? (sc.archived
+             ? `<button data-onclick="archiveUser('${sc.id}',0)" style="${sTemp}">${ic('ic-check',12)} 取消封存</button>`
+             : `<button data-onclick="archiveUser('${sc.id}',1)" style="${sTemp}">${ic('ic-moon',12)} 封存帳號</button>`)
+          : '';
         head += `<div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(26,10,0,.08);flex-wrap:wrap">`
           + (isSuper ? `<button data-onclick="resetPassword('${sc.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-key',12)} 重設密碼</button>` : '')
           + banBtns
+          + archiveBtn
           + (isSuper ? `<button data-onclick="deleteUser('${sc.id}')" style="font-size:12px;padding:4px 12px;background:var(--scarlet);border:none;color:var(--on-dark);border-radius:3px;cursor:pointer">${ic('ic-trash',12)} 刪除帳號</button>` : '')
           + `</div>`;
         if (tempActive) head += `<div style="font-size:12px;color:var(--accent);margin-top:8px">${ic('ic-clock',12)} 臨時封禁中，${new Date(sc.ban_until).toLocaleString('zh-TW')} 自動解除</div>`;
+        if (sc.archived) head += `<div style="font-size:12px;color:var(--ink-light);margin-top:8px">${ic('ic-moon',12)} 此帳號已封存——無法登入，作品與資料保留中，可隨時取消封存恢復。</div>`;
         if (isSuper) head += `<div style="font-size:12px;color:var(--ink-light);margin-top:8px">${ic('ic-shield',12)} 水印碼 <code style="font-size:12px;color:var(--ink)">${wmCode(sc.id)}</code><span style="opacity:.7"> — 迷情劑外流截圖上的代碼對得上此人</span></div>`;
       }
       note.innerHTML = head;
@@ -4912,6 +4921,7 @@ function renderUserRows(q) {
       const open = `viewUserNovels('${u.id}')`;
       const isTempBan = u.banned && u.ban_until && new Date(u.ban_until) > new Date();
       const banTag = u.banned ? '<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(138,45,45,.18);color:var(--accent);margin-left:6px">' + ic(isTempBan ? 'ic-clock' : 'ic-ban',10) + (isTempBan ? ' 臨時封禁' : ' 已封禁') + '</span>' : '';
+      const archTag = u.archived ? '<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(61,31,13,.12);color:var(--ink-light);margin-left:6px">' + ic('ic-moon',10) + ' 已封存</span>' : '';
       const flagBadge = (u.flag_note && isSuper) ? '<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(201,168,76,.3);color:var(--ink);margin-left:6px">' + ic('ic-shield',10) + ' 疑似回鍋</span>' : '';
       const flagRow = (u.flag_note && isSuper) ? `<div style="margin-top:5px;font-size:12px;color:var(--accent);background:rgba(138,45,45,.10);padding:6px 8px;border-radius:6px;display:flex;align-items:center;gap:8px;justify-content:space-between"><span>${escapeHtml(u.flag_note)}</span><button data-onclick="clearUserFlag('${u.id}')" style="flex-shrink:0;font-size:11px;padding:3px 9px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:4px;cursor:pointer;white-space:nowrap">已審</button></div>` : '';
       const _joined = u.created_at ? `加入 ${fmtUpdated(u.created_at)}・` : '';
@@ -4926,7 +4936,7 @@ function renderUserRows(q) {
       <div style="padding:8px 0;border-bottom:1px solid rgba(26,10,0,.07)">
         <div class="user-row" style="border:none;padding:0">
           <span data-onclick="${open}" style="cursor:pointer;flex-shrink:0">${avatarHTML(u, 32)}</span>
-          <div class="u-name" data-onclick="${open}" style="cursor:pointer;line-height:1.3">${escapeHtml(display)}${banTag}${flagBadge}<span style="color:var(--gold);font-weight:bold;margin-left:6px">›</span><div style="font-size:12px;color:var(--ink-light);font-weight:normal">@${escapeHtml(u.username)}</div>${seen}</div>
+          <div class="u-name" data-onclick="${open}" style="cursor:pointer;line-height:1.3">${escapeHtml(display)}${banTag}${archTag}${flagBadge}<span style="color:var(--gold);font-weight:bold;margin-left:6px">›</span><div style="font-size:12px;color:var(--ink-light);font-weight:normal">@${escapeHtml(u.username)}</div>${seen}</div>
           ${delBtn || picker}
         </div>
         ${flagRow}
@@ -4937,7 +4947,7 @@ function renderUserRows(q) {
 // Admin taps a member's name → their detail (scoped 作品管理 + 迷情劑 toggle for readers).
 function viewUserNovels(id) {
   const u = (window._adminUsers || []).find(x => x.id === id) || {};
-  adminNovelScope = { id, name: u.nickname || u.username || '', role: u.role, mqj: u.mqj_access, banned: u.banned, ban_until: u.ban_until || null, auto: !!u.auto_publish, wish: !!u.wish_reply, joined: u.created_at || null };
+  adminNovelScope = { id, name: u.nickname || u.username || '', role: u.role, mqj: u.mqj_access, banned: u.banned, ban_until: u.ban_until || null, archived: !!u.archived, auto: !!u.auto_publish, wish: !!u.wish_reply, joined: u.created_at || null };
   switchAdminTab('novels');
 }
 
@@ -4992,6 +5002,21 @@ async function banUser(id, isBanned) {
     await api(`/permissions/users/${id}/ban`, { method: 'PATCH', body: JSON.stringify({ banned: ban }) });
     toast(ban ? `已封禁 ${name}` : `已解除 ${name} 的封禁`);
     if (adminNovelScope && adminNovelScope.id === id) { adminNovelScope.banned = ban; loadAdminNovelList(); }
+    else loadAdminUsers();
+  } catch (e) { toast(e.message); }
+}
+
+// 封存：非懲罰、可復原。作者不玩了時優雅停用帳號——對方無法登入，但作品與資料全部保留，隨時可取消封存。
+async function archiveUser(id, on) {
+  const name = adminUserName(id);
+  const arch = on === 1 || on === true;
+  if (!confirm(arch
+    ? `封存「${name}」的帳號？\n\n對方將無法登入，但 TA 的作品與資料全部保留、不會刪除，日後隨時可取消封存恢復。適合「作者不玩了、想安靜離開」的情況。`
+    : `取消「${name}」的封存？\n\n帳號恢復，可正常登入。`)) return;
+  try {
+    await api(`/permissions/users/${id}/archive`, { method: 'PATCH', body: JSON.stringify({ archived: arch }) });
+    toast(arch ? `已封存 ${name}` : `已取消 ${name} 的封存`);
+    if (adminNovelScope && adminNovelScope.id === id) { adminNovelScope.archived = arch; loadAdminNovelList(); }
     else loadAdminUsers();
   } catch (e) { toast(e.message); }
 }
