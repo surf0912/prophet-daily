@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.31';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.32';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4815,13 +4815,15 @@ async function saveEditWork() {
   } catch (e) { toast('' + e.message); }
 }
 
-async function deleteNovel(id, isReject) {
-  const msg = isReject ? '確定退回並刪除這篇待審內容？' : '確定刪除此作品及所有章節？此操作無法復原！';
-  if (!confirm(msg)) return;
+// 真刪除（唯一會真的刪掉作品的動作）。fromReview 只決定刪完刷新哪個清單——訊息一律是「刪除」，
+// 不再借用舊的「退回」字眼（退回已獨立成 rejectNovel，退回不刪稿）。後端 delete_novel 只允許
+// owner 或 admin，別人一律 403。
+async function deleteNovel(id, fromReview) {
+  if (!confirm('確定刪除此作品及所有內容？此操作無法復原！')) return;
   try {
     await api(`/novels/${id}`, { method: 'DELETE' });
-    toast(isReject ? '已退回' : '已刪除');
-    if (isReject) loadReviewList(); else { loadAdminNovelList(); loadNovels(); }
+    toast('已刪除');
+    if (fromReview) loadReviewList(); else { loadAdminNovelList(); loadNovels(); }
   } catch (e) { toast(e.message); }
 }
 
