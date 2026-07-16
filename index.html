@@ -416,7 +416,7 @@
           <div class="form-group" id="new-image-source-row" style="display:none"><label>源自（經授權的文章，選填）</label><select id="new-image-source" style="width:100%;padding:9px 10px;font-family:inherit;font-size:13px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></select></div>
           <div class="form-group"><label>畫框</label><div id="image-frame-picker" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
           <div class="form-group"><label>角色（至少選一位）</label><div id="new-image-chars" class="char-picker"></div></div>
-          <button class="btn-primary" data-onclick="submitImageWork()" style="width:100%"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-send"/></svg> 送出畫作</button>
+          <button class="btn-primary" data-onclick="submitImageWork(this)" style="width:100%"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-send"/></svg> 送出畫作</button>
           <p id="new-image-hint" style="font-size:12px;color:var(--ink-light);text-align:center;margin-top:8px"></p>
         </div>
         <div id="upload-kind-novel">
@@ -437,7 +437,7 @@
             </div>
             <textarea id="new-novel-content" rows="12" placeholder="在此貼上小說內文…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
           </div>
-          <button class="btn-primary" data-tour="upload-submit" data-onclick="submitNewNovel()" style="margin-bottom:8px"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-send"/></svg> 建立小說</button>
+          <button class="btn-primary" data-tour="upload-submit" data-onclick="submitNewNovel(this)" style="margin-bottom:8px"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-send"/></svg> 建立小說</button>
           <p id="new-novel-hint" style="font-size:12px;color:var(--ink-light);text-align:center"></p>
         </div>
 
@@ -468,7 +468,7 @@
             <textarea id="forum-post-comments" rows="10" placeholder="貼上各樓回覆，每則用 1L／2L… 開頭，例：&#10;1L 暱稱｜留言內容&#10;2L 暱稱｜留言內容&#10;（系統會自動排成 01L、02L… 蓋樓）" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
             <p style="font-size:12px;color:var(--ink-light);opacity:.8;margin-top:4px">每樓用 <b>1L / 2L / 01L…</b> 開頭切換;暱稱與內容之間用「｜」分隔(沒有也可以)。</p>
           </div>
-          <button class="btn-primary" data-onclick="submitForumPost()" style="margin-bottom:8px"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-send"/></svg> 發佈貼文</button>
+          <button class="btn-primary" data-onclick="submitForumPost(this)" style="margin-bottom:8px"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-send"/></svg> 發佈貼文</button>
           <p id="forum-post-hint" style="font-size:12px;color:var(--ink-light);text-align:center"></p>
         </div>
       </div>

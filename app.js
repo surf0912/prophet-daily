@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.28';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.29';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3297,7 +3297,17 @@ async function onImagePick(input) {
   } catch (e) { toast('圖片讀取失敗'); }
 }
 
-async function submitImageWork() {
+// 防重複送出：投稿常一次送多篇、手殘連點會把同一篇送兩次。一個共用 in-flight 旗標——上一筆
+// 還在飛就忽略後續點擊；同時把按鈕鎖住、改字「送出中…」給即時回饋，送完（成功或失敗）再復原。
+let _uploadBusy = false;
+function _btnBusy(btn) {
+  if (!btn) return () => {};
+  const html = btn.innerHTML, wasDisabled = btn.disabled, op = btn.style.opacity;
+  btn.disabled = true; btn.style.opacity = '.6'; btn.innerHTML = '送出中…';
+  return () => { btn.disabled = wasDisabled; btn.style.opacity = op; btn.innerHTML = html; };
+}
+
+async function submitImageWork(btn) {
   const title = document.getElementById('new-image-title').value.trim();
   // 後端 author/caption 型別是 str（非 Optional），留白時送 '' 而非 null，否則 422（後端一樣把 '' 當佚名）
   const author = document.getElementById('new-image-author').value.trim();
@@ -3306,6 +3316,9 @@ async function submitImageWork() {
   if (!_imgWork.data) { toast('請先選擇一幅畫作'); return; }
   if (!title) { toast('請輸入畫作標題'); return; }
   if (!characters.length && currentUser.role !== 'super_admin') { toast('請至少為畫作選一位角色'); return; }
+  if (_uploadBusy) return;   // 防連點：上一筆還在送就忽略
+  _uploadBusy = true;
+  const _restore = _btnBusy(btn);
   const hint = document.getElementById('new-image-hint');
   if (hint) hint.textContent = '正在上傳畫作…';
   try {
@@ -3323,7 +3336,7 @@ async function submitImageWork() {
     document.getElementById('image-drop').textContent = '選擇畫作';
     _myAuths = null; renderImageSourceRow();   // 掛了源自的授權信已用掉，下拉重整
   } catch (e) { toast(e.message); }
-  finally { if (hint) hint.textContent = ''; }
+  finally { _uploadBusy = false; _restore(); if (hint) hint.textContent = ''; }
 }
 
 // ── 授權信：文字作者與製圖師的雙向授權（一來一回即封緘，不是對話）──────────
@@ -4148,7 +4161,7 @@ function discardUploadDraft() {
   toast('已清空草稿');
 }
 
-async function submitForumPost() {
+async function submitForumPost(btn) {
   const title = document.getElementById('forum-post-title').value.trim();
   const author = document.getElementById('forum-post-author').value.trim() || null;
   const main = document.getElementById('forum-post-content').value.trim();
@@ -4159,6 +4172,9 @@ async function submitForumPost() {
   const characters = readChars('forum-post-chars');
   if (!title) { toast('請輸入貼文標題'); return; }
   if (!main) { toast('請輸入主文'); return; }
+  if (_uploadBusy) return;   // 防連點：上一筆還在送就忽略
+  _uploadBusy = true;
+  const _restore = _btnBusy(btn);
   try {
     const res = await api('/novels/forum', { method: 'POST', body: JSON.stringify({ title, author, content, published_at, characters }) });
     toast(res.status === 'pending' ? '已送出，待管理員審核' : '貼文已發佈');
@@ -4170,6 +4186,7 @@ async function submitForumPost() {
     resetClassPicker(null, 'forum-post-chars');
     clearUploadDraft();
   } catch (e) { toast(e.message); }
+  finally { _uploadBusy = false; _restore(); }
 }
 
 async function loadReviewList() {
@@ -4256,7 +4273,7 @@ async function approveNovel(id) {
 }
 
 // Create a single-piece novel: work metadata + body text in one shot (body becomes chapter 1).
-async function submitNewNovel() {
+async function submitNewNovel(btn) {
   const title = document.getElementById('new-novel-title').value.trim();
   const content = document.getElementById('new-novel-content').value.trim();
   const category = document.getElementById('new-novel-category').value;
@@ -4264,6 +4281,9 @@ async function submitNewNovel() {
   if (!category) { toast('請選擇故事類型'); return; }
   if (!content) { toast('請輸入內文'); return; }
   if (!readChars('new-novel-chars').length && currentUser.role !== 'super_admin') { toast('請至少為作品選一位角色'); return; }
+  if (_uploadBusy) return;   // 防連點：上一筆還在送就忽略
+  _uploadBusy = true;
+  const _restore = _btnBusy(btn);
   try {
     const novel = await api('/novels/', { method: 'POST', body: JSON.stringify({
       title,
@@ -4291,6 +4311,7 @@ async function submitNewNovel() {
     clearUploadDraft();
     loadNovels();
   } catch (e) { toast(e.message); }
+  finally { _uploadBusy = false; _restore(); }
 }
 
 async function loadAdminNovelList() {
