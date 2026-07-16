@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.34';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.35';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3037,14 +3037,27 @@ async function runDbLatency() {
       <div style="font-size:12.5px;color:${verdict[0]};margin-top:7px;line-height:1.55">${verdict[1]}</div>`;
   } catch (e) { el.innerHTML = `<span style="color:var(--scarlet)">測試失敗：${escapeHtml(e.message || '')}</span>`; }
 }
+let _monSnap = null;     // 最近一次 server-stats 快照（視窗切換時免重抓）
+let _monWin = '15m';     // 慢表視窗：'15m' | '24h'
+function setMonWin(w) { _monWin = w === '24h' ? '24h' : '15m'; renderMonitorBody(); }
 async function loadMonitor() {
   const el = document.getElementById('monitor-body');
   if (!el) return;
   if (!el.dataset.loaded) el.innerHTML = '<div class="spinner"></div>';
   try {
-    const s = await api('/permissions/server-stats', { background: true });
+    _monSnap = await api('/permissions/server-stats', { background: true });
     el.dataset.loaded = '1';
-    // Latency is now a 2-min window, so the cold-boot requests age out by ~150s → shorter grace.
+    renderMonitorBody();
+  } catch (e) {
+    el.innerHTML = `<p style="color:var(--scarlet);padding:14px">載入失敗：${escapeHtml(e.message || '')}</p>`;
+  }
+}
+function renderMonitorBody() {
+  const el = document.getElementById('monitor-body');
+  const s = _monSnap;
+  if (!el || !s) return;
+  {
+    // Latency is a 2-min window, so the cold-boot requests age out by ~150s → shorter grace.
     const warming = s.uptime_seconds < 150;
     const latSamples = s.samples_5m || 0;            // samples in the recent 2-min latency window
     const insufficient = !warming && latSamples < 5; // too little recent traffic to judge → 閒置, don't cry 吃緊
@@ -3098,6 +3111,29 @@ async function loadMonitor() {
     const memSub = memMb != null
       ? `<span style="color:${memColor};font-weight:bold">${memPct}%</span> / ${memLimit} MB${memPct >= 88 ? ' 接近上限' : ''}`
       : '無法取得';
+    // 今日（24h 滾動）總覽卡：process 不休眠後才有意義的長窗統計。窗未滿 24h 時註明已收集時數。
+    const winH = s.window_hours || 0;
+    const dayCard = s.total_24h == null ? '' :
+      card(ic('ic-calendar', 12) + (winH >= 24 ? ' 今日（24 小時）' : ` 今日（已收集 ${winH} 小時）`),
+           s.total_24h + ' 請求',
+           `活躍 ${s.active_24h ?? '—'} 人　·　5xx <span style="color:${s.errors_24h ? 'var(--scarlet)' : 'inherit'}">${s.errors_24h ?? 0}</span>`);
+    // 每小時請求長條（24 桶，舊→新）：高度 ∝ 請求數；該小時有 5xx 染紅。克制的純 div，無圖表庫。
+    let hourlyRow = '';
+    if (s.hourly && s.hourly.some(b => b.n > 0)) {
+      const mx = Math.max(...s.hourly.map(b => b.n), 1);
+      hourlyRow = `<div style="margin-top:10px">
+        <div style="font-size:11px;color:var(--ink-light);margin-bottom:4px">${ic('ic-clock', 11)} 每小時請求（近 24 小時）</div>
+        <div style="display:flex;align-items:flex-end;gap:2px;height:30px">${s.hourly.map(b => {
+          const h = b.n ? Math.max(3, Math.round(b.n / mx * 30)) : 1;
+          const t = new Date(b.t * 1000).getHours();
+          return `<div title="${t} 時：${b.n} 請求${b.err ? '，' + b.err + ' 次 5xx' : ''}${b.p50 ? '，p50 ' + b.p50 + 'ms' : ''}" style="flex:1;height:${h}px;border-radius:1px;background:${b.err ? 'var(--scarlet)' : b.n ? 'var(--gold)' : 'var(--gold-lt)'};opacity:${b.n ? '.9' : '.35'}"></div>`;
+        }).join('')}</div>
+      </div>`;
+    }
+    // 慢表視窗切換：15 分鐘看「現在」、24 小時看「全貌」（樣本足、p95 有代表性）。
+    const is24 = _monWin === '24h' && s.endpoints_24h;
+    const winBtn = (w, label) => `<button data-onclick="setMonWin('${w}')" style="font-size:11px;padding:2px 10px;border:1px solid ${(_monWin === w) ? 'var(--scarlet)' : 'var(--gold-lt)'};background:${(_monWin === w) ? 'var(--scarlet)' : 'none'};color:${(_monWin === w) ? 'var(--on-dark)' : 'var(--ink-light)'};border-radius:10px;cursor:pointer">${label}</button>`;
+    const winToggle = s.endpoints_24h ? `<span style="display:inline-flex;gap:5px;margin-left:8px;vertical-align:1px">${winBtn('15m', '15 分鐘')}${winBtn('24h', '24 小時')}</span>` : '';
     el.innerHTML = `
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         ${card(ic('ic-clock', 12) + ' 回應時間', rtVal, rtSub, true)}
@@ -3105,16 +3141,16 @@ async function loadMonitor() {
         ${card(ic('ic-users', 12) + ' 在線（5 分鐘）', s.active_5m, '15 分鐘內 ' + s.active_15m + ' 人')}
         ${card(ic('ic-send', 12) + ' 請求量', s.req_1m + ' /分', '近 5 分 ' + s.req_5m + '　' + s.rps_1m + ' req/s')}
         ${card(ic('ic-shield', 12) + ' 錯誤（5 分鐘）', s.errors_5m, s.errors_5m ? '伺服器錯誤，請留意' : '無 5xx 錯誤')}
-        ${card(ic('ic-castle', 12) + ' 已運行', _fmtUptime(s.uptime_seconds), s.uptime_seconds < 90 ? '剛冷啟動' : '累計請求 ' + s.total_since_boot)}
+        ${dayCard}
+        ${card(ic('ic-castle', 12) + ' 已運行', _fmtUptime(s.uptime_seconds), s.uptime_seconds < 90 ? '剛啟動' : '累計請求 ' + s.total_since_boot)}
       </div>
+      ${hourlyRow}
       ${jwtPct === null ? '' : (jwtPct >= 80
         ? `<div style="font-size:11px;color:#2d4a1e;margin-top:10px">${ic('ic-shield', 11)} JWT 本機驗證：<b>啟用中</b>（${jwtPct}%）— 已省去每次請求對 Supabase 的一次往返</div>`
         : `<div style="font-size:12px;color:var(--scarlet);margin-top:10px;line-height:1.5">${ic('ic-shield', 11)} JWT 本機驗證：<b>未啟用</b>（本機僅 ${jwtPct}%）— 請把 Render 的 <b>JWT_SECRET</b> 設成你的 Supabase JWT 密鑰，回應時間才會降下來</div>`)}
-      ${slowTable(ic('ic-clock', 12) + ' 最慢 Endpoint（近 15 分鐘）', s.endpoints, 'Endpoint')}
-      ${slowTable(ic('ic-gear', 12) + ' 最慢 Supabase 查詢', s.queries, '查詢')}
-      <div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:10px">※「在線」以近 5 分鐘有送出請求的登入用戶計；純閱讀時前端不送請求，故為活躍下限值。Endpoint／查詢表用 15 分鐘窗，樣本累積後才有代表性。</div>`;
-  } catch (e) {
-    el.innerHTML = `<p style="color:var(--scarlet);padding:14px">載入失敗：${escapeHtml(e.message || '')}</p>`;
+      ${slowTable(ic('ic-clock', 12) + ` 最慢 Endpoint（近 ${is24 ? '24 小時' : '15 分鐘'}）` + winToggle, is24 ? s.endpoints_24h : s.endpoints, 'Endpoint')}
+      ${slowTable(ic('ic-gear', 12) + ' 最慢 Supabase 查詢', is24 ? s.queries_24h : s.queries, '查詢')}
+      <div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:10px">※「在線」以近 5 分鐘有送出請求的登入用戶計；純閱讀時前端不送請求，故為活躍下限值。慢表可切 15 分鐘（看現在）／24 小時（看全貌，樣本足）。</div>`;
   }
 }
 
