@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.35';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.36';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -428,20 +428,25 @@ async function doInviteRegister() {
   const nickname = document.getElementById('inv-nickname').value.trim();
   const pass = document.getElementById('inv-pass').value;
   const invToken = new URLSearchParams(window.location.search).get('invite');
+  const grabCode = new URLSearchParams(window.location.search).get('grab');
   if (!username) { shakeMsg('請輸入巫師入學全名'); return; }
   if (/\s/.test(username)) { shakeMsg('入學全名不能有空格'); return; }
   if (!/^[a-zA-Z0-9_]{2,20}$/.test(username)) { shakeMsg('入學全名只能用英文、數字、底線，2-20字'); return; }
   if (!nickname) { shakeMsg('請輸入巫師姓名（暱稱）'); return; }
-  if (!invToken) { shakeMsg('找不到邀請令牌'); return; }
+  if (!invToken && !grabCode) { shakeMsg('找不到邀請令牌'); return; }
   msg.classList.remove('shake');
-  msg.textContent = '建立帳號中…';
+  msg.textContent = grabCode ? '搶名額中…' : '建立帳號中…';
   try {
-    await api('/invites/register', {
+    // 搶名額走 group-register（後端從該輪撈未用 token 原子搶佔，額滿回 410 訊息）
+    await api(grabCode ? '/invites/group-register' : '/invites/register', {
       method: 'POST',
-      body: JSON.stringify({ token: invToken, username, password: pass, nickname, fingerprint: deviceFingerprint(), device: deviceToken() }),
+      body: JSON.stringify(grabCode
+        ? { code: grabCode, username, password: pass, nickname, fingerprint: deviceFingerprint(), device: deviceToken() }
+        : { token: invToken, username, password: pass, nickname, fingerprint: deviceFingerprint(), device: deviceToken() }),
     });
     const url = new URL(window.location.href);
     url.searchParams.delete('invite');
+    url.searchParams.delete('grab');
     history.replaceState({}, '', url);
     // Auto-login straight into the app with the same credentials (skip the manual login step).
     msg.textContent = '登入中…';
@@ -5225,6 +5230,31 @@ async function saveMyPassword() {
 
 // ── Admin: invites ────────────────────────────────────────────
 function inviteLink(token) { return `${window.location.origin}${window.location.pathname}?invite=${token}`; }
+function grabLink(code) { return `${window.location.origin}${window.location.pathname}?grab=${code}`; }
+
+// 搶名額連結：一輪＝N 張共用 group_code 的單次 token，一條連結先搶先贏。
+async function generateGroupInvite(role) {
+  const qty = parseInt(document.getElementById('grab-qty').value, 10) || 15;
+  try {
+    const res = await api('/invites/generate-group', { method: 'POST', body: JSON.stringify({ role, count: qty }) });
+    const box = document.getElementById('grab-result');
+    box.style.display = '';
+    box.innerHTML = `
+      <div style="font-size:12px;color:var(--accent);margin-bottom:4px">已開出 ${res.count} 個${ROLE_NAME_INV[role] || ''}名額（3 天有效，先搶先贏）</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <code style="flex:1;font-size:13px;color:var(--ink);background:var(--parchment);border:1px solid var(--gold-lt);border-radius:4px;padding:6px 8px;word-break:break-all">${grabLink(res.code)}</code>
+        <button data-onclick="copyText('${grabLink(res.code)}', '已複製搶名額連結')" style="padding:6px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;white-space:nowrap">複製</button>
+      </div>
+      <div style="font-size:11px;color:var(--ink-light);opacity:.85;margin-top:6px">也可以直接把入站守則頁貼到群組——開放期間 /rules 底部會自動出現「搶名額」入口。</div>`;
+    loadInviteList();
+  } catch (e) { toast('' + e.message); }
+}
+
+async function revokeGroupInvite(code) {
+  if (!confirm(`撤銷這一輪搶名額（${code}）？\n\n未被搶走的名額立即失效；已搶到入站的人不受影響。`)) return;
+  try { await api(`/invites/group/${code}`, { method: 'DELETE' }); toast('已撤銷這一輪'); loadInviteList(); }
+  catch (e) { toast(e.message); }
+}
 function copyText(text, label) { navigator.clipboard.writeText(text).then(() => toast(label || '已複製')); }
 let _lastInviteLinks = [];
 function copyAllInvites() { copyText(_lastInviteLinks.join('\n'), `已複製全部 ${_lastInviteLinks.length} 條連結`); }
@@ -5255,7 +5285,37 @@ async function loadInviteList() {
   try {
     const list = await api('/invites/list') || [];
     if (!list.length) { el.innerHTML = '<p style="color:#888;font-size:13px">尚無邀請連結</p>'; return; }
+    // 搶名額輪次：同 group_code 的 token 聚合成一張卡（在該組第一次出現的位置渲染一次）
+    const groups = {};
+    list.forEach(inv => { if (inv.group_code) (groups[inv.group_code] = groups[inv.group_code] || []).push(inv); });
+    const groupCard = (code) => {
+      const g = groups[code];
+      const used = g.filter(x => x.used_at);
+      const expired = new Date(g[0].expires_at) < new Date();
+      const remaining = expired ? 0 : g.length - used.length;
+      const dim = remaining <= 0;
+      const names = used.map(x => escapeHtml(x.profiles?.username || '?')).join('、');
+      return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08);font-size:13px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+          <span style="background:${dim ? '#ccc' : 'var(--scarlet)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;flex-shrink:0;white-space:nowrap">${roleBadge(g[0].role, 12)}</span>
+          <span style="background:rgba(201,168,76,.28);color:var(--ink-light);padding:2px 8px;border-radius:10px;font-size:11px;flex-shrink:0">${ic('ic-star-shine',10)} 搶名額</span>
+          <span style="color:${dim ? '#aaa' : 'var(--ink-light)'}">${dim ? (used.length >= g.length ? '已搶完' : '已過期/撤銷') : `剩 ${remaining} / ${g.length} 個`}・到期：${new Date(g[0].expires_at).toLocaleDateString('zh-TW')}</span>
+        </div>
+        ${names ? `<div style="font-size:12px;color:var(--ink-light);margin-bottom:4px">${ic('ic-check',11)} 已搶到：${names}</div>` : ''}
+        <div style="display:flex;align-items:center;gap:6px">
+          <code style="font-size:13px;color:${dim ? '#aaa' : 'var(--ink)'};word-break:break-all;flex:1">${code}</code>
+          ${!dim ? `<button data-onclick="copyText('${grabLink(code)}', '已複製搶名額連結')" style="font-size:12px;padding:3px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap">複製</button>` : ''}
+          ${!dim ? `<button data-onclick="revokeGroupInvite('${code}')" style="font-size:12px;padding:3px 8px;background:none;border:1px solid #ccc;border-radius:3px;cursor:pointer;white-space:nowrap">撤銷</button>` : ''}
+        </div>
+      </div>`;
+    };
+    const seenGroups = new Set();
     el.innerHTML = list.map(inv => {
+      if (inv.group_code) {
+        if (seenGroups.has(inv.group_code)) return '';
+        seenGroups.add(inv.group_code);
+        return groupCard(inv.group_code);
+      }
       const used = !!inv.used_at;
       const usedBy = escapeHtml(inv.profiles?.username || '');
       const expired = !used && new Date(inv.expires_at) < new Date();
@@ -5356,6 +5416,27 @@ document.addEventListener('click', (e) => {
       })
       .catch(() => { /* network error / cold start: keep the form — register re-validates on submit */ });
     return; // don't auto-login, show invite UI
+  }
+
+  // 搶名額連結（?grab=CODE）：同一張註冊表單，附剩餘名額；額滿/過期顯示失效訊息
+  const grabCode = new URLSearchParams(window.location.search).get('grab');
+  if (grabCode) {
+    document.getElementById('signin-form').style.display = 'none';
+    document.getElementById('invite-form').style.display = '';
+    fetch(`${API}/invites/group/${grabCode}`)
+      .then(async r => {
+        if (r.ok) {
+          const res = await r.json();
+          document.getElementById('invite-role-badge').innerHTML = `身份：${roleBadge(res.role, 13)}　·　剩 <b>${res.remaining}</b> 個名額，先搶先贏`;
+        } else {
+          const e = await r.json().catch(() => ({}));
+          document.getElementById('invite-form').style.display = 'none';
+          document.getElementById('invite-invalid-msg').textContent = e.detail || '此搶名額連結已失效';
+          document.getElementById('invite-invalid').style.display = '';
+        }
+      })
+      .catch(() => { /* 網路錯誤：留著表單，送出時後端會再驗 */ });
+    return;
   }
 
   if (token) await initApp();

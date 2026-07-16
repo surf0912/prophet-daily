@@ -518,6 +518,20 @@
           <button class="btn-primary" style="flex:1;padding:9px 4px;font-size:13px;white-space:nowrap;background:var(--chrome)" data-onclick="generateInvite('writer')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 作家</button>
           <button id="invite-admin-btn" class="btn-primary" style="flex:1;padding:9px 4px;font-size:13px;white-space:nowrap;background:#2d4a1e;display:none" data-onclick="generateInvite('admin')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 管理員</button>
         </div>
+        <!-- 搶名額連結：一條連結貼群組，前 N 個註冊的人進站，額滿或到期自動失效 -->
+        <div style="background:var(--parchment2);border:1px solid var(--gold-lt);border-radius:8px;padding:12px;margin-bottom:16px">
+          <div style="font-size:13px;font-weight:bold;color:var(--ink);margin-bottom:4px"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-shine"/></svg> 搶名額連結</div>
+          <div style="font-size:12px;color:var(--ink-light);line-height:1.6;margin-bottom:8px">一條連結貼到群組，先搶先贏——前 N 位完成註冊者入站，額滿或 3 天後自動失效。入站守則頁（/rules）開放期間會自動掛上入口。</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="font-size:13px;color:var(--ink-light)">名額</span>
+            <select id="grab-qty" style="padding:5px 8px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment);color:var(--ink);font-size:13px">
+              <option value="5">5 個</option><option value="10">10 個</option><option value="15" selected>15 個</option><option value="20">20 個</option><option value="30">30 個</option>
+            </select>
+            <button class="btn-primary" style="flex:1;padding:8px 4px;font-size:13px;white-space:nowrap" data-onclick="generateGroupInvite('reader')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 讀者名額</button>
+            <button class="btn-primary" style="flex:1;padding:8px 4px;font-size:13px;white-space:nowrap;background:var(--chrome)" data-onclick="generateGroupInvite('writer')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 作家名額</button>
+          </div>
+          <div id="grab-result" style="display:none"></div>
+        </div>
         <!-- freshly generated links (with per-link + 複製全部) -->
         <div id="invite-result" style="display:none;background:var(--parchment2);border:1px solid var(--gold-lt);border-radius:4px;padding:12px;margin-bottom:16px"></div>
         <!-- existing invites list -->

@@ -164,10 +164,28 @@
     </section>
 
     <div class="entry">
-      <p>讀過了，也認同了？<br />請妥善保管你的邀請函，也請尊重站內作者與讀者的隱私。</p>
-      <!-- 之後接「搶名額 / 申請入口」的位置——邀請機制定案後在這裡放入口鈕。 -->
-      <a class="btn" href="/">推開這扇門 →</a>
+      <p id="entry-copy">讀過了，也認同了？<br />請妥善保管你的邀請函，也請尊重站內作者與讀者的隱私。</p>
+      <a class="btn" id="entry-btn" href="./">推開這扇門 →</a>
+      <p id="entry-note" style="display:none;font-size:12px;opacity:.8;margin:10px 0 0"></p>
     </div>
+    <script>
+      // 開放名額期間，自動把入口換成「搶名額」鈕（額滿/沒開放時維持原樣）。
+      // API 基底與 app 同規則：onrender 鏡像同源；其他（Pages）打新加坡主站。
+      (function () {
+        var API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
+        fetch(API + '/invites/group/active').then(function (r) { return r.ok ? r.json() : null; }).then(function (g) {
+          if (!g || !g.code) return;
+          var roleName = g.role === 'writer' ? '作家' : '讀者';
+          document.getElementById('entry-copy').innerHTML = '讀過了，也認同了？<br />本輪' + roleName + '名額開放中——先搶先贏，額滿即止。';
+          var btn = document.getElementById('entry-btn');
+          btn.textContent = '搶一個名額（剩 ' + g.remaining + ' 個）→';
+          btn.href = './?grab=' + encodeURIComponent(g.code);
+          var note = document.getElementById('entry-note');
+          note.textContent = '搶到後即刻註冊入站；已有帳號的讀者請直接由此登入。';
+          note.style.display = '';
+        }).catch(function () { /* 後端喚醒中或無網路：維持原入口 */ });
+      })();
+    </script>
 
     <div class="colophon">
       感謝各位成為《預言家日報》的受邀讀者。<br />

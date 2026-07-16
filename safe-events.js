@@ -12,7 +12,7 @@
     'archiveUser', 'changeUserRole', 'clearUserFlag', 'closeCharProfile', 'closeReader', 'copyAllInvites',
     'copyText', 'deleteFaq', 'deleteFeedbackItem', 'deleteNovel', 'deleteUser',
     'cpCoverHint', 'discardUploadDraft', 'dismissInstallHint', 'dismissNotice', 'dismissRecap', 'dismissContinueBar', 'dismissEditorLetter', 'dismissTourBanner', 'doInviteRegister', 'doLogout', 'downloadPhoto',
-    'doSignIn', 'editFaq', 'editNick', 'endTour', 'exportBackup', 'favOwlOpen', 'forceRefresh', 'generateInvite',
+    'doSignIn', 'editFaq', 'editNick', 'endTour', 'exportBackup', 'favOwlOpen', 'forceRefresh', 'generateInvite', 'generateGroupInvite', 'revokeGroupInvite',
     'handleAvatarUpload', 'installPwaNow', 'loadChapter', 'loadForumPosts', 'loadNovels', 'letterUpdateOnce', 'loadTxtIntoUpload',
     'navigateChapter', 'navigateSeries', 'openBugReport', 'openCharProfileFromHome', 'openEditorLetter',
     'openEditClass', 'openEditWork', 'openFaq', 'openMqjDisclaimer', 'openNovel', 'openOwners',
