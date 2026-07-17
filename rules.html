@@ -180,26 +180,42 @@
     </section>
 
     <div class="entry">
-      <p id="entry-copy">讀過了，也認同了？<br />請妥善保管你的邀請函，也請尊重站內作者與讀者的隱私。</p>
+      <p id="entry-copy">讀過了，也認同了？<br />邀請函不定期開放領取，開放時這裡會亮起入口。</p>
       <a class="btn" id="entry-btn" href="./">推開這扇門 →</a>
       <p id="entry-note" style="display:none;font-size:12px;opacity:.8;margin:10px 0 0"></p>
     </div>
     <script>
-      // 開放名額期間，自動把入口換成「搶名額」鈕（額滿/沒開放時維持原樣）。
-      // API 基底與 app 同規則：onrender 鏡像同源；其他（Pages）打新加坡主站。
+      // 入口狀態機：/rules 是永久連結——主編開放名額時這裡自動亮起「領取邀請函」直達註冊；
+      // 沒開放時明講「目前暫無」，門鈕留給已有帳號的讀者登入。切回前景時重查，貼在群組裡的
+      // 舊分頁也能即時反映「開放中／已領完」。API 基底與 app 同規則：onrender 同源；Pages 打主站。
       (function () {
         var API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
-        fetch(API + '/invites/group/active').then(function (r) { return r.ok ? r.json() : null; }).then(function (g) {
-          if (!g || !g.code) return;
-          var roleName = g.role === 'writer' ? '作家' : '讀者';
-          document.getElementById('entry-copy').innerHTML = '讀過了，也認同了？<br />本輪' + roleName + '邀請函開放領取中——名額有限，領完即止。';
+        function render(g) {
+          var copy = document.getElementById('entry-copy');
           var btn = document.getElementById('entry-btn');
-          btn.textContent = '領取邀請函（尚餘 ' + g.remaining + ' 份）→';
-          btn.href = './?grab=' + encodeURIComponent(g.code);
           var note = document.getElementById('entry-note');
-          note.textContent = '領取後即刻註冊入站；已有帳號的讀者請直接由此登入。';
+          if (g && g.code) {
+            var roleName = g.role === 'writer' ? '作家' : '讀者';
+            copy.innerHTML = '讀過了，也認同了？<br />本輪' + roleName + '邀請函開放領取中——名額有限，領完即止。';
+            btn.textContent = '領取邀請函（尚餘 ' + g.remaining + ' 份）→';
+            btn.href = './?grab=' + encodeURIComponent(g.code);
+            note.textContent = '領取後即刻註冊入站；已有帳號的讀者請直接由此登入。';
+          } else {
+            copy.innerHTML = '讀過了，也認同了？<br />目前暫無開放領取的邀請函——名額不定期釋出，請留意群組消息。';
+            btn.textContent = '推開這扇門 →';
+            btn.href = './';
+            note.textContent = '已有帳號的讀者，請由此登入。';
+          }
           note.style.display = '';
-        }).catch(function () { /* 後端喚醒中或無網路：維持原入口 */ });
+        }
+        function refresh() {
+          fetch(API + '/invites/group/active').then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (g) { if (g) render(g); })
+            .catch(function () { /* 後端喚醒中或無網路：維持現狀，切回前景會再查 */ });
+        }
+        refresh();
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
+        window.addEventListener('pageshow', refresh);
       })();
     </script>
 

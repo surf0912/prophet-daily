@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.37';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.38';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -5240,12 +5240,13 @@ async function generateGroupInvite(role) {
     const box = document.getElementById('grab-result');
     box.style.display = '';
     box.innerHTML = `
-      <div style="font-size:12px;color:var(--accent);margin-bottom:4px">已開出 ${res.count} 份${ROLE_NAME_INV[role] || ''}邀請函（3 天有效，領完即止）</div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <code style="flex:1;font-size:13px;color:var(--ink);background:var(--parchment);border:1px solid var(--gold-lt);border-radius:4px;padding:6px 8px;word-break:break-all">${grabLink(res.code)}</code>
-        <button data-onclick="copyText('${grabLink(res.code)}', '已複製領取連結')" style="padding:6px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;white-space:nowrap">複製</button>
+      <div style="font-size:12px;color:var(--accent);margin-bottom:6px">已開出 ${res.count} 份${ROLE_NAME_INV[role] || ''}邀請函（3 天有效，領完即止）</div>
+      <div style="font-size:12.5px;color:var(--ink);background:var(--parchment);border:1px solid var(--gold-lt);border-radius:6px;padding:8px 10px;line-height:1.7">${ic('ic-check',12)} 入站守則頁已自動亮起領取入口——群組裡貼過的 /rules 連結<b>即刻生效，不需再發新連結</b>。</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+        <code style="flex:1;font-size:12px;color:var(--ink-light);background:var(--parchment);border:1px solid var(--gold-lt);border-radius:4px;padding:6px 8px;word-break:break-all">${grabLink(res.code)}</code>
+        <button data-onclick="copyText('${grabLink(res.code)}', '已複製領取連結')" style="padding:6px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer;font-size:12px;white-space:nowrap">複製</button>
       </div>
-      <div style="font-size:11px;color:var(--ink-light);opacity:.85;margin-top:6px">也可以直接把入站守則頁貼到群組——開放期間 /rules 底部會自動出現「領取邀請函」入口。</div>`;
+      <div style="font-size:11px;color:var(--ink-light);opacity:.85;margin-top:5px">上面是本輪直達連結（可選）；一般情況貼守則頁連結即可。</div>`;
     loadInviteList();
   } catch (e) { toast('' + e.message); }
 }
