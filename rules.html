@@ -197,7 +197,7 @@
           if (g && g.code) {
             var roleName = g.role === 'writer' ? '作家' : '讀者';
             copy.innerHTML = '讀過了，也認同了？<br />本輪' + roleName + '邀請函開放領取中——名額有限，領完即止。';
-            btn.textContent = '領取邀請函（尚餘 ' + g.remaining + ' 份）→';
+            btn.textContent = '領取邀請函 →';
             btn.href = './?grab=' + encodeURIComponent(g.code);
             note.textContent = '領取後即刻註冊入站；已有帳號的讀者請直接由此登入。';
           } else {
