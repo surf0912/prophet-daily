@@ -13,6 +13,9 @@
   <link rel="stylesheet" href="./styles.css" />
   <style>
     /* 獨立公開頁：沿用 styles.css 的品牌變數與字型，但不載入 app.js，故無登入牆。 */
+    /* styles.css 是 PWA 外殼：html/body 被 overflow:hidden + position:fixed 鎖死（App 靠內部容器捲動）。
+       本頁是普通長文件，必須解鎖回一般文件捲動，否則整頁不能滾。 */
+    html, body { position: static; overflow: auto; height: auto; width: auto; max-width: none; overscroll-behavior: auto; }
     body { margin: 0; background: var(--parchment); color: var(--ink);
            font-family: 'YuseiMagic','HuninnUI','SimpRound',-apple-system,"PingFang TC","PingFang SC",system-ui,sans-serif; }
     .rules-wrap { max-width: 720px; margin: 0 auto;
