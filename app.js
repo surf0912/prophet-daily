@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.36';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.37';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -435,7 +435,7 @@ async function doInviteRegister() {
   if (!nickname) { shakeMsg('請輸入巫師姓名（暱稱）'); return; }
   if (!invToken && !grabCode) { shakeMsg('找不到邀請令牌'); return; }
   msg.classList.remove('shake');
-  msg.textContent = grabCode ? '搶名額中…' : '建立帳號中…';
+  msg.textContent = grabCode ? '領取邀請函中…' : '建立帳號中…';
   try {
     // 搶名額走 group-register（後端從該輪撈未用 token 原子搶佔，額滿回 410 訊息）
     await api(grabCode ? '/invites/group-register' : '/invites/register', {
@@ -5240,18 +5240,18 @@ async function generateGroupInvite(role) {
     const box = document.getElementById('grab-result');
     box.style.display = '';
     box.innerHTML = `
-      <div style="font-size:12px;color:var(--accent);margin-bottom:4px">已開出 ${res.count} 個${ROLE_NAME_INV[role] || ''}名額（3 天有效，先搶先贏）</div>
+      <div style="font-size:12px;color:var(--accent);margin-bottom:4px">已開出 ${res.count} 份${ROLE_NAME_INV[role] || ''}邀請函（3 天有效，領完即止）</div>
       <div style="display:flex;align-items:center;gap:8px">
         <code style="flex:1;font-size:13px;color:var(--ink);background:var(--parchment);border:1px solid var(--gold-lt);border-radius:4px;padding:6px 8px;word-break:break-all">${grabLink(res.code)}</code>
-        <button data-onclick="copyText('${grabLink(res.code)}', '已複製搶名額連結')" style="padding:6px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;white-space:nowrap">複製</button>
+        <button data-onclick="copyText('${grabLink(res.code)}', '已複製領取連結')" style="padding:6px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;white-space:nowrap">複製</button>
       </div>
-      <div style="font-size:11px;color:var(--ink-light);opacity:.85;margin-top:6px">也可以直接把入站守則頁貼到群組——開放期間 /rules 底部會自動出現「搶名額」入口。</div>`;
+      <div style="font-size:11px;color:var(--ink-light);opacity:.85;margin-top:6px">也可以直接把入站守則頁貼到群組——開放期間 /rules 底部會自動出現「領取邀請函」入口。</div>`;
     loadInviteList();
   } catch (e) { toast('' + e.message); }
 }
 
 async function revokeGroupInvite(code) {
-  if (!confirm(`撤銷這一輪搶名額（${code}）？\n\n未被搶走的名額立即失效；已搶到入站的人不受影響。`)) return;
+  if (!confirm(`撤銷這一輪開放（${code}）？\n\n未被領取的邀請函立即失效；已領取入站的人不受影響。`)) return;
   try { await api(`/invites/group/${code}`, { method: 'DELETE' }); toast('已撤銷這一輪'); loadInviteList(); }
   catch (e) { toast(e.message); }
 }
@@ -5298,13 +5298,13 @@ async function loadInviteList() {
       return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08);font-size:13px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
           <span style="background:${dim ? '#ccc' : 'var(--scarlet)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;flex-shrink:0;white-space:nowrap">${roleBadge(g[0].role, 12)}</span>
-          <span style="background:rgba(201,168,76,.28);color:var(--ink-light);padding:2px 8px;border-radius:10px;font-size:11px;flex-shrink:0">${ic('ic-star-shine',10)} 搶名額</span>
-          <span style="color:${dim ? '#aaa' : 'var(--ink-light)'}">${dim ? (used.length >= g.length ? '已搶完' : '已過期/撤銷') : `剩 ${remaining} / ${g.length} 個`}・到期：${new Date(g[0].expires_at).toLocaleDateString('zh-TW')}</span>
+          <span style="background:rgba(201,168,76,.28);color:var(--ink-light);padding:2px 8px;border-radius:10px;font-size:11px;flex-shrink:0">${ic('ic-star-shine',10)} 開放領取</span>
+          <span style="color:${dim ? '#aaa' : 'var(--ink-light)'}">${dim ? (used.length >= g.length ? '已領完' : '已過期/撤銷') : `尚餘 ${remaining} / 共 ${g.length} 份`}・到期：${new Date(g[0].expires_at).toLocaleDateString('zh-TW')}</span>
         </div>
-        ${names ? `<div style="font-size:12px;color:var(--ink-light);margin-bottom:4px">${ic('ic-check',11)} 已搶到：${names}</div>` : ''}
+        ${names ? `<div style="font-size:12px;color:var(--ink-light);margin-bottom:4px">${ic('ic-check',11)} 已領取：${names}</div>` : ''}
         <div style="display:flex;align-items:center;gap:6px">
           <code style="font-size:13px;color:${dim ? '#aaa' : 'var(--ink)'};word-break:break-all;flex:1">${code}</code>
-          ${!dim ? `<button data-onclick="copyText('${grabLink(code)}', '已複製搶名額連結')" style="font-size:12px;padding:3px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap">複製</button>` : ''}
+          ${!dim ? `<button data-onclick="copyText('${grabLink(code)}', '已複製領取連結')" style="font-size:12px;padding:3px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap">複製</button>` : ''}
           ${!dim ? `<button data-onclick="revokeGroupInvite('${code}')" style="font-size:12px;padding:3px 8px;background:none;border:1px solid #ccc;border-radius:3px;cursor:pointer;white-space:nowrap">撤銷</button>` : ''}
         </div>
       </div>`;
@@ -5427,11 +5427,11 @@ document.addEventListener('click', (e) => {
       .then(async r => {
         if (r.ok) {
           const res = await r.json();
-          document.getElementById('invite-role-badge').innerHTML = `身份：${roleBadge(res.role, 13)}　·　剩 <b>${res.remaining}</b> 個名額，先搶先贏`;
+          document.getElementById('invite-role-badge').innerHTML = `身份：${roleBadge(res.role, 13)}　·　邀請函尚餘 <b>${res.remaining}</b> 份`;
         } else {
           const e = await r.json().catch(() => ({}));
           document.getElementById('invite-form').style.display = 'none';
-          document.getElementById('invite-invalid-msg').textContent = e.detail || '此搶名額連結已失效';
+          document.getElementById('invite-invalid-msg').textContent = e.detail || '此領取連結已失效';
           document.getElementById('invite-invalid').style.display = '';
         }
       })

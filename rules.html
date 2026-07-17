@@ -90,8 +90,10 @@
     <section class="rule">
       <h2><span class="no">二</span> 邀請函不得轉讓</h2>
       <div class="divider"></div>
-      <p>邀請函採一次性設計，每份僅能啟用一次。請勿將邀請連結轉發、分享或交給他人使用。
+      <p><strong>個人邀請函</strong>採一次性設計，每份僅能啟用一次。請勿將邀請連結轉發、分享或交給他人使用。
          若邀請函被他人先行啟用，原接收者將無法再使用該連結。</p>
+      <p>若本輪以「<strong>開放領取</strong>」方式發放邀請函：領取入口僅限主編發佈的群組內使用，名額有限、領完即止。
+         請勿將領取連結轉發到群組之外，或代群組外人士領取——違者取消入站資格，並不再補發邀請。</p>
     </section>
 
     <section class="rule">
@@ -179,12 +181,12 @@
         fetch(API + '/invites/group/active').then(function (r) { return r.ok ? r.json() : null; }).then(function (g) {
           if (!g || !g.code) return;
           var roleName = g.role === 'writer' ? '作家' : '讀者';
-          document.getElementById('entry-copy').innerHTML = '讀過了，也認同了？<br />本輪' + roleName + '名額開放中——先搶先贏，額滿即止。';
+          document.getElementById('entry-copy').innerHTML = '讀過了，也認同了？<br />本輪' + roleName + '邀請函開放領取中——名額有限，領完即止。';
           var btn = document.getElementById('entry-btn');
-          btn.textContent = '搶一個名額（剩 ' + g.remaining + ' 個）→';
+          btn.textContent = '領取邀請函（尚餘 ' + g.remaining + ' 份）→';
           btn.href = './?grab=' + encodeURIComponent(g.code);
           var note = document.getElementById('entry-note');
-          note.textContent = '搶到後即刻註冊入站；已有帳號的讀者請直接由此登入。';
+          note.textContent = '領取後即刻註冊入站；已有帳號的讀者請直接由此登入。';
           note.style.display = '';
         }).catch(function () { /* 後端喚醒中或無網路：維持原入口 */ });
       })();
