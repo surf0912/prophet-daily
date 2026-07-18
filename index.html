@@ -523,12 +523,19 @@
           <div style="font-size:13px;font-weight:bold;color:var(--ink);margin-bottom:4px"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-shine"/></svg> 邀請函開放領取</div>
           <div style="font-size:12px;color:var(--ink-light);line-height:1.6;margin-bottom:8px">一條連結貼到群組，名額有限、領完即止——前 N 位完成註冊者入站，領完或 3 天後自動失效。開放期間入站守則頁（/rules）會自動掛上領取入口。</div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-            <span style="font-size:13px;color:var(--ink-light)">名額</span>
+            <span style="font-size:13px;color:var(--ink-light);flex-shrink:0">名額</span>
             <input id="grab-qty" type="number" inputmode="numeric" min="1" max="50" step="1" value="15"
                    style="width:62px;flex-shrink:0;padding:5px 8px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment);color:var(--ink);font-size:13px;text-align:center">
             <span style="font-size:12px;color:var(--ink-light);flex-shrink:0">份</span>
-            <button class="btn-primary" style="flex:1;padding:8px 4px;font-size:13px;white-space:nowrap" data-onclick="generateGroupInvite('reader')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 開放讀者名額</button>
           </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-size:13px;color:var(--ink-light);flex-shrink:0">開放時間</span>
+            <input id="grab-opens" type="datetime-local"
+                   style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment);color:var(--ink);font-size:13px">
+            <button data-onclick="clearGrabOpens()" style="flex-shrink:0;font-size:12px;padding:5px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:4px;cursor:pointer">清除</button>
+          </div>
+          <div style="font-size:11.5px;color:var(--ink-light);margin-bottom:8px">留空＝立刻開放。設定時間則名額先備好，到點自動放出，守則頁同時亮起入口。</div>
+          <button class="btn-primary" style="width:100%;padding:9px 4px;font-size:13px;white-space:nowrap;margin-bottom:8px" data-onclick="generateGroupInvite('reader')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 開放讀者名額</button>
           <div id="grab-result" style="display:none"></div>
         </div>
         <!-- freshly generated links (with per-link + 複製全部) -->
@@ -681,10 +688,6 @@
   </div>
   <div class="cp-body" id="cp-body"></div>
 </div>
-
-<!-- 自創角色 modal (beta, super_admin only) -->
-
-
 
 <!-- Manage owners (co-authors) modal -->
 <div class="perm-modal" id="transfer-modal">

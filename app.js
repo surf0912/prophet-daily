@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.50';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.51';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1980,9 +1980,6 @@ function matchesQuery(item, q) {
 // All chips lit (default) or none lit = no character filtering (show everything);
 // deselect chips to narrow down to works featuring ANY still-lit character.
 let charAnd = false;   // false = 任一角色 (OR); true = 同框 (AND — every selected character must appear)
-// ccSet: when a 自創角色 is selected, its tagged-novel Set. It joins the SAME 任一/同框 (OR/AND)
-// evaluation as the official characters — it is NOT a separate AND gate (that made 自創+官方 an
-// impossible intersection in OR mode).
 function applyClassFilter(list, cat, chars) {
   const sel = (chars || []).filter(Boolean);
   const noFilter = sel.length === 0 || (!charAnd && sel.length === CHAR_LIST.length);
@@ -5264,13 +5261,29 @@ async function generateGroupInvite(role) {
     return;
   }
   const qty = raw;
+
+  // 開放時間：datetime-local 給的是「本機時間」字串（無時區）。交給 Date 解析後轉 ISO，
+  // 時區換算由瀏覽器處理——她在 UTC+8 填晚上 7 點，送出去就是正確的 11:00Z。
+  const opensEl = document.getElementById('grab-opens');
+  let opensAt = '';
+  if (opensEl && opensEl.value) {
+    const d = new Date(opensEl.value);
+    if (isNaN(d.getTime())) { toast('開放時間格式不正確'); return; }
+    if (d.getTime() <= Date.now()) { toast('開放時間已經過了——若要立刻開放，請把時間清空'); return; }
+    opensAt = d.toISOString();
+  }
+
   try {
-    const res = await api('/invites/generate-group', { method: 'POST', body: JSON.stringify({ role, count: qty }) });
+    const res = await api('/invites/generate-group', { method: 'POST', body: JSON.stringify({ role, count: qty, opens_at: opensAt }) });
     const box = document.getElementById('grab-result');
     box.style.display = '';
     box.innerHTML = `
-      <div style="font-size:12px;color:var(--accent);margin-bottom:6px">已開出 ${res.count} 份${ROLE_NAME_INV[role] || ''}邀請函（3 天有效，領完即止）</div>
-      <div style="font-size:12.5px;color:var(--ink);background:var(--parchment);border:1px solid var(--gold-lt);border-radius:6px;padding:8px 10px;line-height:1.7">${ic('ic-check',12)} 入站守則頁已自動亮起領取入口——群組裡貼過的守則頁連結<b>即刻生效，不需再發新連結</b>。</div>
+      <div style="font-size:12px;color:var(--accent);margin-bottom:6px">已開出 ${res.count} 份${ROLE_NAME_INV[role] || ''}邀請函（開放後 3 天有效，領完即止）</div>
+      <div style="font-size:12.5px;color:var(--ink);background:var(--parchment);border:1px solid var(--gold-lt);border-radius:6px;padding:8px 10px;line-height:1.7">${
+        res.opens_at
+          ? `${ic('ic-clock',12)} 已排定 <b>${new Date(res.opens_at).toLocaleString('zh-TW')}</b> 開放——時間一到，守則頁自動亮起領取入口，你不必再做任何事。`
+          : `${ic('ic-check',12)} 入站守則頁已自動亮起領取入口——群組裡貼過的守則頁連結<b>即刻生效，不需再發新連結</b>。`
+      }</div>
       <div style="display:flex;gap:6px;margin-top:8px">
         <button class="btn-primary" style="flex:1;padding:8px 4px;font-size:13px;white-space:nowrap" data-onclick="copyText('https://surf0912.github.io/prophet-daily/rules','已複製 守則頁連結（GitHub）')">${ic('ic-link',13)} GitHub 守則頁</button>
         <button class="btn-primary" style="flex:1;padding:8px 4px;font-size:13px;white-space:nowrap;background:var(--chrome)" data-onclick="copyText('https://the-prophet-daily.onrender.com/rules','已複製 守則頁連結（鏡像）')">${ic('ic-link',13)} 鏡像 守則頁</button>
@@ -5311,6 +5324,11 @@ async function generateInvite(role) {
 // ── 作家申請（守則頁的公開表單）─────────────────────────────
 // 留的是聯絡方式而非帳號，所以只在管理介面顯示，且不回傳送出者 IP（IP 只在後端做限流）。
 let _writerApps = [];
+function clearGrabOpens() {
+  const el = document.getElementById('grab-opens');
+  if (el) { el.value = ''; toast('已清除——將立刻開放'); }
+}
+
 async function loadWriterApps() {
   const el = document.getElementById('writer-app-list');
   if (!el) return;
@@ -5372,13 +5390,20 @@ async function loadInviteList() {
       const used = g.filter(x => x.used_at);
       const expired = new Date(g[0].expires_at) < new Date();
       const remaining = expired ? 0 : g.length - used.length;
-      const dim = remaining <= 0;
+      // 排定但尚未到點：名額已備好，對外還不存在。不算 dim——它不是失效，是還沒輪到。
+      const opensAt = g[0].opens_at ? new Date(g[0].opens_at) : null;
+      const pending = !!(opensAt && opensAt > new Date());
+      const dim = !pending && remaining <= 0;
       const names = used.map(x => escapeHtml(x.profiles?.username || '?')).join('、');
       return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08);font-size:13px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
           <span style="background:${dim ? '#ccc' : 'var(--scarlet)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;flex-shrink:0;white-space:nowrap">${roleBadge(g[0].role, 12)}</span>
-          <span style="background:rgba(201,168,76,.28);color:var(--ink-light);padding:2px 8px;border-radius:10px;font-size:11px;flex-shrink:0">${ic('ic-star-shine',10)} 開放領取</span>
-          <span style="color:${dim ? '#aaa' : 'var(--ink-light)'}">${dim ? (used.length >= g.length ? '已領完' : '已過期/撤銷') : `尚餘 ${remaining} / 共 ${g.length} 份`}・到期：${new Date(g[0].expires_at).toLocaleDateString('zh-TW')}</span>
+          <span style="background:rgba(201,168,76,.28);color:var(--ink-light);padding:2px 8px;border-radius:10px;font-size:11px;flex-shrink:0">${pending ? `${ic('ic-clock',10)} 排定開放` : `${ic('ic-star-shine',10)} 開放領取`}</span>
+          <span style="color:${dim ? '#aaa' : 'var(--ink-light)'}">${
+            pending
+              ? `${opensAt.toLocaleString('zh-TW')} 放出 ${g.length} 份`
+              : `${dim ? (used.length >= g.length ? '已領完' : '已過期/撤銷') : `尚餘 ${remaining} / 共 ${g.length} 份`}・到期：${new Date(g[0].expires_at).toLocaleDateString('zh-TW')}`
+          }</span>
         </div>
         ${names ? `<div style="font-size:12px;color:var(--ink-light);margin-bottom:4px">${ic('ic-check',11)} 已領取：${names}</div>` : ''}
         <div style="display:flex;align-items:center;gap:6px">

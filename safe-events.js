@@ -28,7 +28,7 @@
     'openGalleryItem', 'closeGalleryDetail', 'openGalleryFull', 'closeGalleryFull', 'setImageSlot', 'downloadGalleryImage',
     'openCoverCrop', 'closeCoverCrop', 'saveCoverCrop', 'clearCoverCrop', 'ccrDragStart', 'ccrZoom',
     'setGalleryView', 'galleryGroupNav', 'galleryFullNav', 'toggleHideGalleryImage',
-    'setWriterAppHandled', 'deleteWriterApp', 'copyWriterApp',
+    'setWriterAppHandled', 'deleteWriterApp', 'copyWriterApp', 'clearGrabOpens',
     'setReviewMode', 'openReviewImage', 'galleryAuthAsk', 'sendAuthRequest', 'openAuthDecide', 'saveAuthDecide', 'runDbLatency',
     'withdrawAuth', 'adminResetAuth', 'applyAuthArt', 'galleryOpenWork', 'readerAuthClick', 'owlOpenAuth',
     'submitForumPost', 'submitNewNovel', 'switchAdminTab', 'tempBan', 'toggleCharAnd', 'toggleCoverPhoto',
