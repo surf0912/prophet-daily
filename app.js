@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.60';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.61';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2980,7 +2980,6 @@ function switchAdminTab(tab) {
     document.getElementById('invite-qty-row').style.display = isSuper ? 'flex' : 'none';
     if (!isSuper) document.getElementById('invite-qty').value = '1';
     loadInviteList();
-    loadWriterApps();
   }
 }
 
@@ -3486,16 +3485,26 @@ async function renderAuthMailbox(elId) {
   el.innerHTML = sec('收到的信', box.received || [], true) + sec('寄出的信', box.sent || [], false);
 }
 // 審核分頁的膠囊：待審作品 ⇄ 授權信（僅管理員）
+// 審核分頁。原本是寫死的二選一（作品／授權信），加第三個就得整段改——改成表驅動，
+// 之後再加一種只需在這張表補一列。
+const REVIEW_MODES = {
+  works:   { pill: 'review-pill-works',   pane: 'admin-review-list',    note: 'review-works-note' },
+  auths:   { pill: 'review-pill-auths',   pane: 'admin-review-auths' },
+  writers: { pill: 'review-pill-writers', pane: 'admin-review-writers', note: 'review-writers-note' },
+};
 function setReviewMode(mode) {
-  const auths = mode === 'auths';
-  const pw = document.getElementById('review-pill-works'), pa = document.getElementById('review-pill-auths');
-  if (pw) pw.classList.toggle('active', !auths);
-  if (pa) pa.classList.toggle('active', auths);
-  const note = document.getElementById('review-works-note');
-  if (note) note.style.display = auths ? 'none' : '';
-  document.getElementById('admin-review-list').style.display = auths ? 'none' : '';
-  document.getElementById('admin-review-auths').style.display = auths ? '' : 'none';
-  if (auths) renderAuthMailbox('admin-review-auths');
+  if (!REVIEW_MODES[mode]) mode = 'works';
+  Object.entries(REVIEW_MODES).forEach(([key, m]) => {
+    const on = key === mode;
+    const pill = document.getElementById(m.pill);
+    if (pill) pill.classList.toggle('active', on);
+    const pane = document.getElementById(m.pane);
+    if (pane) pane.style.display = on ? '' : 'none';
+    const note = m.note && document.getElementById(m.note);
+    if (note) note.style.display = on ? '' : 'none';
+  });
+  if (mode === 'auths') renderAuthMailbox('admin-review-auths');
+  if (mode === 'writers') loadWriterApps();
 }
 // 寫信彈窗
 let _authReqCtx = null;

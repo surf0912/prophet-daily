@@ -477,10 +477,13 @@
         <div id="review-mode-pills" style="display:flex;gap:6px;margin-bottom:10px">
           <button class="cat-pill active" id="review-pill-works" data-onclick="setReviewMode('works')">待審作品</button>
           <button class="cat-pill" id="review-pill-auths" data-onclick="setReviewMode('auths')">授權信</button>
+          <button class="cat-pill" id="review-pill-writers" data-onclick="setReviewMode('writers')">作者申請</button>
         </div>
         <p id="review-works-note" style="font-size:12px;color:var(--ink-light);margin-bottom:12px">作者上傳的內容需審核通過才會公開給所有人。</p>
+        <p id="review-writers-note" style="display:none;font-size:12px;color:var(--ink-light);margin-bottom:12px">從閱報須知頁留下聯絡方式、有意寫文的人。</p>
         <div id="admin-review-list"></div>
         <div id="admin-review-auths" style="display:none"></div>
+        <div id="admin-review-writers" style="display:none"><div id="writer-app-list" class="log-list"></div></div>
       </div>
       <div id="admin-auths" class="admin-pane">
         <p style="font-size:12px;color:var(--ink-light);margin-bottom:12px">授權信一來一回即封緘：對方回覆前可撤回；被婉拒的信無法重寄。</p>
@@ -543,14 +546,6 @@
         <div id="invite-result" style="display:none;background:var(--parchment2);border:1px solid var(--gold-lt);border-radius:4px;padding:12px;margin-bottom:16px"></div>
         <!-- existing invites list -->
         <div id="invite-list"></div>
-        <div class="log-panel">
-          <div class="log-head">
-            <svg width="13" height="13" aria-hidden="true"><use href="#ic-send"/></svg>
-            <span class="log-title">作者申請</span>
-            <span class="log-sub">從閱報須知頁留下聯絡方式、有意寫文的人</span>
-          </div>
-          <div id="writer-app-list" class="log-list"></div>
-        </div>
       </div>
       <div id="admin-monitor" class="admin-pane">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px">
