@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.56';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.57';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1067,12 +1067,22 @@ function openCharProfile(name) {
 }
 function openCharProfileFromHome() { if (_homeChar) openCharProfile(_homeChar.name); }
 function closeCharProfile() { document.getElementById('char-profile').classList.remove('open'); }
+// 封面分手機版與桌機版兩組，數量與內容都不同（Sean 手機 11 張、桌機 4 張，且同序不同景）。
+// 首頁輪播以 600px 為界決定播哪一組——檔案頁的封面網格與開關必須跟著同一條規則，
+// 否則使用者看到的、和他實際關掉的會是兩張不同的圖。
+const COVER_WIDE_MQ = '(min-width: 600px)';
+function isWideCover() { return window.matchMedia(COVER_WIDE_MQ).matches; }
+function coverSetOf(c, wide) {
+  return ((wide ? (c.imgsD || [c.imgD]) : (c.imgs || [c.img])) || []).filter(Boolean);
+}
+
 function renderCharProfile(name) {
   const charData = CHARS.find(c => c.name === name) || {};
   const prof = CHAR_PROFILE[name] || { bio: '', gallery: [] };
   const code = (CHAR_LIST.find(x => x.name === name) || {}).code;
   document.getElementById('cp-name').textContent = name;
-  const photos = (charData.imgs && charData.imgs.length) ? charData.imgs : [charData.img].filter(Boolean);
+  const wideCovers = isWideCover();
+  const photos = coverSetOf(charData, wideCovers);
   const excluded = excludedPhotos();
   const myWorks = (typeof novels !== 'undefined' ? novels : []).filter(n =>
     (n.owners || []).includes(currentUser && currentUser.id) && (n.characters || []).includes(code));
@@ -1089,7 +1099,7 @@ function renderCharProfile(name) {
     const charShots = photos.map((u, i) => {
       const on = !excluded.has(photoKey(u));
       const dl = photoWallpaperUrl(u) ? `<button class="cp-download" data-onclick="downloadPhoto('${u}','${escapeHtml(name)}')" aria-label="下載桌布" title="下載桌布">${DL}</button>` : '';
-      const heart = `<button class="cp-cover-toggle${on ? ' on' : ''}" data-onclick="toggleCoverPhoto('${name}', ${i}, this)" role="checkbox" aria-checked="${on}" aria-label="心動封面顯示這張">${HEART}</button>`;
+      const heart = `<button class="cp-cover-toggle${on ? ' on' : ''}" data-onclick="toggleCoverPhoto('${name}', ${i}, this, '${wideCovers ? 'd' : 'm'}')" role="checkbox" aria-checked="${on}" aria-label="心動封面顯示這張">${HEART}</button>`;
       return `<div class="cp-shot" data-full="${escapeHtml(u)}" style="background-image:url('${u}')">${heart}${dl}${adminish ? cropBtn(u) : ''}</div>`;
     }).join('');
     // P2：這個角色「已排時段」的留影走廊畫作也列進來（傳全域索引給 toggle，避免把 URL 塞進宣告式 handler）
@@ -1124,16 +1134,17 @@ function renderCharProfile(name) {
     });
   });
 }
-// 逐張開關：勾 = 這張出現在心動封面，取消 = 隱藏這一張。
-// 原本會「連同同一序的桌機版一起排除」，但兩組圖並非一一對應——手機 11 張、桌機 4 張，
-// 且 sean_phone_3 與 sean_desktop_3 根本是不同的照片。按索引配對只會隱藏到不相干的圖，
-// 而且超出桌機張數的部分還悄悄不生效。這個網格顯示的一律是手機版，就只動它。
+// 逐張開關：勾 = 這張出現在心動封面，取消 = 隱藏這一張。網格顯示哪一組，就只動那一組。
+// mode（'d' 桌機／'m' 手機）由渲染當下決定並寫進按鈕，不在這裡重新量螢幕——否則使用者
+// 中途轉了螢幕或改了視窗大小，點下去關掉的會是另一組裡的圖。
+// 早期版本會「連同同一序的桌機版一起排除」，但兩組並非一一對應（手機 11 張、桌機 4 張，
+// 且 sean_phone_3 與 sean_desktop_3 是不同的照片），等於隱藏到不相干的圖。
 // 封面愛心說明(收進 tooltip:點 ⓘ 才出現,不直接佔版面)
 function cpCoverHint() { const n = document.getElementById('cp-cover-note'); if (n) n.hidden = !n.hidden; }
 function toggleEntryNote() { const n = document.getElementById('entry-note'); if (n) n.hidden = !n.hidden; }
-async function toggleCoverPhoto(charName, index, btn) {
+async function toggleCoverPhoto(charName, index, btn, mode) {
   const c = CHARS.find(x => x.name === charName) || {};
-  const ids = [(c.imgs || [c.img])[index]].filter(Boolean).map(photoKey);
+  const ids = [coverSetOf(c, mode === 'd')[index]].filter(Boolean).map(photoKey);
   const ex = excludedPhotos();
   const nowShown = ex.has(ids[0]);          // 目前被隱藏 → 切換後變顯示
   ids.forEach(id => { if (nowShown) ex.delete(id); else ex.add(id); });
@@ -1234,8 +1245,8 @@ function renderGreeting(repick = true) {
   // 時段 index：0=早上(5-11) 1=中午(12-13) 2=下午(14-17) 3=晚上/深夜(18-4)
   const timeIdx = h >= 5 && h < 12 ? 0 : h >= 12 && h < 14 ? 1 : h >= 14 && h < 18 ? 2 : 3;
   const period = h < 5 ? '深夜好' : h < 12 ? '早安' : h < 18 ? '午安' : '晚安';
-  const isWide = window.matchMedia('(min-width: 600px)').matches;
-  const photosOf = c => ((isWide ? (c.imgsD || [c.imgD]) : (c.imgs || [c.img])) || []).filter(Boolean);
+  const isWide = isWideCover();
+  const photosOf = c => coverSetOf(c, isWide);
   // 以「照片」為單位建池：使用者未取消的照片(連同角色)都是候選。全被取消 → 退回全部隨機。
   const excluded = excludedPhotos();
   let selected = [];
@@ -1327,8 +1338,8 @@ let _coverWarmed = false;
 function warmCoverCache() {
   if (_coverWarmed) return; _coverWarmed = true;
   if (navigator.connection && navigator.connection.saveData) return;
-  const isWide = window.matchMedia('(min-width: 600px)').matches;
-  const photosOf = c => ((isWide ? (c.imgsD || [c.imgD]) : (c.imgs || [c.img])) || []).filter(Boolean);
+  const isWide = isWideCover();
+  const photosOf = c => coverSetOf(c, isWide);
   const mins = new Date().getHours() * 60 + new Date().getMinutes();
   const slot = (mins >= 360 && mins < 870) ? 'am' : (mins >= 870 && mins < 1080) ? 'pm' : 'night';
   const excluded = excludedPhotos();   // 使用者已隱藏的封面不預抓（他永遠看不到，抓了純浪費流量）
