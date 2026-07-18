@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.53';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.54';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1078,7 +1078,7 @@ function renderCharProfile(name) {
     (n.owners || []).includes(currentUser && currentUser.id) && (n.characters || []).includes(code));
   let html = '';
   if (photos.length) {
-    // 每張照片右上角一個開關：勾 = 這張出現在心動封面，取消 = 隱藏這張(連同桌機同序版)
+    // 每張照片右上角一個開關：勾 = 這張出現在心動封面，取消 = 隱藏這張
     const HEART = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.7l-1.45-1.32C5.4 14.74 2 11.66 2 7.9 2 5.1 4.2 3 7 3c1.6 0 3.14.74 4.13 1.9L12 5.9l.87-1C13.86 3.74 15.4 3 17 3c2.8 0 5 2.1 5 4.9 0 3.76-3.4 6.84-8.55 11.49L12 20.7z"/></svg>`;
     const DL = `<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>`;
     // 裁切框（心動顯示焦點）：官方封面只有管理員能框；留影走廊畫作作者(gc.mine)或管理員能框。
@@ -1124,13 +1124,16 @@ function renderCharProfile(name) {
     });
   });
 }
-// 逐張開關：勾 = 這張出現在心動封面，取消 = 隱藏。連同同一序的桌機版一起排除(照顧桌機讀者)。
+// 逐張開關：勾 = 這張出現在心動封面，取消 = 隱藏這一張。
+// 原本會「連同同一序的桌機版一起排除」，但兩組圖並非一一對應——手機 11 張、桌機 4 張，
+// 且 sean_phone_3 與 sean_desktop_3 根本是不同的照片。按索引配對只會隱藏到不相干的圖，
+// 而且超出桌機張數的部分還悄悄不生效。這個網格顯示的一律是手機版，就只動它。
 // 封面愛心說明(收進 tooltip:點 ⓘ 才出現,不直接佔版面)
 function cpCoverHint() { const n = document.getElementById('cp-cover-note'); if (n) n.hidden = !n.hidden; }
 function toggleEntryNote() { const n = document.getElementById('entry-note'); if (n) n.hidden = !n.hidden; }
 async function toggleCoverPhoto(charName, index, btn) {
   const c = CHARS.find(x => x.name === charName) || {};
-  const ids = [(c.imgs || [c.img])[index], (c.imgsD || [])[index]].filter(Boolean).map(photoKey);
+  const ids = [(c.imgs || [c.img])[index]].filter(Boolean).map(photoKey);
   const ex = excludedPhotos();
   const nowShown = ex.has(ids[0]);          // 目前被隱藏 → 切換後變顯示
   ids.forEach(id => { if (nowShown) ex.delete(id); else ex.add(id); });
@@ -2033,10 +2036,13 @@ function renderShelfForum(grid, fav) {
     grid.innerHTML = '<div class="spinner"></div>';
     if (fav) {
       _shelfForumFavLoaded = true;
-      api('/novels/my-liked').then(d => { forumLiked = d || []; if (shelfCat === '羊皮紙' && shelfFav) renderShelf(); }).catch(err);
+      // 失敗要把旗子放回去，否則「點此重試」會走到下面的空狀態，顯示「目前還沒有貼文」而不是重載。
+      api('/novels/my-liked').then(d => { forumLiked = d || []; if (shelfCat === '羊皮紙' && shelfFav) renderShelf(); })
+        .catch(e => { _shelfForumFavLoaded = false; err(); });
     } else {
       _shelfForumLoaded = true;
-      api('/novels/?kind=forum').then(d => { forumPosts = d || []; if (shelfCat === '羊皮紙' && !shelfFav) renderShelf(); }).catch(err);
+      api('/novels/?kind=forum').then(d => { forumPosts = d || []; if (shelfCat === '羊皮紙' && !shelfFav) renderShelf(); })
+        .catch(e => { _shelfForumLoaded = false; err(); });
     }
     return;
   }
@@ -4830,6 +4836,9 @@ async function openEditWork(id) {
     return;   // 畫作：標題／署名／日期／說明／畫框／裁切框，無章節
   }
   ct.value = '載入中…'; ct.disabled = true;
+  // 內文載入失敗時，chapterId 會留在 null，而存檔會「跳過章節寫入卻照樣報成功」——
+  // 作者可能重打一整篇、被告知已更新、內容其實從未送出。這面旗子讓存檔擋下來而不是默默丟掉。
+  editWork.chapterUnavailable = false;
   try {
     const chs = await api(`/chapters/novel/${id}`) || [];
     const ch = chs[0];
@@ -4841,8 +4850,12 @@ async function openEditWork(id) {
         const { intro, comments } = splitForumContent(raw);
         ct.value = intro; document.getElementById('editwork-comments').value = comments;
       } else { ct.value = raw; }
-    } else { ct.value = ''; }
-  } catch (e) { ct.value = ''; toast('內文載入失敗：' + ((e && e.message) || e || '未知錯誤')); }   // 顯示後端實際錯誤，方便診斷
+    } else { ct.value = ''; editWork.chapterUnavailable = true; }
+  } catch (e) {
+    ct.value = '';
+    editWork.chapterUnavailable = true;
+    toast('內文載入失敗：' + ((e && e.message) || e || '未知錯誤'));   // 顯示後端實際錯誤，方便診斷
+  }
   ct.disabled = false;
 }
 
@@ -4888,6 +4901,10 @@ async function saveEditWork() {
     content = document.getElementById('editwork-content').value;
   }
   if (!title) { toast('請輸入標題'); return; }
+  if (editWork.chapterUnavailable || !editWork.chapterId) {
+    toast('內文尚未載入成功——為免覆蓋原文，這次不會儲存。請關閉後重新開啟編輯。');
+    return;
+  }
   const published_at = dateToIso(document.getElementById('editwork-date').value);
   try {
     await api(`/novels/${editWork.id}`, { method: 'PATCH', body: JSON.stringify({ title, author, published_at }) });
