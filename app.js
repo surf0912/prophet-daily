@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.52';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.53';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -5282,7 +5282,7 @@ async function generateGroupInvite(role) {
       <div style="font-size:12.5px;color:var(--ink);background:var(--parchment);border:1px solid var(--gold-lt);border-radius:6px;padding:8px 10px;line-height:1.7">${
         res.opens_at
           ? `${ic('ic-clock',12)} 已排定 <b>${new Date(res.opens_at).toLocaleString('zh-TW')}</b> 開放——時間一到，守則頁自動亮起領取入口，你不必再做任何事。`
-          : `${ic('ic-check',12)} 入站守則頁已自動亮起領取入口——群組裡貼過的守則頁連結<b>即刻生效，不需再發新連結</b>。`
+          : `${ic('ic-check',12)} 閱報須知頁已自動亮起領取入口——群組裡貼過的守則頁連結<b>即刻生效，不需再發新連結</b>。`
       }</div>
       <div style="display:flex;gap:6px;margin-top:8px">
         <button class="btn-primary" style="flex:1;padding:8px 4px;font-size:13px;white-space:nowrap" data-onclick="copyText('https://surf0912.github.io/prophet-daily/rules','已複製 守則頁連結（GitHub）')">${ic('ic-link',13)} GitHub 守則頁</button>
