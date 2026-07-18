@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.54';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.55';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3683,6 +3683,9 @@ function setForumMode(mode) {
   if (isGallery) galleryView = 'all';   // 進留影走廊一律回「全部」檢視（與羊皮紙進頁行為一致）
   const fav = document.getElementById('forum-fav-btn');
   if (fav) fav.classList.toggle('on', isGallery ? false : forumView === 'liked');
+  // 許願池：留影走廊也要有，位置與意若思鏡一致（收藏夾左邊）。羊皮紙模式沿用原本沒有的樣子。
+  const wish = document.getElementById('forum-wish-btn');
+  if (wish) wish.style.display = isGallery ? '' : 'none';
   const title = document.getElementById('forum-title');
   if (title) title.innerHTML = isGallery
     ? ic('ic-gallery', 20).replace('-2px', '-3px') + ' 留影走廊'
