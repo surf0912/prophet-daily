@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.44';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.45';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -5454,7 +5454,7 @@ document.addEventListener('click', (e) => {
       .then(async r => {
         if (r.ok) {
           const res = await r.json();
-          document.getElementById('invite-role-badge').innerHTML = `身份：${roleBadge(res.role, 13)}　·　名額有限，領完即止`;
+          document.getElementById('invite-role-badge').innerHTML = `身份：${roleBadge(res.role, 13)}`;
         } else {
           const e = await r.json().catch(() => ({}));
           document.getElementById('invite-form').style.display = 'none';

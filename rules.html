@@ -55,6 +55,12 @@
     .entry p { font-size: 14px; color: var(--ink-light); line-height: 1.85; margin: 0 0 14px; }
     .entry a.btn { display: inline-block; background: var(--scarlet); color: var(--on-dark);
                    text-decoration: none; font-size: 15px; padding: 11px 30px; border-radius: 8px; }
+    /* 登入是另一件事，和領取邀請函分開：獨立一區、樣式次一級，且永遠在。 */
+    .entry .signin { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--gold-lt); }
+    .entry .signin .label { font-size: 13px; color: var(--ink-light); margin-bottom: 10px; }
+    .entry a.btn-ghost { display: inline-block; background: transparent; color: var(--accent);
+                         border: 1px solid var(--gold); text-decoration: none; font-size: 14px;
+                         padding: 9px 24px; border-radius: 8px; }
     .colophon { text-align: center; font-size: 13px; color: var(--ink-light); margin-top: 38px;
                 padding-top: 20px; border-top: 1px solid var(--gold-lt); line-height: 2; }
     .colophon .quote { color: var(--accent); font-size: 14px; }
@@ -181,32 +187,36 @@
 
     <div class="entry">
       <p id="entry-copy">讀過了，也認同了？<br />邀請函不定期開放領取，開放時這裡會亮起入口。</p>
-      <a class="btn" id="entry-btn" href="./">推開這扇門 →</a>
+      <a class="btn" id="entry-grab" href="./" style="display:none">領取邀請函 →</a>
       <p id="entry-note" style="display:none;font-size:12px;opacity:.8;margin:10px 0 0"></p>
+      <div class="signin">
+        <div class="label">已有帳號的讀者</div>
+        <a class="btn-ghost" href="./">推開這扇門 →</a>
+      </div>
     </div>
     <script>
       // 入口狀態機：/rules 是永久連結——主編開放名額時這裡自動亮起「領取邀請函」直達註冊；
-      // 沒開放時明講「目前暫無」，門鈕留給已有帳號的讀者登入。切回前景時重查，貼在群組裡的
+      // 沒開放時明講「目前暫無」，該鈕整個收起。登入是獨立一區、與狀態無關，永遠都在。
+      // 切回前景時重查，貼在群組裡的
       // 舊分頁也能即時反映「開放中／已領完」。API 基底與 app 同規則：onrender 同源；Pages 打主站。
       (function () {
         var API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
         function render(g) {
           var copy = document.getElementById('entry-copy');
-          var btn = document.getElementById('entry-btn');
+          var grab = document.getElementById('entry-grab');
           var note = document.getElementById('entry-note');
           if (g && g.code) {
             var roleName = g.role === 'writer' ? '作家' : '讀者';
-            copy.innerHTML = '讀過了，也認同了？<br />本輪' + roleName + '邀請函開放領取中——名額有限，領完即止。';
-            btn.textContent = '領取邀請函 →';
-            btn.href = './?grab=' + encodeURIComponent(g.code);
-            note.textContent = '領取後即刻註冊入站；已有帳號的讀者請直接由此登入。';
+            copy.innerHTML = '讀過了，也認同了？<br />本輪' + roleName + '邀請函開放領取中。';
+            grab.href = './?grab=' + encodeURIComponent(g.code);
+            grab.style.display = '';
+            note.textContent = '領取後即刻註冊入站。';
+            note.style.display = '';
           } else {
             copy.innerHTML = '讀過了，也認同了？<br />目前暫無開放領取的邀請函——名額不定期釋出，請留意群組消息。';
-            btn.textContent = '推開這扇門 →';
-            btn.href = './';
-            note.textContent = '已有帳號的讀者，請由此登入。';
+            grab.style.display = 'none';
+            note.style.display = 'none';
           }
-          note.style.display = '';
         }
         function refresh() {
           fetch(API + '/invites/group/active').then(function (r) { return r.ok ? r.json() : null; })
