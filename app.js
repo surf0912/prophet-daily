@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.62';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.63';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3489,7 +3489,7 @@ async function renderAuthMailbox(elId) {
 // 之後再加一種只需在這張表補一列。
 const REVIEW_MODES = {
   works:   { pill: 'review-pill-works',   pane: 'admin-review-list',    note: 'review-works-note' },
-  auths:   { pill: 'review-pill-auths',   pane: 'admin-review-auths' },
+  auths:   { pill: 'review-pill-auths',   pane: 'admin-review-auths',  note: 'review-auths-note' },
   writers: { pill: 'review-pill-writers', pane: 'admin-review-writers', note: 'review-writers-note' },
 };
 function setReviewMode(mode) {
@@ -5394,12 +5394,12 @@ async function loadWriterApps() {
   try {
     list = await api('/applications/writer') || [];
   } catch (e) {
-    el.innerHTML = `<p style="color:#888;font-size:13px">讀取失敗：${escapeHtml(e.message)}</p>`;
+    el.innerHTML = `<p style="font-size:12.5px;color:var(--accent);padding:2px 0 6px">讀取失敗：${escapeHtml(e.message)}</p>`;
     return;
   }
   _writerApps = list;
   setWriterAppBadge(list.filter(r => r.status !== 'handled').length);
-  if (!list.length) { el.innerHTML = '<p style="color:#888;font-size:13px">尚無申請</p>'; return; }
+  if (!list.length) { el.innerHTML = '<p style="font-size:12.5px;color:var(--ink-light);padding:2px 0 6px">尚無申請</p>'; return; }
   el.innerHTML = list.map(r => {
     const done = r.status === 'handled';
     return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08);font-size:13px;${done ? 'opacity:.55' : ''}">
