@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.51';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.52';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4873,7 +4873,7 @@ async function saveEditWork() {
       loadAdminNovelList(); loadNovels();
       // 同步留影走廊快取：畫作編輯後，留影牆／詳情卡即時反映。原本只刷新作品管理與意若思鏡（畫作根本
       // 不在意若思鏡），漏了留影走廊，作者改了署名會以為「改不了名字」——其實已存進 DB，只是留影沒刷新。
-      const gi = (window._galleryItems || []).find(x => x.id === editWork.id);
+      const gi = (_galleryItems || []).find(x => x.id === editWork.id);   // 頂層 let 不會掛到 window，寫成 window._galleryItems 等於永遠取到 undefined
       if (gi) { gi.title = title; gi.author = author; gi.image_caption = caption; gi.image_frame = editWork.imageFrame; }
       if (typeof forumTab !== 'undefined' && forumTab === 'gallery' && typeof renderGallery === 'function') renderGallery();
     } catch (e) { toast(e.message); }
