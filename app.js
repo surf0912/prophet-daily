@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.40';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.41';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -83,8 +83,8 @@ let replyToId = null;
 let currentForumChapterId = null;
 
 // ── API helper ───────────────────────────────────────────────
-// Render free tier sleeps when idle; the first request can take 30-50s to wake.
-// Show a friendly overlay if any request runs longer than ~3.5s.
+// 顯示連線中覆蓋層：任何前景請求超過 ~3.5 秒就浮出（升 Starter 後伺服器不再休眠，
+// 這裡攔的是網路層的慢／掛住，不是冷啟動）。
 let _wakeCount = 0;
 function _wakeToggle(on) {
   const el = document.getElementById('waking-overlay');
@@ -126,15 +126,28 @@ async function api(path, opts = {}, _retried) {
   if (!bg) _wakeCount++;
   const wt = bg ? null : setTimeout(() => _wakeToggle(true), 3500);
   try {
-    // Render free tier sleeps when idle; the first hit can drop the connection while it wakes.
-    // Retry network-level failures a few times (keeping the 喚醒中 overlay up) so cold starts are transparent.
     let res;
     for (let attempt = 0; ; attempt++) {
-      try { res = await fetch(API + path, { ...opts, headers }); break; }
-      catch (netErr) {
-        if (attempt >= 4) throw netErr;            // ~5 tries over ~30s, then give up
+      // PWA 啟動時第一發連線常常「瞬間失敗」或「掛住不回」——伺服器端其實從沒收到（監看的
+      // per-endpoint 最慢也只有幾百毫秒），所以那十秒全花在這個迴圈上。兩個對策：
+      //  (1) 無 body 的請求（GET 與簡單 POST）加 5 秒逾時，掛住就中止改重試，不再乾等；
+      //      有 body 的（上傳畫作等）不設限，免得大圖被砍。
+      //  (2) 退避改成「首次極快」：300ms → 1s → 2.5s → 5s，取代原本的 2s → 4s → 6s。
+      let _sig, _tid;
+      if (!opts.body && typeof AbortController !== 'undefined') {
+        const _c = new AbortController();
+        _sig = _c.signal;
+        _tid = setTimeout(() => _c.abort(), 5000);
+      }
+      try {
+        res = await fetch(API + path, { ...opts, headers, ...(_sig ? { signal: _sig } : {}) });
+        break;
+      } catch (netErr) {
+        if (attempt >= 4) throw netErr;            // 5 次後放棄
         if (!bg) _wakeToggle(true);
-        await new Promise(r => setTimeout(r, 2000 + attempt * 2000));
+        await new Promise(r => setTimeout(r, [300, 1000, 2500, 5000][attempt] || 5000));
+      } finally {
+        if (_tid) clearTimeout(_tid);
       }
     }
     // A 401 from the login / invite-register forms means "wrong credentials" — surface that message
