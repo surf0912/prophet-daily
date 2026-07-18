@@ -61,6 +61,23 @@
     .entry a.btn-ghost { display: inline-block; background: transparent; color: var(--accent);
                          border: 1px solid var(--gold); text-decoration: none; font-size: 14px;
                          padding: 9px 24px; border-radius: 8px; }
+    /* 作家申請：入口是守則頁最底下一條不張揚的連結，點開才展開表單。 */
+    .wa-toggle { display: block; text-align: center; margin: 18px 0 0; font-size: 14px; }
+    .wa-box { margin: 14px 0 0; padding: 18px 16px; background: var(--parchment2);
+              border: 1px solid var(--gold-lt); border-radius: 12px; text-align: left; }
+    .wa-box p { font-size: 13px; color: var(--ink-light); line-height: 1.85; margin: 0 0 12px; }
+    .wa-box label { display: block; font-size: 13px; color: var(--ink); margin: 0 0 5px; }
+    .wa-box input, .wa-box textarea {
+      width: 100%; box-sizing: border-box; padding: 9px 11px; margin: 0 0 12px;
+      border: 1px solid var(--gold-lt); border-radius: 4px; background: var(--parchment);
+      color: var(--ink); font-size: 14px; font-family: inherit; }
+    .wa-box textarea { min-height: 76px; resize: vertical; }
+    .wa-box button { width: 100%; padding: 11px; border: 0; border-radius: 8px;
+                     background: var(--scarlet); color: var(--on-dark); font-size: 15px;
+                     font-family: inherit; cursor: pointer; }
+    .wa-box button[disabled] { opacity: .55; cursor: default; }
+    .wa-msg { font-size: 13px; line-height: 1.85; margin: 10px 0 0; }
+    .wa-msg.ok { color: var(--accent); }
     .colophon { text-align: center; font-size: 13px; color: var(--ink-light); margin-top: 38px;
                 padding-top: 20px; border-top: 1px solid var(--gold-lt); line-height: 2; }
     .colophon .quote { color: var(--accent); font-size: 14px; }
@@ -226,6 +243,77 @@
         refresh();
         document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
         window.addEventListener('pageshow', refresh);
+      })();
+
+    </script>
+
+    <a class="wa-toggle" href="#" id="wa-toggle">想成為作家？</a>
+    <div class="wa-box" id="wa-box" style="display:none">
+      <p>《預言家日報》的作家由編務處逐一邀請。若你也寫文，留下一個能找到你的方式，
+         我們會與你聯繫、看看你的作品。<br />
+         主編不會親自與你聯繫——後續一律由客服與你聯絡。</p>
+      <label for="wa-contact">聯絡方式</label>
+      <input id="wa-contact" type="text" maxlength="100" placeholder="微信號、郵箱等，能找到你就好" />
+      <label for="wa-note">想說的話（選填）</label>
+      <textarea id="wa-note" maxlength="300" placeholder="平常寫什麼、在哪裡發表過，都可以寫在這裡"></textarea>
+      <button type="button" id="wa-send">送出</button>
+      <p class="wa-msg" id="wa-msg" style="display:none"></p>
+    </div>
+    <script>
+      // 作家申請：免登入的公開表單。濫用防護在後端（每 IP 每日 3 次＋全站保險絲），
+      // 這裡只負責不讓人重複連點，以及把後端的訊息原樣轉達。
+      (function () {
+        var API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
+        var toggle = document.getElementById('wa-toggle');
+        var box = document.getElementById('wa-box');
+        var btn = document.getElementById('wa-send');
+        var msg = document.getElementById('wa-msg');
+        var busy = false;
+
+        toggle.addEventListener('click', function (e) {
+          e.preventDefault();
+          var open = box.style.display !== 'none';
+          box.style.display = open ? 'none' : '';
+          toggle.textContent = open ? '想成為作家？' : '收起';
+          if (!open) document.getElementById('wa-contact').focus();
+        });
+
+        function say(text, ok) {
+          msg.textContent = text;
+          msg.className = 'wa-msg' + (ok ? ' ok' : '');
+          msg.style.display = '';
+        }
+
+        btn.addEventListener('click', function () {
+          if (busy) return;
+          var contact = document.getElementById('wa-contact').value.trim();
+          if (!contact) { say('請先留下聯絡方式。'); return; }
+          busy = true;
+          btn.disabled = true;
+          btn.textContent = '送出中…';
+          fetch(API + '/applications/writer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contact: contact, note: document.getElementById('wa-note').value.trim() })
+          }).then(function (r) {
+            return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; });
+          }).then(function (res) {
+            if (res.ok) {
+              document.getElementById('wa-contact').value = '';
+              document.getElementById('wa-note').value = '';
+              say('已收到。編務處會再與你聯絡——請留意你留下的聯絡方式。', true);
+              btn.style.display = 'none';
+            } else {
+              say((res.d && res.d.detail) || '送出失敗，請稍後再試。');
+              btn.disabled = false;
+              btn.textContent = '送出';
+            }
+          }).catch(function () {
+            say('連線不順，請稍後再試。');
+            btn.disabled = false;
+            btn.textContent = '送出';
+          }).then(function () { busy = false; });
+        });
       })();
     </script>
 

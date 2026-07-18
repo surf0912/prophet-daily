@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.49';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.50';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2966,6 +2966,7 @@ function switchAdminTab(tab) {
     document.getElementById('invite-qty-row').style.display = isSuper ? 'flex' : 'none';
     if (!isSuper) document.getElementById('invite-qty').value = '1';
     loadInviteList();
+    loadWriterApps();
   }
 }
 
@@ -5305,6 +5306,56 @@ async function generateInvite(role) {
     box.innerHTML = `<div style="font-size:12px;color:var(--accent);margin-bottom:2px">已產生 ${tokens.length} 個${ROLE_NAME_INV[role] || ''}邀請（3 天有效、各用一次）</div>${rows}${all}`;
     loadInviteList();
   } catch (e) { toast('' + e.message); }
+}
+
+// ── 作家申請（守則頁的公開表單）─────────────────────────────
+// 留的是聯絡方式而非帳號，所以只在管理介面顯示，且不回傳送出者 IP（IP 只在後端做限流）。
+let _writerApps = [];
+async function loadWriterApps() {
+  const el = document.getElementById('writer-app-list');
+  if (!el) return;
+  el.innerHTML = '<div class="spinner"></div>';
+  let list;
+  try {
+    list = await api('/applications/writer') || [];
+  } catch (e) {
+    el.innerHTML = `<p style="color:#888;font-size:13px">讀取失敗：${escapeHtml(e.message)}</p>`;
+    return;
+  }
+  _writerApps = list;
+  if (!list.length) { el.innerHTML = '<p style="color:#888;font-size:13px">尚無申請</p>'; return; }
+  el.innerHTML = list.map(r => {
+    const done = r.status === 'handled';
+    return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08);font-size:13px;${done ? 'opacity:.55' : ''}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+        <span style="font-weight:bold;color:var(--ink);word-break:break-all;min-width:0">${escapeHtml(r.contact || '')}</span>
+        ${done ? '<span style="background:rgba(201,168,76,.28);color:var(--ink-light);padding:2px 8px;border-radius:10px;font-size:11px;flex-shrink:0;margin-left:auto">已處理</span>' : ''}
+      </div>
+      <div style="color:var(--ink-light);font-size:12px;margin-bottom:6px">${new Date(r.created_at).toLocaleString('zh-TW')}</div>
+      ${r.note ? `<div style="color:var(--ink-light);line-height:1.7;margin-bottom:6px;white-space:pre-wrap">${escapeHtml(r.note)}</div>` : ''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button data-onclick="copyWriterApp('${r.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:5px;cursor:pointer">複製</button>
+        <button data-onclick="setWriterAppHandled('${r.id}',${done ? 'false' : 'true'})" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:5px;cursor:pointer">${done ? '標記未處理' : '標記已處理'}</button>
+        <button data-onclick="deleteWriterApp('${r.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:5px;cursor:pointer">刪除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function copyWriterApp(id) {
+  const r = _writerApps.find(x => x.id === id);
+  if (r) copyText(r.contact, '已複製聯絡方式');
+}
+
+async function setWriterAppHandled(id, on) {
+  try { await api(`/applications/writer/${id}`, { method: 'PATCH', body: JSON.stringify({ handled: on }) }); loadWriterApps(); }
+  catch (e) { toast(e.message); }
+}
+
+async function deleteWriterApp(id) {
+  if (!confirm('刪除這筆申請？\n\n刪除後無法復原，聯絡方式也一併消失。')) return;
+  try { await api(`/applications/writer/${id}`, { method: 'DELETE' }); toast('已刪除'); loadWriterApps(); }
+  catch (e) { toast(e.message); }
 }
 
 async function loadInviteList() {
