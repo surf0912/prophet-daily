@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.55';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.56';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1818,7 +1818,7 @@ function renderFeedbackList(kind, items) {
   const listEl = document.getElementById(kind + '-list');
   if (!items.length) { listEl.innerHTML = `<p style="color:var(--ink-light);font-size:13px;text-align:center;padding:14px">${kind === 'wish' ? '還沒有人許願,當第一個吧' : '目前沒有回報'}</p>`; return; }
   const admin = isAdminUser();
-  // 作家獲得「許願池回覆權」後，也能回覆許願並標記「考慮中」（不能婉拒，且僅限許願）。
+  // 作家獲得「許願池回覆權」後，也能回覆許願並標記「考慮中」或「已實現」（不能婉拒，且僅限許願）。
   const wishReplier = !admin && kind === 'wish' && currentUser?.role === 'writer' && !!currentUser?.wish_reply;
   const canReply = admin || wishReplier;
   listEl.innerHTML = items.map(it => {
@@ -1829,7 +1829,7 @@ function renderFeedbackList(kind, items) {
     const _rs = (Array.isArray(it.replies) && it.replies.length) ? it.replies
       : ((it.admin_reply || '').trim() ? [{ t: it.admin_reply }] : []);
     const reply = _rs.map(r => `<div style="font-size:12px;color:var(--accent);margin-top:5px;padding-left:8px;border-left:2px solid var(--gold-lt)">${ic('ic-megaphone',12)} ${escapeHtml(r.t || '')}</div>`).join('');
-    const _statusKeys = admin ? Object.keys(FB_STATUS[kind]) : (wishReplier ? ['considering'] : []);
+    const _statusKeys = admin ? Object.keys(FB_STATUS[kind]) : (wishReplier ? ['considering', 'done'] : []);
     const statusBtns = _statusKeys.map(s =>
       `<button data-onclick="setFeedbackStatus('${it.id}','${kind}','${s}')" style="font-size:11px;padding:2px 7px;border:1px solid var(--gold-lt);background:${it.status===s?'var(--scarlet)':'none'};color:${it.status===s?'var(--on-dark)':'var(--ink-light)'};border-radius:10px;cursor:pointer">${FB_STATUS[kind][s].replace(/^[^\s]+\s/, '')}</button>`).join('');
     const adminRow = canReply ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center">${statusBtns}<button data-onclick="replyFeedback('${it.id}','${kind}')" style="font-size:11px;padding:2px 8px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:10px;cursor:pointer">${ic('ic-megaphone',12)} 回覆</button></div>` : '';
@@ -4459,7 +4459,7 @@ async function loadAdminNovelList() {
           </label>
         </div>
         <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(26,10,0,.08)">
-          <span style="font-size:13px;color:var(--ink-light)">${ic('ic-megaphone',13)} 許願池回覆權<span style="opacity:.7">（開啟後此作家可回覆許願、標記「考慮中」；不能婉拒）</span></span>
+          <span style="font-size:13px;color:var(--ink-light)">${ic('ic-megaphone',13)} 許願池回覆權<span style="opacity:.7">（開啟後此作家可回覆許願、標記「考慮中」或「已實現」；不能婉拒）</span></span>
           <label class="toggle green" style="flex-shrink:0">
             <input type="checkbox" ${sc.wish ? 'checked' : ''} data-onchange="setWishReply('${sc.id}',this.checked)" />
             <span class="slider"></span>
