@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prophet-daily-v4.42';
+const CACHE_NAME = 'prophet-daily-v4.43';
 // 圖片與字型的常駐快取：跨版本保留（activate 不清），避免每次發版把使用者存好的
 // ~10MB 心動封面全部作廢重抓。內容物都是不改內容的靜態檔；若真要強制換新，把 -v1 進位。
 const STATIC_CACHE = 'prophet-daily-static-v1';

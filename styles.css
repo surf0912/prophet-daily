@@ -860,9 +860,11 @@
 
     /* Admin operation log (bottom of 監看) — terminal/log feel */
     .log-panel { margin-top: 20px; padding-top: 14px; border-top: 1px solid rgba(128, 128, 128, .2); }
-    .log-head { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; color: var(--ink-light); }
-    .log-title { font-size: 13px; font-weight: bold; color: var(--ink); }
-    .log-sub { font-size: 11px; color: var(--ink-light); opacity: .85; }
+    /* 標題不縮不換行（否則長說明會把「作品互授」擠成兩行）；說明去吸收剩餘寬度並自行折行。 */
+    .log-head { display: flex; align-items: flex-start; gap: 7px; margin-bottom: 8px; color: var(--ink-light); }
+    .log-head > svg { flex-shrink: 0; margin-top: 2px; }
+    .log-title { font-size: 13px; font-weight: bold; color: var(--ink); flex-shrink: 0; white-space: nowrap; }
+    .log-sub { font-size: 11px; color: var(--ink-light); opacity: .85; min-width: 0; }
     .log-list {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: 12px; line-height: 1.7;
