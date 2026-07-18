@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.41';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.42';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3096,11 +3096,16 @@ function renderMonitorBody() {
         ${sub ? `<div style="font-size:11px;color:var(--ink-light);opacity:.85;margin-top:3px;line-height:1.5">${sub}</div>` : ''}
       </div>`;
     // 效能定位：最慢 Endpoint／Supabase 查詢（15 分鐘窗，p95 由高到低）。p95 上色：紅≥1s、橙≥500ms。
-    const slowTable = (title, rows, col1) => {
+    const slowTable = (title, rows, col1, right) => {
       if (!rows || !rows.length) return '';
       const cell = v => `<td style="padding:3px 7px;text-align:right;color:${v >= 1000 ? 'var(--scarlet)' : v >= 500 ? '#a8761f' : 'inherit'}">${v}</td>`;
+      // 標題列：一行到底不換行——標題可縮（過長才省略號），右側膠囊固定不縮，
+      // 這樣切換視窗不會因標題字數變化而讓按鈕跳行。
       return `<div style="margin-top:14px">
-        <div style="font-size:12px;font-weight:bold;color:var(--ink);margin-bottom:5px">${title}</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;margin-bottom:5px">
+          <div style="font-size:12px;font-weight:bold;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</div>
+          ${right ? `<div style="flex-shrink:0;display:inline-flex;gap:5px;margin-left:auto">${right}</div>` : ''}
+        </div>
         <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead><tr style="color:var(--ink-light)">
             <th style="text-align:left;padding:3px 7px;font-weight:normal">${col1}</th>
@@ -3131,10 +3136,12 @@ function renderMonitorBody() {
       : '無法取得';
     // 今日（24h 滾動）總覽卡：process 不休眠後才有意義的長窗統計。窗未滿 24h 時註明已收集時數。
     const winH = s.window_hours || 0;
+    // 標籤保持極短（否則窄卡片會折行）；「已收集 N 小時」這種補充放副標。
     const dayCard = s.total_24h == null ? '' :
-      card(ic('ic-calendar', 12) + (winH >= 24 ? ' 今日（24 小時）' : ` 今日（已收集 ${winH} 小時）`),
+      card(ic('ic-calendar', 12) + ' 今日',
            s.total_24h + ' 請求',
-           `活躍 ${s.active_24h ?? '—'} 人　·　5xx <span style="color:${s.errors_24h ? 'var(--scarlet)' : 'inherit'}">${s.errors_24h ?? 0}</span>`);
+           `活躍 ${s.active_24h ?? '—'} 人　·　5xx <span style="color:${s.errors_24h ? 'var(--scarlet)' : 'inherit'}">${s.errors_24h ?? 0}</span>`
+           + (winH >= 24 ? '' : `<br>已收集 ${winH} 小時`));
     // 每小時請求長條（24 桶，舊→新）：高度 ∝ 請求數；該小時有 5xx 染紅。克制的純 div，無圖表庫。
     let hourlyRow = '';
     if (s.hourly && s.hourly.some(b => b.n > 0)) {
@@ -3151,7 +3158,7 @@ function renderMonitorBody() {
     // 慢表視窗切換：15 分鐘看「現在」、24 小時看「全貌」（樣本足、p95 有代表性）。
     const is24 = _monWin === '24h' && s.endpoints_24h;
     const winBtn = (w, label) => `<button data-onclick="setMonWin('${w}')" style="font-size:11px;padding:2px 10px;border:1px solid ${(_monWin === w) ? 'var(--scarlet)' : 'var(--gold-lt)'};background:${(_monWin === w) ? 'var(--scarlet)' : 'none'};color:${(_monWin === w) ? 'var(--on-dark)' : 'var(--ink-light)'};border-radius:10px;cursor:pointer">${label}</button>`;
-    const winToggle = s.endpoints_24h ? `<span style="display:inline-flex;gap:5px;margin-left:8px;vertical-align:1px">${winBtn('15m', '15 分鐘')}${winBtn('24h', '24 小時')}</span>` : '';
+    const winToggle = s.endpoints_24h ? `${winBtn('15m', '15 分鐘')}${winBtn('24h', '24 小時')}` : '';
     el.innerHTML = `
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         ${card(ic('ic-clock', 12) + ' 回應時間', rtVal, rtSub, true)}
@@ -3166,7 +3173,7 @@ function renderMonitorBody() {
       ${jwtPct === null ? '' : (jwtPct >= 80
         ? `<div style="font-size:11px;color:#2d4a1e;margin-top:10px">${ic('ic-shield', 11)} JWT 本機驗證：<b>啟用中</b>（${jwtPct}%）— 已省去每次請求對 Supabase 的一次往返</div>`
         : `<div style="font-size:12px;color:var(--scarlet);margin-top:10px;line-height:1.5">${ic('ic-shield', 11)} JWT 本機驗證：<b>未啟用</b>（本機僅 ${jwtPct}%）— 請把 Render 的 <b>JWT_SECRET</b> 設成你的 Supabase JWT 密鑰，回應時間才會降下來</div>`)}
-      ${slowTable(ic('ic-clock', 12) + ` 最慢 Endpoint（近 ${is24 ? '24 小時' : '15 分鐘'}）` + winToggle, is24 ? s.endpoints_24h : s.endpoints, 'Endpoint')}
+      ${slowTable(ic('ic-clock', 12) + ' 最慢 Endpoint', is24 ? s.endpoints_24h : s.endpoints, 'Endpoint', winToggle)}
       ${slowTable(ic('ic-gear', 12) + ' 最慢 Supabase 查詢', is24 ? s.queries_24h : s.queries, '查詢')}
       <div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:10px">※「在線」以近 5 分鐘有送出請求的登入用戶計；純閱讀時前端不送請求，故為活躍下限值。慢表可切 15 分鐘（看現在）／24 小時（看全貌，樣本足）。</div>`;
   }
