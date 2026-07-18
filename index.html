@@ -36,7 +36,7 @@
     <!-- Normal login -->
     <div id="signin-form">
       <div class="field"><label>巫師入學全名</label><input type="text" id="si-username" placeholder="你的入學全名（英文）" autocomplete="username" /></div>
-      <div class="field"><label>通關密語</label><input type="password" id="si-pass" placeholder="輸入你的通關密語" autocomplete="current-password" /></div>
+      <div class="field"><label>密碼</label><input type="password" id="si-pass" placeholder="輸入你的密碼" autocomplete="current-password" /></div>
       <button class="btn-primary" data-onclick="doSignIn()">進入魔法世界</button>
     </div>
 
@@ -265,15 +265,15 @@
               <small style="color:var(--ink-light);opacity:.7">大家看到的名字，最多 7 字，可用中文</small>
             </div>
             <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:6px">
-              <label>通關密語</label>
+              <label>密碼</label>
               <div id="pw-view" style="display:flex;align-items:center;gap:8px">
                 <span style="font-size:14px;color:var(--ink-light)">••••••••</span>
                 <button data-onclick="togglePwEdit(true)" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;font-size:12px;padding:4px 10px;cursor:pointer">修改</button>
               </div>
               <div id="pw-edit" style="display:none;flex-direction:column;gap:6px;width:100%;max-width:240px">
-                <input type="password" id="pw-current" placeholder="目前的通關密語" autocomplete="current-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
-                <input type="password" id="pw-new" placeholder="新通關密語（至少 8 字）" autocomplete="new-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
-                <input type="password" id="pw-new2" placeholder="再次輸入新通關密語" autocomplete="new-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
+                <input type="password" id="pw-current" placeholder="目前的密碼" autocomplete="current-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
+                <input type="password" id="pw-new" placeholder="新密碼（至少 8 字）" autocomplete="new-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
+                <input type="password" id="pw-new2" placeholder="再次輸入新密碼" autocomplete="new-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
                 <div style="display:flex;gap:8px">
                   <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="togglePwEdit(false)">取消</button>
                   <button class="btn-primary" style="flex:1;padding:8px;font-size:13px" data-onclick="saveMyPassword()">儲存</button>

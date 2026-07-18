@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.46';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.47';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -152,7 +152,7 @@ async function api(path, opts = {}, _retried) {
     }
     // A 401 from the login / invite-register forms means "wrong credentials" — surface that message
     // instead of treating it as an expired session (the refresh+logout path swallows it, so the user
-    // saw nothing when they mistyped their 通關密語).
+    // saw nothing when they mistyped their 密碼).
     const _authSubmit = path === '/auth/signin' || path === '/invites/register';
     if (res.status === 401 && !_authSubmit) {
       // Try a one-time silent refresh + retry before giving up and logging out.
@@ -5086,12 +5086,12 @@ async function changeUserRole(userId, role) {
 
 async function resetPassword(id) {
   const name = adminUserName(id);
-  const pw = prompt(`為「${name}」設定新的通關密語(至少 8 字)。\n設定後請私下告訴對方,讓他用這組登入:`);
+  const pw = prompt(`為「${name}」設定新的密碼（至少 8 字）。\n設定後請私下告訴對方，讓他用這組登入：`);
   if (pw === null) return;
-  if (pw.trim().length < 8) { toast('通關密語至少 8 字'); return; }
+  if (pw.trim().length < 8) { toast('密碼至少 8 字'); return; }
   try {
     await api(`/permissions/users/${id}/password`, { method: 'PATCH', body: JSON.stringify({ password: pw.trim() }) });
-    toast(`已重設 ${name} 的通關密語`);
+    toast(`已重設 ${name} 的密碼`);
   } catch (e) { toast('' + e.message); }
 }
 
@@ -5238,12 +5238,12 @@ async function saveMyPassword() {
   const cur = document.getElementById('pw-current').value;
   const nw = document.getElementById('pw-new').value.trim();
   const nw2 = document.getElementById('pw-new2').value.trim();
-  if (!cur) { toast('請輸入目前的通關密語'); return; }
-  if (nw.length < 8) { toast('新通關密語至少 8 字'); return; }
-  if (nw !== nw2) { toast('兩次輸入的新通關密語不一致'); return; }
+  if (!cur) { toast('請輸入目前的密碼'); return; }
+  if (nw.length < 8) { toast('新密碼至少 8 字'); return; }
+  if (nw !== nw2) { toast('兩次輸入的新密碼不一致'); return; }
   try {
     await api('/auth/me/password', { method: 'PATCH', body: JSON.stringify({ current: cur, new: nw }) });
-    toast('通關密語已更新');
+    toast('密碼已更新');
     togglePwEdit(false);
   } catch (e) { toast('' + e.message); }
 }
