@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.43';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.44';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -5251,9 +5251,18 @@ async function saveMyPassword() {
 // ── Admin: invites ────────────────────────────────────────────
 function inviteLink(token) { return `${window.location.origin}${window.location.pathname}?invite=${token}`; }
 
+const GRAB_QTY_MAX = 50;   // 要跟 routers/invites.py 的 _GROUP_MAX 一致
+
 // 搶名額連結：一輪＝N 張共用 group_code 的單次 token，一條連結先搶先贏。
 async function generateGroupInvite(role) {
-  const qty = parseInt(document.getElementById('grab-qty').value, 10) || 15;
+  const el = document.getElementById('grab-qty');
+  const raw = parseInt(el.value, 10);
+  if (!raw || raw < 1 || raw > GRAB_QTY_MAX) {   // 後端也夾一次；這裡先講清楚，別讓她打 50 卻默默拿到別的數字
+    toast(`名額請填 1～${GRAB_QTY_MAX} 之間的整數`);
+    el.focus();
+    return;
+  }
+  const qty = raw;
   try {
     const res = await api('/invites/generate-group', { method: 'POST', body: JSON.stringify({ role, count: qty }) });
     const box = document.getElementById('grab-result');
