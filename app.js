@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.61';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.62';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2971,7 +2971,7 @@ function switchAdminTab(tab) {
   if (tab === 'novels') loadAdminNovelList();
   if (tab === 'users') loadAdminUsers();
   if (tab === 'upload') { setUploadKind('novel'); initUploadDraftWatch(); restoreUploadDraft(); }
-  if (tab === 'review') { setReviewMode('works'); loadReviewList(); }
+  if (tab === 'review') { setReviewMode('works'); loadReviewList(); refreshWriterAppBadge(); }
   if (tab === 'auths') renderAuthMailbox('auth-mailbox');
   if (tab === 'invites') {
     // super_admin only: 管理員邀請 button + 批次數量 selector (admins generate one at a time)
@@ -5364,6 +5364,23 @@ async function generateInvite(role) {
 // ── 作家申請（守則頁的公開表單）─────────────────────────────
 // 留的是聯絡方式而非帳號，所以只在管理介面顯示，且不回傳送出者 IP（IP 只在後端做限流）。
 let _writerApps = [];
+
+// 分頁上的未處理數字。兩個來源都會走這裡：進審核頁時打輕量的 /count，清單已開時直接由
+// 清單算——後者不必再多打一次 API，也讓「標記已處理」後數字立刻跟著變。
+function setWriterAppBadge(n) {
+  const pill = document.getElementById('review-pill-writers');
+  if (!pill) return;
+  pill.innerHTML = '作者申請' + (n > 0
+    ? ` <span style="display:inline-block;min-width:16px;padding:0 4px;margin-left:3px;border-radius:8px;background:var(--scarlet);color:var(--on-dark);font-size:11px;line-height:16px;text-align:center">${n}</span>`
+    : '');
+}
+
+async function refreshWriterAppBadge() {
+  try {
+    const r = await api('/applications/writer/count', { background: true });
+    setWriterAppBadge((r && r.new) || 0);
+  } catch (e) { /* 數字拿不到就不顯示，不必打擾使用者 */ }
+}
 function clearGrabOpens() {
   const el = document.getElementById('grab-opens');
   if (el) { el.value = ''; toast('已清除——將立刻開放'); }
@@ -5381,6 +5398,7 @@ async function loadWriterApps() {
     return;
   }
   _writerApps = list;
+  setWriterAppBadge(list.filter(r => r.status !== 'handled').length);
   if (!list.length) { el.innerHTML = '<p style="color:#888;font-size:13px">尚無申請</p>'; return; }
   el.innerHTML = list.map(r => {
     const done = r.status === 'handled';
