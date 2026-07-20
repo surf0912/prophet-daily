@@ -33,6 +33,14 @@
       <div class="auth-divider" aria-hidden="true"><svg viewBox="0 0 12 12"><path fill="currentColor" d="M6 0 L7.4 4.6 L12 6 L7.4 7.4 L6 12 L4.6 7.4 L0 6 L4.6 4.6 Z"/></svg></div>
     </div>
 
+    <!-- 微信內建瀏覽器提示：無法強制跳轉（微信全數攔截），只能把指引做明顯並附複製連結 -->
+    <div id="wx-note" style="display:none;position:relative;margin:0 0 16px;padding:14px 16px;background:rgba(201,168,76,.10);border:1px solid var(--gold);border-radius:10px;text-align:left">
+      <svg style="position:absolute;top:-7px;right:9px;color:var(--gold)" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg>
+      <div style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--gold);margin-bottom:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>你正在微信中開啟</div>
+      <p style="font-size:12.5px;line-height:1.85;color:var(--gold-lt);margin:0 0 10px">微信的內建瀏覽器無法將日報加入主畫面，閱讀體驗也會打折。請點<b>右上角的「⋯」</b>，選「在瀏覽器打開」，再繼續。</p>
+      <button type="button" data-onclick="copyThisLink(this)" style="font-family:inherit;font-size:12.5px;padding:7px 16px;border-radius:8px;border:1px solid var(--gold);background:none;color:var(--gold);cursor:pointer">複製本頁連結</button>
+    </div>
+
     <!-- Normal login -->
     <div id="signin-form">
       <div class="field"><label>巫師入學全名</label><input type="text" id="si-username" placeholder="你的入學全名（英文）" autocomplete="username" /></div>

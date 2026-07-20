@@ -78,6 +78,16 @@
     .wa-box button[disabled] { opacity: .55; cursor: default; }
     .wa-msg { font-size: 13px; line-height: 1.85; margin: 10px 0 0; }
     .wa-msg.ok { color: var(--accent); }
+    /* 微信內建瀏覽器提示。無法強制跳轉——微信封死了所有導向外部瀏覽器的手段，
+       任何網站能做的都只是引導。所以把指引做得夠明顯，並附上複製連結這條後路。 */
+    .wx-note { display: none; position: relative; margin: 0 0 22px; padding: 15px 17px;
+               background: var(--parchment2); border: 1.5px solid var(--gold); border-radius: 12px; }
+    .wx-note h3 { margin: 0 0 7px; font-size: 15px; color: var(--accent);
+                  display: flex; align-items: center; gap: 7px; }
+    .wx-note p { font-size: 13.5px; line-height: 1.9; color: var(--ink-light); margin: 0 0 10px; }
+    .wx-note .corner { position: absolute; top: -6px; right: 10px; color: var(--gold); }
+    .wx-note button { font-family: inherit; font-size: 13px; padding: 8px 18px; border-radius: 8px;
+                      border: 1px solid var(--gold); background: transparent; color: var(--accent); cursor: pointer; }
     .colophon { text-align: center; font-size: 13px; color: var(--ink-light); margin-top: 38px;
                 padding-top: 20px; border-top: 1px solid var(--gold-lt); line-height: 2; }
     .colophon .quote { color: var(--accent); font-size: 14px; }
@@ -91,6 +101,54 @@
       <h1>預言家日報</h1>
       <div class="sub">一份邀請制的魔法閱讀日報。<br />在翻開這份報紙之前，請先讀過扉頁上的字。</div>
     </header>
+
+    <div class="wx-note" id="wx-note">
+      <svg class="corner" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M7 17 17 7" /><path d="M9 7h8v8" />
+      </svg>
+      <h3>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" />
+        </svg>
+        你正在微信中開啟
+      </h3>
+      <p>微信的內建瀏覽器無法將日報加入主畫面，閱讀體驗也會打折。
+         請點<strong>右上角的「⋯」</strong>，選「在瀏覽器打開」，再繼續。</p>
+      <button type="button" id="wx-copy">複製本頁連結</button>
+    </div>
+    <script>
+      // 微信內建瀏覽器：偵測 UA 後把上方提示打開。
+      // 不嘗試自動跳轉——微信會攔下 location 導向、target="_blank" 與各種 scheme，
+      // 硬跳只會讓使用者卡在白畫面。能做的就是把「⋯ → 在瀏覽器打開」講清楚，
+      // 並提供複製連結，讓他們自己貼到瀏覽器。腳本必須放在標記之後才抓得到元素。
+      (function () {
+        if (!/micromessenger/i.test(navigator.userAgent)) return;
+        var note = document.getElementById('wx-note');
+        var btn = document.getElementById('wx-copy');
+        note.style.display = 'block';
+        btn.addEventListener('click', function () {
+          var url = location.href;
+          var done = function () { btn.textContent = '已複製，請貼到瀏覽器開啟'; };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(done, fallback);
+          } else { fallback(); }
+          function fallback() {
+            // 舊版微信沒有 clipboard API：塞一個暫時的 input 走 execCommand。
+            var i = document.createElement('input');
+            i.value = url;
+            i.style.cssText = 'position:fixed;opacity:0';
+            document.body.appendChild(i);
+            i.select();
+            i.setSelectionRange(0, url.length);
+            try { document.execCommand('copy'); done(); }
+            catch (e) { btn.textContent = '請長按網址列複製'; }
+            i.remove();
+          }
+        });
+      })();
+    </script>
 
     <p class="lede">
       各位好，這裡是《預言家日報》的<span class="sign">創刊主編兼技術支援</span>。

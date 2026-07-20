@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.65';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.66';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -329,6 +329,37 @@ function showLoginForm() {
 // fieldId：出錯的欄位。#auth-msg 掛在整張卡片最下面（按鈕之下），手機上——尤其微信內建
 // 瀏覽器上下都被工具列吃掉——它根本在畫面外。有讀者因此以為「按了沒反應、註冊不了」。
 // 所以錯誤同時走三個管道：原地訊息、固定在畫面上的 toast、以及把游標移到出錯的那一欄。
+// 微信內建瀏覽器。沒有辦法強制把人送到外部瀏覽器——微信攔截 location 導向、target="_blank"
+// 與各種 scheme，硬跳只會讓使用者卡在白畫面。所以只做兩件事：把「⋯ → 在瀏覽器打開」講清楚，
+// 以及提供複製連結，讓他們自己貼過去。
+const IS_WECHAT = /micromessenger/i.test(navigator.userAgent);
+
+function showWechatNote() {
+  if (!IS_WECHAT) return;
+  const el = document.getElementById('wx-note');
+  if (el) el.style.display = '';
+}
+
+async function copyThisLink(btn) {
+  const url = location.href;
+  const done = () => { if (btn) btn.textContent = '已複製，請貼到瀏覽器開啟'; };
+  try {
+    await navigator.clipboard.writeText(url);
+    done();
+  } catch (_) {
+    // 舊版微信沒有 clipboard API：塞一個暫時的 input 走 execCommand。
+    const i = document.createElement('input');
+    i.value = url;
+    i.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(i);
+    i.select();
+    i.setSelectionRange(0, url.length);
+    try { document.execCommand('copy'); done(); }
+    catch (e) { if (btn) btn.textContent = '請長按網址列複製'; }
+    i.remove();
+  }
+}
+
 function shakeMsg(text, fieldId) {
   const el = document.getElementById('auth-msg');
   el.textContent = text;
@@ -5553,6 +5584,7 @@ document.addEventListener('click', (e) => {
 
 // ── Boot ─────────────────────────────────────────────────────
 (async () => {
+  showWechatNote();   // 提示掛在登入卡片內，登入成功後整張卡片消失，不必再收
   fetch(API + '/health', { cache: 'no-store' }).catch(() => {});  // wake Render FIRST so a backgrounded→resumed reload isn't cold
   // Don't let the stale-check block the boot on a slow network: if it hasn't resolved in
   // 1.5s, show the app now and let self-heal finish (and reload only if stale) in the background.
