@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.63';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.64';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -326,12 +326,22 @@ function showLoginForm() {
 }
 
 // Show an auth error and shake it to draw the eye (restart the animation each call).
-function shakeMsg(text) {
+// fieldId：出錯的欄位。#auth-msg 掛在整張卡片最下面（按鈕之下），手機上——尤其微信內建
+// 瀏覽器上下都被工具列吃掉——它根本在畫面外。有讀者因此以為「按了沒反應、註冊不了」。
+// 所以錯誤同時走三個管道：原地訊息、固定在畫面上的 toast、以及把游標移到出錯的那一欄。
+function shakeMsg(text, fieldId) {
   const el = document.getElementById('auth-msg');
   el.textContent = text;
   el.classList.remove('shake');
   void el.offsetWidth;        // force reflow so the animation replays on repeat clicks
   el.classList.add('shake');
+  toast(text);
+  if (fieldId) {
+    const f = document.getElementById(fieldId);
+    if (f) { try { f.focus({ preventScroll: false }); f.select && f.select(); } catch (_) { f.focus(); } }
+  } else {
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
   // 從 GitHub Pages 開啟且登入出錯 → 提示鏡像入口（部分地區 Pages 不穩，鏡像走 Render）
   const mh = document.getElementById('mirror-hint');
   if (mh && location.hostname === 'surf0912.github.io') mh.style.display = '';
@@ -343,7 +353,7 @@ async function doSignIn() {
   msg.textContent = '驗證中…';
   try {
     const username = document.getElementById('si-username').value.trim();
-    if (!username) { shakeMsg('請輸入巫師入學全名'); return; }
+    if (!username) { shakeMsg('請輸入巫師入學全名', 'si-username'); return; }
     const res = await api('/auth/signin', {
       method: 'POST',
       body: JSON.stringify({ username, password: document.getElementById('si-pass').value }),
@@ -442,10 +452,10 @@ async function doInviteRegister() {
   const pass = document.getElementById('inv-pass').value;
   const invToken = new URLSearchParams(window.location.search).get('invite');
   const grabCode = new URLSearchParams(window.location.search).get('grab');
-  if (!username) { shakeMsg('請輸入巫師入學全名'); return; }
-  if (/\s/.test(username)) { shakeMsg('入學全名不能有空格'); return; }
-  if (!/^[a-zA-Z0-9_]{2,20}$/.test(username)) { shakeMsg('入學全名只能用英文、數字、底線，2-20字'); return; }
-  if (!nickname) { shakeMsg('請輸入巫師姓名（暱稱）'); return; }
+  if (!username) { shakeMsg('請輸入巫師入學全名', 'inv-name'); return; }
+  if (/\s/.test(username)) { shakeMsg('入學全名不能有空格，可用底線代替', 'inv-name'); return; }
+  if (!/^[a-zA-Z0-9_]{2,20}$/.test(username)) { shakeMsg('入學全名只能用英文、數字、底線，2-20 字', 'inv-name'); return; }
+  if (!nickname) { shakeMsg('請輸入巫師姓名（暱稱）', 'inv-nickname'); return; }
   if (!invToken && !grabCode) { shakeMsg('找不到邀請令牌'); return; }
   msg.classList.remove('shake');
   msg.textContent = grabCode ? '領取邀請函中…' : '建立帳號中…';

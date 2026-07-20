@@ -853,7 +853,9 @@
       transform: translateX(-50%) translateY(20px); opacity: 0;
       background: var(--chrome-dk); color: var(--gold); padding: 10px 20px;
       border-radius: 20px; font-size: 13px; border: 1px solid var(--gold);
-      transition: opacity .3s, transform .3s; z-index: 999; white-space: nowrap;
+      transition: opacity .3s, transform .3s; z-index: 999;
+      /* 錯誤訊息可能是一整句中文，nowrap 會直接衝出 375px 的螢幕兩側。 */
+      max-width: min(90vw, 420px); white-space: normal; text-align: center; line-height: 1.6;
       pointer-events: none;
     }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
