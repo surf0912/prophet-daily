@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.68';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.69';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1251,7 +1251,7 @@ async function downloadCoverGallery(idx) {
   const gc = (_homeGalleryCovers || [])[idx];
   if (!gc || !gc.image_url) return;
   try { await downloadWatermarkedImage(gc.image_url, '預言家日報-' + (gc.title || '畫作') + '.jpg'); }
-  catch (e) { toast('下載失敗，請稍後再試'); }
+  catch (e) { if (!e || e.name !== 'AbortError') toast('下載失敗，請稍後再試'); }   // AbortError = 使用者取消分享
 }
 // 官方角色頭像：單擊 = 篩選（原行為）；雙擊 = 開角色頁。onFilter(type,val) 是原本的篩選回呼。
 let _ocTapTimer = null, _ocTapCode = null;
@@ -4063,15 +4063,26 @@ async function downloadWatermarkedImage(imageUrl, filename) {
   ctx.globalAlpha = 1;
   const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
   if (!blob) throw new Error('no blob');
+  // iOS PWA 存相簿要走 Web Share（會跳「儲存影像」）。直接把 canvas 產出的 File 交給 share——
+  // 不再繞「建 object URL → 再 fetch 一次」，那多出來的一趟 fetch 會讓 iOS 的使用者手勢有效期
+  // (transient activation) 在 share 前就過期，導致 share 觸發不了、掉進開新視窗被瀏覽器擋成彈窗。
+  const file = new File([blob], filename, { type: 'image/jpeg' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    await navigator.share({ files: [file] });   // 使用者取消 = reject(AbortError)，由呼叫端吞掉
+    return;
+  }
+  // 桌機／Android：a[download] 直接下載（不開新視窗，避免彈窗攔截）。
   const url = URL.createObjectURL(blob);
-  try { await shareOrDownload(url, filename); }
-  finally { setTimeout(() => URL.revokeObjectURL(url), 30000); }
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 async function downloadGalleryImage() {
   const it = _galleryDetailItem;
   if (!it || !it.image_url) return;
   try { await downloadWatermarkedImage(it.image_url, '預言家日報-' + (it.title || '畫作') + '.jpg'); }
-  catch (e) { toast('下載失敗，請稍後再試'); }
+  catch (e) { if (!e || e.name !== 'AbortError') toast('下載失敗，請稍後再試'); }   // AbortError = 使用者取消分享
 }
 
 function galleryGroupNav(dir) {
