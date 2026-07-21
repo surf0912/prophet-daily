@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.67';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.68';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1175,8 +1175,9 @@ function renderCharProfile(name) {
       .map(({ gc, gi }) => {
         const on = !excluded.has(photoKey(gc.image_url));
         const heart = `<button class="cp-cover-toggle${on ? ' on' : ''}" data-onclick="toggleCoverGallery(${gi}, this)" role="checkbox" aria-checked="${on}" aria-label="心動封面顯示這張">${HEART}</button>`;
+        const dl = `<button class="cp-download" data-onclick="downloadCoverGallery(${gi})" aria-label="下載畫作" title="下載帶浮水印高清版">${DL}</button>`;
         const canCrop = adminish || gc.mine;
-        return `<div class="cp-shot" data-full="${escapeHtml(gc.image_url)}" style="background-image:url('${escapeHtml(gc.image_url)}')">${heart}${canCrop ? cropBtn(gc.image_url) : ''}</div>`;
+        return `<div class="cp-shot" data-full="${escapeHtml(gc.image_url)}" style="background-image:url('${escapeHtml(gc.image_url)}')">${heart}${dl}${canCrop ? cropBtn(gc.image_url) : ''}</div>`;
       }).join('');
     html += `<div class="cp-gallery">${charShots}${galShots}</div>`;
   }
@@ -1243,6 +1244,14 @@ async function toggleCoverGallery(idx, btn) {
     btn.classList.toggle('on', !nowShown);
     toast(e.message || '儲存失敗');
   }
+}
+// 角色頁的作家上傳封面：下載帶浮水印高清版（與留影走廊詳情共用同一套壓浮水印流程）。
+// 官方封面走 downloadPhoto（預先產好的 _wall.jpg 桌布），作家投稿圖沒有桌布檔，改即時壓浮水印。
+async function downloadCoverGallery(idx) {
+  const gc = (_homeGalleryCovers || [])[idx];
+  if (!gc || !gc.image_url) return;
+  try { await downloadWatermarkedImage(gc.image_url, '預言家日報-' + (gc.title || '畫作') + '.jpg'); }
+  catch (e) { toast('下載失敗，請稍後再試'); }
 }
 // 官方角色頭像：單擊 = 篩選（原行為）；雙擊 = 開角色頁。onFilter(type,val) 是原本的篩選回呼。
 let _ocTapTimer = null, _ocTapCode = null;
@@ -4037,27 +4046,32 @@ function _loadImgCors(src) {
     im.src = src;
   });
 }
+// 把金色徽記即時壓進任意圖檔（右下角、寬 30%、邊距 2%，與全螢幕觀看一致），
+// 匯出高清 JPEG 再走 分享/下載 流程。留影走廊詳情與角色頁的作家上傳封面共用。
+// 跨來源圖（Supabase Storage）需 crossOrigin。
+async function downloadWatermarkedImage(imageUrl, filename) {
+  const [img, logo] = await Promise.all([_loadImgCors(imageUrl), _loadImgCors('./assets/watermark_logo.png')]);
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth; c.height = img.naturalHeight;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const lw = Math.max(40, Math.round(c.width * 0.30));
+  const lh = Math.round(logo.naturalHeight * lw / logo.naturalWidth);
+  const pad = Math.round(c.width * 0.02);
+  ctx.globalAlpha = 0.95;
+  ctx.drawImage(logo, c.width - lw - pad, c.height - lh - pad, lw, lh);
+  ctx.globalAlpha = 1;
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+  if (!blob) throw new Error('no blob');
+  const url = URL.createObjectURL(blob);
+  try { await shareOrDownload(url, filename); }
+  finally { setTimeout(() => URL.revokeObjectURL(url), 30000); }
+}
 async function downloadGalleryImage() {
   const it = _galleryDetailItem;
   if (!it || !it.image_url) return;
-  try {
-    const [img, logo] = await Promise.all([_loadImgCors(it.image_url), _loadImgCors('./assets/watermark_logo.png')]);
-    const c = document.createElement('canvas');
-    c.width = img.naturalWidth; c.height = img.naturalHeight;
-    const ctx = c.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-    const lw = Math.max(40, Math.round(c.width * 0.30));
-    const lh = Math.round(logo.naturalHeight * lw / logo.naturalWidth);
-    const pad = Math.round(c.width * 0.02);
-    ctx.globalAlpha = 0.95;
-    ctx.drawImage(logo, c.width - lw - pad, c.height - lh - pad, lw, lh);
-    ctx.globalAlpha = 1;
-    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
-    if (!blob) throw new Error('no blob');
-    const url = URL.createObjectURL(blob);
-    try { await shareOrDownload(url, '預言家日報-' + (it.title || '畫作') + '.jpg'); }
-    finally { setTimeout(() => URL.revokeObjectURL(url), 30000); }
-  } catch (e) { toast('下載失敗，請稍後再試'); }
+  try { await downloadWatermarkedImage(it.image_url, '預言家日報-' + (it.title || '畫作') + '.jpg'); }
+  catch (e) { toast('下載失敗，請稍後再試'); }
 }
 
 function galleryGroupNav(dir) {
