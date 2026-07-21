@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.66';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.67';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -97,6 +97,8 @@ async function tryRefreshToken() {
   const rt = localStorage.getItem('pd_refresh');
   if (!rt) return false;
   if (!_refreshing) {
+    // Tie the reset to the promise itself (.finally), so a single in-flight refresh is shared by
+    // every concurrent caller and never nulled out from under a later refresh.
     _refreshing = (async () => {
       try {
         const res = await fetch(API + '/auth/refresh', {
@@ -111,14 +113,38 @@ async function tryRefreshToken() {
         if (d.refresh_token) localStorage.setItem('pd_refresh', d.refresh_token);
         return true;
       } catch { return false; }
-    })();
+    })().finally(() => { _refreshing = null; });
   }
-  const ok = await _refreshing;
-  _refreshing = null;
-  return ok;
+  return await _refreshing;
+}
+
+// Read a Supabase access token's `exp` (unix seconds) WITHOUT verifying it — we only need to know
+// when it's about to expire so we can renew ahead of time. Returns 0 when it can't be parsed.
+function _tokenExp(t) {
+  try {
+    let s = String(t).split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    const p = JSON.parse(atob(s));
+    return typeof p.exp === 'number' ? p.exp : 0;
+  } catch { return 0; }
+}
+// Proactively swap a near-expiry access token BEFORE a request goes out, so the ~1h expiry never
+// surfaces as a 401 that would drop the reader back to the login screen. Deduped via
+// tryRefreshToken's shared in-flight promise, so a burst triggers at most one refresh.
+async function ensureFreshToken() {
+  if (!token) return;
+  const exp = _tokenExp(token);
+  if (!exp) return;                              // can't tell → leave it to the reactive 401 path
+  if (exp * 1000 - Date.now() > 120000) return;  // still >2 min of life → nothing to do
+  await tryRefreshToken();
 }
 
 async function api(path, opts = {}, _retried) {
+  // Renew ahead of expiry (once, deduped) so authenticated calls don't fire with a dead token. Skip
+  // the auth-submit endpoints and the post-refresh retry (token is already fresh there).
+  if (token && !_retried && path !== '/auth/signin' && path !== '/invites/register' && path !== '/auth/refresh') {
+    await ensureFreshToken();
+  }
   const headers = { ...(opts.headers || {}) };
   if (!(opts.body instanceof FormData)) headers['Content-Type'] = 'application/json';
   if (token) headers['Authorization'] = 'Bearer ' + token;
