@@ -770,6 +770,23 @@
     #waking-overlay { position: fixed; inset: 0; z-index: 300; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.55); }
     #waking-overlay.show { display: flex; }
     #waking-overlay .box { background: var(--chrome-dk); color: var(--gold); border: 1px solid var(--gold); border-radius: 12px; padding: 24px 30px; text-align: center; font-size: 15px; max-width: 80%; }
+
+    /* ── 直式閱讀提示：僅「手機＋橫向」出現 ──
+       iOS 不理會 manifest 的 orientation: portrait（Android PWA 已鎖），網頁也無法呼叫方向鎖定，
+       所以橫放時以整頁提示層守住直式。條件三重限定：hover:none + pointer:coarse 排除桌機滑鼠、
+       max-height 500px 排除 iPad（iPad 橫放高度 ≥ 768）。蓋過一切（含全螢幕看圖 9999）。 */
+    #rotate-guard { display: none; }
+    @media screen and (orientation: landscape) and (hover: none) and (pointer: coarse) and (max-height: 500px) {
+      #rotate-guard {
+        display: flex; position: fixed; inset: 0; z-index: 10000;
+        align-items: center; justify-content: center;
+        background: var(--parchment, #f2e3bc);
+      }
+      #rotate-guard .rg-box { text-align: center; color: var(--ink, #3a2417); padding: 24px; }
+      #rotate-guard .rg-box svg { color: var(--accent, #8a2d2d); margin-bottom: 12px; }
+      #rotate-guard .rg-title { font-size: 17px; letter-spacing: .08em; }
+      #rotate-guard .rg-sub { font-size: 12.5px; color: var(--ink-light, #6b5138); margin-top: 8px; opacity: .9; }
+    }
     .toggle input:checked + .slider { background: var(--scarlet); }
     .toggle.green input:checked + .slider { background: #2d7a2d; }
     .toggle input:checked + .slider::before { transform: translateX(20px); }

@@ -876,6 +876,19 @@
   </div>
 </div>
 
+<!-- 直式閱讀提示：手機橫放時整頁蓋上（CSS media query 控制顯示，僅手機橫向；iPad 與桌機不受影響）。
+     iOS PWA 無法真正鎖定方向（manifest orientation 只有 Android 理會），故以提示層守住直式閱讀。 -->
+<div id="rotate-guard" aria-hidden="true">
+  <div class="rg-box">
+    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="7" y="3" width="10" height="18" rx="2"/>
+      <path d="M20 8a8 8 0 0 0-3-4.5M4 16a8 8 0 0 0 3 4.5"/>
+    </svg>
+    <div class="rg-title">請把手機轉回直式</div>
+    <div class="rg-sub">日報是直著讀的——版面為直式而生。</div>
+  </div>
+</div>
+
 <div class="perm-modal" id="soon-modal">
   <div class="perm-modal-inner" style="text-align:center;padding:28px 20px">
     <div style="margin-bottom:10px"><svg width="44" height="44" aria-hidden="true" style="vertical-align:0px"><use href="#ic-camera"/></svg></div>

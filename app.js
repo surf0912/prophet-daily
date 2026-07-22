@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.70';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.71';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1191,14 +1191,13 @@ function renderCharProfile(name) {
   body.innerHTML = html;
   // 每張縮圖套用自己的裁切框（有設定才動，否則維持 cover 預設）。
   body.querySelectorAll('.cp-shot[data-full]').forEach(el => applyCoverCropToEl(el, el.dataset.full));
-  // 封面雙擊 → 全螢幕帶浮水印大圖（同留影走廊）。手動雙擊偵測，避免與愛心／下載鈕的單擊誤觸。
+  // 封面單擊 → 全螢幕帶浮水印大圖（同留影走廊）。愛心／下載／裁切鈕有自己的 handler，
+  // closest('button') 排除掉就不會誤觸，無需再用雙擊區隔。
   body.querySelectorAll('.cp-shot').forEach(el => {
-    let t = 0;
     el.addEventListener('click', (e) => {
-      if (e.target.closest('button')) return;   // 點在愛心／下載鈕上不算
-      const now = Date.now();
-      if (now - t < 320) { t = 0; const u = el.dataset.full; if (u) openImageFull(u); }
-      else t = now;
+      if (e.target.closest('button')) return;   // 點在愛心／下載／裁切鈕上不算
+      const u = el.dataset.full;
+      if (u) openImageFull(u);
     });
   });
 }
