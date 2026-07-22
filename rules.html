@@ -314,15 +314,15 @@
 
     </script>
 
-    <a class="wa-toggle" href="#" id="wa-toggle">想成為作者？</a>
+    <a class="wa-toggle" href="#" id="wa-toggle">想為日報執筆或作畫？</a>
     <div class="wa-box" id="wa-box" style="display:none">
-      <p>《預言家日報》的作者由編務處逐一邀請。若你也寫文，留下一個能找到你的方式，
+      <p>《預言家日報》的作者與製圖師，皆由編務處逐一邀請。無論你寫文或作畫，留下一個能找到你的方式，
          我們會與你聯繫、看看你的作品。<br />
          後續一律由客服與你聯絡。</p>
       <label for="wa-contact">聯絡方式</label>
       <input id="wa-contact" type="text" maxlength="100" placeholder="微信號、郵箱等，能找到你就好" />
       <label for="wa-note">想說的話（選填）</label>
-      <textarea id="wa-note" maxlength="300" placeholder="平常寫什麼、在哪裡發表過，都可以寫在這裡"></textarea>
+      <textarea id="wa-note" maxlength="300" placeholder="平常寫什麼、畫什麼，在哪裡發表過，都可以寫在這裡"></textarea>
       <button type="button" id="wa-send">送出</button>
       <p class="wa-msg" id="wa-msg" style="display:none"></p>
     </div>
@@ -341,7 +341,7 @@
           e.preventDefault();
           var open = box.style.display !== 'none';
           box.style.display = open ? 'none' : '';
-          toggle.textContent = open ? '想成為作者？' : '收起';
+          toggle.textContent = open ? '想為日報執筆或作畫？' : '收起';
           if (!open) document.getElementById('wa-contact').focus();
         });
 
