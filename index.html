@@ -426,7 +426,7 @@
           </div>
           <div class="form-group"><label>標題</label><input type="text" id="new-image-title" placeholder="畫作標題" /></div>
           <div class="form-group"><label>作者署名（選填）</label><input type="text" id="new-image-author" placeholder="留空則佚名" /></div>
-          <div class="form-group"><label>說明（選填）</label><input type="text" id="new-image-caption" maxlength="50" placeholder="給這幅畫留一句話（至多五十字，可留白）" /></div>
+          <div class="form-group"><label>說明（選填）</label><textarea id="new-image-caption" maxlength="300" placeholder="給這幅畫留幾句話（至多三百字，可留白）"></textarea></div>
           <div class="form-group" id="new-image-source-row" style="display:none"><label>源自（經授權的文章，選填）</label><select id="new-image-source" style="width:100%;padding:9px 10px;font-family:inherit;font-size:13px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></select></div>
           <div class="form-group"><label>畫框</label><div id="image-frame-picker" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
           <div class="form-group"><label>角色（至少選一位）</label><div id="new-image-chars" class="char-picker"></div></div>
@@ -810,7 +810,7 @@
     <div class="form-group"><label>作者署名</label><input type="text" id="editwork-author" placeholder="留空則佚名" /></div>
     <div class="form-group"><label>發佈日期</label><input type="date" id="editwork-date" /></div>
     <div id="editwork-image-group" style="display:none">
-      <div class="form-group"><label>說明（選填）</label><input type="text" id="editwork-caption" maxlength="50" placeholder="給這幅畫留一句話（至多五十字）" /></div>
+      <div class="form-group"><label>說明（選填）</label><textarea id="editwork-caption" maxlength="300" placeholder="給這幅畫留幾句話（至多三百字）"></textarea></div>
       <div class="form-group"><label>畫框</label><div id="editwork-frame-picker" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
       <div class="form-group"><button type="button" id="editwork-crop-btn" style="width:100%;font-size:12px;padding:8px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:var(--parchment2);color:var(--ink-light)">調整心動封面顯示（裁切框）</button></div>
     </div>
