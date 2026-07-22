@@ -476,18 +476,8 @@
     #forum-gallery { flex: 1; padding: 8px 12px 90px; }
     /* 角色篩選列滿版貼齊標題列下緣（抵銷 #forum-gallery 內距），視覺與羊皮紙一致 */
     #forum-gallery .filter-bar { margin: -8px -12px 10px; }
-    /* 留影走廊：頂部也木紋化（淺一階）＋角色列做成嵌在牆上的淺木飾板，柔化與深木牆的硬交界。
-       scope 於 #page-area.gallery-bg → 只在留影走廊模式生效，不動意若思鏡/羊皮紙。 */
-    #page-area.gallery-bg #forum-gallery .filter-bar {
-      margin: 0 12px 12px; padding: 12px 14px; border-radius: 12px;
-      background-color: #7d5a3a; border: 1px solid rgba(0,0,0,.28);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 3px 8px rgba(0,0,0,.25);
-      background-image:
-        repeating-linear-gradient(90deg, transparent 0 3px, rgba(0,0,0,.04) 3px 4px, transparent 4px 8px),
-        repeating-linear-gradient(90deg, rgba(255,255,255,.03) 0 2px, transparent 2px 11px),
-        repeating-linear-gradient(90deg, #7d5a3a 0 94px, #6a4a30 94px 98px); }
-    #page-area.gallery-bg #forum-gallery .filter-bar .filter-label { color: #f0dcae; }
-    #page-area.gallery-bg #forum-gallery .filter-bar .char-chip span { color: #f7edcf; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+    /* 留影走廊的角色篩選列：與意若思鏡同款滿版帶狀（沿用 .filter-bar 基底＋上面的負邊距），
+       不再做成嵌牆木飾板。羊皮紙質帶狀與深木牆的交界由標題列下緣一路延伸，全站三頁一致。 */
     .gallery-wall { columns: 2; column-gap: 20px; }
     .gwall-item { break-inside: avoid; margin: 0 0 22px; cursor: pointer; box-shadow: 0 7px 16px rgba(0,0,0,.45); line-height: 0; }
     /* 掛畫式載入：畫框先以 3:4 佔位掛滿牆（框內深色空畫布），圖載到才淡入、比例回歸原圖 */
