@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.80';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.81';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4295,9 +4295,29 @@ async function setImageSlot(id, slot) {
 // 12:00 +08:00 == 04:00 UTC.
 function dateToIso(d) {
   if (!d) return null;
-  const [y, m, day] = d.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, day, 4, 0, 0)).toISOString();
+  // 桌機 Safari 的日期欄已降級為文字輸入（見下方 _tameDateInputs），亂格式一律當「未填」，
+  // 不讓 Invalid Date 的 toISOString 直接把送出流程炸掉。
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(d).trim());
+  if (!m) return null;
+  return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 4, 0, 0)).toISOString();
 }
+// 桌機 Safari 的原生日期欄馴不了：空值時以淡色顯示今天、分段高亮吃 macOS 系統強調色，
+// 而 ::-webkit-datetime-edit 系列偽元素它不支援，CSS 搆不到內部。只在「桌機＋Safari」
+// 降級成純文字欄（YYYY-MM-DD），樣式回歸站內規則；桌機 Chrome 的日曆與手機的滾輪不受影響。
+(function _tameDateInputs() {
+  const fine = window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const ua = navigator.userAgent;
+  const safari = /safari/i.test(ua) && !/chrome|chromium|crios|edg|android/i.test(ua);
+  if (!fine || !safari) return;
+  document.querySelectorAll('input[type="date"]').forEach(el => {
+    el.type = 'text';
+    el.placeholder = 'YYYY-MM-DD';
+    el.addEventListener('change', () => {
+      el.value = el.value.trim().replace(/[./]/g, '-');   // 2026/07/22、2026.07.22 → 2026-07-22
+      if (el.value && !/^\d{4}-\d{1,2}-\d{1,2}$/.test(el.value)) toast('日期格式：YYYY-MM-DD');
+    });
+  });
+})();
 function isFutureIso(ts) { return !!ts && new Date(ts) > new Date(); }
 
 // ── Upload draft autosave ────────────────────────────────────
