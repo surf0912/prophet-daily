@@ -122,7 +122,9 @@
     .nav-btn:active { opacity: .7; }
 
     /* ── Pages ── */
-    .page { display: none; min-height: 100%; padding: 0 0 80px; }
+    /* 底部留 24px 呼吸空間即可：nav 是實體佔位的 flex 兄弟（不浮在內容上），
+       舊值 80px 是 nav 還是 fixed 年代的清空區，現在只會在每頁底部多出一段死空白。 */
+    .page { display: none; min-height: 100%; padding: 0 0 24px; }
     .page.active { display: block; }
     /* App-wide UI scale (settings page). Home is locked, so it never scales. */
     .page:not(#page-home) { zoom: var(--app-zoom, 1); }
