@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.82';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.83';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3368,9 +3368,14 @@ function initImageUpload() {
   }
 }
 
+// 畫框即時預覽的 class：'none' 走無框樣式，其餘套與牆上同一套 border-image
+function _frameCls(code) { return code === 'none' ? 'upl-noframe' : 'upl-frame gframe fr-' + code; }
+
 function pickFrame(code) {
   _imgWork.frame = code;
   document.querySelectorAll('#image-frame-picker .frame-swatch').forEach(el => el.classList.toggle('sel', el.dataset.frame === code));
+  const pv = document.getElementById('image-frame-inner');
+  if (pv) pv.className = _frameCls(code);   // 預覽圖即時換框
 }
 
 function pickImageFile() { const el = document.getElementById('image-file'); if (el) el.click(); }
@@ -3465,7 +3470,8 @@ async function onImagePick(input) {
     const data = await resizeImageContain(f, 1400, 0.85);
     _imgWork.data = data;
     const wrap = document.getElementById('image-preview-wrap');
-    wrap.style.display = ''; wrap.innerHTML = `<img src="${data}" alt="" style="max-width:100%;max-height:300px;border-radius:6px" />`;
+    wrap.style.display = '';
+    wrap.innerHTML = `<div id="image-frame-inner" class="${_frameCls(_imgWork.frame)}"><img src="${data}" alt="" /></div>`;
     document.getElementById('image-drop').textContent = '已選擇畫作，點此可更換';
   } catch (e) { toast('圖片讀取失敗'); }
 }
@@ -4985,6 +4991,12 @@ async function openEditWork(id) {
     ct.value = '';
     editWork.imageFrame = GALLERY_FRAMES.some(([c]) => c === n.image_frame) ? n.image_frame : 'ebony';
     renderEditFramePicker();
+    // 畫框即時預覽：有圖就顯示，換框時 pickEditFrame 同步換 class
+    { const pv = document.getElementById('editwork-frame-preview');
+      if (pv) {
+        if (n.image_url) { pv.style.display = ''; pv.innerHTML = `<div id="editwork-frame-inner" class="${_frameCls(editWork.imageFrame)}"><img src="${escapeHtml(n.image_url)}" alt="" /></div>`; }
+        else { pv.style.display = 'none'; pv.innerHTML = ''; }
+      } }
     document.getElementById('editwork-caption').value = n.image_caption || '';
     { const cb = document.getElementById('editwork-crop-btn'); if (cb) cb.setAttribute('data-onclick', `openCoverCrop('${escapeHtml(n.image_url || '')}')`); }
     return;   // 畫作：標題／署名／日期／說明／畫框／裁切框，無章節
@@ -5025,6 +5037,8 @@ function renderEditFramePicker() {
 function pickEditFrame(code) {
   editWork.imageFrame = code;
   document.querySelectorAll('#editwork-frame-picker .frame-swatch').forEach(el => el.classList.toggle('sel', el.dataset.frame === code));
+  const pv = document.getElementById('editwork-frame-inner');
+  if (pv) pv.className = _frameCls(code);   // 預覽圖即時換框
 }
 async function saveEditWork() {
   const title = document.getElementById('editwork-title').value.trim();
