@@ -512,13 +512,14 @@
         <div class="user-list" id="user-list"></div>
       </div>
       <div id="admin-invites" class="admin-pane">
-        <!-- 站台登入連結：管理員可複製任一入口的登入連結貼給需要的人 -->
+        <!-- 報紙入口：管理員可複製任一入口的登入連結貼給需要的人；閱報須知頁另附一鍵複製 -->
         <div style="background:var(--parchment2);border:1px solid var(--gold-lt);border-radius:4px;padding:10px 12px;margin-bottom:14px">
-          <div style="font-size:12px;color:var(--accent);margin-bottom:8px">站台登入連結</div>
+          <div style="font-size:12px;color:var(--accent);margin-bottom:8px">報紙入口</div>
           <div style="display:flex;gap:6px">
             <button class="btn-primary" style="flex:1;padding:8px 4px;font-size:13px;white-space:nowrap" data-onclick="copyText('https://surf0912.github.io/prophet-daily/','已複製 GitHub 登入連結')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-link"/></svg> GitHub</button>
             <button class="btn-primary" style="flex:1;padding:8px 4px;font-size:13px;white-space:nowrap;background:var(--chrome)" data-onclick="copyText('https://the-prophet-daily.onrender.com/','已複製 鏡像登入連結')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-link"/></svg> 鏡像</button>
           </div>
+          <button class="btn-primary" style="width:100%;margin-top:6px;padding:8px 4px;font-size:13px;white-space:nowrap;background:none;border:1px solid var(--gold);color:var(--ink-light)" data-onclick="copyText('https://surf0912.github.io/prophet-daily/rules','已複製 閱報須知連結')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-scroll"/></svg> 閱報須知</button>
         </div>
         <div id="invite-qty-row" style="display:none;align-items:center;gap:8px;margin-bottom:8px">
           <span style="font-size:13px;color:var(--ink-light)">一次產生</span>
