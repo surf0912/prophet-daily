@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.78';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.79';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -709,6 +709,7 @@ async function initApp() {
   document.querySelectorAll('.staff-only').forEach(el => el.style.display = staff ? '' : 'none');  // readers: no 防窺工坊
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = adminish ? '' : 'none');  // writers: only 作品管理 + 上傳
   document.querySelectorAll('.super-only').forEach(el => el.style.display = currentUser.role === 'super_admin' ? '' : 'none');  // 監看面板 + 實驗功能開關：只給 SA
+  { const _wa = document.getElementById('writer-apply-row'); if (_wa) _wa.style.display = currentUser.role === 'reader' ? '' : 'none'; }  // 站內申請：writer 以上已在列，只給讀者
   // 授權信箱：writer 用獨立「授權」分頁；admin 併入「審核」分頁的授權信膠囊，不重複顯示
   { const _au = document.getElementById('auths-tab-btn'); if (_au) _au.style.display = currentUser.role === 'writer' ? '' : 'none'; }
   { const _fx = document.getElementById('tapfx-toggle'); if (_fx) _fx.checked = localStorage.getItem('pd_tap_fx') !== '0'; }   // 點擊特效預設開
@@ -5471,9 +5472,26 @@ async function generateInvite(role) {
   } catch (e) { toast('' + e.message); }
 }
 
-// ── 作家申請（守則頁的公開表單）─────────────────────────────
+// ── 作家申請（守則頁的公開表單＋站內個人檔案入口）───────────────
 // 留的是聯絡方式而非帳號，所以只在管理介面顯示，且不回傳送出者 IP（IP 只在後端做限流）。
+// 站內申請（讀者限定）另記 source='in_app' 與 user_id，管理清單能直接對到帳號。
 let _writerApps = [];
+
+function openWriterApply() {
+  document.getElementById('writer-apply-modal').classList.add('open');
+}
+async function submitWriterApplication() {
+  const c = document.getElementById('writer-apply-contact').value.trim();
+  const n = document.getElementById('writer-apply-note').value.trim();
+  if (!c) { toast('請留下聯絡方式'); return; }
+  try {
+    await api('/applications/writer/in-app', { method: 'POST', body: JSON.stringify({ contact: c, note: n }) });
+    document.getElementById('writer-apply-modal').classList.remove('open');
+    document.getElementById('writer-apply-contact').value = '';
+    document.getElementById('writer-apply-note').value = '';
+    toast('申請已送達編務處，靜候貓頭鷹');
+  } catch (e) { toast(e.message || '送出失敗，請稍後再試'); }
+}
 
 // 分頁上的未處理數字。兩個來源都會走這裡：進審核頁時打輕量的 /count，清單已開時直接由
 // 清單算——後者不必再多打一次 API，也讓「標記已處理」後數字立刻跟著變。
@@ -5515,6 +5533,7 @@ async function loadWriterApps() {
     return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08);font-size:13px;${done ? 'opacity:.55' : ''}">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
         <span style="font-weight:bold;color:var(--ink);word-break:break-all;min-width:0">${escapeHtml(r.contact || '')}</span>
+        ${r.source === 'in_app' ? `<span style="background:rgba(45,74,30,.15);color:var(--series);padding:2px 8px;border-radius:10px;font-size:11px;flex-shrink:0">站內${r.applicant ? '·' + escapeHtml(r.applicant) : ''}</span>` : ''}
         ${done ? '<span style="background:rgba(201,168,76,.28);color:var(--ink-light);padding:2px 8px;border-radius:10px;font-size:11px;flex-shrink:0;margin-left:auto">已處理</span>' : ''}
       </div>
       <div style="color:var(--ink-light);font-size:12px;margin-bottom:6px">${new Date(r.created_at).toLocaleString('zh-TW')}</div>

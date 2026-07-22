@@ -380,6 +380,11 @@
             <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-bug"/></svg> 回報問題</label>
             <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" data-onclick="openBugReport()">回報</button>
           </div>
+          <!-- 站內申請成為作者／製圖師：僅讀者顯示（writer 以上已在列，無需申請） -->
+          <div class="settings-row" id="writer-apply-row" style="display:none">
+            <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-scroll"/></svg> 加入創作行列</label>
+            <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" data-onclick="openWriterApply()">申請</button>
+          </div>
           </details>
         </div>
         <button id="version-status" class="version-btn checking" data-onclick="updateToLatest()">檢查更新中…</button>
@@ -489,7 +494,7 @@
         </div>
         <p id="review-works-note" style="font-size:12px;color:var(--ink-light);margin-bottom:12px">作者上傳的內容需審核通過才會公開給所有人。</p>
         <p id="review-auths-note" style="display:none;font-size:12px;color:var(--ink-light);margin-bottom:12px">授權信一來一回即封緘：對方回覆前可撤回；被婉拒的信無法重寄。</p>
-        <p id="review-writers-note" style="display:none;font-size:12px;color:var(--ink-light);margin-bottom:12px">從閱報須知頁留下聯絡方式、有意寫文的人。</p>
+        <p id="review-writers-note" style="display:none;font-size:12px;color:var(--ink-light);margin-bottom:12px">從閱報須知頁或站內留下聯絡方式、有意執筆或作畫的人。標「站內」者為登入讀者，可直接對到帳號。</p>
         <div id="admin-review-list"></div>
         <div id="admin-review-auths" style="display:none"></div>
         <div id="admin-review-writers" style="display:none"><div id="writer-app-list"></div></div>
@@ -888,6 +893,20 @@
     </svg>
     <div class="rg-title">請把手機轉回直式</div>
     <div class="rg-sub">日報是直著讀的——版面為直式而生。</div>
+  </div>
+</div>
+
+<!-- 站內作者／製圖師申請（個人檔案 → 幫助 & 反饋 → 加入創作行列） -->
+<div class="perm-modal" id="writer-apply-modal">
+  <div class="perm-modal-inner">
+    <h3><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-scroll"/></svg> 想為日報執筆或作畫？</h3>
+    <p style="font-size:13px;color:var(--ink-light);line-height:1.85;margin:10px 0 14px">《預言家日報》的作者與製圖師，皆由編務處逐一邀請。留下能找到你的方式，我們讀過你的作品後，貓頭鷹便會啟程。</p>
+    <div class="form-group"><label>聯絡方式</label><input type="text" id="writer-apply-contact" maxlength="100" placeholder="微信號、郵箱等，能找到你就好" /></div>
+    <div class="form-group"><label>想說的話（選填）</label><textarea id="writer-apply-note" maxlength="300" placeholder="平常寫什麼、畫什麼，在哪裡發表過，都可以寫在這裡"></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('writer-apply-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:11px;font-size:13px" data-onclick="submitWriterApplication()">送出</button>
+    </div>
   </div>
 </div>
 
