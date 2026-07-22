@@ -25,7 +25,7 @@
     'setWishFilter', 'showLoginForm', 'showPage', 'showGalleryPage', 'startTour', 'stepReaderFont', 'submitFeedback',
     'onImagePick', 'submitImageWork', 'pickFrame', 'pickEditFrame', 'pickImageFile', 'setForumMode', 'toggleForumMode',
     'pickNovelHeader', 'onNovelHeaderPick', 'clearNovelHeader', 'pickEditHeader', 'onEditHeaderPick', 'removeEditHeader',
-    'openGalleryItem', 'closeGalleryDetail', 'openGalleryFull', 'closeGalleryFull', 'setImageSlot', 'downloadGalleryImage', 'downloadCoverGallery', 'retractCoverGallery',
+    'openGalleryItem', 'closeGalleryDetail', 'openGalleryFull', 'closeGalleryFull', 'setImageSlot', 'downloadGalleryImage', 'downloadCoverGallery',
     'openCoverCrop', 'closeCoverCrop', 'saveCoverCrop', 'clearCoverCrop', 'ccrDragStart', 'ccrZoom',
     'setGalleryView', 'galleryGroupNav', 'galleryFullNav', 'toggleHideGalleryImage',
     'setWriterAppHandled', 'deleteWriterApp', 'copyWriterApp', 'clearGrabOpens', 'copyThisLink',

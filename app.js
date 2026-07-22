@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.72';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.73';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1177,12 +1177,7 @@ function renderCharProfile(name) {
         const heart = `<button class="cp-cover-toggle${on ? ' on' : ''}" data-onclick="toggleCoverGallery(${gi}, this)" role="checkbox" aria-checked="${on}" aria-label="心動封面顯示這張">${HEART}</button>`;
         const dl = `<button class="cp-download" data-onclick="downloadCoverGallery(${gi})" aria-label="下載畫作" title="下載帶浮水印高清版">${DL}</button>`;
         const canCrop = adminish || gc.mine;
-        // 超管退件（左上角）：只對留影走廊畫作出現——官方封面是程式資產，退件概念不適用。
-        // gc.id 需後端 home-covers 帶回；舊版 API 沒有 id 時不渲染，避免出現按了沒反應的鈕。
-        const CLOCK = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`;
-        const retract = (currentUser && currentUser.role === 'super_admin' && gc.id)
-          ? `<button class="cp-retract" data-onclick="retractCoverGallery(${gi})" aria-label="退件" title="退件（退回待審）">${CLOCK}</button>` : '';
-        return `<div class="cp-shot" data-full="${escapeHtml(gc.image_url)}" style="background-image:url('${escapeHtml(gc.image_url)}')">${heart}${dl}${retract}${canCrop ? cropBtn(gc.image_url) : ''}</div>`;
+        return `<div class="cp-shot" data-full="${escapeHtml(gc.image_url)}" style="background-image:url('${escapeHtml(gc.image_url)}')">${heart}${dl}${canCrop ? cropBtn(gc.image_url) : ''}</div>`;
       }).join('');
     html += `<div class="cp-gallery">${charShots}${galShots}</div>`;
   }
@@ -1196,13 +1191,14 @@ function renderCharProfile(name) {
   body.innerHTML = html;
   // 每張縮圖套用自己的裁切框（有設定才動，否則維持 cover 預設）。
   body.querySelectorAll('.cp-shot[data-full]').forEach(el => applyCoverCropToEl(el, el.dataset.full));
-  // 封面單擊 → 全螢幕帶浮水印大圖（同留影走廊）。愛心／下載／裁切鈕有自己的 handler，
-  // closest('button') 排除掉就不會誤觸，無需再用雙擊區隔。
+  // 封面單擊 → 畫作詳情卡（與留影走廊同一張卡：作者、收藏、下載、授權、系列，超管退件也在
+  // 裡面；再點卡上的縮圖 → 全螢幕帶浮水印大圖）。愛心／下載／裁切鈕有自己的 handler，
+  // closest('button') 排除掉就不會誤觸。
   body.querySelectorAll('.cp-shot').forEach(el => {
     el.addEventListener('click', (e) => {
       if (e.target.closest('button')) return;   // 點在愛心／下載／裁切鈕上不算
       const u = el.dataset.full;
-      if (u) openImageFull(u);
+      if (u) openCoverDetail(u);
     });
   });
 }
@@ -1257,15 +1253,19 @@ async function downloadCoverGallery(idx) {
   try { await downloadWatermarkedImage(gc.image_url, '預言家日報-' + (gc.title || '畫作') + '.jpg'); }
   catch (e) { if (!e || e.name !== 'AbortError') toast('下載失敗，請稍後再試'); }   // AbortError = 使用者取消分享
 }
-// 角色頁超管退件：沿用留影走廊的退件流程（confirm 文案、下架回待審），完成後刷新心動池並
-// 重繪目前角色頁，讓那張圖立刻從封面網格消失。取消 confirm 時 retractNovel 內部直接 return。
-async function retractCoverGallery(idx) {
-  const gc = (_homeGalleryCovers || [])[idx];
-  if (!gc || !gc.id) return;
-  await retractNovel(gc.id);
-  await loadHomeGalleryCovers();
-  const name = document.getElementById('cp-name');
-  if (name && name.textContent && document.getElementById('char-profile').classList.contains('open')) renderCharProfile(name.textContent);
+// 心動封面單擊 → 留影走廊的畫作詳情卡（同一張卡：作者、收藏、下載、授權、系列導覽；
+// 超管的退件／隱藏也在裡面）。官方封面若曾批次匯入留影走廊（photoKey 對得上畫作列）一樣
+// 走詳情卡；對不上的（純程式資產）退回直接開全螢幕大圖。
+// _galleryItems 若還沒載（使用者沒進過留影走廊）就先背景抓一次——openGalleryItem 靠它查資料。
+async function openCoverDetail(url) {
+  if (!url) return;
+  if (!(_galleryItems || []).length) {
+    try { _galleryItems = (await api('/novels/gallery', { background: true })) || []; } catch {}
+  }
+  const k = photoKey(url);
+  const it = (_galleryItems || []).find(x => x.image_url && photoKey(x.image_url) === k);
+  if (it) openGalleryItem(it.id);
+  else openImageFull(url);
 }
 // 官方角色頭像：單擊 = 篩選（原行為）；雙擊 = 開角色頁。onFilter(type,val) 是原本的篩選回呼。
 let _ocTapTimer = null, _ocTapCode = null;
