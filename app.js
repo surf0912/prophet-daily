@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.69';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.70';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1275,27 +1275,31 @@ function photoWallpaperUrl(img) {
 async function downloadPhoto(img, charName) {
   const url = photoWallpaperUrl(img);
   if (!url) return;
-  await shareOrDownload(url, '預言家日報-' + (charName || '桌布') + '.jpg');
-}
-// iOS PWA 存相簿要走 Web Share(會跳「儲存影像」);桌機/Android 退回直接下載;再不行就開圖讓使用者長按存。
-async function shareOrDownload(url, filename) {
+  const filename = '預言家日報-' + (charName || '桌布') + '.jpg';
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('not found');
-    const blob = await res.blob();
-    const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file] }); } catch (e) {}   // 使用者取消 = 不做事
-      return;
-    }
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    await shareOrDownload(url, filename);
   } catch (e) {
-    window.open(url, '_blank');   // 最後手段:開圖,長按儲存
+    // 桌機封面沒有預產的 _wall.jpg（add_cover.py 只為手機版產桌布）→ 退回即時壓浮水印，
+    // 與作家上傳圖同一條路。不再 window.open 硬開缺檔網址（那會把 404 JSON 開成新分頁）。
+    try { await downloadWatermarkedImage(img, filename); }
+    catch (e2) { if (!e2 || e2.name !== 'AbortError') toast('下載失敗，請稍後再試'); }
   }
+}
+// iOS PWA 存相簿要走 Web Share(會跳「儲存影像」);桌機/Android 退回直接下載。失敗時 throw 給呼叫端決定退路。
+async function shareOrDownload(url, filename) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('not found');
+  const blob = await res.blob();
+  const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); } catch (e) {}   // 使用者取消 = 不做事
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
 
