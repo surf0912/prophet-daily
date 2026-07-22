@@ -397,7 +397,7 @@
     .el-btn-ghost { flex: 1; padding: 10px; border-radius: 7px; border: 1px solid #c2a253; background: none; color: #5a4423; font-size: 13px; cursor: pointer; }
     .el-btn-solid { flex: 1; padding: 10px; border-radius: 7px; border: none; background: #2d2820; color: #e8d6a4; font-size: 13px; letter-spacing: 1px; cursor: pointer; }
     /* 檔案頁版本狀態按鈕 */
-    .version-btn { display: flex; align-items: center; justify-content: center; gap: 7px; box-sizing: border-box; width: calc(100% - 36px); margin: 14px 18px 2px; padding: 11px 14px; border-radius: 10px; font-size: 13px; border: 1px solid var(--gold-lt); background: var(--parchment2); color: var(--ink-light); }
+    .version-btn { display: flex; align-items: center; justify-content: center; gap: 7px; box-sizing: border-box; width: calc(100% - 36px); margin: 10px 18px 2px; padding: 11px 14px; border-radius: 10px; font-size: 13px; border: 1px solid var(--gold-lt); background: var(--parchment2); color: var(--ink-light); }
     .version-btn.checking { opacity: .6; }
     .version-btn.latest { color: var(--series); border-color: rgba(45,74,30,.3); }
     .version-btn.outdated { background: var(--scarlet); color: var(--on-dark); border-color: var(--scarlet); font-weight: bold; cursor: pointer; }
@@ -733,8 +733,8 @@
     /* ── Settings page ── */
     .settings-header { position: sticky; top: 0; z-index: 6; padding: calc(10px + var(--safe-top)) 18px 6px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
     .settings-header h2 { font-size: 18px; }
-    .settings-body { padding: 20px 18px; }
-    .settings-section { margin-bottom: 28px; }
+    .settings-body { padding: 14px 18px; }
+    .settings-section { margin-bottom: 14px; }   /* 摺疊時四區收緊，整頁含版本號一屏可見 */
     .settings-section h3 { font-size: 12px; color: var(--accent); letter-spacing: .1em; margin-bottom: 12px; }
     .profile-details > summary { font-size: 12px; color: var(--accent); letter-spacing: .1em; cursor: pointer; padding: 4px 0; }
     .profile-details > summary::-webkit-details-marker { color: var(--accent); }
@@ -792,11 +792,11 @@
     .toggle input:checked + .slider { background: var(--scarlet); }
     .toggle.green input:checked + .slider { background: #2d7a2d; }
     .toggle input:checked + .slider::before { transform: translateX(20px); }
-    .profile-box { text-align: center; padding: 20px 0; }
+    .profile-box { text-align: center; padding: 8px 0 10px; }
     .profile-box .avatar-lg { width: 72px; height: 72px; border-radius: 50%; background: var(--scarlet); display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 32px; margin: 0 auto 10px; }
     .profile-box h3 { font-size: 18px; }
     .profile-box p { font-size: 12px; color: var(--ink-light); margin-top: 2px; }
-    .btn-logout { display: block; width: 100%; padding: 12px; background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: 3px; font-size: 14px; cursor: pointer; margin-top: 20px; }
+    .btn-logout { display: block; width: 100%; padding: 12px; background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: 3px; font-size: 14px; cursor: pointer; margin-top: 12px; }
 
     /* ── Admin page ── */
     .admin-header { position: sticky; top: 0; z-index: 6; padding: calc(10px + var(--safe-top)) 18px 6px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
