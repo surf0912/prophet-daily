@@ -490,6 +490,9 @@
     #page-area.gallery-bg #forum-gallery .filter-bar .filter-label { color: #f0dcae; }
     #page-area.gallery-bg #forum-gallery .filter-bar .char-chip span { color: #f7edcf; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
     .gallery-wall { columns: 2; column-gap: 20px; }
+    /* 桌機：畫框隨欄數縮回合理大小（手機 2 欄不動） */
+    @media (min-width: 700px)  { .gallery-wall { columns: 3; } }
+    @media (min-width: 1100px) { .gallery-wall { columns: 4; column-gap: 24px; } }
     .gwall-item { break-inside: avoid; margin: 0 0 22px; cursor: pointer; box-shadow: 0 7px 16px rgba(0,0,0,.45); line-height: 0; }
     /* 掛畫式載入：畫框先以 3:4 佔位掛滿牆（框內深色空畫布），圖載到才淡入、比例回歸原圖 */
     .gwall-item .gframe { background: rgba(26,10,0,.12); }
@@ -815,6 +818,18 @@
     .form-group input, .form-group textarea, .form-group select {
       width: 100%; padding: 10px; border: 1px solid var(--gold-lt); border-radius: 3px;
       font-size: 14px; background: var(--parchment2); color: var(--ink);
+    }
+    /* 桌機 Safari 的原生日期欄自帶分段樣式（橙色高亮、系統字型），與站內輸入框格格不入——
+       關掉外觀、字型與墨色跟其他欄位對齊；分段選取色改用站內酒紅。 */
+    .form-group input[type="date"] {
+      -webkit-appearance: none; appearance: none;
+      font-family: inherit; min-height: 41px; accent-color: var(--scarlet);
+    }
+    .form-group input[type="date"]::-webkit-datetime-edit { color: var(--ink); font-family: inherit; }
+    .form-group input[type="date"]:focus::-webkit-datetime-edit-day-field:focus,
+    .form-group input[type="date"]:focus::-webkit-datetime-edit-month-field:focus,
+    .form-group input[type="date"]:focus::-webkit-datetime-edit-year-field:focus {
+      background: var(--scarlet); color: var(--on-dark); border-radius: 3px;
     }
     .form-group textarea { resize: vertical; min-height: 80px; }
     .upload-zone { border: 2px dashed var(--gold-lt); border-radius: 4px; padding: 24px; text-align: center; cursor: pointer; }
