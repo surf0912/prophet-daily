@@ -416,7 +416,9 @@
     .cp-cover-toggle.on svg path { fill: currentColor; stroke: none; }
     .cp-download { position: absolute; bottom: 8px; right: 8px; width: 30px; height: 30px; border: none; border-radius: 50%; background: rgba(0,0,0,.4); color: #f4e8c1; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; box-shadow: 0 1px 4px rgba(0,0,0,.45); }
     .cp-crop { position: absolute; bottom: 8px; left: 8px; width: 30px; height: 30px; border: none; border-radius: 50%; background: rgba(0,0,0,.4); color: #f4e8c1; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; box-shadow: 0 1px 4px rgba(0,0,0,.45); }
-    .cp-cover-toggle:active, .cp-download:active, .cp-crop:active { transform: scale(.9); }
+    /* 超管退件鈕（僅留影走廊畫作）：左上角、酒紅底標示管理動作，與一般操作鈕區分 */
+    .cp-retract { position: absolute; top: 8px; left: 8px; width: 30px; height: 30px; border: none; border-radius: 50%; background: rgba(138,45,45,.62); color: #f4e8c1; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; box-shadow: 0 1px 4px rgba(0,0,0,.45); }
+    .cp-cover-toggle:active, .cp-download:active, .cp-crop:active, .cp-retract:active { transform: scale(.9); }
     .cp-cover-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; position: relative; }
     .cp-cover-head h3 { font-size: 15px; color: var(--accent); margin: 0; }
     .cp-cover-note { position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 10; width: max-content; max-width: 280px; font-size: 12px; color: var(--ink-light); line-height: 1.7; background: var(--parchment2); border: 1px solid var(--gold-lt); border-radius: 8px; padding: 8px 12px; box-shadow: 0 4px 14px rgba(26,10,0,.18); }
