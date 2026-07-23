@@ -316,6 +316,15 @@
       background: var(--parchment); color: var(--ink-light); font-size: 13px; cursor: pointer; transition: all .15s;
     }
     .cat-pill.active { background: var(--scarlet); color: var(--on-dark); border-color: var(--accent); }
+    /* 留影走廊分級 pill 上色（與 t-cat 標籤同色系）：未選＝色字色框，選中＝該色滿底 */
+    .cat-pill.cp-red    { color: var(--accent); border-color: rgba(138,45,45,.45); }
+    .cat-pill.cp-green  { color: #2d4a1e; border-color: rgba(45,74,30,.45); }
+    .cat-pill.cp-violet { color: #68488a; border-color: rgba(104,72,138,.45); }
+    .cat-pill.cp-blue   { color: #2c5488; border-color: rgba(44,84,136,.45); }
+    .cat-pill.cp-red.active    { background: var(--scarlet); color: var(--on-dark); border-color: var(--accent); }
+    .cat-pill.cp-green.active  { background: #2d4a1e; color: var(--on-dark); border-color: #2d4a1e; }
+    .cat-pill.cp-violet.active { background: #68488a; color: var(--on-dark); border-color: #68488a; }
+    .cat-pill.cp-blue.active   { background: #2c5488; color: var(--on-dark); border-color: #2c5488; }
     .char-chips { display: flex; gap: 10px; flex-wrap: wrap; }
     .char-chip {
       display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer;

@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.94';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.95';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3841,11 +3841,12 @@ let forumTab = 'forum';     // 羊皮紙頁目前分頁：'forum' | 'gallery'。
                             // 其餘地方一律讀這個變數判斷模式，不再嗅探 DOM 的 display 狀態。
 
 // 分級 pill：無迷情劑權限者不顯示迷情劑（那些畫作後端本來就不回給他）
+const _CAT_PILL_CLS = { '迷情劑': 'cp-red', '吐真劑': 'cp-green', '白日夢咒': 'cp-violet', '儲思盆': 'cp-blue' };
 function renderGalleryCatPills() {
   const el = document.getElementById('gallery-cat-pills');
   if (!el) return;
   el.innerHTML = IMAGE_CATS.filter(c => c !== '迷情劑' || canSeeMqj())
-    .map(c => `<button class="cat-pill ${galleryCat === c ? 'active' : ''}" data-onclick="setGalleryCat('${c}')">${c}</button>`).join('');
+    .map(c => `<button class="cat-pill ${_CAT_PILL_CLS[c] || ''} ${galleryCat === c ? 'active' : ''}" data-onclick="setGalleryCat('${c}')">${c}</button>`).join('');
 }
 function setGalleryCat(c) {
   galleryCat = galleryCat === c ? '' : c;
