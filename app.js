@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.84';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.85';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3366,6 +3366,7 @@ function initImageUpload() {
     chars.innerHTML = CHAR_LIST.map(ch => `<span class="opt" data-ch="${ch.code}" data-onclick="this.classList.toggle('on')">${ch.name}</span>`).join('');
     chars.dataset.init = '1';
   }
+  { const mr = document.getElementById('new-image-mqj-row'); if (mr) mr.style.display = canSeeMqj() ? '' : 'none'; }
 }
 
 // 畫框即時預覽的 class：'none' 走無框樣式，其餘套與牆上同一套 border-image
@@ -3503,14 +3504,17 @@ async function submitImageWork(btn) {
   try {
     const srcSel = document.getElementById('new-image-source');
     const source_auth_id = (srcSel && srcSel.closest('#new-image-source-row').style.display !== 'none' && srcSel.value) || null;
+    const mqj = canSeeMqj() && !!(document.getElementById('new-image-mqj') || {}).checked;
     const res = await api('/novels/image', { method: 'POST', body: JSON.stringify({
-      title, author, caption, frame: _imgWork.frame, characters, image: _imgWork.data, source_auth_id }) });
+      title, author, caption, frame: _imgWork.frame, characters, image: _imgWork.data, source_auth_id,
+      category: mqj ? '迷情劑' : null }) });
     toast(res && res.status === 'pending' ? '已送出，待管理員審核' : '畫作已送出');
     _imgWork.data = null; _imgWork.frame = 'ebony';
     ['new-image-title', 'new-image-author', 'new-image-caption'].forEach(id => document.getElementById(id).value = '');
     prefillAuthor('new-image-author');   // 清空後重新帶回暱稱（同小說）
     document.querySelectorAll('#new-image-chars .opt.on').forEach(el => el.classList.remove('on'));
     document.querySelectorAll('#image-frame-picker .frame-swatch').forEach(el => el.classList.toggle('sel', el.dataset.frame === 'ebony'));
+    { const m = document.getElementById('new-image-mqj'); if (m) m.checked = false; }
     const wrap = document.getElementById('image-preview-wrap'); wrap.style.display = 'none'; wrap.innerHTML = '';
     document.getElementById('image-drop').textContent = '選擇畫作';
     _myAuths = null; renderImageSourceRow();   // 掛了源自的授權信已用掉，下拉重整
@@ -3960,7 +3964,9 @@ function openGalleryItem(id, fromAdmin) {
   document.getElementById('gd-img').src = it.image_url;
   document.getElementById('gd-title').textContent = it.title || '';
   document.getElementById('gd-author').textContent = it.author ? ('— ' + it.author) : '— 佚名';
-  document.getElementById('gd-chars').innerHTML = (it.characters || []).map(c => charPill(c)).join('');
+  document.getElementById('gd-chars').innerHTML =
+    (it.category === '迷情劑' ? `<span class="t-cat${catCls('迷情劑')}">迷情劑</span>` : '')
+    + (it.characters || []).map(c => charPill(c)).join('');
   const cap = document.getElementById('gd-caption');
   cap.textContent = it.image_caption || ''; cap.style.display = it.image_caption ? '' : 'none';
   renderGdAuth(it);   // 授權信：請求授權鈕＋「授權予／源自」連結
@@ -4995,6 +5001,9 @@ async function openEditWork(id) {
     ct.value = '';
     editWork.imageFrame = GALLERY_FRAMES.some(([c]) => c === n.image_frame) ? n.image_frame : 'ebony';
     renderEditFramePicker();
+    // 分級開關：無迷情劑權限者藏列（存檔也不送 category，不會誤清別人設好的分級）
+    { const mr = document.getElementById('editwork-mqj-row'); const mc = document.getElementById('editwork-mqj');
+      if (mr && mc) { mr.style.display = canSeeMqj() ? '' : 'none'; mc.checked = n.category === '迷情劑'; } }
     // 畫框即時預覽：有圖就顯示，換框時 pickEditFrame 同步換 class
     { const pv = document.getElementById('editwork-frame-preview');
       if (pv) {
@@ -5049,17 +5058,19 @@ async function saveEditWork() {
   const author = document.getElementById('editwork-author').value.trim();
   if (editWork.kind === 'image') {
     if (!title) { toast('請輸入標題'); return; }
-    const caption = document.getElementById('editwork-caption').value.trim().slice(0, 50);
+    const caption = document.getElementById('editwork-caption').value.trim().slice(0, 300);
     const published_at = dateToIso(document.getElementById('editwork-date').value);
+    const body = { title, author, published_at, image_frame: editWork.imageFrame, image_caption: caption };
+    if (canSeeMqj()) body.category = document.getElementById('editwork-mqj').checked ? '迷情劑' : '';   // ''＝清除分級
     try {
-      await api(`/novels/${editWork.id}`, { method: 'PATCH', body: JSON.stringify({ title, author, published_at, image_frame: editWork.imageFrame, image_caption: caption }) });
+      await api(`/novels/${editWork.id}`, { method: 'PATCH', body: JSON.stringify(body) });
       toast('作品已更新');
       document.getElementById('editwork-modal').classList.remove('open');
       loadAdminNovelList(); loadNovels();
       // 同步留影走廊快取：畫作編輯後，留影牆／詳情卡即時反映。原本只刷新作品管理與意若思鏡（畫作根本
       // 不在意若思鏡），漏了留影走廊，作者改了署名會以為「改不了名字」——其實已存進 DB，只是留影沒刷新。
       const gi = (_galleryItems || []).find(x => x.id === editWork.id);   // 頂層 let 不會掛到 window，寫成 window._galleryItems 等於永遠取到 undefined
-      if (gi) { gi.title = title; gi.author = author; gi.image_caption = caption; gi.image_frame = editWork.imageFrame; }
+      if (gi) { gi.title = title; gi.author = author; gi.image_caption = caption; gi.image_frame = editWork.imageFrame; if (body.category !== undefined) gi.category = body.category || null; }
       if (typeof forumTab !== 'undefined' && forumTab === 'gallery' && typeof renderGallery === 'function') renderGallery();
     } catch (e) { toast(e.message); }
     return;

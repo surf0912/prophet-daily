@@ -430,6 +430,10 @@
           <div class="form-group" id="new-image-source-row" style="display:none"><label>源自（經授權的文章，選填）</label><select id="new-image-source" style="width:100%;padding:9px 10px;font-family:inherit;font-size:13px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></select></div>
           <div class="form-group"><label>畫框</label><div id="image-frame-picker" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
           <div class="form-group"><label>角色（至少選一位）</label><div id="new-image-chars" class="char-picker"></div></div>
+          <!-- 畫作分級：僅持迷情劑權限者可見可設（canSeeMqj），與小說上傳同一條權限線 -->
+          <div class="form-group" id="new-image-mqj-row" style="display:none">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--ink);margin:0"><input type="checkbox" id="new-image-mqj" style="width:auto" /> 迷情劑分級（僅持迷情劑閱讀權的讀者看得到這幅畫）</label>
+          </div>
           <button class="btn-primary" data-onclick="submitImageWork(this)" style="width:100%"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-send"/></svg> 送出畫作</button>
           <p id="new-image-hint" style="font-size:12px;color:var(--ink-light);text-align:center;margin-top:8px"></p>
         </div>
@@ -811,6 +815,9 @@
     <div class="form-group"><label>發佈日期</label><input type="date" id="editwork-date" /></div>
     <div id="editwork-image-group" style="display:none">
       <div class="form-group"><label>說明（選填）</label><textarea id="editwork-caption" maxlength="300" placeholder="給這幅畫留幾句話（至多三百字）"></textarea></div>
+      <div class="form-group" id="editwork-mqj-row" style="display:none">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--ink);margin:0"><input type="checkbox" id="editwork-mqj" style="width:auto" /> 迷情劑分級（僅持迷情劑閱讀權的讀者看得到這幅畫）</label>
+      </div>
       <div class="form-group" id="editwork-frame-preview" style="display:none;text-align:center"></div>
       <div class="form-group"><label>畫框</label><div id="editwork-frame-picker" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
       <div class="form-group"><button type="button" id="editwork-crop-btn" style="width:100%;font-size:12px;padding:8px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:var(--parchment2);color:var(--ink-light)">調整心動封面顯示（裁切框）</button></div>
