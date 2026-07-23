@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.89';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.90';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4535,10 +4535,10 @@ async function approveNovel(id) {
 // 常用話術：點一下插入文字框（已有內容時換行接在後面），仍可自行增改。句子保持完整、可獨立成段。
 const REJECT_PHRASES = [
   '作品內容與本平台的女本位創作方向不符，故不予採用。',
-  '錯字與標點較多，請整理後重新送審。',
-  '排版需要調整（分段與空行），請整理後重新送審。',
-  '角色標記與內容不符，請修正後重新送審。',
-  '內容涉及迷情劑範疇，請將分類改為迷情劑後重新送審。',
+  '畫面清晰度不足，請更換更高解析度的版本後重新送審。',
+  '人物細節有明顯瑕疵（如手部、五官），請修整後重新送審。',
+  '角色標記與畫中人物不符，請修正後重新送審。',
+  '畫作涉及迷情劑範疇，請將分級改為迷情劑後重新送審。',
 ];
 function insertRejectPhrase(i) {
   const ta = document.getElementById('reject-note-text');
