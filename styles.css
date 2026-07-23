@@ -464,31 +464,25 @@
     /* ── 肖像廊（gallery，beta：管理員/超管可見）────────────────────────────── */
     /* 羊皮紙頁在肖像廊模式改 flex 直排，讓木牆區塊撐滿剩餘高度（空狀態才不會露出下方羊皮紙底） */
     #page-forum.active { display: flex; flex-direction: column; }
-    /* 木紋牆鋪在滾動容器（#page-area.gallery-bg）：連 .page 底部留白與 overscroll 回彈都是木紋。
-       純 CSS 仿木紋（CSP 禁外部圖）：暖胡桃底＋直向板縫＋細木理。直向板縫是 X 座標無關 Y，
-       不加 180deg 縱向漸層 → 垂直方向可無縫延伸，不會出現色帶接縫。畫框直接掛在這片木牆上。 */
-    #page-area.gallery-bg {
-      background-color: #5b3f29;
-      background-image:
-        repeating-linear-gradient(90deg, transparent 0 3px, rgba(0,0,0,.045) 3px 4px, transparent 4px 8px),
-        repeating-linear-gradient(90deg, rgba(255,255,255,.022) 0 2px, transparent 2px 11px),
-        repeating-linear-gradient(90deg, #5b3f29 0 94px, #4a3220 94px 98px);
-    }
+    /* 深色藝廊底（2026-07-23 改版）：素面深棕黑取代木紋直條，畫框在暗處更亮眼。
+       鋪在滾動容器上：連 .page 底部留白與 overscroll 回彈都是同一片深色。 */
+    #page-area.gallery-bg { background: #1e1510; }
+    /* 走廊模式的頁首列：融入深底——標題乳白、按鈕金線；收藏夾維持紅框星章、紅色調亮保可讀 */
+    #page-area.gallery-bg .forum-header { background: #16100c; border-bottom: 1px solid rgba(201,168,76,.35); }
+    #page-area.gallery-bg .forum-header h2 { color: #f2e3bc; }
+    #page-area.gallery-bg .forum-header button { color: var(--gold-lt) !important; border-color: rgba(201,168,76,.55) !important; }
+    #page-area.gallery-bg #forum-fav-btn { color: #e0938c !important; border-color: rgba(224,130,120,.6) !important; }
+    #page-area.gallery-bg #forum-fav-btn.on { background: var(--scarlet) !important; color: var(--on-dark) !important; border-color: var(--accent) !important; }
     #forum-gallery { flex: 1; padding: 8px 12px 90px; }
     /* 角色篩選列滿版貼齊標題列下緣（抵銷 #forum-gallery 內距），視覺與羊皮紙一致 */
     #forum-gallery .filter-bar { margin: -8px -12px 10px; }
-    /* 留影走廊：角色列＝滿版帶狀的淺木飾板——材質保留（淺木紋、內嵌高光、落影、深底金字），
-       版式改成與意若思鏡同款左右貼齊（負邊距抵銷 #forum-gallery 內距），從標題列下緣滿版延伸。
-       scope 於 #page-area.gallery-bg → 只在留影走廊模式生效，不動意若思鏡/羊皮紙。 */
+    /* 留影走廊篩選區（2026-07-23 改版）：拿掉木飾板，label 金字直接坐深底；
+       乳白 pill 與角色頭像在深底上自帶對比。scope 於 gallery-bg，不動意若思鏡/羊皮紙。 */
     #page-area.gallery-bg #forum-gallery .filter-bar {
       margin: -8px -12px 12px; padding: 12px 16px;
-      background-color: #7d5a3a; border-bottom: 1px solid rgba(0,0,0,.28);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 3px 8px rgba(0,0,0,.25);
-      background-image:
-        repeating-linear-gradient(90deg, transparent 0 3px, rgba(0,0,0,.04) 3px 4px, transparent 4px 8px),
-        repeating-linear-gradient(90deg, rgba(255,255,255,.03) 0 2px, transparent 2px 11px),
-        repeating-linear-gradient(90deg, #7d5a3a 0 94px, #6a4a30 94px 98px); }
-    #page-area.gallery-bg #forum-gallery .filter-bar .filter-label { color: #f0dcae; }
+      background: none; border: 0; box-shadow: none;
+    }
+    #page-area.gallery-bg #forum-gallery .filter-bar .filter-label { color: var(--gold-lt); }
     #page-area.gallery-bg #forum-gallery .filter-bar .char-chip span { color: #f7edcf; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
     .gallery-wall { columns: 2; column-gap: 20px; }
     /* 桌機：畫框隨欄數縮回合理大小（手機 2 欄不動） */
