@@ -466,9 +466,9 @@
     #page-forum.active { display: flex; flex-direction: column; }
     /* 深色藝廊底（2026-07-23 改版）：素面深棕黑取代木紋直條，畫框在暗處更亮眼。
        鋪在滾動容器上：連 .page 底部留白與 overscroll 回彈都是同一片深色。 */
-    #page-area.gallery-bg { background: #1e1510; }
+    #page-area.gallery-bg { background: #2a1d14; }   /* 暖深棕：初版 #1e1510 太近黑（2026-07-23 調亮一階） */
     /* 走廊模式的頁首列：融入深底——標題乳白、按鈕金線；收藏夾維持紅框星章、紅色調亮保可讀 */
-    #page-area.gallery-bg .forum-header { background: #16100c; border-bottom: 1px solid rgba(201,168,76,.35); }
+    #page-area.gallery-bg .forum-header { background: #231811; border-bottom: 1px solid rgba(201,168,76,.35); }
     #page-area.gallery-bg .forum-header h2 { color: #f2e3bc; }
     #page-area.gallery-bg .forum-header button { color: var(--gold-lt) !important; border-color: rgba(201,168,76,.55) !important; }
     #page-area.gallery-bg #forum-fav-btn { color: #e0938c !important; border-color: rgba(224,130,120,.6) !important; }
