@@ -27,7 +27,7 @@
     'pickNovelHeader', 'onNovelHeaderPick', 'clearNovelHeader', 'pickEditHeader', 'onEditHeaderPick', 'removeEditHeader',
     'openGalleryItem', 'closeGalleryDetail', 'openGalleryFull', 'closeGalleryFull', 'setImageSlot', 'downloadGalleryImage', 'downloadCoverGallery',
     'openCoverCrop', 'closeCoverCrop', 'saveCoverCrop', 'clearCoverCrop', 'ccrDragStart', 'ccrZoom',
-    'setGalleryView', 'galleryGroupNav', 'galleryFullNav', 'toggleHideGalleryImage',
+    'setGalleryView', 'setGalleryCat', 'galleryGroupNav', 'galleryFullNav', 'toggleHideGalleryImage',
     'setWriterAppHandled', 'deleteWriterApp', 'copyWriterApp', 'clearGrabOpens', 'copyThisLink', 'openWriterApply', 'submitWriterApplication',
     'setReviewMode', 'openReviewImage', 'galleryAuthAsk', 'sendAuthRequest', 'openAuthDecide', 'saveAuthDecide', 'runDbLatency',
     'withdrawAuth', 'adminResetAuth', 'applyAuthArt', 'galleryOpenWork', 'readerAuthClick', 'owlOpenAuth',
