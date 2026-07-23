@@ -316,15 +316,6 @@
       background: var(--parchment); color: var(--ink-light); font-size: 13px; cursor: pointer; transition: all .15s;
     }
     .cat-pill.active { background: var(--scarlet); color: var(--on-dark); border-color: var(--accent); }
-    /* 留影走廊分級 pill 上色（與 t-cat 標籤同色系）：未選＝色字色框，選中＝該色滿底 */
-    .cat-pill.cp-red    { color: var(--accent); border-color: rgba(138,45,45,.45); }
-    .cat-pill.cp-green  { color: #2d4a1e; border-color: rgba(45,74,30,.45); }
-    .cat-pill.cp-violet { color: #68488a; border-color: rgba(104,72,138,.45); }
-    .cat-pill.cp-blue   { color: #2c5488; border-color: rgba(44,84,136,.45); }
-    .cat-pill.cp-red.active    { background: var(--scarlet); color: var(--on-dark); border-color: var(--accent); }
-    .cat-pill.cp-green.active  { background: #2d4a1e; color: var(--on-dark); border-color: #2d4a1e; }
-    .cat-pill.cp-violet.active { background: #68488a; color: var(--on-dark); border-color: #68488a; }
-    .cat-pill.cp-blue.active   { background: #2c5488; color: var(--on-dark); border-color: #2c5488; }
     .char-chips { display: flex; gap: 10px; flex-wrap: wrap; }
     .char-chip {
       display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer;
@@ -564,9 +555,10 @@
     .gd-hint { font-size: 11px; color: var(--ink-light); margin-top: 12px; text-align: center; letter-spacing: .04em; }
     /* 投稿的畫框小樣 */
     /* 上傳／編輯的畫框即時預覽：點哪個框，上方的圖就套哪個框（與牆上同一套 border-image） */
-    .upl-frame { display: inline-block; width: min(100%, 300px); border-width: 14px; box-shadow: 0 4px 14px rgba(26,10,0,.3); }
-    .upl-noframe { display: inline-block; width: min(100%, 300px); border-radius: 6px; overflow: hidden; }
-    .upl-frame img, .upl-noframe img { display: block; width: 100%; height: auto; }
+    .upl-frame { display: inline-block; max-width: min(100%, 300px); border-width: 14px; box-shadow: 0 4px 14px rgba(26,10,0,.3); }
+    .upl-noframe { display: inline-block; max-width: min(100%, 300px); border-radius: 6px; overflow: hidden; }
+    /* 高度上限：長直幅畫作不再把上傳表單撐到極長（健檢 #29）；寬高各自上限、比例保留 */
+    .upl-frame img, .upl-noframe img { display: block; max-width: 100%; max-height: 380px; width: auto; height: auto; }
     .frame-swatch { width: 52px; height: 52px; cursor: pointer; border-style: solid; border-width: 8px; line-height: 0; }
     .frame-swatch > div { width: 100%; height: 100%; background: #cfc4ad; }
     .frame-swatch.sel { outline: 2px solid var(--scarlet); outline-offset: 2px; }
@@ -796,7 +788,9 @@
        所以橫放時以整頁提示層守住直式。條件三重限定：hover:none + pointer:coarse 排除桌機滑鼠、
        max-height 500px 排除 iPad（iPad 橫放高度 ≥ 768）。蓋過一切（含全螢幕看圖 9999）。 */
     #rotate-guard { display: none; }
-    @media screen and (orientation: landscape) and (hover: none) and (pointer: coarse) and (max-height: 500px) {
+    /* min-width 600px：排除「直式手機被鍵盤/分割視窗壓扁視口」誤判成橫向（健檢 #27）——
+       真橫放的手機寬度必 ≥ 650 邏輯 px */
+    @media screen and (orientation: landscape) and (hover: none) and (pointer: coarse) and (max-height: 500px) and (min-width: 600px) {
       #rotate-guard {
         display: flex; position: fixed; inset: 0; z-index: 10000;
         align-items: center; justify-content: center;

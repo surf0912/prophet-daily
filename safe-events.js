@@ -23,7 +23,7 @@
     'saveNickname', 'saveNoticeDays', 'saveOwners', 'saveRejectNote', 'saveSeries', 'setAutoPublish', 'updateRejectCount',
     'setFeedbackStatus', 'setMonWin', 'setMqjAccess', 'setUploadKind', 'setUserFilter', 'setUserRole', 'setUiScript', 'setWishReply', 'wishReplyOpen',
     'setWishFilter', 'showLoginForm', 'showPage', 'showGalleryPage', 'startTour', 'stepReaderFont', 'submitFeedback',
-    'onImagePick', 'submitImageWork', 'pickFrame', 'pickEditFrame', 'pickImageFile', 'setForumMode', 'toggleForumMode',
+    'onImagePick', 'submitImageWork', 'pickFrame', 'pickEditFrame', 'pickImageFile', 'toggleForumMode',
     'pickNovelHeader', 'onNovelHeaderPick', 'clearNovelHeader', 'pickEditHeader', 'onEditHeaderPick', 'removeEditHeader',
     'openGalleryItem', 'closeGalleryDetail', 'openGalleryFull', 'closeGalleryFull', 'setImageSlot', 'downloadGalleryImage', 'downloadCoverGallery',
     'openCoverCrop', 'closeCoverCrop', 'saveCoverCrop', 'clearCoverCrop', 'ccrDragStart', 'ccrZoom',

@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.95';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.96';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3841,12 +3841,11 @@ let forumTab = 'forum';     // 羊皮紙頁目前分頁：'forum' | 'gallery'。
                             // 其餘地方一律讀這個變數判斷模式，不再嗅探 DOM 的 display 狀態。
 
 // 分級 pill：無迷情劑權限者不顯示迷情劑（那些畫作後端本來就不回給他）
-const _CAT_PILL_CLS = { '迷情劑': 'cp-red', '吐真劑': 'cp-green', '白日夢咒': 'cp-violet', '儲思盆': 'cp-blue' };
 function renderGalleryCatPills() {
   const el = document.getElementById('gallery-cat-pills');
   if (!el) return;
   el.innerHTML = IMAGE_CATS.filter(c => c !== '迷情劑' || canSeeMqj())
-    .map(c => `<button class="cat-pill ${_CAT_PILL_CLS[c] || ''} ${galleryCat === c ? 'active' : ''}" data-onclick="setGalleryCat('${c}')">${c}</button>`).join('');
+    .map(c => `<button class="cat-pill ${galleryCat === c ? 'active' : ''}" data-onclick="setGalleryCat('${c}')">${c}</button>`).join('');
 }
 function setGalleryCat(c) {
   galleryCat = galleryCat === c ? '' : c;
@@ -3973,7 +3972,8 @@ function openGalleryItem(id, fromAdmin) {
   _galleryGroup = it.series
     ? _galleryItems.filter(x => x.series === it.series && x.created_by === it.created_by && !hid.has(photoKey(x.image_url))).sort((x, y) => (x.series_order || 0) - (y.series_order || 0))
     : [it];
-  _galleryGroupIdx = Math.max(0, _galleryGroup.findIndex(x => x.id === it.id));
+  _galleryGroupIdx = _galleryGroup.findIndex(x => x.id === it.id);
+  if (_galleryGroupIdx === -1) { _galleryGroup = [it]; _galleryGroupIdx = 0; }   // 自己被隱藏（從已隱藏檢視開啟）→ 單張模式，不錯位
   const sEl = document.getElementById('gd-series');
   if (sEl) {
     if (_galleryGroup.length > 1) {
@@ -4183,20 +4183,27 @@ function _zfZoomAt(px, py, ns) {
   if (_zf.s === 1) { _zf.tx = 0; _zf.ty = 0; }
   _zfApply();
 }
+let _zfCloseTimer = null;
 function _zfInit() {
   const gf = document.getElementById('gallery-full');
   if (!gf || gf.dataset.zoomInit) return;
   gf.dataset.zoomInit = '1';
-  // 放大中或剛拖曳完：capture 擋掉背景的 closeGalleryFull（與組導覽箭頭），避免平移誤關
+  // 關閉不再走宣告式 data-onclick（滑鼠雙擊/觸控雙點的「第一下」click 會先到、直接把窗關掉，
+  // 放大手勢永遠觸發不了——健檢 #1）。改由這裡延遲 300ms 關閉：雙擊/雙點在時窗內到達就取消關閉改放大。
   gf.addEventListener('click', (e) => {
-    if (_zf.s > 1 || _zf.drag) { e.stopPropagation(); _zf.drag = false; }
-  }, true);
+    if (e.target.closest('button')) return;              // 組導覽箭頭自己有 handler
+    if (_zf.drag) { _zf.drag = false; return; }          // 拖曳結尾的 click 不算
+    if (_zf.s > 1) return;                               // 放大中點擊不關（雙擊還原後再點才關）
+    clearTimeout(_zfCloseTimer);
+    _zfCloseTimer = setTimeout(() => closeGalleryFull(), 300);
+  });
   gf.addEventListener('wheel', (e) => {
     e.preventDefault();
     _zfZoomAt(e.clientX, e.clientY, _zf.s * (e.deltaY < 0 ? 1.2 : 1 / 1.2));
   }, { passive: false });
   gf.addEventListener('dblclick', (e) => {
     e.preventDefault();
+    clearTimeout(_zfCloseTimer);
     _zfZoomAt(e.clientX, e.clientY, _zf.s > 1 ? 1 : 2.5);
   });
   // pointer 手勢：單指平移（放大時）、雙指捏合；觸控雙點放大
@@ -4204,6 +4211,7 @@ function _zfInit() {
   let g0 = null;                       // 捏合起點 {s, tx, ty, dist, mx, my}
   let lastTap = { t: 0, x: 0, y: 0 };  // 觸控雙點偵測
   gf.addEventListener('pointerdown', (e) => {
+    try { gf.setPointerCapture(e.pointerId); } catch (_) {}   // 視窗外放開也收得到 up，不留殘存指標
     pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pts.size === 2) {
       const [a, b] = [...pts.values()];
@@ -4240,6 +4248,7 @@ function _zfInit() {
     if (e.pointerType === 'touch' && pts.size === 1 && !_zf.drag) {
       const now = Date.now();
       if (now - lastTap.t < 320 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 24) {
+        clearTimeout(_zfCloseTimer);   // 第一下排的延遲關閉取消，改成放大
         _zfZoomAt(e.clientX, e.clientY, _zf.s > 1 ? 1 : 2.5);
         _zf.drag = true;   // 順手擋掉這一下的 click，免得觸發關閉
         lastTap.t = 0;
@@ -4282,7 +4291,7 @@ function openImageFull(src, fromGallery, hideMark) {
   if (img.complete && img.naturalWidth) applyRot();
   document.getElementById('gallery-full').style.display = 'flex';
 }
-function closeGalleryFull() { document.getElementById('gallery-full').style.display = 'none'; _zfReset(); }
+function closeGalleryFull() { clearTimeout(_zfCloseTimer); document.getElementById('gallery-full').style.display = 'none'; _zfReset(); }
 // 審核畫作：點縮圖看全螢幕大圖（單張、無組導覽、無浮水印，方便看清品質再決定通過）
 function openReviewImage(id) {
   const n = (window._reviewPending || []).find(x => x.id === id);
@@ -4430,7 +4439,10 @@ function dateToIso(d) {
   // 不讓 Invalid Date 的 toISOString 直接把送出流程炸掉。
   const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(d).trim());
   if (!m) return null;
-  return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 4, 0, 0)).toISOString();
+  const dt = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 4, 0, 0));
+  // 溢位日期（2026-99-99 之類）JS 會靜默滾動成別的日子——滾動過就當沒填
+  if (dt.getUTCFullYear() !== +m[1] || dt.getUTCMonth() !== +m[2] - 1 || dt.getUTCDate() !== +m[3]) return null;
+  return dt.toISOString();
 }
 // 桌機 Safari 的原生日期欄馴不了：空值時以淡色顯示今天、分段高亮吃 macOS 系統強調色，
 // 而 ::-webkit-datetime-edit 系列偽元素它不支援，CSS 搆不到內部。只在「桌機＋Safari」
@@ -5120,7 +5132,10 @@ async function openEditWork(id) {
   { const cp = document.getElementById('editwork-copyid'); if (cp) cp.setAttribute('data-onclick', `copyText('${id}', '已複製作品編號')`); }
   document.getElementById('editwork-title').value = n.title || '';
   document.getElementById('editwork-author').value = n.author || '';
-  document.getElementById('editwork-date').value = (n.created_at || '').slice(0, 10);   // 發佈日期
+  // 發佈日期以台灣時區帶入：直接 slice UTC 字串的話，台灣 00:00–08:00 投稿的作品
+  // 會帶出前一天，管理員改個錯字存檔就把發佈日悄悄倒退一天（健檢 #3）。
+  document.getElementById('editwork-date').value = n.created_at
+    ? new Date(new Date(n.created_at).getTime() + 8 * 3600 * 1000).toISOString().slice(0, 10) : '';
   document.getElementById('editwork-content-label').textContent = isForum ? '主文（開場白）' : '內文';
   document.getElementById('editwork-comments-group').style.display = isForum ? '' : 'none';
   // 內文：畫作沒有內文，整組收起（避免出現一個空的編輯框）
@@ -5152,7 +5167,10 @@ async function openEditWork(id) {
         else { pv.style.display = 'none'; pv.innerHTML = ''; }
       } }
     document.getElementById('editwork-caption').value = n.image_caption || '';
-    { const cb = document.getElementById('editwork-crop-btn'); if (cb) cb.setAttribute('data-onclick', `openCoverCrop('${escapeHtml(n.image_url || '')}')`); }
+    // setAttribute 走 DOM 屬性、不經 HTML 解析——escapeHtml 會把 & 變 &amp; 留在真值裡害 photoKey 對不上。
+    // 這裡要的是「宣告式語法的引號安全」：跳脫反斜線與單引號即可（分派器 parseArgument 支援 \'）。
+    { const cb = document.getElementById('editwork-crop-btn');
+      if (cb) cb.setAttribute('data-onclick', `openCoverCrop('${String(n.image_url || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')`); }
     return;   // 畫作：標題／署名／日期／說明／畫框／裁切框，無章節
   }
   ct.value = '載入中…'; ct.disabled = true;
@@ -5670,10 +5688,13 @@ let _writerApps = [];
 function openWriterApply() {
   document.getElementById('writer-apply-modal').classList.add('open');
 }
+let _waBusy = false;
 async function submitWriterApplication() {
+  if (_waBusy) return;   // 防連點重複投遞
   const c = document.getElementById('writer-apply-contact').value.trim();
   const n = document.getElementById('writer-apply-note').value.trim();
   if (!c) { toast('請留下聯絡方式'); return; }
+  _waBusy = true;
   try {
     await api('/applications/writer/in-app', { method: 'POST', body: JSON.stringify({ contact: c, note: n }) });
     document.getElementById('writer-apply-modal').classList.remove('open');
@@ -5681,6 +5702,7 @@ async function submitWriterApplication() {
     document.getElementById('writer-apply-note').value = '';
     toast('申請已送達編務處，靜候貓頭鷹');
   } catch (e) { toast(e.message || '送出失敗，請稍後再試'); }
+  finally { _waBusy = false; }
 }
 
 // 分頁上的未處理數字。兩個來源都會走這裡：進審核頁時打輕量的 /count，清單已開時直接由

@@ -649,7 +649,8 @@
     </div>
   </div>
 </div>
-<div id="gallery-full" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(10,6,3,.96);align-items:center;justify-content:center;overflow:hidden;touch-action:none" data-onclick="closeGalleryFull()">
+<!-- 關閉由 _zfInit 的延遲 click 管理（宣告式 data-onclick 會讓雙擊的第一下就關窗，放大手勢永遠觸發不了） -->
+<div id="gallery-full" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(10,6,3,.96);align-items:center;justify-content:center;overflow:hidden;touch-action:none">
   <div id="gf-stage" style="position:relative;display:inline-block;line-height:0">
     <img id="gf-img" alt="" style="display:block;max-width:100vw;max-height:100vh" />
   </div>

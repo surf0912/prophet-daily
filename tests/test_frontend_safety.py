@@ -33,6 +33,16 @@ class FrontendOutputSafetyTests(unittest.TestCase):
             "escapeHtml(f.question)",
             "escapeHtml(f.answer)",
             "escapeHtml(inv.profiles?.username || '')",
+            # 2026-07 新增的使用者輸入沉澱點（健檢 #4）：
+            # 作者申請是「未登入公開表單 → 管理面板」的經典 stored-XSS 通道，回歸防護必列
+            "escapeHtml(r.contact || '')",
+            "escapeHtml(r.note)",
+            "escapeHtml(r.applicant)",
+            "escapeHtml(a.note)",
+            "escapeHtml(a.reply_note)",
+            "escapeHtml(a.requester_name)",
+            "escapeHtml(a.recipient_name)",
+            "escapeHtml(u.flag_note)",
         ]
         for expression in required:
             with self.subTest(expression=expression):
@@ -91,6 +101,15 @@ class FrontendOutputSafetyTests(unittest.TestCase):
         self.assertIn('<script src="./safe-events.js" defer></script>', self.html)
         self.assertNotRegex(self.html, r"<script(?:\s[^>]*)?>\s*(?!</script>)")
         self.assertIn('<link rel="stylesheet" href="./styles.css" />', self.html)
+
+    def test_dynamically_assigned_handlers_call_allowlisted_actions(self):
+        """setAttribute 動態掛的 data-onclick 不在靜態屬性掃描範圍（健檢 #18）——
+        逐一驗證動態組出的第一個函式名也在 safe-events 白名單。"""
+        dynamic = re.findall(r"setAttribute\('data-onclick',\s*`([A-Za-z_$][\w$]*)\(", self.app)
+        self.assertTrue(dynamic, "找不到任何動態 data-onclick——若已全部移除，請一併刪除本測試")
+        for fn in dynamic:
+            with self.subTest(handler=fn):
+                self.assertIn(f"'{fn}'", self.events)
 
     def test_every_declarative_handler_calls_an_allowlisted_action(self):
         handlers = re.findall(
