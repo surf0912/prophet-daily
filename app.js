@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.83';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.84';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4907,6 +4907,7 @@ async function saveSeries() {
 }
 
 let editClassNovelId = null;
+let editClassKind = 'novel';   // 分類窗當前作品的種類（畫作/羊皮紙不送 category）
 
 function openEditClass(id) {
   const work = adminWorkById(id);
@@ -4926,8 +4927,10 @@ function openEditClass(id) {
     div.innerHTML = CHAR_LIST.map(ch => `<span class="opt" data-ch="${ch.code}" data-onclick="this.classList.toggle('on')">${ch.name}</span>`).join('');
     div.dataset.init = '1';
   }
-  // forum posts have no 故事類型
-  document.getElementById('editclass-cat-group').style.display = kind === 'forum' ? 'none' : '';
+  // 羊皮紙與畫作都沒有故事類型——畫作的分級不走迷情劑三分類，藏起下拉避免誤標
+  //（畫廊端點本來就不看 category，畫作標了也不會生效，只會誤導）。
+  editClassKind = kind;
+  document.getElementById('editclass-cat-group').style.display = (kind === 'forum' || kind === 'image') ? 'none' : '';
   sel.value = category || '';
   const have = new Set(characters || []);
   div.querySelectorAll('.opt').forEach(el => el.classList.toggle('on', have.has(el.dataset.ch)));
@@ -4938,8 +4941,9 @@ async function saveEditClass() {
   const category = document.getElementById('editclass-category').value;
   const characters = [...document.querySelectorAll('#editclass-chars .opt.on')].map(el => el.dataset.ch);
   // category null is ignored by the backend (PATCH skips null), so only novels send it.
+  // 羊皮紙／畫作沒有故事類型——下拉藏起來後可能留著上一次編輯小說的殘值，不能跟著送出。
   const body = { characters };
-  if (category) body.category = category;
+  if (category && editClassKind !== 'forum' && editClassKind !== 'image') body.category = category;
   try {
     await api(`/novels/${editClassNovelId}`, { method: 'PATCH', body: JSON.stringify(body) });
     toast('分類已更新');
