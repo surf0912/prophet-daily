@@ -741,6 +741,8 @@
     <h3><svg width="17" height="17" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-edit"/></svg> 退回修改</h3>
     <p id="reject-note-work" style="font-size:13px;color:var(--accent);margin:6px 0 4px"></p>
     <p style="font-size:12px;color:var(--ink-light);margin:0 0 10px">告訴作者哪裡需要修改（可留空）。稿件不會刪除，會退回作者的「作品管理」，這段話也會顯示給作者。</p>
+    <!-- 常用話術：點一下插入文字框，仍可自行增改 -->
+    <div id="reject-quick-row" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px"></div>
     <textarea id="reject-note-text" rows="5" maxlength="500" data-oninput="updateRejectCount()" placeholder="例如：第三段情節與設定衝突，麻煩調整後再送；或分類選錯了……" style="width:100%;box-sizing:border-box;resize:vertical;min-height:110px;padding:11px 12px;font-family:inherit;font-size:14px;line-height:1.7;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></textarea>
     <div style="text-align:right;font-size:11px;color:var(--ink-light);margin-top:4px"><span id="reject-note-count">0</span>/500</div>
     <div style="display:flex;gap:8px;margin-top:12px">

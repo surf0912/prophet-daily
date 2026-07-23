@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.88';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.89';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4532,11 +4532,33 @@ async function approveNovel(id) {
   catch (e) { toast(e.message); }
 }
 // 退回修改（不刪除）：開彈窗讓管理員留一段修改建議給作者，標記 rejected 退回作者的作品管理。
+// 常用話術：點一下插入文字框（已有內容時換行接在後面），仍可自行增改。句子保持完整、可獨立成段。
+const REJECT_PHRASES = [
+  '作品內容與本平台的女本位創作方向不符，故不予採用。',
+  '錯字與標點較多，請整理後重新送審。',
+  '排版需要調整（分段與空行），請整理後重新送審。',
+  '角色標記與內容不符，請修正後重新送審。',
+  '內容涉及迷情劑範疇，請將分類改為迷情劑後重新送審。',
+];
+function insertRejectPhrase(i) {
+  const ta = document.getElementById('reject-note-text');
+  const p = REJECT_PHRASES[i];
+  if (!ta || !p) return;
+  ta.value = (ta.value.trim() ? ta.value.replace(/\s+$/, '') + '\n' + p : p).slice(0, 500);
+  updateRejectCount();
+  ta.focus();
+}
 let _rejectingId = null;
 function rejectNovel(id) {
   const n = (window._reviewPending || []).find(x => x.id === id);
   _rejectingId = id;
   document.getElementById('reject-note-work').textContent = `《${(n && n.title) || '這篇稿件'}》`;
+  { const row = document.getElementById('reject-quick-row');
+    if (row && !row.dataset.init) {
+      row.innerHTML = REJECT_PHRASES.map((p, i) =>
+        `<button type="button" data-onclick="insertRejectPhrase(${i})" title="${escapeHtml(p)}" style="font-size:12px;padding:4px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:10px;cursor:pointer">${escapeHtml(p.length > 14 ? p.slice(0, 13) + '…' : p)}</button>`).join('');
+      row.dataset.init = '1';
+    } }
   const ta = document.getElementById('reject-note-text'); ta.value = '';
   document.getElementById('reject-note-count').textContent = '0';
   document.getElementById('reject-note-modal').classList.add('open');
