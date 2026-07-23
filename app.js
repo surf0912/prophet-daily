@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.85';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.86';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1494,7 +1494,16 @@ function charPill(code) {
   return `<span class="t-chr">${dot}${escapeHtml(name)}</span>`;
 }
 // 分類標籤色：迷情劑紅（預設）、吐真劑綠、儲思盆靛藍。
-function catCls(c) { return c === '吐真劑' ? ' t-cat-green' : c === '儲思盆' ? ' t-cat-blue' : ''; }
+function catCls(c) { return c === '吐真劑' ? ' t-cat-green' : c === '儲思盆' ? ' t-cat-blue' : c === '白日夢咒' ? ' t-cat-violet' : ''; }
+// 畫作分級四選：僅迷情劑有權限語義（無權讀者看不到該畫），其餘為展示分類。
+const IMAGE_CATS = ['迷情劑', '吐真劑', '白日夢咒', '儲思盆'];
+// keepMqj：編輯時若現值已是迷情劑，即使編輯者無權也保留該選項（可維持原值，後端亦允許不升級的沿用）
+function renderImageCatOptions(sel, current, keepMqj) {
+  if (!sel) return;
+  const cats = IMAGE_CATS.filter(c => c !== '迷情劑' || canSeeMqj() || (keepMqj && current === '迷情劑'));
+  sel.innerHTML = '<option value="">— 一般（不分級）—</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  sel.value = cats.includes(current) ? current : '';
+}
 let shelfCat = '';        // '' = 全部
 let shelfChars = [];   // default: none lit = show everything; tap a character to filter to them (OR)
 // 作品管理 (admin works) filter. Type pills include 羊皮紙 (=forum) on top of the 3 novel categories.
@@ -3366,7 +3375,7 @@ function initImageUpload() {
     chars.innerHTML = CHAR_LIST.map(ch => `<span class="opt" data-ch="${ch.code}" data-onclick="this.classList.toggle('on')">${ch.name}</span>`).join('');
     chars.dataset.init = '1';
   }
-  { const mr = document.getElementById('new-image-mqj-row'); if (mr) mr.style.display = canSeeMqj() ? '' : 'none'; }
+  renderImageCatOptions(document.getElementById('new-image-cat'), (document.getElementById('new-image-cat') || {}).value || '', false);
 }
 
 // 畫框即時預覽的 class：'none' 走無框樣式，其餘套與牆上同一套 border-image
@@ -3504,17 +3513,17 @@ async function submitImageWork(btn) {
   try {
     const srcSel = document.getElementById('new-image-source');
     const source_auth_id = (srcSel && srcSel.closest('#new-image-source-row').style.display !== 'none' && srcSel.value) || null;
-    const mqj = canSeeMqj() && !!(document.getElementById('new-image-mqj') || {}).checked;
+    const cat = (document.getElementById('new-image-cat') || {}).value || null;
     const res = await api('/novels/image', { method: 'POST', body: JSON.stringify({
       title, author, caption, frame: _imgWork.frame, characters, image: _imgWork.data, source_auth_id,
-      category: mqj ? '迷情劑' : null }) });
+      category: cat }) });
     toast(res && res.status === 'pending' ? '已送出，待管理員審核' : '畫作已送出');
     _imgWork.data = null; _imgWork.frame = 'ebony';
     ['new-image-title', 'new-image-author', 'new-image-caption'].forEach(id => document.getElementById(id).value = '');
     prefillAuthor('new-image-author');   // 清空後重新帶回暱稱（同小說）
     document.querySelectorAll('#new-image-chars .opt.on').forEach(el => el.classList.remove('on'));
     document.querySelectorAll('#image-frame-picker .frame-swatch').forEach(el => el.classList.toggle('sel', el.dataset.frame === 'ebony'));
-    { const m = document.getElementById('new-image-mqj'); if (m) m.checked = false; }
+    { const m = document.getElementById('new-image-cat'); if (m) m.value = ''; }
     const wrap = document.getElementById('image-preview-wrap'); wrap.style.display = 'none'; wrap.innerHTML = '';
     document.getElementById('image-drop').textContent = '選擇畫作';
     _myAuths = null; renderImageSourceRow();   // 掛了源自的授權信已用掉，下拉重整
@@ -3965,7 +3974,7 @@ function openGalleryItem(id, fromAdmin) {
   document.getElementById('gd-title').textContent = it.title || '';
   document.getElementById('gd-author').textContent = it.author ? ('— ' + it.author) : '— 佚名';
   document.getElementById('gd-chars').innerHTML =
-    (it.category === '迷情劑' ? `<span class="t-cat${catCls('迷情劑')}">迷情劑</span>` : '')
+    (it.category ? `<span class="t-cat${catCls(it.category)}">${escapeHtml(it.category)}</span>` : '')
     + (it.characters || []).map(c => charPill(c)).join('');
   const cap = document.getElementById('gd-caption');
   cap.textContent = it.image_caption || ''; cap.style.display = it.image_caption ? '' : 'none';
@@ -5001,9 +5010,8 @@ async function openEditWork(id) {
     ct.value = '';
     editWork.imageFrame = GALLERY_FRAMES.some(([c]) => c === n.image_frame) ? n.image_frame : 'ebony';
     renderEditFramePicker();
-    // 分級開關：無迷情劑權限者藏列（存檔也不送 category，不會誤清別人設好的分級）
-    { const mr = document.getElementById('editwork-mqj-row'); const mc = document.getElementById('editwork-mqj');
-      if (mr && mc) { mr.style.display = canSeeMqj() ? '' : 'none'; mc.checked = n.category === '迷情劑'; } }
+    // 分級下拉：帶入現值。無迷情劑權限者看不到迷情劑選項；但現值已是迷情劑時保留（可沿用不升級）。
+    renderImageCatOptions(document.getElementById('editwork-cat'), n.category || '', true);
     // 畫框即時預覽：有圖就顯示，換框時 pickEditFrame 同步換 class
     { const pv = document.getElementById('editwork-frame-preview');
       if (pv) {
@@ -5061,7 +5069,7 @@ async function saveEditWork() {
     const caption = document.getElementById('editwork-caption').value.trim().slice(0, 300);
     const published_at = dateToIso(document.getElementById('editwork-date').value);
     const body = { title, author, published_at, image_frame: editWork.imageFrame, image_caption: caption };
-    if (canSeeMqj()) body.category = document.getElementById('editwork-mqj').checked ? '迷情劑' : '';   // ''＝清除分級
+    body.category = (document.getElementById('editwork-cat') || {}).value || '';   // ''＝清除分級
     try {
       await api(`/novels/${editWork.id}`, { method: 'PATCH', body: JSON.stringify(body) });
       toast('作品已更新');
