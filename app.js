@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.91';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v4.92';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4161,6 +4161,96 @@ function galleryFullNav(dir) {
 }
 // 任意圖片全螢幕（右下角金色徽記浮水印，即時疊、不改檔案）；留影走廊詳情與角色頁封面共用。
 // fromGallery=true 且該畫屬於多幅組圖時，顯示組內切換箭頭；角色頁封面等直接呼叫（無箭頭）。
+// ── 全螢幕看圖的縮放/平移（審核看細節與讀者賞畫共用）────────────────────────
+// 手勢：雙擊（滑鼠雙擊/觸控雙點）＝以該點為中心放大 2.5x，再雙擊還原；滾輪/觸控板＝縮放；
+// 雙指捏合＝縮放＋跟隨移動；放大後拖曳＝平移。放大或剛拖曳完時，點背景不觸發關閉
+// （capture 階段擋掉 data-onclick 的 closeGalleryFull），先雙擊還原再點即可關閉。
+// 變換組成：translate/scale 在外（螢幕座標），rotate 在內——與橫幅旋轉共存。
+const _zf = { s: 1, tx: 0, ty: 0, rot: false, drag: false };
+function _zfApply() {
+  const stage = document.getElementById('gf-stage');
+  if (stage) stage.style.transform = `translate(${_zf.tx}px, ${_zf.ty}px) scale(${_zf.s})` + (_zf.rot ? ' rotate(90deg)' : '');
+}
+function _zfReset() { _zf.s = 1; _zf.tx = 0; _zf.ty = 0; _zfApply(); }
+function _zfZoomAt(px, py, ns) {
+  ns = Math.min(6, Math.max(1, ns));
+  const cx = window.innerWidth / 2, cy = window.innerHeight / 2;   // stage 以 flex 置中，變換原點≈螢幕中心
+  const bx = (px - cx - _zf.tx) / _zf.s, by = (py - cy - _zf.ty) / _zf.s;
+  _zf.tx = px - cx - ns * bx;
+  _zf.ty = py - cy - ns * by;
+  _zf.s = ns;
+  if (_zf.s === 1) { _zf.tx = 0; _zf.ty = 0; }
+  _zfApply();
+}
+function _zfInit() {
+  const gf = document.getElementById('gallery-full');
+  if (!gf || gf.dataset.zoomInit) return;
+  gf.dataset.zoomInit = '1';
+  // 放大中或剛拖曳完：capture 擋掉背景的 closeGalleryFull（與組導覽箭頭），避免平移誤關
+  gf.addEventListener('click', (e) => {
+    if (_zf.s > 1 || _zf.drag) { e.stopPropagation(); _zf.drag = false; }
+  }, true);
+  gf.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    _zfZoomAt(e.clientX, e.clientY, _zf.s * (e.deltaY < 0 ? 1.2 : 1 / 1.2));
+  }, { passive: false });
+  gf.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    _zfZoomAt(e.clientX, e.clientY, _zf.s > 1 ? 1 : 2.5);
+  });
+  // pointer 手勢：單指平移（放大時）、雙指捏合；觸控雙點放大
+  const pts = new Map();
+  let g0 = null;                       // 捏合起點 {s, tx, ty, dist, mx, my}
+  let lastTap = { t: 0, x: 0, y: 0 };  // 觸控雙點偵測
+  gf.addEventListener('pointerdown', (e) => {
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      g0 = { s: _zf.s, tx: _zf.tx, ty: _zf.ty,
+             dist: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+             mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+    }
+  });
+  gf.addEventListener('pointermove', (e) => {
+    const p = pts.get(e.pointerId);
+    if (!p) return;
+    if (pts.size === 2 && g0) {
+      p.x = e.clientX; p.y = e.clientY;
+      const [a, b] = [...pts.values()];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+      const ns = Math.min(6, Math.max(1, g0.s * dist / g0.dist));
+      _zf.tx = mx - cx - (ns / g0.s) * (g0.mx - cx - g0.tx);
+      _zf.ty = my - cy - (ns / g0.s) * (g0.my - cy - g0.ty);
+      _zf.s = ns;
+      if (_zf.s === 1) { _zf.tx = 0; _zf.ty = 0; }
+      _zf.drag = true;
+      _zfApply();
+    } else if (pts.size === 1 && _zf.s > 1) {
+      _zf.tx += e.clientX - p.x; _zf.ty += e.clientY - p.y;
+      p.x = e.clientX; p.y = e.clientY;
+      _zf.drag = true;   // 放大中有平移＝這一下的 click 不當作「點背景關閉」
+      _zfApply();
+    }
+  });
+  const lift = (e) => {
+    // 觸控雙點＝放大/還原（滑鼠走 dblclick）
+    if (e.pointerType === 'touch' && pts.size === 1 && !_zf.drag) {
+      const now = Date.now();
+      if (now - lastTap.t < 320 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 24) {
+        _zfZoomAt(e.clientX, e.clientY, _zf.s > 1 ? 1 : 2.5);
+        _zf.drag = true;   // 順手擋掉這一下的 click，免得觸發關閉
+        lastTap.t = 0;
+      } else { lastTap = { t: now, x: e.clientX, y: e.clientY }; }
+    }
+    pts.delete(e.pointerId);
+    if (pts.size < 2) g0 = null;
+  };
+  gf.addEventListener('pointerup', lift);
+  gf.addEventListener('pointercancel', lift);
+}
+
 function openImageFull(src, fromGallery, hideMark) {
   _fullGroupOn = !!fromGallery && Array.isArray(_galleryGroup) && _galleryGroup.length > 1;
   const mark = document.getElementById('gf-mark');   // 審核看大圖時隱藏浮水印，看清畫作
@@ -4170,25 +4260,28 @@ function openImageFull(src, fromGallery, hideMark) {
   if (next) next.style.display = _fullGroupOn ? 'flex' : 'none';
   const img = document.getElementById('gf-img');
   const stage = document.getElementById('gf-stage');
+  _zfInit();
+  _zfReset();
   // 橫幅圖＋直式螢幕：把整個 stage（圖＋右下角浮水印）旋 90° 填滿螢幕（旋轉後 pre-rotation 寬對到螢幕高、高對到螢幕寬）
   const applyRot = () => {
     const landscape = img.naturalWidth > img.naturalHeight;
     const portraitScreen = window.innerHeight > window.innerWidth;
     if (landscape && portraitScreen) {
       img.style.maxWidth = '100vh'; img.style.maxHeight = '100vw';
-      stage.style.transform = 'rotate(90deg)';
+      _zf.rot = true;
     } else {
       img.style.maxWidth = '100vw'; img.style.maxHeight = '100vh';
-      stage.style.transform = '';
+      _zf.rot = false;
     }
+    _zfApply();
   };
-  img.style.maxWidth = '100vw'; img.style.maxHeight = '100vh'; stage.style.transform = '';
+  img.style.maxWidth = '100vw'; img.style.maxHeight = '100vh'; _zf.rot = false; _zfApply();
   img.onload = applyRot;
   img.src = src;
   if (img.complete && img.naturalWidth) applyRot();
   document.getElementById('gallery-full').style.display = 'flex';
 }
-function closeGalleryFull() { document.getElementById('gallery-full').style.display = 'none'; }
+function closeGalleryFull() { document.getElementById('gallery-full').style.display = 'none'; _zfReset(); }
 // 審核畫作：點縮圖看全螢幕大圖（單張、無組導覽、無浮水印，方便看清品質再決定通過）
 function openReviewImage(id) {
   const n = (window._reviewPending || []).find(x => x.id === id);
