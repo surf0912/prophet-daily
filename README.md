@@ -9,7 +9,7 @@
 - GitHub Pages：<https://surf0912.github.io/prophet-daily/>
 - Render 新加坡鏡像及 API：<https://the-prophet-daily.onrender.com>
 
-Render 同時提供前端鏡像，作為部分無法穩定連線 GitHub Pages 地區的備援入口。舊 Oregon 入口 `<https://prophet-daily.onrender.com>` 目前只作為過渡鏡像。
+Render 同時提供前端鏡像，作為部分無法穩定連線 GitHub Pages 地區的備援入口。（舊 Oregon 過渡鏡像已於 2026-07-24 移除。）
 
 ## 主要功能
 
