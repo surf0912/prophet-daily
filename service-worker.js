@@ -1,18 +1,24 @@
-const CACHE_NAME = 'prophet-daily-v4.98';
+const CACHE_NAME = 'prophet-daily-v4.99';
 // 圖片與字型的常駐快取：跨版本保留（activate 不清），避免每次發版把使用者存好的
 // ~10MB 心動封面全部作廢重抓。內容物都是不改內容的靜態檔；若真要強制換新，把 -v1 進位。
 const STATIC_CACHE = 'prophet-daily-static-v1';
+// 版本資產：隨發版更新，每次 bump 重新抓（帶 ?swv= 防 CDN 陳舊快取）。
 const ASSETS = [
   './index.html',
   './styles.css',
   './app.js',
   './safe-events.js',
   './zhconv.js',
+  './manifest.json'
+];
+// 常駐資產：內容永遠不變（圖示、離線封面）。首次抓進 STATIC_CACHE 後，
+// 版本 bump 不再重新下載——先前每次發版全部重抓（~1MB/人），密集發版週把
+// Render 鏡像的流量額度直接燒穿。要強制換新把 STATIC_CACHE 的 -v1 進位。
+const STATIC_ASSETS = [
   './assets/offline_sean.webp',
   './assets/offline_silas.webp',
   './assets/offline_eli.webp',
   './assets/offline_adrian.webp',
-  './manifest.json',
   './favicon.png',
   './apple-touch-icon.png',
   './icon-192.png',
@@ -28,11 +34,18 @@ self.addEventListener('install', (event) => {
   // loops forever. The ?swv=<version> query is a guaranteed cache-miss → the real new file from
   // origin; storing under the bare url means the fetch handler (which matches bare requests) serves
   // it. Per-asset catch so one 404 can't fail the whole install.
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => Promise.all(
-    ASSETS.map((u) => fetch(new Request(u + (u.includes('?') ? '&' : '?') + 'swv=' + CACHE_NAME, { cache: 'no-store' }))
-      .then((res) => (res && res.ok) ? cache.put(u, res) : undefined)
-      .catch(() => undefined))
-  )));
+  event.waitUntil(Promise.all([
+    caches.open(CACHE_NAME).then((cache) => Promise.all(
+      ASSETS.map((u) => fetch(new Request(u + (u.includes('?') ? '&' : '?') + 'swv=' + CACHE_NAME, { cache: 'no-store' }))
+        .then((res) => (res && res.ok) ? cache.put(u, res) : undefined)
+        .catch(() => undefined))
+    )),
+    // 常駐資產：已在快取就跳過（省流量的關鍵），缺的才抓
+    caches.open(STATIC_CACHE).then((cache) => Promise.all(
+      STATIC_ASSETS.map((u) => cache.match(u).then((hit) => hit ? undefined :
+        fetch(u).then((res) => (res && res.ok) ? cache.put(u, res) : undefined).catch(() => undefined)))
+    )),
+  ]));
   self.skipWaiting();
 });
 
