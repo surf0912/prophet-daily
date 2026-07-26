@@ -162,7 +162,9 @@
       background: url('./auth-frame.png') 50% / 100% 100% no-repeat;
     }
     @media (min-width: 640px) {
-      .auth-box { max-width: 580px; padding: 56px 64px; }
+      /* 下 88px：桌機卡片較大，金框底線也隨之下移——沿用手機的用意，讓 auth-msg（驗證中／錯誤訊息）
+         落在框線上方。先前這裡把 padding 整組覆蓋成 56px，等於把手機特意留的下方淨空洗掉了。 */
+      .auth-box { max-width: 580px; padding: 56px 64px 88px; }
       .auth-logo { margin-bottom: 40px; }
       .field { margin-bottom: 24px; }
       .field input { padding: 14px 16px; font-size: 17px; }
@@ -689,6 +691,22 @@
     #reader-dock > div + div { border-top: 1px solid var(--gold-lt); }
     #reader-view.chrome-on #reader-dock { transform: none; opacity: 1; pointer-events: auto; }
     @media (prefers-reduced-motion: reduce) { #reader-dock { transition: opacity .2s ease; } }
+    /* ── 閱讀器：桌機版面 ──
+       手機一欄到底是對的；但在寬螢幕上同一套 CSS 會讓每行橫跨整個視窗，一行三、四十字以上，
+       眼睛得大幅度左右掃視，非常難讀。桌機收成一條置中的閱讀欄（約 40 字寬），兩側留白，
+       標題列／目錄／導覽列的內容跟著對齊同一欄寬，整頁才不會上下錯位。手機（<820px）不受影響。 */
+    @media (min-width: 820px) {
+      /* width:100% 不可省——.reader-content 是 flex column 的子項，只給 margin:auto 會取消 stretch、
+         收縮成內容寬（實測 498px），與標題列／導覽列的 720px 欄寬對不齊。 */
+      .reader-content { width: 100%; max-width: 720px; margin: 0 auto; padding: 44px 32px 28px; }
+      .reader-header > div, .chapter-list-panel > details,
+      #reader-auth-wrap > button, #reader-dock .chapter-nav {
+        max-width: 720px; margin-left: auto; margin-right: auto;
+      }
+      /* 文首插圖跟著閱讀欄，不再拉成整個視窗寬 */
+      .reader-artwork, .reader-byline { max-width: 720px; margin-left: auto; margin-right: auto; }
+      .reader-byline { margin-top: -14px; margin-bottom: 20px; }
+    }
     .chapter-list-panel { padding: 12px 18px; background: var(--parchment2); border-bottom: 1px solid var(--gold-lt); }
     .chapter-list-panel details summary { cursor: pointer; font-size: 13px; color: var(--accent); }
     .chapter-list-panel ol { margin: 8px 0 0 18px; font-size: 13px; }
