@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.02';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.03';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2490,6 +2490,7 @@ async function updateSeriesNav(novel) {
   } else {
     nav.style.display = 'none';
   }
+  if (window._readerChromeRefresh) window._readerChromeRefresh();   // nav 顯示變了 → 底座高度與內文留白重算
 }
 function navigateSeries(delta) {
   const target = _seriesSibs[_seriesIdx + delta];
@@ -2811,7 +2812,7 @@ function navigateChapter(dir) {
   const EDGE = 4;
   const atBottom = () => rv.scrollTop + rv.clientHeight >= rv.scrollHeight - EDGE;
   // 底座裡至少一條 nav 可見才值得滑出——單篇貼文兩條都藏著，不顯示空底座（免得底部一條空邊線）
-  const hasNav = () => ['reader-auth-wrap', 'reader-chapter-nav', 'reader-series-nav']
+  const hasNav = () => ['reader-chapter-nav', 'reader-series-nav']
     .some(id => { const el = document.getElementById(id); return el && el.style.display !== 'none'; });
   let hideT = null, lastTop = 0;
   function show(sticky) {
@@ -2823,6 +2824,11 @@ function navigateChapter(dir) {
   function hide() { clearTimeout(hideT); rv.classList.remove('chrome-on'); }
   window._readerChromeRefresh = () => {
     lastTop = rv.scrollTop;
+    // 內文底部留白＝底座實際高度＋間距（transform 不影響 offsetHeight，收起時也量得到）。
+    // 捲到底時底座常駐，文末與授權入口永遠露在它上方；無 nav（單篇貼文）則還原 CSS 預設。
+    const dock = document.getElementById('reader-dock');
+    const rc = document.getElementById('reader-content');
+    if (rc && dock) rc.style.paddingBottom = hasNav() ? (dock.offsetHeight + 18) + 'px' : '';
     // 換章／開篇：捲不動（短內容）就直接顯示，否則收起讓人從頭讀
     if (rv.scrollHeight <= rv.clientHeight + EDGE) show(true); else hide();
   };

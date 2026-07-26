@@ -686,13 +686,12 @@
   </div>
   <div class="watermark-overlay"></div>
   <div class="reader-content" id="reader-content"></div>
-  <!-- 章節／系列導覽底座（照搬書海）：閱讀時收起，往回滑或捲到底才滑出。
-       同座疊放：授權入口＋上一章/下一章＋上一篇/下一篇——一起隨底座顯示，不會被蓋住。 -->
+  <!-- 授權信：篇末的衍生創作入口（writer 以上、非本篇作者才顯示）——在內文流末、隨文字捲動 -->
+  <div id="reader-auth-wrap" style="display:none;text-align:center;padding:4px 16px 20px">
+    <button id="reader-auth-btn" data-onclick="readerAuthClick()" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;padding:8px 16px;font-size:12.5px;cursor:pointer;font-family:inherit"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 想為這篇作畫？向作者請求授權</button>
+  </div>
+  <!-- 章節／系列導覽底座（照搬書海）：閱讀時收起，往回滑或捲到底才滑出 -->
   <div id="reader-dock">
-    <!-- 授權信：篇末的衍生創作入口（writer 以上、非本篇作者才顯示） -->
-    <div id="reader-auth-wrap" style="display:none;text-align:center;padding:8px 16px">
-      <button id="reader-auth-btn" data-onclick="readerAuthClick()" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;padding:7px 14px;font-size:12.5px;cursor:pointer;font-family:inherit"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 想為這篇作畫？向作者請求授權</button>
-    </div>
     <div class="chapter-nav" id="reader-chapter-nav">
       <button id="prev-ch-btn" data-onclick="navigateChapter(-1)" disabled>← 上一章</button>
       <span id="reader-ch-label" style="font-size:12px;color:var(--ink-light);align-self:center">—</span>
