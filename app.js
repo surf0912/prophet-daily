@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v4.99';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.00';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2520,6 +2520,7 @@ function showMqjGateInReader(target) {
   document.getElementById('reader-series-label').textContent = `${_seriesIdx + 1} / ${_seriesSibs.length}`;
   document.getElementById('reader-series-nav').style.display = '';
   document.getElementById('reader-view').classList.add('open');
+  if (window._readerChromeRefresh) window._readerChromeRefresh();   // 閘門頁短內容→直接顯示上下篇導覽
 }
 
 // Parse a forum-體 post into the original post (intro) + the running comments.
@@ -2681,6 +2682,7 @@ async function loadChapter(idx) {
   const rv = document.getElementById('reader-view');
   rv.scrollTo(0, pendingScroll || 0);   // resume to saved spot; 0 for a fresh chapter
   pendingScroll = 0;
+  if (window._readerChromeRefresh) window._readerChromeRefresh();   // 換章：導覽底座先收起（短內容則顯示）
   // save progress (including current scroll position)
   const novel = [...forumPosts, ...novels].find(n => n.id === currentNovelId);
   if (novel) {
@@ -2799,6 +2801,39 @@ function navigateChapter(dir) {
   const next = currentChapterIdx + dir;
   if (next >= 0 && next < currentChapters.length) loadChapter(next);
 }
+
+// ── 章節／系列導覽底座：閱讀時收起，往回滑或捲到底才滑出（照搬書海）──────────────
+// 掛在 #reader-view（閱讀器本身即捲動容器）。往下讀＝收起、往回滑＝滑出並停留 5 秒、
+// 篇末＝維持顯示（此時正要換篇）。短到不能捲的內容直接顯示，否則 nav 永遠搆不到。
+(function setupReaderDock() {
+  const rv = document.getElementById('reader-view');
+  if (!rv) return;
+  const EDGE = 4;
+  const atBottom = () => rv.scrollTop + rv.clientHeight >= rv.scrollHeight - EDGE;
+  // 底座裡至少一條 nav 可見才值得滑出——單篇貼文兩條都藏著，不顯示空底座（免得底部一條空邊線）
+  const hasNav = () => ['reader-chapter-nav', 'reader-series-nav']
+    .some(id => { const el = document.getElementById(id); return el && el.style.display !== 'none'; });
+  let hideT = null, lastTop = 0;
+  function show(sticky) {
+    if (!hasNav()) { rv.classList.remove('chrome-on'); return; }
+    rv.classList.add('chrome-on');
+    clearTimeout(hideT);
+    if (!sticky) hideT = setTimeout(() => { if (!atBottom()) rv.classList.remove('chrome-on'); }, 5000);
+  }
+  function hide() { clearTimeout(hideT); rv.classList.remove('chrome-on'); }
+  window._readerChromeRefresh = () => {
+    lastTop = rv.scrollTop;
+    // 換章／開篇：捲不動（短內容）就直接顯示，否則收起讓人從頭讀
+    if (rv.scrollHeight <= rv.clientHeight + EDGE) show(true); else hide();
+  };
+  rv.addEventListener('scroll', () => {
+    const top = rv.scrollTop, dy = top - lastTop;
+    lastTop = top;
+    if (atBottom()) { show(true); return; }   // 篇末停留＝正要換篇，維持顯示
+    if (dy < -2) show(false);                  // 往回滑＝找導覽，滑出並停留
+    else if (dy > 2) hide();                   // 繼續往下讀＝收起
+  }, { passive: true });
+})();
 
 function closeReader() {
   document.getElementById('reader-view').classList.remove('open');

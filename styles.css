@@ -671,11 +671,20 @@
       -webkit-user-select: none; -moz-user-select: none; user-select: none; -webkit-touch-callout: none;
     }
     .reader-content.noselect img { pointer-events: none; -webkit-user-drag: none; user-drag: none; }
-    .chapter-nav { display: flex; justify-content: space-between; padding: 16px 20px; border-top: 1px solid var(--gold-lt); background: var(--parchment2); }
+    .chapter-nav { display: flex; justify-content: space-between; padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--parchment2); }
     .chapter-nav button { padding: 8px 16px; background: var(--scarlet); color: var(--on-dark); border: none; border-radius: 3px; cursor: pointer; font-size: 13px; }
     .chapter-nav button:disabled { opacity: .4; cursor: default; }
-    /* Series (上下篇) nav floats at the bottom of the reader so you can jump parts at any scroll. */
-    #reader-series-nav { position: sticky; bottom: 0; z-index: 6; box-shadow: 0 -3px 10px rgba(26,10,0,.10); }
+    /* 章節／系列導覽底座（照搬書海）：固定螢幕底、閱讀時收在畫面外，往回滑或捲到底才由 .chrome-on 滑出。
+       兩條 nav（上一章/下一章、上一篇/下一篇）在座內直排疊放；reader-content 的底部留白已預留清出空間。 */
+    #reader-dock {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+      border-top: 1px solid var(--gold-lt); box-shadow: 0 -6px 18px -8px rgba(26,10,0,.4);
+      transform: translateY(115%); opacity: 0; pointer-events: none;
+      transition: transform .3s ease, opacity .2s ease;
+    }
+    #reader-dock .chapter-nav + .chapter-nav { border-top: 1px solid var(--gold-lt); }
+    #reader-view.chrome-on #reader-dock { transform: none; opacity: 1; pointer-events: auto; }
+    @media (prefers-reduced-motion: reduce) { #reader-dock { transition: opacity .2s ease; } }
     .chapter-list-panel { padding: 12px 18px; background: var(--parchment2); border-bottom: 1px solid var(--gold-lt); }
     .chapter-list-panel details summary { cursor: pointer; font-size: 13px; color: var(--accent); }
     .chapter-list-panel ol { margin: 8px 0 0 18px; font-size: 13px; }

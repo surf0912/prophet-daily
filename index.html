@@ -686,20 +686,23 @@
   </div>
   <div class="watermark-overlay"></div>
   <div class="reader-content" id="reader-content"></div>
-  <div class="chapter-nav" id="reader-chapter-nav">
-    <button id="prev-ch-btn" data-onclick="navigateChapter(-1)" disabled>← 上一章</button>
-    <span id="reader-ch-label" style="font-size:12px;color:var(--ink-light);align-self:center">—</span>
-    <button id="next-ch-btn" data-onclick="navigateChapter(1)">下一章 →</button>
-  </div>
-  <!-- 授權信：篇末的衍生創作入口（writer 以上、非本篇作者才顯示） -->
+  <!-- 授權信：篇末的衍生創作入口（writer 以上、非本篇作者才顯示）——留在內文流末，非浮動 -->
   <div id="reader-auth-wrap" style="display:none;text-align:center;padding:4px 16px 16px">
     <button id="reader-auth-btn" data-onclick="readerAuthClick()" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;padding:8px 16px;font-size:12.5px;cursor:pointer;font-family:inherit"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 想為這篇作畫？向作者請求授權</button>
   </div>
-  <!-- 系列(上下集)導覽：在同系列的「不同作品」之間切換 -->
-  <div class="chapter-nav" id="reader-series-nav" style="display:none">
-    <button id="prev-series-btn" data-onclick="navigateSeries(-1)">← 上一篇</button>
-    <span id="reader-series-label" style="font-size:12px;color:var(--ink-light);align-self:center">—</span>
-    <button id="next-series-btn" data-onclick="navigateSeries(1)">下一篇 →</button>
+  <!-- 章節／系列導覽底座（照搬書海）：閱讀時收起，往回滑或捲到底才滑出；上一章/下一章與上一篇/下一篇同座疊放 -->
+  <div id="reader-dock">
+    <div class="chapter-nav" id="reader-chapter-nav">
+      <button id="prev-ch-btn" data-onclick="navigateChapter(-1)" disabled>← 上一章</button>
+      <span id="reader-ch-label" style="font-size:12px;color:var(--ink-light);align-self:center">—</span>
+      <button id="next-ch-btn" data-onclick="navigateChapter(1)">下一章 →</button>
+    </div>
+    <!-- 系列(上下集)導覽：在同系列的「不同作品」之間切換 -->
+    <div class="chapter-nav" id="reader-series-nav" style="display:none">
+      <button id="prev-series-btn" data-onclick="navigateSeries(-1)">← 上一篇</button>
+      <span id="reader-series-label" style="font-size:12px;color:var(--ink-light);align-self:center">—</span>
+      <button id="next-series-btn" data-onclick="navigateSeries(1)">下一篇 →</button>
+    </div>
   </div>
 </div>
 
