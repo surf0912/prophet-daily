@@ -28,7 +28,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHARS_DIR = os.path.join(REPO, "chars")
 WALL_DIR = os.path.join(REPO, "wallpapers")
 LOGO = os.path.join(REPO, "tools", "watermark_logo.png")   # repo 內建，不依賴 wp
-PHONE_MAX_W, DESK_MAX_W = 1080, 1366
+PHONE_MAX_W, DESK_MAX_W = 1080, 2048   # 桌機 2048：1366 在 Retina（2x）上放大逾兩倍、明顯糊
 DISPLAY_Q, WALL_Q = 82, 92
 
 
