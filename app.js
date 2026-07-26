@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.01';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.02';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2811,7 +2811,7 @@ function navigateChapter(dir) {
   const EDGE = 4;
   const atBottom = () => rv.scrollTop + rv.clientHeight >= rv.scrollHeight - EDGE;
   // 底座裡至少一條 nav 可見才值得滑出——單篇貼文兩條都藏著，不顯示空底座（免得底部一條空邊線）
-  const hasNav = () => ['reader-chapter-nav', 'reader-series-nav']
+  const hasNav = () => ['reader-auth-wrap', 'reader-chapter-nav', 'reader-series-nav']
     .some(id => { const el = document.getElementById(id); return el && el.style.display !== 'none'; });
   let hideT = null, lastTop = 0;
   function show(sticky) {
