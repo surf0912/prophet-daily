@@ -908,10 +908,13 @@
     .btn-close-modal { display: block; width: 100%; margin-top: 16px; padding: 12px; background: var(--chrome-dk); color: var(--gold); border: none; border-radius: 3px; cursor: pointer; }
 
     /* ── Loading spinner ── */
-    .spinner { display: flex; justify-content: center; padding: 40px; }
-    .spinner::after {
-      content: ''; width: 36px; height: 36px; border: 3px solid var(--gold-lt);
-      border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite;
+    /* 轉圈本體就是 .spinner 自己，不再畫在 ::after 上——Safari 對「父層由 display:none 切成顯示」
+       時的偽元素動畫會不啟動（桌機與 iOS 都出現過圈圈定住不轉）。動畫掛在真實元素上就沒這問題。
+       所有呼叫端都是 <div class="spinner">（部分帶 inline margin 覆寫），結構不必改。 */
+    .spinner {
+      box-sizing: border-box; width: 36px; height: 36px; margin: 40px auto;
+      border: 3px solid var(--gold-lt); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .7s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
