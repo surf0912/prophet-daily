@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.03';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.04';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2459,6 +2459,8 @@ async function openNovel(novelId) {
     updateSeriesNav(novel);                                     // 上一篇/下一篇 only after the content is in
     const aw = document.getElementById('reader-auth-wrap');     // 篇末「想為這篇作畫」也等內容進來才浮現
     if (aw) aw.style.display = window._readerAuthTarget ? '' : 'none';
+    // 授權入口的顯示可能晚於 updateSeriesNav（無系列時它同步跑完）——再刷一次，把底座淨空墊到正確元素上
+    if (window._readerChromeRefresh) window._readerChromeRefresh();
     api(`/novels/${novelId}/view`, { method: 'POST' }).catch(() => {});   // 記 view 移到首屏顯示後，不跟章節請求搶連線
   });
 }
@@ -2824,11 +2826,16 @@ function navigateChapter(dir) {
   function hide() { clearTimeout(hideT); rv.classList.remove('chrome-on'); }
   window._readerChromeRefresh = () => {
     lastTop = rv.scrollTop;
-    // 內文底部留白＝底座實際高度＋間距（transform 不影響 offsetHeight，收起時也量得到）。
-    // 捲到底時底座常駐，文末與授權入口永遠露在它上方；無 nav（單篇貼文）則還原 CSS 預設。
+    // 清出底座高度的空間——墊在「流程中真正的最後一個元素」上：授權入口顯示時是它，
+    // 否則是內文。先前墊在內文上，但授權入口排在內文之後，等於沒墊到、照樣被蓋住。
+    // 高度直接量底座（transform 不影響 offsetHeight，收起時也量得到），只加 8px 間距，不多留。
     const dock = document.getElementById('reader-dock');
     const rc = document.getElementById('reader-content');
-    if (rc && dock) rc.style.paddingBottom = hasNav() ? (dock.offsetHeight + 18) + 'px' : '';
+    const aw = document.getElementById('reader-auth-wrap');
+    const pad = (dock && hasNav()) ? (dock.offsetHeight + 8) + 'px' : '';
+    const authOn = aw && aw.style.display !== 'none';
+    if (rc) rc.style.marginBottom = authOn ? '' : pad;
+    if (aw) aw.style.marginBottom = authOn ? pad : '';
     // 換章／開篇：捲不動（短內容）就直接顯示，否則收起讓人從頭讀
     if (rv.scrollHeight <= rv.clientHeight + EDGE) show(true); else hide();
   };

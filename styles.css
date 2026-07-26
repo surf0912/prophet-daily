@@ -604,7 +604,7 @@
       border-radius: 2px;
       box-shadow: 0 6px 16px rgba(26,10,0,.28);
     }
-    .reader-content { padding: 24px 20px 28px; font-size: var(--reader-font, 15px); line-height: 2; color: var(--ink); user-select: none; flex: 1 0 auto; }
+    .reader-content { padding: 24px 20px 20px; font-size: var(--reader-font, 15px); line-height: 2; color: var(--ink); user-select: none; flex: 1 0 auto; }
     /* 羊皮紙貼文沒有底部 sticky 導覽，收小底部留白，封存框下方不留一大片空白 */
     .reader-content.rc-forum { padding-bottom: 28px; }
     .reader-content p { font-size: inherit; }
@@ -671,8 +671,8 @@
       -webkit-user-select: none; -moz-user-select: none; user-select: none; -webkit-touch-callout: none;
     }
     .reader-content.noselect img { pointer-events: none; -webkit-user-drag: none; user-drag: none; }
-    .chapter-nav { display: flex; justify-content: space-between; align-items: center; padding: 5px 16px; background: none; }
-    .chapter-nav button { padding: 5px 13px; background: var(--scarlet); color: var(--on-dark); border: none; border-radius: 3px; cursor: pointer; font-size: 12.5px; }
+    .chapter-nav { display: flex; justify-content: space-between; align-items: center; padding: 4px 16px; background: none; }
+    .chapter-nav button { padding: 4px 12px; background: var(--scarlet); color: var(--on-dark); border: none; border-radius: 3px; cursor: pointer; font-size: 12.5px; line-height: 1.5; }
     .chapter-nav button:disabled { opacity: .4; cursor: default; }
     /* 章節／系列導覽底座（照搬書海）：固定螢幕底、閱讀時收在畫面外，往回滑或捲到底才由 .chrome-on 滑出。
        背景／安全區留白掛在底座本身（不逐條 bar 疊加），內裝授權入口＋上一章下一章＋上一篇下一篇直排。 */
@@ -680,7 +680,9 @@
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
       background: var(--parchment2); border-top: 1px solid var(--gold-lt);
       box-shadow: 0 -6px 18px -8px rgba(26,10,0,.4);
-      padding-bottom: env(safe-area-inset-bottom, 0px);
+      /* 安全區收斂：整條 env() 在 iPhone 是 34px 的 home indicator 帶，掛滿等於 bar 底下一大片
+         死空白。沿用全站 nav 的同一套算式，只留約 6px 淨空。 */
+      padding-bottom: max(2px, calc(env(safe-area-inset-bottom, 0px) - 28px));
       transform: translateY(115%); opacity: 0; pointer-events: none;
       transition: transform .3s ease, opacity .2s ease;
     }
