@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.17';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.18';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1645,6 +1645,17 @@ async function renderFavUpdates() {
           }
           return;
         }
+        // 畫師主動授權（offer_image）自己按了同意之後，圖還是要到編輯頁掛上——提醒一次
+        if (a.direction === 'offer_image' && a.status === 'approved') {
+          const kp = `authapply:${a.id}`;
+          const tp = new Date(a.decided_at || a.created_at).getTime();
+          if (!(read.has(kp) && tp < cutoff)) {
+            items.push({ kind: 'authin', id: a.id, key: kp, readKey: kp, title: '有一幅畫可以掛上你的文章',
+              sub: `《${a.artwork_title || '畫作'}》→ 到「作品管理 → 編輯」的〈獲授權畫作〉把圖掛上`,
+              at: a.decided_at || a.created_at, unread: !read.has(kp) });
+          }
+          return;
+        }
         if (a.status === 'cancelled') {   // 對方放棄了你給的授權：告知一聲（鍵含狀態，故為新通知）
           const kc = `authin:${a.id}:cancelled`;
           const tc = new Date(a.decided_at || a.created_at).getTime();
@@ -1665,8 +1676,13 @@ async function renderFavUpdates() {
         const t = new Date(a.decided_at).getTime();
         const k = `authout:${a.id}:${a.status}`;
         if (read.has(k) && t < cutoff) return;
+        // 談成不等於掛上：文首圖要作者自己到「作品管理 → 編輯 → 獲授權畫作」選一次，
+        // 不提示的話大多數人會以為同意後圖就自動出現在文章上。
+        const needApply = a.status === 'approved' && (a.direction === 'use_image' || a.direction === 'offer_image');
         items.push({ kind: 'authout', id: a.id, key: k, readKey: k, title: a.status === 'revoked' ? '一封授權已被收回' : '你的授權信有了回音',
-          sub: (a.status === 'approved' ? '已同意' : a.status === 'revoked' ? '對方已收回授權' : '已婉拒') + ((a.reply_note || '').trim() ? `：${a.reply_note.trim()}` : ''),
+          sub: (a.status === 'approved' ? '已同意' : a.status === 'revoked' ? '對方已收回授權' : '已婉拒')
+            + ((a.reply_note || '').trim() ? `：${a.reply_note.trim()}` : '')
+            + (needApply ? '　→ 到「作品管理 → 編輯」的〈獲授權畫作〉把圖掛上' : ''),
           at: a.decided_at, unread: !read.has(k) });
       });
     } catch (e) {}
@@ -3870,7 +3886,9 @@ async function revokeAuth(id) {
 // 裁決彈窗（同意／婉拒各可附一句話）
 let _authDecideCtx = null;
 function openAuthDecide(id, approve) {
-  _authDecideCtx = { id, status: approve ? 'approved' : 'declined' };
+  // 帶上 direction：同意畫師主動授權（offer_image）後要提醒去編輯頁掛圖
+  const _a = [...((_myAuths || {}).received || []), ...((_myAuths || {}).sent || [])].find(x => x.id === id) || {};
+  _authDecideCtx = { id, status: approve ? 'approved' : 'declined', direction: _a.direction };
   const t = document.getElementById('auth-decide-title');
   const s = document.getElementById('auth-decide-sub');
   const c = document.getElementById('auth-decide-confirm');
@@ -3886,7 +3904,10 @@ async function saveAuthDecide() {
     await api(`/authorizations/${_authDecideCtx.id}`, { method: 'PATCH', body: JSON.stringify({
       status: _authDecideCtx.status, reply_note: (document.getElementById('auth-decide-note').value || '').trim() }) });
     document.getElementById('auth-decide-modal').classList.remove('open');
-    toast(_authDecideCtx.status === 'approved' ? '已同意授權' : '已婉拒');
+    toast(_authDecideCtx.status !== 'approved' ? '已婉拒'
+      : (_authDecideCtx.direction === 'offer_image'
+          ? '已同意——記得到「作品管理 → 編輯」的〈獲授權畫作〉把圖掛上'
+          : '已同意授權'));
     _authDecideCtx = null; _myAuths = null;
     if (_authBoxEl) renderAuthMailbox(_authBoxEl);
   } catch (e) { toast(e.message); }
