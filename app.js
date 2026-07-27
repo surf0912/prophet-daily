@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.12';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.13';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3733,12 +3733,12 @@ function setReviewMode(mode) {
 let _authReqCtx = null;
 async function openAuthRequest(direction, targetId, targetTitle, targetOwnerName) {
   const mine = await loadMyAuths(true);   // 強制重抓：對方同意/婉拒發生在別的 session，快取不會自己更新
-  const dupe = (mine.sent || []).find(a => a.direction === direction
+  // 已收回的信不算「已寄過」——收回後可再申請一次（後端同規）
+  const dupe = (mine.sent || []).filter(a => a.status !== 'revoked').find(a => a.direction === direction
     && (direction === 'use_image' ? a.artwork_id === targetId : a.work_id === targetId));
   if (dupe) {
     toast(dupe.status === 'pending' ? '授權信已寄出，等待對方回覆'
       : dupe.status === 'approved' ? '你已獲得這件作品的授權'
-      : dupe.status === 'revoked' ? '這次授權已被對方收回，如需再用請另行聯繫作者'
       : '這封授權信曾被婉拒，無法重寄');
     return;
   }
@@ -3858,9 +3858,10 @@ async function renderGdAuth(it) {
   b.setAttribute('data-onclick', '');
   const mine = await loadMyAuths(true);   // 強制重抓：對方同意/婉拒發生在別的 session，快取不會自己更新
   if (!_galleryDetailItem || _galleryDetailItem.id !== it.id) return;   // 已切到別幅
-  const dupe = (mine.sent || []).find(a => a.direction === 'use_image' && a.artwork_id === it.id);
+  const dupe = (mine.sent || []).filter(a => a.status !== 'revoked')
+    .find(a => a.direction === 'use_image' && a.artwork_id === it.id);   // 已收回＝可再請求，鈕要留著
   if (dupe) {
-    b.textContent = dupe.status === 'pending' ? '授權信已寄出' : dupe.status === 'approved' ? '已獲授權' : dupe.status === 'revoked' ? '授權已收回' : '已婉拒';
+    b.textContent = dupe.status === 'pending' ? '授權信已寄出' : dupe.status === 'approved' ? '已獲授權' : '已婉拒';
     b.disabled = true; b.style.opacity = '.6';
   } else {
     b.disabled = false; b.style.opacity = '';
