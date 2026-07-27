@@ -700,7 +700,7 @@
          收縮成內容寬（實測 498px），與標題列／導覽列的 720px 欄寬對不齊。 */
       .reader-content { width: 100%; max-width: 720px; margin: 0 auto; padding: 44px 32px 28px; }
       .reader-header > div, .chapter-list-panel > details,
-      #reader-auth-wrap > button, #reader-dock .chapter-nav {
+      #reader-auth-wrap > div, #reader-dock .chapter-nav {
         max-width: 720px; margin-left: auto; margin-right: auto;
       }
       /* 文首插圖跟著閱讀欄，不再拉成整個視窗寬 */
