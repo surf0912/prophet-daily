@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.09';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.10';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1642,7 +1642,7 @@ async function renderFavUpdates() {
         const k = `authout:${a.id}:${a.status}`;
         if (read.has(k) && t < cutoff) return;
         items.push({ kind: 'authout', id: a.id, key: k, readKey: k, title: '你的授權信有了回音',
-          sub: (a.status === 'approved' ? '已同意' : '已婉拒') + ((a.reply_note || '').trim() ? `：${a.reply_note.trim()}` : ''),
+          sub: (a.status === 'approved' ? '已同意' : a.status === 'revoked' ? '對方已收回授權' : '已婉拒') + ((a.reply_note || '').trim() ? `：${a.reply_note.trim()}` : ''),
           at: a.decided_at, unread: !read.has(k) });
       });
     } catch (e) {}
@@ -3095,7 +3095,7 @@ async function loadAuthMonitor() {
     const rows = await api('/authorizations/all', { background: true });
     if (!rows || !rows.length) { el.innerHTML = '<p style="font-size:13px;color:var(--ink-light)">尚無授權往來</p>'; return; }
     const DIR = { use_image: '借圖', derive_art: '求畫' };
-    const STAT = { pending: ['待回覆', 'var(--ink-light)'], approved: ['已同意', 'var(--series)'], declined: ['已婉拒', 'var(--accent)'] };
+    const STAT = { pending: ['待回覆', 'var(--ink-light)'], approved: ['已同意', 'var(--series)'], declined: ['已婉拒', 'var(--accent)'], revoked: ['已收回', 'var(--accent)'] };
     el.innerHTML = rows.map(a => {
       const dir = DIR[a.direction] || a.direction;
       const st = STAT[a.status] || [a.status, 'var(--ink-light)'];
@@ -3640,7 +3640,7 @@ async function loadMyAuths(force) {
   catch (e) { _myAuths = { sent: [], received: [] }; }
   return _myAuths;
 }
-const AUTH_STATUS = { pending: '待回覆', approved: '已同意', declined: '已婉拒' };
+const AUTH_STATUS = { pending: '待回覆', approved: '已同意', declined: '已婉拒', revoked: '已收回' };
 // 信件一句話摘要。received=true 用「你的」視角。
 function _authSummary(a, received) {
   const art = escapeHtml(a.artwork_title || '畫作');
@@ -3662,7 +3662,7 @@ async function renderAuthMailbox(elId) {
   const admin = isAdminUser();
   const noteLine = (t, label) => (t || '').trim()
     ? `<div style="font-size:12px;color:var(--ink-light);margin-top:4px;padding-left:8px;border-left:2px solid var(--gold-lt)">${label}「${escapeHtml(t.trim())}」</div>` : '';
-  const badge = a => `<span style="font-size:11px;padding:1px 8px;border-radius:9px;background:${a.status === 'approved' ? 'rgba(45,74,30,.15)' : a.status === 'declined' ? 'rgba(122,42,42,.12)' : 'rgba(160,130,60,.18)'};color:${a.status === 'approved' ? 'var(--series)' : a.status === 'declined' ? 'var(--accent)' : 'var(--ink-light)'}">${AUTH_STATUS[a.status] || ''}</span>`;
+  const badge = a => `<span style="font-size:11px;padding:1px 8px;border-radius:9px;background:${a.status === 'approved' ? 'rgba(45,74,30,.15)' : (a.status === 'declined' || a.status === 'revoked') ? 'rgba(122,42,42,.12)' : 'rgba(160,130,60,.18)'};color:${a.status === 'approved' ? 'var(--series)' : (a.status === 'declined' || a.status === 'revoked') ? 'var(--accent)' : 'var(--ink-light)'}">${AUTH_STATUS[a.status] || ''}</span>`;
   const thumb = a => a.artwork_url ? `<img src="${escapeHtml(a.artwork_url)}" alt="" style="width:46px;height:60px;object-fit:cover;border-radius:3px;border:3px solid var(--gold-lt);flex-shrink:0" />` : '';
   const card = (a, received) => {
     const acts = [];
@@ -3672,6 +3672,9 @@ async function renderAuthMailbox(elId) {
     }
     if (!received && a.status === 'pending') {
       acts.push(`<button data-onclick="withdrawAuth('${a.id}')" style="font-size:12px;padding:6px 14px;border:1px solid var(--ink-light);background:none;color:var(--ink-light);border-radius:6px;cursor:pointer">撤回</button>`);
+    }
+    if ((received || admin) && a.status === 'approved') {
+      acts.push(`<button data-onclick="revokeAuth('${a.id}')" style="font-size:12px;padding:6px 14px;border:1px solid var(--accent);background:none;color:var(--accent);border-radius:6px;cursor:pointer">收回授權</button>`);
     }
     if (admin && received && a.status === 'declined') {
       acts.push(`<button data-onclick="adminResetAuth('${a.id}')" style="font-size:12px;padding:6px 14px;border:1px solid var(--accent);background:none;color:var(--accent);border-radius:6px;cursor:pointer">刪除信（允許重寄）</button>`);
@@ -3725,6 +3728,7 @@ async function openAuthRequest(direction, targetId, targetTitle, targetOwnerName
   if (dupe) {
     toast(dupe.status === 'pending' ? '授權信已寄出，等待對方回覆'
       : dupe.status === 'approved' ? '你已獲得這件作品的授權'
+      : dupe.status === 'revoked' ? '這次授權已被對方收回，如需再用請另行聯繫作者'
       : '這封授權信曾被婉拒，無法重寄');
     return;
   }
@@ -3771,6 +3775,26 @@ async function sendAuthRequest() {
     if (_galleryDetailItem) renderGdAuth(_galleryDetailItem);   // 詳情卡開著就更新鈕狀態
   } catch (e) { toast(e.message); }
 }
+// 收回授權（授權者本人或管理員）：只對「已同意」出現。連帶把兌現的成果撤下——
+// use_image 會把對方文章的文首圖與畫師署名清掉，所以二次確認要把後果講明白。
+async function revokeAuth(id) {
+  const box = _myAuths || {};
+  const a = [...(box.received || []), ...(box.sent || [])].find(x => x.id === id) || {};
+  const isUse = a.direction === 'use_image';
+  const warn = isUse
+    ? `收回後，這幅畫會從《${a.work_title || '那篇文章'}》的文首撤下，畫師署名一併移除。`
+    : '收回後，那幅畫將不再標示「源自」你的文章（畫作本身不會被刪除）。';
+  if (!confirm(`確定收回這次授權？\n\n${warn}\n對方會收到一則貓頭鷹通知。此動作無法復原。`)) return;
+  try {
+    const r = await api(`/authorizations/${id}/revoke`, { method: 'POST', body: JSON.stringify({}) });
+    toast(r && r.unapplied ? '已收回授權，文首圖也已撤下' : '已收回授權');
+    _myAuths = null;
+    if (_authBoxEl) renderAuthBox(_authBoxEl);
+    if (typeof loadNovels === 'function') loadNovels();
+    if (typeof loadGallery === 'function' && forumTab === 'gallery') loadGallery();
+  } catch (e) { toast(e.message || '收回失敗'); }
+}
+
 // 裁決彈窗（同意／婉拒各可附一句話）
 let _authDecideCtx = null;
 function openAuthDecide(id, approve) {
@@ -3826,7 +3850,7 @@ async function renderGdAuth(it) {
   if (!_galleryDetailItem || _galleryDetailItem.id !== it.id) return;   // 已切到別幅
   const dupe = (mine.sent || []).find(a => a.direction === 'use_image' && a.artwork_id === it.id);
   if (dupe) {
-    b.textContent = dupe.status === 'pending' ? '授權信已寄出' : dupe.status === 'approved' ? '已獲授權' : '已婉拒';
+    b.textContent = dupe.status === 'pending' ? '授權信已寄出' : dupe.status === 'approved' ? '已獲授權' : dupe.status === 'revoked' ? '授權已收回' : '已婉拒';
     b.disabled = true; b.style.opacity = '.6';
   } else {
     b.disabled = false; b.style.opacity = '';
