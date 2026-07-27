@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.07';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.08';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3936,6 +3936,7 @@ function renderGallery() {
     const gf = document.getElementById('gtab-fav'); if (gf) gf.classList.toggle('on', inFav);
     const gh = document.getElementById('gtab-hidden'); if (gh) gh.classList.toggle('on', inHidden);
   }
+  { const sb = document.getElementById('gallery-searchbar'); if (sb) sb.style.display = chromeOff ? 'none' : ''; }
   const fb = document.getElementById('gallery-filter-bar');
   if (fb) {
     fb.style.display = chromeOff ? 'none' : '';
@@ -3951,14 +3952,20 @@ function renderGallery() {
   }
   const hid = hiddenGallery();
   const notHidden = it => !hid.has(photoKey(it.image_url));
-  const items = inHidden
+  // 搜尋：沿用全站的 matchesQuery（標題／作者／系列／角色名或代碼）。三種檢視都套，
+  // 收藏夾與已隱藏裡也找得到；搜尋框收合時（收藏夾檢視）值仍在，故一律讀當下輸入。
+  const gq = ((document.getElementById('gallery-search-input') || {}).value || '').trim().toLowerCase();
+  const items = (inHidden
     ? _galleryItems.filter(it => hid.has(photoKey(it.image_url)))
     : inFav
       ? _galleryItems.filter(it => favIds.has(it.id)).filter(notHidden)
-      : applyClassFilter(_galleryItems, galleryCat, galleryChars).filter(notHidden);
+      : applyClassFilter(_galleryItems, galleryCat, galleryChars).filter(notHidden)
+  ).filter(it => matchesQuery(it, gq));
   if (!items.length) {
     wall.style.columns = '1';
-    const msg = inHidden
+    const msg = gq
+      ? `找不到符合「${escapeHtml(gq)}」的畫作<br><small>可試著搜尋畫作標題、繪師署名或角色名</small>`
+      : inHidden
       ? '沒有已隱藏的畫作<br><small>在畫作詳情點眼睛鈕，就能把不想看到的圖藏起來</small>'
       : inFav
         ? '你還沒收藏任何畫作<br><small>打開畫作詳情，點標題旁的 ☆ 就能收進這裡</small>'
