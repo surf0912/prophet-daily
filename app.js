@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.15';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.16';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1631,6 +1631,20 @@ async function renderFavUpdates() {
     try {
       const mine = await loadMyAuths(true);
       (mine.received || []).forEach(a => {
+        // 求畫授權談成後，製圖師畫完上傳、通過審核上牆——作者原本完全不會知道畫好了、
+        // 也不知道畫成什麼樣（授權當下畫還不存在）。上牆時通知一次，點進去直接看成品。
+        if (a.direction === 'derive_art' && a.status === 'approved'
+            && a.artwork_id && a.artwork_status === 'approved') {
+          const ka = `artdone:${a.id}:${a.artwork_id}`;
+          const ta = new Date(a.artwork_at || a.decided_at || a.created_at).getTime();
+          if (!(read.has(ka) && ta < cutoff)) {
+            items.push({ kind: 'pub', workKind: 'image', id: a.artwork_id, key: ka, readKey: ka,
+              title: '你的文章有了衍生畫作',
+              sub: `《${a.work_title || '你的文章'}》· 繪師 ${a.requester_name || ''}`.trim(),
+              at: a.artwork_at || a.decided_at || a.created_at, unread: !read.has(ka) });
+          }
+          return;
+        }
         if (a.status === 'cancelled') {   // 對方放棄了你給的授權：告知一聲（鍵含狀態，故為新通知）
           const kc = `authin:${a.id}:cancelled`;
           const tc = new Date(a.decided_at || a.created_at).getTime();
