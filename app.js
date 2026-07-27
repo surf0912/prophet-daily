@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.10';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.11';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1641,7 +1641,7 @@ async function renderFavUpdates() {
         const t = new Date(a.decided_at).getTime();
         const k = `authout:${a.id}:${a.status}`;
         if (read.has(k) && t < cutoff) return;
-        items.push({ kind: 'authout', id: a.id, key: k, readKey: k, title: '你的授權信有了回音',
+        items.push({ kind: 'authout', id: a.id, key: k, readKey: k, title: a.status === 'revoked' ? '一封授權已被收回' : '你的授權信有了回音',
           sub: (a.status === 'approved' ? '已同意' : a.status === 'revoked' ? '對方已收回授權' : '已婉拒') + ((a.reply_note || '').trim() ? `：${a.reply_note.trim()}` : ''),
           at: a.decided_at, unread: !read.has(k) });
       });
