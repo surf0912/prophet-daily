@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.11';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.12';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1611,7 +1611,8 @@ async function renderFavUpdates() {
       const t = new Date(n.approved_at).getTime();
       if (isNaN(t) || t < cutoff) return;
       const k = `pub:${n.id}`;
-      items.push({ kind: 'pub', id: n.id, key: k, readKey: k, title: '你的作品已刊出', sub: n.title, at: n.approved_at, unread: !read.has(k) });
+      items.push({ kind: 'pub', id: n.id, workKind: n.kind || 'novel', key: k, readKey: k,
+        title: n.kind === 'image' ? '你的畫作已上牆' : '你的作品已刊出', sub: n.title, at: n.approved_at, unread: !read.has(k) });
     });
   }
   // 許願池：我自己的願望被回應（文字回覆 或 狀態變動）→ 通知
@@ -1691,10 +1692,19 @@ function dismissNotice(i) {
   });
 }
 function toggleFavOwl() { const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = !p.hidden; }
-function owlOpenIdx(i) {   // 章節更新/作品刊出：標記已讀（帶前綴 key）並打開作品
+async function owlOpenIdx(i) {   // 章節更新/作品刊出：標記已讀（帶前綴 key）並打開作品
   const it = _owlItems[i]; if (!it) return;
   const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true;
   if (it.readKey) _markInstallmentRead(it.readKey);
+  // 畫作沒有章節：用閱讀器開會停在「此作品尚無內容」——改開留影走廊的詳情卡
+  if (it.workKind === 'image') {
+    if (!(_galleryItems || []).length) {
+      try { _galleryItems = (await api('/novels/gallery', { background: true })) || []; } catch {}
+    }
+    if ((_galleryItems || []).some(x => x.id === it.id)) { openGalleryItem(it.id); return; }
+    toast('這幅畫作目前不在留影走廊上');   // 已被退件／隱藏／鎖起來
+    return;
+  }
   openNovel(it.id);
 }
 function favOwlOpen(id) { const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true; _markInstallmentRead(id); openNovel(id); }
