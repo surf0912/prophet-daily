@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.18';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.19';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2705,19 +2705,23 @@ async function loadChapter(idx) {
   try {
     const full = await api(`/chapters/${ch.id}`);
     const el = document.getElementById('reader-content');
+    // 內文一律包進 .rc-body：桌機分屏用 grid 分欄，而 textContent 產生的是文字節點、
+    // CSS 選不到，會與文首圖擠在同一欄。包成元素後圖與文才分得開。
+    el.innerHTML = '<div class="rc-body"></div>';
+    const body = el.querySelector('.rc-body');
     if (currentNovelKind === 'forum') {
       try { forumLikes = await api(`/novels/${currentNovelId}/likes`) || { counts: {}, mine: [] }; }
       catch { forumLikes = { counts: {}, mine: [] }; }
-      el.style.whiteSpace = '';
-      el.innerHTML = renderForumContent(full.content);
+      body.style.whiteSpace = '';
+      body.innerHTML = renderForumContent(full.content);
     } else {
       // Render exactly as the author typed it — preserve blank lines & spacing (WYSIWYG with the editor).
-      el.style.whiteSpace = 'pre-wrap';
-      el.textContent = full.content;
+      body.style.whiteSpace = 'pre-wrap';
+      body.textContent = full.content;
     }
     // 羊皮紙貼文沒有 sticky 上下篇導覽，不需 100px 底部留白（否則封存框下方一大片空）→ 收小
     el.classList.toggle('rc-forum', currentNovelKind === 'forum');
-  } catch { document.getElementById('reader-content').textContent = '載入失敗'; }
+  } catch { document.getElementById('reader-content').innerHTML = '<div class="rc-body">載入失敗</div>'; }
   // 文首插圖：優先用上傳的頁首圖（image_url）；沒有才退回舊約定 artwork/<作品id>.jpg
   // （管理員手放 repo、走 Pages/鏡像＋SW 快取）。只在第一章文首顯示；載入失敗＝靜靜略過。
   if (idx === 0) {
@@ -2728,19 +2732,31 @@ async function loadChapter(idx) {
       if (artSeq !== _artSeq || artNid !== currentNovelId) return;   // 已切到別的作品/章節
       const rc = document.getElementById('reader-content');
       if (!rc || rc.querySelector('.reader-artwork')) return;
+      // 圖與署名包成一欄（.rc-art）：桌機分屏時整欄 sticky 釘住，文字在右欄自己捲；
+      // 手機上它只是個普通區塊，外觀與先前相同。
+      const art = document.createElement('div');
+      art.className = 'rc-art';
       const img = document.createElement('img');
       img.src = artSrc; img.className = 'reader-artwork'; img.alt = '';
-      rc.prepend(img);
+      art.appendChild(img);
+      rc.prepend(art);
       // 授權畫作的雙署名：緊貼文首圖下方（自己上傳的頁首圖沒有畫師署名，不顯示）
+      let byEl = null;
       if (currentNovelByline && artSrc === currentNovelHeader) {
         const by = document.createElement('div');
         by.className = 'reader-byline';
         by.textContent = `文／${currentNovelByline.text}　圖／${currentNovelByline.art}`;
-        img.after(by);
+        art.appendChild(by);
+        byEl = by;
       }
+      // 文首圖若是留影走廊的畫作：標上畫名、點擊跳到畫作詳情。
+      // 文章只存了 image_url（apply 時複製過來），沒有畫作 id——用 photoKey 回查牆上那幅。
+      if (artSrc === currentNovelHeader) _linkHeaderArtwork(img, byEl, artSrc);
+      applyReaderSplit();   // 圖是非同步載入的，這時才真的知道「有圖」
     };
     artIm.src = artSrc;
   }
+  applyReaderSplit();   // 桌機：有文首圖就切成左圖右文
   const rv = document.getElementById('reader-view');
   rv.scrollTo(0, pendingScroll || 0);   // resume to saved spot; 0 for a fresh chapter
   pendingScroll = 0;
@@ -2758,6 +2774,38 @@ async function loadChapter(idx) {
     }));
     renderContinueBar();
     _pushReadingSoon();   // 續讀進度回寫帳號（防抖）
+  }
+}
+
+// 桌機分屏：文章有文首圖時，左圖右文（圖固定、文字自己捲）。掛 class 交給 CSS 判斷寬度，
+// JS 只負責回答「這篇到底有沒有圖」——圖是非同步載入的，故在載入完成與換章時各叫一次。
+function applyReaderSplit() {
+  const rv = document.getElementById('reader-view');
+  const rc = document.getElementById('reader-content');
+  if (!rv || !rc) return;
+  rv.classList.toggle('has-art', !!rc.querySelector('.reader-artwork'));
+}
+
+// 文首圖 → 留影走廊畫作：文章只複製了 image_url，沒存畫作 id，故以 photoKey 回查牆上那幅。
+// 查得到就把畫名標在署名列、整張圖變成可點擊（跳畫作詳情）；查不到（畫被退件／隱藏）就維持原樣。
+async function _linkHeaderArtwork(img, byEl, url) {
+  if (!img || !url) return;
+  try {
+    if (!(_galleryItems || []).length) _galleryItems = (await api('/novels/gallery', { background: true })) || [];
+  } catch { return; }
+  const k = photoKey(url);
+  const art = (_galleryItems || []).find(x => x.image_url && photoKey(x.image_url) === k);
+  if (!art) return;
+  img.style.cursor = 'zoom-in';
+  img.title = `《${art.title || '畫作'}》— 點擊看畫作詳情`;
+  img.addEventListener('click', () => openGalleryItem(art.id));
+  const name = `《${art.title || '無題'}》`;
+  if (byEl) byEl.textContent = `${name}　${byEl.textContent}`;
+  else {
+    const cap = document.createElement('div');
+    cap.className = 'reader-byline';
+    cap.textContent = name;
+    (img.closest('.rc-art') || img.parentNode).appendChild(cap);
   }
 }
 

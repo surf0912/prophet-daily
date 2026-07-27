@@ -691,6 +691,23 @@
     #reader-dock > div + div { border-top: 1px solid var(--gold-lt); }
     #reader-view.chrome-on #reader-dock { transform: none; opacity: 1; pointer-events: auto; }
     @media (prefers-reduced-motion: reduce) { #reader-dock { transition: opacity .2s ease; } }
+    /* 桌機分屏（≥1100px 且有文首圖）：左邊留給畫、右邊是可獨立捲動的文字。
+       畫用 sticky 釘住，讀者往下讀時圖一直在視野內；窄於 1100px 或沒有圖就維持單欄。
+       只動內距與定位，不改 DOM 順序——圖仍是 .reader-content 的第一個子元素。 */
+    @media (min-width: 1100px) {
+      #reader-view.has-art .reader-content {
+        max-width: 1180px; display: grid; grid-template-columns: 460px 1fr;
+        column-gap: 40px; align-items: start;
+      }
+      /* 圖欄跨滿所有列＋align-self:start，sticky 才有可移動的範圍（只佔一列時黏不住） */
+      #reader-view.has-art .reader-content > .rc-art {
+        grid-column: 1; grid-row: 1 / -1; position: sticky; top: 24px; align-self: start;
+      }
+      #reader-view.has-art .reader-content > .rc-art .reader-artwork { margin: 0; }
+      #reader-view.has-art .reader-content > .rc-art .reader-byline { margin: 10px 0 0; }
+      #reader-view.has-art .reader-content > .rc-body { grid-column: 2; grid-row: 1 / -1; min-width: 0; }
+    }
+
     /* ── 閱讀器：桌機版面 ──
        手機一欄到底是對的；但在寬螢幕上同一套 CSS 會讓每行橫跨整個視窗，一行三、四十字以上，
        眼睛得大幅度左右掃視，非常難讀。桌機收成一條置中的閱讀欄（約 40 字寬），兩側留白，
