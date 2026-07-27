@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.14';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.15';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2478,6 +2478,16 @@ async function openNovel(novelId) {
     updateSeriesNav(novel);                                     // 上一篇/下一篇 only after the content is in
     const aw = document.getElementById('reader-auth-wrap');     // 篇末「想為這篇作畫」也等內容進來才浮現
     if (aw) aw.style.display = window._readerAuthTarget ? '' : 'none';
+    // 第二顆入口（授權自己已上牆的畫給這篇）：手上真的有畫才顯示，避免點開才發現沒得選
+    { const ob = document.getElementById('reader-offer-btn');
+      if (ob) {
+        ob.style.display = 'none';
+        if (window._readerAuthTarget) {
+          api('/novels/?mine=true&kind=image', { background: true })
+            .then(list => { if ((list || []).some(n => n.status === 'approved' && !n.locked)) ob.style.display = ''; })
+            .catch(() => {});
+        }
+      } }
     // 授權入口的顯示可能晚於 updateSeriesNav（無系列時它同步跑完）——再刷一次，把底座淨空墊到正確元素上
     if (window._readerChromeRefresh) window._readerChromeRefresh();
     api(`/novels/${novelId}/view`, { method: 'POST' }).catch(() => {});   // 記 view 移到首屏顯示後，不跟章節請求搶連線
@@ -3669,6 +3679,11 @@ function _authSummary(a, received) {
       ? `<b>${escapeHtml(a.requester_name)}</b> 想將你的畫作《${art}》用作《${wk}》的文首圖`
       : `你向 <b>${escapeHtml(a.recipient_name)}</b> 請求《${art}》的文首圖授權（用於《${wk}》）`;
   }
+  if (a.direction === 'offer_image') {
+    return received
+      ? `<b>${escapeHtml(a.requester_name)}</b> 願意授權畫作《${art}》給你的《${wk}》作文首圖`
+      : `你將畫作《${art}》授權給 <b>${escapeHtml(a.recipient_name)}</b> 的《${wk}》`;
+  }
   return received
     ? `<b>${escapeHtml(a.requester_name)}</b> 想為你的文章《${wk}》作衍生畫作`
     : `你向 <b>${escapeHtml(a.recipient_name)}</b> 請求為《${wk}》作畫的授權`;
@@ -3759,22 +3774,35 @@ async function openAuthRequest(direction, targetId, targetTitle, targetOwnerName
   const head = document.getElementById('auth-req-target');
   if (head) head.innerHTML = direction === 'use_image'
     ? `向 <b>${escapeHtml(targetOwnerName || '作者')}</b> 請求畫作《${escapeHtml(targetTitle || '')}》的文首圖授權`
-    : `向 <b>${escapeHtml(targetOwnerName || '作者')}</b> 請求為《${escapeHtml(targetTitle || '')}》作衍生畫作的授權`;
+    : direction === 'offer_image'
+      ? `將你的畫作授權給 <b>${escapeHtml(targetOwnerName || '作者')}</b> 的《${escapeHtml(targetTitle || '')}》作文首圖`
+      : `向 <b>${escapeHtml(targetOwnerName || '作者')}</b> 請求為《${escapeHtml(targetTitle || '')}》作衍生畫作的授權`;
   const row = document.getElementById('auth-req-work-row');
   const send = document.getElementById('auth-req-send');
   const hint = document.getElementById('auth-req-work-hint');
   const sel = document.getElementById('auth-req-work');
   const note = document.getElementById('auth-req-note');
   if (note) note.value = '';
-  if (direction === 'use_image') {
+  const label = document.getElementById('auth-req-work-label');
+  if (direction === 'use_image' || direction === 'offer_image') {
+    const offering = direction === 'offer_image';
+    if (label) label.textContent = offering ? '要授權哪一幅畫作' : '用於哪篇文章';
+    if (hint) hint.textContent = offering ? '你在留影走廊上還沒有已上牆的畫作。' : '你還沒有任何文章可以掛頁首圖。';
     row.style.display = '';
     sel.style.display = ''; hint.style.display = 'none'; send.disabled = true;
     sel.innerHTML = '<option>載入中…</option>';
     document.getElementById('auth-request-modal').classList.add('open');
-    let works = [];
-    try { works = await api('/authorizations/eligible-works') || []; } catch (e) {}
-    if (!works.length) { sel.style.display = 'none'; hint.style.display = ''; send.disabled = true; return; }
-    sel.innerHTML = works.map(w => `<option value="${w.id}">《${escapeHtml(w.title)}》${w.status === 'approved' ? '' : '（待發佈）'}</option>`).join('');
+    let opts = [];
+    try {
+      opts = offering
+        // 只有「已上牆」的畫能授權：待審／被鎖的排除（後端也會擋，這裡先不讓人選到）
+        ? ((await api('/novels/?mine=true&kind=image')) || []).filter(n => n.status === 'approved' && !n.locked)
+        : (await api('/authorizations/eligible-works')) || [];
+    } catch (e) {}
+    if (!opts.length) { sel.style.display = 'none'; hint.style.display = ''; send.disabled = true; return; }
+    sel.innerHTML = opts.map(w => offering
+      ? `<option value="${w.id}">《${escapeHtml(w.title || '無題')}》</option>`
+      : `<option value="${w.id}">《${escapeHtml(w.title)}》${w.status === 'approved' ? '' : '（待發佈）'}</option>`).join('');
     send.disabled = false;
   } else {
     row.style.display = 'none'; send.disabled = false;
@@ -3789,6 +3817,11 @@ async function sendAuthRequest() {
     const wid = document.getElementById('auth-req-work').value;
     if (!wid) { toast('請選擇要用這幅畫的文章'); return; }
     body.work_id = wid;
+  }
+  if (direction === 'offer_image') {
+    const aid = document.getElementById('auth-req-work').value;
+    if (!aid) { toast('請選擇要授權的畫作'); return; }
+    body.artwork_id = aid;
   }
   try {
     await api('/authorizations/', { method: 'POST', body: JSON.stringify(body) });
@@ -3892,6 +3925,12 @@ function galleryOpenWork(id) { closeGalleryDetail(); openNovel(id); }
 function readerAuthClick() {
   const t = window._readerAuthTarget; if (!t) return;
   openAuthRequest('derive_art', t.id, t.title, t.author);
+}
+// 畫師把「已上牆的畫」授權給這篇文章當文首圖。補上先前的死角：derive_art 只能在
+// 上傳新畫作時掛授權，已上牆的畫原本無路可掛，只能把同一張圖再傳一次。
+function readerOfferClick() {
+  const t = window._readerAuthTarget; if (!t) return;
+  openAuthRequest('offer_image', t.id, t.title, t.author);
 }
 // 編輯視窗：本篇的「獲授權畫作」區（僅信上那一篇看得到；選用＝掛成文首圖）
 async function renderEditAuthArts() {

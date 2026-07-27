@@ -695,6 +695,7 @@
   <!-- 授權信：篇末的衍生創作入口（writer 以上、非本篇作者才顯示）——在內文流末、隨文字捲動 -->
   <div id="reader-auth-wrap" style="display:none;text-align:center;padding:4px 16px 6px">
     <button id="reader-auth-btn" data-onclick="readerAuthClick()" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;padding:8px 16px;font-size:12.5px;cursor:pointer;font-family:inherit"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 想為這篇作畫？向作者請求授權</button>
+    <button id="reader-offer-btn" data-onclick="readerOfferClick()" style="display:none;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;padding:8px 16px;font-size:12.5px;cursor:pointer;font-family:inherit;margin-top:8px"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 把我已上牆的畫授權給這篇</button>
   </div>
   <!-- 章節／系列導覽底座（照搬書海）：閱讀時收起，往回滑或捲到底才滑出 -->
   <div id="reader-dock">
@@ -770,7 +771,7 @@
     <h3><svg width="17" height="17" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-edit"/></svg> 寄一封授權信</h3>
     <p id="auth-req-target" style="font-size:13px;margin:6px 0 10px"></p>
     <div id="auth-req-work-row">
-      <p style="font-size:12px;color:var(--ink-light);margin:0 0 6px">用於哪篇文章</p>
+      <p id="auth-req-work-label" style="font-size:12px;color:var(--ink-light);margin:0 0 6px">用於哪篇文章</p>
       <select id="auth-req-work" style="width:100%;padding:9px 10px;font-family:inherit;font-size:13px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></select>
       <p id="auth-req-work-hint" style="display:none;font-size:12px;color:var(--accent);margin:6px 0 0">你還沒有任何文章可以掛頁首圖。</p>
     </div>
