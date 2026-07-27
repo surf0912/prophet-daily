@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.08';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.09';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3182,7 +3182,54 @@ let _monitorTimer = null;
 function stopMonitor() { if (_monitorTimer) { clearInterval(_monitorTimer); _monitorTimer = null; } }
 function startMonitor() {
   loadMonitor();
+  loadActivityStats();   // 讀者活躍：進頁抓一次就好——DB 查詢，且日活不需要 10 秒刷新
   _monitorTimer = setInterval(loadMonitor, 10000);   // refresh every 10s while viewing
+}
+
+// ── 讀者活躍（監看頁頂端）──────────────────────────────────────────────
+// 與下方「在線」不同：那個存記憶體、重啟歸零；這裡查 novel_views（DB），以「當天真的
+// 開啟作品閱讀」為準，重啟不受影響。
+async function loadActivityStats() {
+  const el = document.getElementById('activity-body');
+  if (!el) return;
+  let s;
+  try { s = await api('/permissions/activity-stats', { background: true }); }
+  catch (e) { el.innerHTML = ''; return; }              // 取不到就整區不顯示，不打擾
+  if (!s || !s.available) { el.innerHTML = ''; return; }
+  const delta = s.today - s.yesterday;
+  const deltaTxt = delta === 0
+    ? '與昨日持平'
+    : `<span style="color:${delta > 0 ? 'var(--series)' : 'var(--accent)'}">${delta > 0 ? '▲' : '▼'} ${Math.abs(delta)}</span> 較昨日`;
+  const card = (label, val, sub) => `
+    <div style="flex:1;min-width:96px;box-sizing:border-box;background:var(--parchment);border:1px solid var(--gold-lt);border-radius:10px;padding:12px 14px">
+      <div style="font-size:12px;color:var(--ink-light)">${label}</div>
+      <div style="font-size:22px;font-weight:bold;color:var(--ink);line-height:1.3">${val}</div>
+      <div style="font-size:11px;color:var(--ink-light);opacity:.85;margin-top:3px">${sub}</div>
+    </div>`;
+  const days = s.daily || [];
+  const mx = Math.max(...days.map(d => d.n), 1);
+  const bars = days.map((d, i) => {
+    const h = d.n ? Math.max(4, Math.round(d.n / mx * 56)) : 1;
+    const isToday = i === days.length - 1;
+    return `<div title="${escapeHtml(d.d)}：${d.n} 人" style="flex:1;height:${h}px;border-radius:2px 2px 0 0;background:${isToday ? 'var(--scarlet)' : 'var(--gold)'}"></div>`;
+  }).join('');
+  const fmtMd = iso => { const p = String(iso).split('-'); return p.length === 3 ? `${+p[1]}/${+p[2]}` : iso; };
+  el.innerHTML = `
+    <div style="font-size:13px;color:var(--accent);letter-spacing:.06em;margin-bottom:10px">${ic('ic-users', 13)} 讀者活躍</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      ${card('今日活躍', s.today, deltaTxt)}
+      ${card('昨日', s.yesterday, `近 7 天平均 ${s.avg7}`)}
+      ${card('近 7 天', s.uniq7, `近 30 天 ${s.uniq30} 人`)}
+    </div>
+    <div style="margin-top:12px;background:var(--parchment);border:1px solid var(--gold-lt);border-radius:10px;padding:12px 14px">
+      <div style="font-size:11px;color:var(--ink-light)">每日活躍人數（近 14 天）</div>
+      <div style="display:flex;align-items:flex-end;gap:3px;height:56px;margin-top:8px">${bars}</div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink-light);opacity:.7;margin-top:4px">
+        <span>${fmtMd(days[0] && days[0].d)}</span><span>${fmtMd(days[7] && days[7].d)}</span><span>今天</span>
+      </div>
+      <div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:8px;line-height:1.6">※ 活躍＝當天實際開啟作品閱讀的人（以閱讀紀錄計，非僅開啟 App）。資料存於資料庫，伺服器重啟不影響。</div>
+    </div>
+    <div style="height:16px"></div>`;
 }
 function _fmtUptime(s) {
   if (s < 60) return s + ' 秒';
