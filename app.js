@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.25';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.26';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -5285,11 +5285,17 @@ function _adminGroupBySeries(list) {
   for (const n of list) {
     if (seen.has(n.id)) continue;
     if (!n.series) { seen.add(n.id); out.push(_adminNovelCard(n)); continue; }
-    const members = list.filter(m => m.series === n.series)
+    // 畫作系列與文章系列是兩件事（留影走廊自己也把畫作依系列疊起來），同名時不能併成一列——
+    // 併了會出現「系列合集 共 2 篇」裡混著畫，點開才發現不是自己以為的那個系列。
+    const isImg = n.kind === 'image';
+    const members = list.filter(m => m.series === n.series && (m.kind === 'image') === isImg)
       .sort((a, b) => (a.series_order || 0) - (b.series_order || 0)
         || new Date(a.created_at || 0) - new Date(b.created_at || 0));
     members.forEach(m => seen.add(m.id));
-    const expanded = _expandedSeries.has(n.series);
+    // 展開狀態的鍵：文章系列沿用系列名，與意若思鏡同步；畫作系列另加前綴，
+    // 免得同名的兩個系列在兩邊互相牽動（意若思鏡沒有畫作系列，不會撞到）。
+    const key = isImg ? '圖::' + n.series : n.series;
+    const expanded = _expandedSeries.has(key);
     // 標籤與意若思鏡同規：成員的類型＋角色去重彙整（類型前、角色後，保持首次出現順序）
     const cats = [], chars = [];
     members.forEach(m => {
@@ -5303,15 +5309,22 @@ function _adminGroupBySeries(list) {
       + (rej ? `<span class="t-cat" style="background:rgba(201,168,76,.28);color:var(--ink-light)">${ic('ic-x', 11)} 已退回 ${rej}</span>` : '');
     const newest = members.reduce((x, m) => (!x || new Date(m.created_at || 0) > new Date(x.created_at || 0)) ? m : x, null);
     const meta = newest && newest.created_at ? `${ic('ic-calendar', 11)} ${fmtUpdated(newest.created_at)}` : '';
+    // 收合時就分得出畫作系列與文章系列：副標用不同說法（幅／篇），並掛上與單張卡片同款的種類徽章
+    const sub = isImg ? `畫作系列 · 共 ${members.length} 幅` : `系列合集 · 共 ${members.length} 篇`;
+    const kindBadge = isImg
+      ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${ic('ic-gallery', 12)} 畫作</span>`
+      : n.kind === 'forum'
+        ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">${ic('ic-scroll', 12)} 論壇體</span>`
+        : `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">${ic('ic-book', 12)} 小說</span>`;
     out.push(`
-      <div class="series-block${expanded ? ' expanded' : ''}" data-series="${escapeHtml(n.series)}">
+      <div class="series-block${expanded ? ' expanded' : ''}" data-series="${escapeHtml(key)}">
         <div class="novel-row series-head" data-onclick="toggleSeries(this)" role="button" aria-expanded="${expanded}">
           <div class="series-title-line">
             <h4>《${escapeHtml(stripOuterBookQuotes(n.series))}》</h4>
-            <span class="series-sub">系列合集 · 共 ${members.length} 篇 <span class="series-chev" aria-hidden="true"></span></span>
+            <span class="series-sub">${sub} <span class="series-chev" aria-hidden="true"></span></span>
           </div>
           <div class="row-meta">${meta}</div>
-          <div class="row-tags">${flags}${cats.map(c => `<span class="t-cat${catCls(c)}">${escapeHtml(c)}</span>`).join('')}${chars.map(c => charPill(c)).join('')}</div>
+          <div class="row-tags">${kindBadge}${flags}${cats.map(c => `<span class="t-cat${catCls(c)}">${escapeHtml(c)}</span>`).join('')}${chars.map(c => charPill(c)).join('')}</div>
         </div>
         <div class="series-members">${members.map(m => _adminNovelCard(m)).join('')}</div>
       </div>`);
@@ -5380,13 +5393,13 @@ function _adminNovelCard(n) {
         return `
       <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
         <div style="display:flex;gap:10px;align-items:flex-start">
-          <img src="${escapeHtml(n.image_url || '')}" alt="" data-onclick="openGalleryItem('${n.id}', true)" style="width:84px;height:84px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:pointer" />
           <div style="flex:1;min-width:0">
             <div style="display:flex;gap:5px;flex-wrap:wrap">${badges}</div>
             <div data-onclick="openGalleryItem('${n.id}', true)" style="font-size:14px;font-weight:bold;cursor:pointer;margin-top:3px">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>
             <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">${tags}</div>
             <div style="font-size:12px;color:var(--ink-light);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(n.author || '佚名')}${ownerTag(n)}${n.created_at ? ' · ' + ic('ic-calendar',11) + ' ' + fmtUpdated(n.created_at) : ''}</div>
           </div>
+          <img src="${escapeHtml(n.image_url || '')}" alt="" data-onclick="openGalleryItem('${n.id}', true)" style="width:84px;height:84px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:pointer" />
         </div>
         ${rejectNoteRow}
         <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">${acts}</div>
