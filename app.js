@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.21';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.22';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1640,7 +1640,8 @@ async function renderFavUpdates() {
           if (!(read.has(ka) && ta < cutoff)) {
             items.push({ kind: 'pub', workKind: 'image', id: a.artwork_id, key: ka, readKey: ka,
               title: '你的文章有了衍生畫作',
-              sub: `《${a.work_title || '你的文章'}》· 繪師 ${a.requester_name || ''}`.trim(),
+              sub: `《${a.artwork_title || '畫作'}》· 繪師 ${a.requester_name || ''}`.trim()
+                + '　→ 可到「作品管理 → 編輯」的〈獲授權畫作〉直接掛成文首圖',
               at: a.artwork_at || a.decided_at || a.created_at, unread: !read.has(ka) });
           }
           return;
@@ -4072,8 +4073,10 @@ async function renderEditAuthArts() {
     + grants.map(a => {
       const inUse = a.artwork_url && (editWork.headerArts || []).some(x =>
         x.artwork_id === a.artwork_id || x.url === a.artwork_url);
+      const forThis = a.direction === 'derive_art';   // 為本篇而畫的衍生作品
       return `<div style="text-align:center">
-        <img src="${escapeHtml(a.artwork_url || '')}" alt="" style="width:64px;height:84px;object-fit:cover;border-radius:3px;border:3px solid ${inUse ? 'var(--gold)' : 'var(--gold-lt)'}" />
+        <img src="${escapeHtml(a.artwork_url || '')}" alt="" title="${forThis ? '為本篇而畫' : ''}" style="width:64px;height:84px;object-fit:cover;border-radius:3px;border:3px solid ${inUse ? 'var(--gold)' : 'var(--gold-lt)'}" />
+        ${forThis ? '<div style="font-size:10px;color:var(--series);margin-top:2px">為本篇而畫</div>' : ''}
         <div style="margin-top:4px">${inUse
           ? '<span style="font-size:11px;color:var(--series)">使用中</span>'
           : `<button data-onclick="applyAuthArt('${a.id}')" style="font-size:11px;padding:3px 12px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:4px;cursor:pointer">選用</button>`}</div>
