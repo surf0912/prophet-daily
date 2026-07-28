@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.24';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.25';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2498,8 +2498,11 @@ async function openNovel(novelId) {
   // 授權信：篇末「想為這篇作畫」入口（writer 以上、非本篇作者、已發佈的小說）。先算好目標但「不顯示」，
   // 等內容載入完成才浮現，否則會在 spinner 還在轉時就飄在讀取畫面上（同 reader-series-nav 的處理）。
   { const aw = document.getElementById('reader-auth-wrap'); if (aw) aw.style.display = 'none';
+    // 入職指南沙盒：示範文章與示範畫作都在自己名下，照常規會被「自己的作品」擋掉入口，
+    // 新作家就沒地方練習。只對 is_guide 且自己是擁有者的作品放行（後端 create_authorization 同規）。
+    const mine = novel && (novel.owners || []).includes(currentUser.id);
     const canAsk = _isWriterPlus() && novel && novel.kind === 'novel'
-      && novel.status === 'approved' && !(novel.owners || []).includes(currentUser.id);
+      && novel.status === 'approved' && (!mine || !!novel.is_guide);
     window._readerAuthTarget = canAsk ? { id: novel.id, title: novel.title, author: novel.author || '佚名' } : null; }
   applyMqjGuard(true);   // personalized watermark + copy guard on EVERY work now (was 迷情劑-only)
   updateReaderFavBtn();   // show ☆/★ for 意若思鏡 works
