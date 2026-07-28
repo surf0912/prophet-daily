@@ -736,6 +736,10 @@
     .chapter-list-panel ol li:hover { color: var(--accent); }
     .chapter-list-panel ol li.current { color: var(--accent); font-weight: bold; }
 
+    /* 作品管理沿用意若思鏡的 .series-block 系列列；成員是完整的管理卡片，
+       比書架的單行高，左側加一道金線與縮排，看得出從屬於上面那列。 */
+    #admin-novel-list .series-block .series-members { padding-left: 12px; border-left: 2px solid var(--gold-lt); margin-left: 4px; }
+
     /* ── Forum page ── */
     .forum-header { position: sticky; top: 0; z-index: 6; padding: calc(10px + var(--safe-top)) 18px 6px; background: var(--parchment2); border-bottom: 2px solid var(--gold-lt); }
     .forum-tabs { display: flex; gap: 8px; padding: 10px 18px 0; }

@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.22';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.23';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2352,6 +2352,8 @@ function renderShelf() {
 // 系列展開狀態（默認全收合）。點系列標題切換，不重繪整個書架——只翻該區塊的 class，保住捲動位置。
 let _expandedSeries = new Set();
 function toggleSeries(headEl) {
+  // 意若思鏡與作品管理共用同一套 .series-block 結構與展開狀態（_expandedSeries），
+  // 兩邊對同一個系列的開合因此一致。
   const block = headEl.closest('.series-block');
   if (!block) return;
   const name = block.dataset.series || '';
@@ -5268,7 +5270,55 @@ function renderAdminNovels() {
   const isAdmin = ['admin', 'super_admin'].includes(currentUser.role);
   renderAdminFilterBar(ns);
   const list = applyAdminFilter(ns);
-  el.innerHTML = list.map(n => {
+  el.innerHTML = _adminGroupBySeries(list);
+}
+
+// 作品管理：同系列收合成一列，點開才展開成員。展開狀態與意若思鏡共用 _expandedSeries，
+// 兩邊對同一個系列的開合一致。搜尋／篩選後系列只剩一篇時仍照系列列呈現——那是篩選結果，
+// 不是資料變了；標題列的篇數顯示實際命中的數量。
+function _adminGroupBySeries(list) {
+  const seen = new Set();
+  const out = [];
+  for (const n of list) {
+    if (seen.has(n.id)) continue;
+    if (!n.series) { seen.add(n.id); out.push(_adminNovelCard(n)); continue; }
+    const members = list.filter(m => m.series === n.series)
+      .sort((a, b) => (a.series_order || 0) - (b.series_order || 0)
+        || new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    members.forEach(m => seen.add(m.id));
+    const expanded = _expandedSeries.has(n.series);
+    // 標籤與意若思鏡同規：成員的類型＋角色去重彙整（類型前、角色後，保持首次出現順序）
+    const cats = [], chars = [];
+    members.forEach(m => {
+      if (m.category && !cats.includes(m.category)) cats.push(m.category);
+      (m.characters || []).forEach(c => { if (!chars.includes(c)) chars.push(c); });
+    });
+    // 作品管理專屬：收合時也要看得出「這個系列有事待辦」，否則得逐一點開才知道哪篇待審
+    const pend = members.filter(m => m.status === 'pending').length;
+    const rej = members.filter(m => m.status === 'rejected').length;
+    const flags = (pend ? `<span class="t-cat">${ic('ic-clock', 11)} 待審 ${pend}</span>` : '')
+      + (rej ? `<span class="t-cat" style="background:rgba(201,168,76,.28);color:var(--ink-light)">${ic('ic-x', 11)} 已退回 ${rej}</span>` : '');
+    const newest = members.reduce((x, m) => (!x || new Date(m.created_at || 0) > new Date(x.created_at || 0)) ? m : x, null);
+    const meta = newest && newest.created_at ? `${ic('ic-calendar', 11)} ${fmtUpdated(newest.created_at)}` : '';
+    out.push(`
+      <div class="series-block${expanded ? ' expanded' : ''}" data-series="${escapeHtml(n.series)}">
+        <div class="novel-row series-head" data-onclick="toggleSeries(this)" role="button" aria-expanded="${expanded}">
+          <div class="series-title-line">
+            <h4>《${escapeHtml(stripOuterBookQuotes(n.series))}》</h4>
+            <span class="series-sub">系列合集 · 共 ${members.length} 篇 <span class="series-chev" aria-hidden="true"></span></span>
+          </div>
+          <div class="row-meta">${meta}</div>
+          <div class="row-tags">${flags}${cats.map(c => `<span class="t-cat${catCls(c)}">${escapeHtml(c)}</span>`).join('')}${chars.map(c => charPill(c)).join('')}</div>
+        </div>
+        <div class="series-members">${members.map(m => _adminNovelCard(m)).join('')}</div>
+      </div>`);
+  }
+  return out.join('') || '<p style="font-size:12.5px;color:var(--ink-light);padding:6px 0">沒有符合的作品</p>';
+}
+
+function _adminNovelCard(n) {
+  const isAdmin = ['admin', 'super_admin'].includes(currentUser.role);
+  return ((n) => {
       const statusTag = (n.status === 'pending'
         ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-clock',11) + ' 待審核</span>'
         : n.status === 'rejected'
@@ -6127,7 +6177,7 @@ async function loadWriterApps() {
         <button data-onclick="deleteWriterApp('${r.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:5px;cursor:pointer">刪除</button>
       </div>
     </div>`;
-  }).join('');
+  })(n);
 }
 
 function copyWriterApp(id) {
