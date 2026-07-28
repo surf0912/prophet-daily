@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.28';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.29';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3381,6 +3381,40 @@ function _fmtUptime(s) {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
   return h + ' 小時 ' + m + ' 分';
 }
+// 監看頁：為既有畫作補「牆上縮圖」。縮圖是後來才加的，先前上傳的畫牆上仍在載 1400 的
+// 顯示版；補圖要重新解碼原圖，伺服器沒有影像函式庫，所以在管理員瀏覽器就地縮再上傳。
+// 只新增縮圖，不動顯示版與高清版；中途失敗的下次再跑一次即可（已補的會被跳過）。
+async function backfillThumbs() {
+  const el = document.getElementById('thumb-backfill-out');
+  if (!el) return;
+  el.style.display = 'block';
+  el.innerHTML = '<div class="spinner" style="margin:8px auto"></div>';
+  let list;
+  try { list = await api('/novels/thumb-missing', { background: true }) || []; }
+  catch (e) { el.textContent = '讀取清單失敗：' + (e.message || ''); return; }
+  if (!list.length) { el.textContent = '所有畫作都已經有牆面縮圖了。'; return; }
+  if (!confirm(`有 ${list.length} 幅畫作還沒有牆面縮圖。\n\n將逐幅下載原圖、在這台裝置縮成 1000 寬再上傳，會用掉一些你的流量，過程中請不要關掉頁面。要開始嗎？`)) {
+    el.style.display = 'none'; return;
+  }
+  let ok = 0, fail = 0;
+  for (let i = 0; i < list.length; i++) {
+    el.innerHTML = `<div style="font-size:13px;color:var(--ink-light)">補圖中 ${i + 1}/${list.length}　完成 ${ok}　失敗 ${fail}</div>`;
+    try {
+      const img = await _loadImgCors(list[i].image_url);
+      const srcMax = Math.max(img.naturalWidth, img.naturalHeight);
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (srcMax > 1000) { const r = 1000 / srcMax; w = Math.round(w * r); h = Math.round(h * r); }
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      await api(`/novels/${list[i].id}/thumb`, { method: 'POST', background: true,
+        body: JSON.stringify({ image: c.toDataURL('image/jpeg', 0.82) }) });
+      ok++;
+    } catch (e) { fail++; }
+  }
+  el.innerHTML = `<div style="font-size:13px">補圖完成：成功 ${ok} 幅${fail ? `，失敗 ${fail} 幅（可以再跑一次，已補的會跳過）` : ''}。</div>`;
+  _galleryItems = null;   // 牆面資料含縮圖網址，重抓才會吃到
+}
+
 async function runDbLatency() {
   const el = document.getElementById('db-latency-out');
   if (!el) return;
@@ -3598,7 +3632,7 @@ function setUploadKind(kind) {
 const GALLERY_FRAMES = [
   ['ebony', '墨檀'], ['oak', '橡木'], ['oakmat', '橡木襯白'], ['gilt', '鎏金襯白'], ['none', '無框'],
 ];
-const _imgWork = { data: null, full: null, frame: 'ebony' };
+const _imgWork = { data: null, thumb: null, full: null, frame: 'ebony' };
 
 function initImageUpload() {
   const picker = document.getElementById('image-frame-picker');
@@ -3731,11 +3765,15 @@ async function onImagePick(input) {
   if (!f) return;
   if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { toast('請選擇 JPG、PNG 或 WebP 圖片'); return; }
   try {
-    // 顯示版（牆上、詳情卡）＋高清版（只在下載時取用）。牆上維持 1400，畫廊瀏覽的流量不變。
-    const [disp, full] = await resizeImageVariants(f, [{ maxDim: 1400, quality: 0.85 }, { maxDim: 2560, quality: 0.9 }]);
+    // 三個尺寸各有用途：牆上的縮圖（流量大宗）、詳情卡與全螢幕的顯示版、下載的高清版。
+    // 牆上一格最寬的情境是桌機四欄（約 250 CSS px），3 倍螢幕也只要 ~750 實體像素，
+    // 縮圖取最長邊 1000 仍有餘裕；直式圖 1000 高＝750 寬，同樣夠。
+    const [thumb, disp, full] = await resizeImageVariants(f, [
+      { maxDim: 1000, quality: 0.82 }, { maxDim: 1400, quality: 0.85 }, { maxDim: 2560, quality: 0.9 }]);
     const data = disp.data;
     _imgWork.data = data;
-    // 原圖沒比顯示版大多少就不多存一份——那只會佔 Storage，換不到解析度。
+    // 原圖沒比某一版大多少就不多存那一份——只會佔 Storage，換不到解析度。
+    _imgWork.thumb = disp.srcMax > 1000 * 1.2 ? thumb.data : null;
     _imgWork.full = disp.srcMax > 1400 * 1.2 ? full.data : null;
     const wrap = document.getElementById('image-preview-wrap');
     wrap.style.display = '';
@@ -3774,10 +3812,10 @@ async function submitImageWork(btn) {
     const cat = (document.getElementById('new-image-cat') || {}).value || '吐真劑';
     const res = await api('/novels/image', { method: 'POST', body: JSON.stringify({
       title, author, caption, frame: _imgWork.frame, characters, image: _imgWork.data,
-      image_full: _imgWork.full, source_auth_id,
+      image_thumb: _imgWork.thumb, image_full: _imgWork.full, source_auth_id,
       category: cat }) });
     toast(res && res.status === 'pending' ? '已送出，待管理員審核' : '畫作已送出');
-    _imgWork.data = null; _imgWork.full = null; _imgWork.frame = 'ebony';
+    _imgWork.data = null; _imgWork.thumb = null; _imgWork.full = null; _imgWork.frame = 'ebony';
     ['new-image-title', 'new-image-author', 'new-image-caption'].forEach(id => document.getElementById(id).value = '');
     prefillAuthor('new-image-author');   // 清空後重新帶回暱稱（同小說）
     document.querySelectorAll('#new-image-chars .opt.on').forEach(el => el.classList.remove('on'));
@@ -4332,7 +4370,7 @@ function renderGallery() {
     const fr = GALLERY_FRAMES.some(([c]) => c === it.image_frame) ? it.image_frame : 'ebony';
     const grp = cell.count > 1;
     return `<div class="gwall-item${grp ? ' gwall-stack' : ''}" data-onclick="openGalleryItem('${it.id}')">
-      <div class="gframe fr-${fr}"><img src="${escapeHtml(it.image_url)}" alt="${escapeHtml(it.title || '')}" loading="lazy" /></div>
+      <div class="gframe fr-${fr}"><img src="${escapeHtml(it.image_url_thumb || it.image_url)}" alt="${escapeHtml(it.title || '')}" loading="lazy" /></div>
       ${grp ? `<div class="gstack-badge">${_stackBadge}${cell.count}</div>` : ''}
     </div>`;
   }).join('');
