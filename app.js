@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.26';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.27';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1251,7 +1251,7 @@ async function toggleCoverGallery(idx, btn) {
 async function downloadCoverGallery(idx) {
   const gc = (_homeGalleryCovers || [])[idx];
   if (!gc || !gc.image_url) return;
-  try { await downloadWatermarkedImage(gc.image_url, '預言家日報-' + (gc.title || '畫作') + '.jpg'); }
+  try { await downloadWatermarkedImage(gc.image_url_full || gc.image_url, '預言家日報-' + (gc.title || '畫作') + '.jpg'); }
   catch (e) { if (!e || e.name !== 'AbortError') toast('下載失敗，請稍後再試'); }   // AbortError = 使用者取消分享
 }
 // 心動封面單擊 → 留影走廊的畫作詳情卡（同一張卡：作者、收藏、下載、授權、系列導覽；
@@ -3598,7 +3598,7 @@ function setUploadKind(kind) {
 const GALLERY_FRAMES = [
   ['ebony', '墨檀'], ['oak', '橡木'], ['oakmat', '橡木襯白'], ['gilt', '鎏金襯白'], ['none', '無框'],
 ];
-const _imgWork = { data: null, frame: 'ebony' };
+const _imgWork = { data: null, full: null, frame: 'ebony' };
 
 function initImageUpload() {
   const picker = document.getElementById('image-frame-picker');
@@ -3698,23 +3698,32 @@ function _syncAdminNovelField(id, key, val) {
     .forEach(o => { if (o && o.id === id) o[key] = val; });
 }
 
-// 保留長寬比、限制最長邊，輸出 JPEG data URL（畫作無需透明背景）。
-function resizeImageContain(file, maxDim, quality) {
+// 單次解碼輸出多個尺寸：上傳畫作要同時產「牆上顯示版」與「下載高清版」，
+// 手機上一張 4000px 的圖解碼並不便宜，解一次共用比跑兩趟省。
+// 回傳 [{ data, w, h, srcMax }]，srcMax＝原圖最長邊（用來判斷值不值得多存高清版）。
+function resizeImageVariants(file, specs) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
-        let { width: w, height: h } = img;
-        if (Math.max(w, h) > maxDim) { const r = maxDim / Math.max(w, h); w = Math.round(w * r); h = Math.round(h * r); }
-        const c = document.createElement('canvas'); c.width = w; c.height = h;
-        c.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(c.toDataURL('image/jpeg', quality));
+        const srcMax = Math.max(img.width, img.height);
+        resolve(specs.map(({ maxDim, quality }) => {
+          let { width: w, height: h } = img;
+          if (srcMax > maxDim) { const r = maxDim / srcMax; w = Math.round(w * r); h = Math.round(h * r); }
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          return { data: c.toDataURL('image/jpeg', quality), w, h, srcMax };
+        }));
       };
       img.onerror = reject; img.src = reader.result;
     };
     reader.onerror = reject; reader.readAsDataURL(file);
   });
+}
+// 保留長寬比、限制最長邊，輸出 JPEG data URL（畫作無需透明背景）。
+function resizeImageContain(file, maxDim, quality) {
+  return resizeImageVariants(file, [{ maxDim, quality }]).then(v => v[0].data);
 }
 
 async function onImagePick(input) {
@@ -3722,8 +3731,12 @@ async function onImagePick(input) {
   if (!f) return;
   if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { toast('請選擇 JPG、PNG 或 WebP 圖片'); return; }
   try {
-    const data = await resizeImageContain(f, 1400, 0.85);
+    // 顯示版（牆上、詳情卡）＋高清版（只在下載時取用）。牆上維持 1400，畫廊瀏覽的流量不變。
+    const [disp, full] = await resizeImageVariants(f, [{ maxDim: 1400, quality: 0.85 }, { maxDim: 2560, quality: 0.9 }]);
+    const data = disp.data;
     _imgWork.data = data;
+    // 原圖沒比顯示版大多少就不多存一份——那只會佔 Storage，換不到解析度。
+    _imgWork.full = disp.srcMax > 1400 * 1.2 ? full.data : null;
     const wrap = document.getElementById('image-preview-wrap');
     wrap.style.display = '';
     wrap.innerHTML = `<div id="image-frame-inner" class="${_frameCls(_imgWork.frame)}"><img src="${data}" alt="" /></div>`;
@@ -3760,10 +3773,11 @@ async function submitImageWork(btn) {
     const source_auth_id = (srcSel && srcSel.closest('#new-image-source-row').style.display !== 'none' && srcSel.value) || null;
     const cat = (document.getElementById('new-image-cat') || {}).value || '吐真劑';
     const res = await api('/novels/image', { method: 'POST', body: JSON.stringify({
-      title, author, caption, frame: _imgWork.frame, characters, image: _imgWork.data, source_auth_id,
+      title, author, caption, frame: _imgWork.frame, characters, image: _imgWork.data,
+      image_full: _imgWork.full, source_auth_id,
       category: cat }) });
     toast(res && res.status === 'pending' ? '已送出，待管理員審核' : '畫作已送出');
-    _imgWork.data = null; _imgWork.frame = 'ebony';
+    _imgWork.data = null; _imgWork.full = null; _imgWork.frame = 'ebony';
     ['new-image-title', 'new-image-author', 'new-image-caption'].forEach(id => document.getElementById(id).value = '');
     prefillAuthor('new-image-author');   // 清空後重新帶回暱稱（同小說）
     document.querySelectorAll('#new-image-chars .opt.on').forEach(el => el.classList.remove('on'));
@@ -4510,7 +4524,7 @@ async function downloadWatermarkedImage(imageUrl, filename) {
 async function downloadGalleryImage() {
   const it = _galleryDetailItem;
   if (!it || !it.image_url) return;
-  try { await downloadWatermarkedImage(it.image_url, '預言家日報-' + (it.title || '畫作') + '.jpg'); }
+  try { await downloadWatermarkedImage(it.image_url_full || it.image_url, '預言家日報-' + (it.title || '畫作') + '.jpg'); }
   catch (e) { if (!e || e.name !== 'AbortError') toast('下載失敗，請稍後再試'); }   // AbortError = 使用者取消分享
 }
 
