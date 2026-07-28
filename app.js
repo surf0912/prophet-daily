@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.30';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.31';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3381,21 +3381,6 @@ function _fmtUptime(s) {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
   return h + ' 小時 ' + m + ' 分';
 }
-// 監看頁：一次性清掉 gallery 桶裡的孤兒圖檔（畫作資料列已刪、檔案還在）。
-// 比對與刪除都在後端做；這裡只負責觸發與把結果攤開給超管看。冪等，重按無害。
-async function pruneOrphans() {
-  const el = document.getElementById('storage-maint-out');
-  if (!el) return;
-  if (!confirm('掃描 gallery 桶並刪除孤兒圖檔（畫作已刪、檔案還在的）？\n\n只會動檔名對得上畫作格式、又不屬於任何現存畫作的檔案。')) return;
-  el.style.display = 'block';
-  el.innerHTML = '<div class="spinner" style="margin:8px auto"></div>';
-  try {
-    const r = await api('/novels/gallery/prune-orphans', { method: 'POST', background: true });
-    el.innerHTML = `<div style="font-size:13px">掃描 ${r.scanned} 個檔案，刪除孤兒檔 ${r.deleted} 個。</div>`
-      + ((r.files || []).length ? `<div style="font-size:11px;color:var(--ink-light);margin-top:6px;word-break:break-all">${r.files.map(escapeHtml).join('、')}${r.deleted > r.files.length ? ' …' : ''}</div>` : '');
-  } catch (e) { el.innerHTML = `<div style="font-size:13px;color:var(--accent)">清理失敗：${escapeHtml(e.message || '')}</div>`; }
-}
-
 async function runDbLatency() {
   const el = document.getElementById('db-latency-out');
   if (!el) return;
