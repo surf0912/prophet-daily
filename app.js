@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.19';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.20';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2436,6 +2436,8 @@ let currentNovelKind = 'novel';
 let currentNovelTitle = '';
 let currentNovelHeader = null;   // 目前作品的頁首圖 URL（image_url）；閱讀器優先用它，沒有才退回 artwork/<id>.jpg
 let currentNovelByline = null;   // 授權畫作雙署名 {text:作者, art:畫師}；頁首圖非授權畫作時為 null
+let currentHeaderArts = [];      // 文首圖清單 [{url, artist, artwork_id}]，最多 5 張
+let _artIdx = 0;                 // 目前顯示第幾張
 
 // Stable, obscure per-account watermark code (first 8 hex of the UUID). Nicknames can be
 // changed by the user, so they can't be used for attribution; the UUID can't. An admin maps
@@ -2481,6 +2483,12 @@ async function openNovel(novelId) {
   currentNovelKind = (novel && novel.kind) || 'novel';
   currentNovelTitle = (novel && novel.title) || '';
   currentNovelHeader = (novel && novel.kind === 'novel' && novel.image_url) || null;   // 頁首圖（僅小說）
+  // 多張文首圖：header_arts 是來源，舊資料只有單張時補成一筆。每張各自帶畫師署名。
+  currentHeaderArts = (novel && novel.kind === 'novel')
+    ? ((Array.isArray(novel.header_arts) && novel.header_arts.length)
+        ? novel.header_arts.filter(a => a && a.url)
+        : (novel.image_url ? [{ url: novel.image_url, artist: novel.image_caption || null, artwork_id: null }] : []))
+    : [];
   // 雙署名：文首圖來自授權畫作時（image_caption＝畫師署名），標題圖下顯示「文／X　圖／Y」
   currentNovelByline = (currentNovelHeader && novel.image_caption)
     ? { text: novel.author || '佚名', art: novel.image_caption } : null;
@@ -2733,25 +2741,19 @@ async function loadChapter(idx) {
       const rc = document.getElementById('reader-content');
       if (!rc || rc.querySelector('.reader-artwork')) return;
       // 圖與署名包成一欄（.rc-art）：桌機分屏時整欄 sticky 釘住，文字在右欄自己捲；
-      // 手機上它只是個普通區塊，外觀與先前相同。
+      // 手機上它只是個普通區塊。多張時圖下方出現 ‹ 1/N › 切換（同畫廊組圖的互動）。
       const art = document.createElement('div');
       art.className = 'rc-art';
-      const img = document.createElement('img');
-      img.src = artSrc; img.className = 'reader-artwork'; img.alt = '';
-      art.appendChild(img);
+      art.innerHTML = `<img class="reader-artwork" alt="" />
+        <div class="reader-byline"></div>
+        <div class="rc-art-nav" style="display:none">
+          <button data-onclick="stepHeaderArt(-1)" aria-label="上一張">‹</button>
+          <span class="rc-art-count"></span>
+          <button data-onclick="stepHeaderArt(1)" aria-label="下一張">›</button>
+        </div>`;
       rc.prepend(art);
-      // 授權畫作的雙署名：緊貼文首圖下方（自己上傳的頁首圖沒有畫師署名，不顯示）
-      let byEl = null;
-      if (currentNovelByline && artSrc === currentNovelHeader) {
-        const by = document.createElement('div');
-        by.className = 'reader-byline';
-        by.textContent = `文／${currentNovelByline.text}　圖／${currentNovelByline.art}`;
-        art.appendChild(by);
-        byEl = by;
-      }
-      // 文首圖若是留影走廊的畫作：標上畫名、點擊跳到畫作詳情。
-      // 文章只存了 image_url（apply 時複製過來），沒有畫作 id——用 photoKey 回查牆上那幅。
-      if (artSrc === currentNovelHeader) _linkHeaderArtwork(img, byEl, artSrc);
+      _artIdx = 0;
+      renderHeaderArt();
       applyReaderSplit();   // 圖是非同步載入的，這時才真的知道「有圖」
     };
     artIm.src = artSrc;
@@ -2777,6 +2779,34 @@ async function loadChapter(idx) {
   }
 }
 
+// 畫出目前這一張文首圖：署名依「這一張」的畫師而定（切到哪張顯示哪位），
+// 可點擊跳畫作詳情。單張時不顯示切換列，看起來與先前一致。
+function renderHeaderArt() {
+  const art = document.querySelector('#reader-content .rc-art');
+  if (!art) return;
+  const list = currentHeaderArts.length
+    ? currentHeaderArts
+    : (currentNovelHeader ? [{ url: currentNovelHeader, artist: currentNovelByline && currentNovelByline.art }] : []);
+  if (!list.length) { art.remove(); applyReaderSplit(); return; }
+  _artIdx = ((_artIdx % list.length) + list.length) % list.length;   // 循環
+  const cur = list[_artIdx];
+  const img = art.querySelector('.reader-artwork');
+  const by = art.querySelector('.reader-byline');
+  const nav = art.querySelector('.rc-art-nav');
+  img.src = cur.url;
+  img.onclick = null; img.style.cursor = ''; img.title = '';
+  const wen = currentNovelByline && currentNovelByline.text;
+  by.textContent = cur.artist ? (wen ? `文／${wen}　圖／${cur.artist}` : `圖／${cur.artist}`) : '';
+  by.style.display = by.textContent ? '' : 'none';
+  if (nav) {
+    nav.style.display = list.length > 1 ? '' : 'none';
+    const c = nav.querySelector('.rc-art-count');
+    if (c) c.textContent = `${_artIdx + 1} / ${list.length}`;
+  }
+  _linkHeaderArtwork(img, by, cur.url, cur.artwork_id);
+}
+function stepHeaderArt(d) { _artIdx += d; renderHeaderArt(); }
+
 // 桌機分屏：文章有文首圖時，左圖右文（圖固定、文字自己捲）。掛 class 交給 CSS 判斷寬度，
 // JS 只負責回答「這篇到底有沒有圖」——圖是非同步載入的，故在載入完成與換章時各叫一次。
 function applyReaderSplit() {
@@ -2788,19 +2818,20 @@ function applyReaderSplit() {
 
 // 文首圖 → 留影走廊畫作：文章只複製了 image_url，沒存畫作 id，故以 photoKey 回查牆上那幅。
 // 查得到就把畫名標在署名列、整張圖變成可點擊（跳畫作詳情）；查不到（畫被退件／隱藏）就維持原樣。
-async function _linkHeaderArtwork(img, byEl, url) {
+async function _linkHeaderArtwork(img, byEl, url, artworkId) {
   if (!img || !url) return;
   try {
     if (!(_galleryItems || []).length) _galleryItems = (await api('/novels/gallery', { background: true })) || [];
   } catch { return; }
   const k = photoKey(url);
-  const art = (_galleryItems || []).find(x => x.image_url && photoKey(x.image_url) === k);
+  const art = (_galleryItems || []).find(x => artworkId ? x.id === artworkId
+    : (x.image_url && photoKey(x.image_url) === k));
   if (!art) return;
   img.style.cursor = 'zoom-in';
   img.title = `《${art.title || '畫作'}》— 點擊看畫作詳情`;
   img.addEventListener('click', () => openGalleryItem(art.id));
   const name = `《${art.title || '無題'}》`;
-  if (byEl) byEl.textContent = `${name}　${byEl.textContent}`;
+  if (byEl) { byEl.textContent = `${name}　${byEl.textContent}`.trim(); byEl.style.display = ''; }
   else {
     const cap = document.createElement('div');
     cap.className = 'reader-byline';
@@ -4047,12 +4078,15 @@ async function applyAuthArt(authId) {
   try {
     const r = await api(`/authorizations/${authId}/apply`, { method: 'POST' });
     editWork.headerUrl = r.image_url;
+    editWork.headerArts = r.header_arts || [];
     renderEditHeaderPreview(r.image_url);
     _syncAdminNovelField(editWork.id, 'image_url', r.image_url);
     _syncAdminNovelField(editWork.id, 'image_caption', r.image_caption);
+    _syncAdminNovelField(editWork.id, 'header_arts', r.header_arts);
     _myAuths = null;
     renderEditAuthArts();
-    toast('已掛上獲授權的畫作');
+    const n = (r.header_arts || []).length;
+    toast(n > 1 ? `已掛上，這篇目前有 ${n} 張文首圖` : '已掛上獲授權的畫作');
   } catch (e) { toast(e.message); }
 }
 // 上傳畫作的「源自」下拉：只列自己已同意、還沒掛過畫的 derive_art 授權信
