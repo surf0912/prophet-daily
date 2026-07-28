@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.20';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.21';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3662,6 +3662,10 @@ async function onEditHeaderPick(input) {
     const data = await resizeImageContain(f, 1080, 0.82);
     const r = await api(`/novels/${editWork.id}/header-image`, { method: 'PATCH', body: JSON.stringify({ image: data }) });
     editWork.headerUrl = (r && r.image_url) || null;
+    editWork.headerArts = (r && r.image_url)
+      ? [{ url: r.image_url, artist: null, artwork_id: null },
+         ...((editWork.headerArts || []).filter(a => a.artwork_id))]
+      : ((editWork.headerArts || []).filter(a => a.artwork_id));
     renderEditHeaderPreview(r && r.image_url);
     _syncAdminNovelField(editWork.id, 'image_url', r && r.image_url);
     _syncAdminNovelField(editWork.id, 'image_caption', null);   // 自傳頁首圖沒有畫師署名（後端已清）
@@ -3674,6 +3678,7 @@ async function removeEditHeader() {
   try {
     await api(`/novels/${editWork.id}/header-image`, { method: 'PATCH', body: JSON.stringify({ image: null }) });
     editWork.headerUrl = null;
+    editWork.headerArts = (editWork.headerArts || []).filter(a => a.artwork_id);
     renderEditHeaderPreview(null);
     _syncAdminNovelField(editWork.id, 'image_url', null);
     _syncAdminNovelField(editWork.id, 'image_caption', null);
@@ -4065,14 +4070,65 @@ async function renderEditAuthArts() {
   box.innerHTML = '<div style="font-size:12px;color:var(--ink-light);margin-bottom:6px">獲授權畫作（僅限本篇）</div>'
     + '<div style="display:flex;gap:10px;flex-wrap:wrap">'
     + grants.map(a => {
-      const inUse = a.artwork_url && editWork.headerUrl === a.artwork_url;
+      const inUse = a.artwork_url && (editWork.headerArts || []).some(x =>
+        x.artwork_id === a.artwork_id || x.url === a.artwork_url);
       return `<div style="text-align:center">
         <img src="${escapeHtml(a.artwork_url || '')}" alt="" style="width:64px;height:84px;object-fit:cover;border-radius:3px;border:3px solid ${inUse ? 'var(--gold)' : 'var(--gold-lt)'}" />
         <div style="margin-top:4px">${inUse
           ? '<span style="font-size:11px;color:var(--series)">使用中</span>'
           : `<button data-onclick="applyAuthArt('${a.id}')" style="font-size:11px;padding:3px 12px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:4px;cursor:pointer">選用</button>`}</div>
       </div>`;
-    }).join('') + '</div>';
+    }).join('') + '</div>' + _headerArtsManager();
+}
+
+// 已掛上的文首圖：顯示順序、可左右調序與單獨移除（後端 PUT /header-arts 整份覆寫）。
+// 只有兩張以上才顯示排序鈕——單張時排序沒有意義，按鈕只是雜訊。
+function _headerArtsManager() {
+  const arts = (editWork.headerArts || []).filter(a => a && a.url);
+  if (!arts.length) return '';
+  const many = arts.length > 1;
+  return `<div style="margin-top:10px;border-top:1px solid var(--gold-lt);padding-top:8px">
+    <div style="font-size:12px;color:var(--ink-light);margin-bottom:6px">目前的文首圖（${arts.length} / 5，第一張為封面）</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">${arts.map((a, i) => `
+      <div style="text-align:center">
+        <div style="position:relative">
+          <img src="${escapeHtml(a.url)}" alt="" style="width:64px;height:84px;object-fit:cover;border-radius:3px;border:3px solid ${i === 0 ? 'var(--gold)' : 'var(--gold-lt)'}" />
+          <span style="position:absolute;top:2px;left:2px;background:rgba(26,10,0,.6);color:var(--on-dark);font-size:10px;padding:0 5px;border-radius:8px">${i + 1}</span>
+        </div>
+        <div style="margin-top:4px;display:flex;gap:3px;justify-content:center">
+          ${many ? `<button data-onclick="moveHeaderArt(${i}, -1)" ${i === 0 ? 'disabled' : ''} style="font-size:11px;padding:2px 6px;border:1px solid var(--gold-lt);background:none;color:var(--ink-light);border-radius:4px;cursor:pointer">‹</button>
+          <button data-onclick="moveHeaderArt(${i}, 1)" ${i === arts.length - 1 ? 'disabled' : ''} style="font-size:11px;padding:2px 6px;border:1px solid var(--gold-lt);background:none;color:var(--ink-light);border-radius:4px;cursor:pointer">›</button>` : ''}
+          <button data-onclick="removeHeaderArt(${i})" style="font-size:11px;padding:2px 7px;border:1px solid var(--accent);background:none;color:var(--accent);border-radius:4px;cursor:pointer">移除</button>
+        </div>
+      </div>`).join('')}</div>
+    <div style="font-size:11px;color:var(--ink-light);opacity:.75;margin-top:6px;line-height:1.6">※ 移除只是不掛在這篇文章上，授權與畫作本身都還在，可再從上方「選用」掛回。</div>
+  </div>`;
+}
+async function _saveHeaderArts(arts) {
+  try {
+    const r = await api(`/novels/${editWork.id}/header-arts`, { method: 'PUT', body: JSON.stringify({ arts }) });
+    editWork.headerArts = r.header_arts || [];
+    editWork.headerUrl = (editWork.headerArts[0] || {}).url || null;
+    renderEditHeaderPreview(editWork.headerUrl);
+    _syncAdminNovelField(editWork.id, 'image_url', editWork.headerUrl);
+    _syncAdminNovelField(editWork.id, 'image_caption', (editWork.headerArts[0] || {}).artist || null);
+    _syncAdminNovelField(editWork.id, 'header_arts', editWork.headerArts);
+    renderEditAuthArts();
+  } catch (e) { toast(e.message || '更新失敗'); }
+}
+function moveHeaderArt(i, d) {
+  const arts = [...(editWork.headerArts || [])];
+  const j = i + d;
+  if (j < 0 || j >= arts.length) return;
+  [arts[i], arts[j]] = [arts[j], arts[i]];
+  _saveHeaderArts(arts);
+}
+function removeHeaderArt(i) {
+  const arts = [...(editWork.headerArts || [])];
+  if (!arts[i]) return;
+  if (!confirm('把這張從文首移除？\n\n授權與畫作本身都還在，之後可以再掛回來。')) return;
+  arts.splice(i, 1);
+  _saveHeaderArts(arts);
 }
 async function applyAuthArt(authId) {
   try {
@@ -5453,6 +5509,10 @@ async function openEditWork(id) {
   { const ig = document.getElementById('editwork-image-group'); if (ig) ig.style.display = isImage ? '' : 'none'; }
   if (!isForum && !isImage) {
     editWork.headerUrl = n.image_url || null;   // 授權畫作「使用中」判定用
+    // 多圖管理：header_arts 是來源；舊資料只有單張時補成一筆
+    editWork.headerArts = (Array.isArray(n.header_arts) && n.header_arts.length)
+      ? n.header_arts.filter(a => a && a.url)
+      : (n.image_url ? [{ url: n.image_url, artist: n.image_caption || null, artwork_id: null }] : []);
     renderEditHeaderPreview(n.image_url || null);
     renderEditAuthArts();                       // 本篇的獲授權畫作區（沒有就自動隱藏）
   } else {

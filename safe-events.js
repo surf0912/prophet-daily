@@ -30,7 +30,7 @@
     'setGalleryView', 'setGalleryCat', 'renderGallery', 'galleryGroupNav', 'galleryFullNav', 'toggleHideGalleryImage',
     'setWriterAppHandled', 'deleteWriterApp', 'copyWriterApp', 'clearGrabOpens', 'copyThisLink', 'openWriterApply', 'submitWriterApplication',
     'setReviewMode', 'openReviewImage', 'galleryAuthAsk', 'sendAuthRequest', 'openAuthDecide', 'saveAuthDecide', 'runDbLatency',
-    'withdrawAuth', 'revokeAuth', 'readerOfferClick', 'adminResetAuth', 'applyAuthArt', 'galleryOpenWork', 'readerAuthClick', 'owlOpenAuth',
+    'withdrawAuth', 'revokeAuth', 'readerOfferClick', 'adminResetAuth', 'applyAuthArt', 'moveHeaderArt', 'removeHeaderArt', 'galleryOpenWork', 'readerAuthClick', 'owlOpenAuth',
     'submitForumPost', 'submitNewNovel', 'switchAdminTab', 'tempBan', 'toggleCharAnd', 'toggleCoverPhoto',
     'toggleDark', 'toggleFavOwl', 'toggleFont', 'toggleForumFav', 'toggleGalleryFavorite', 'toggleLike', 'toggleLock', 'toggleOwlAlways', 'togglePwEdit', 'toggleTapFx',
     'toggleReaderDark', 'toggleReaderFavorite', 'toggleShelfFav', 'toggleCoverGallery', 'toggleSeries', 'tourBack', 'tourNext',
