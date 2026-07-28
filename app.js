@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.23';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.24';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -5267,10 +5267,10 @@ function renderAdminFilterBar(ns) {
 function renderAdminNovels() {
   const el = document.getElementById('admin-novel-list');
   const ns = window._adminNovels || [];
-  const isAdmin = ['admin', 'super_admin'].includes(currentUser.role);
   renderAdminFilterBar(ns);
   const list = applyAdminFilter(ns);
-  el.innerHTML = _adminGroupBySeries(list);
+  el.innerHTML = _adminGroupBySeries(list)
+    || `<p style="color:#888;padding:14px;text-align:center">${ns.length ? '此篩選沒有作品' : '尚無作品'}</p>`;
 }
 
 // 作品管理：同系列收合成一列，點開才展開成員。展開狀態與意若思鏡共用 _expandedSeries，
@@ -5313,12 +5313,13 @@ function _adminGroupBySeries(list) {
         <div class="series-members">${members.map(m => _adminNovelCard(m)).join('')}</div>
       </div>`);
   }
-  return out.join('') || '<p style="font-size:12.5px;color:var(--ink-light);padding:6px 0">沒有符合的作品</p>';
+  return out.join('');
 }
 
+// 單一作品卡（小說／畫作各一種版型）。原本是 ns.map() 的內聯樣板，抽成函式後
+// 由 _adminGroupBySeries 決定它出現在系列列裡還是直接一張。
 function _adminNovelCard(n) {
   const isAdmin = ['admin', 'super_admin'].includes(currentUser.role);
-  return ((n) => {
       const statusTag = (n.status === 'pending'
         ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-clock',11) + ' 待審核</span>'
         : n.status === 'rejected'
@@ -5398,7 +5399,6 @@ function _adminNovelCard(n) {
         ${rejectNoteRow}
         <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${resubmitBtn}${editBtn}${manageBtns}${ownerAssignBtn}${lockBtn}${retractBtn}${delBtn}</div>
       </div>`;
-    }).join('') || `<p style="color:#888;padding:14px;text-align:center">${ns.length ? '此篩選沒有作品' : '尚無作品'}</p>`;
 }
 
 // 作者把自己的作品鎖上：鎖住後除了作者本人和超管,其他人完全看不到這篇存在。
