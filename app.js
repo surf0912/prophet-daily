@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.29';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.30';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3381,38 +3381,19 @@ function _fmtUptime(s) {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
   return h + ' 小時 ' + m + ' 分';
 }
-// 監看頁：為既有畫作補「牆上縮圖」。縮圖是後來才加的，先前上傳的畫牆上仍在載 1400 的
-// 顯示版；補圖要重新解碼原圖，伺服器沒有影像函式庫，所以在管理員瀏覽器就地縮再上傳。
-// 只新增縮圖，不動顯示版與高清版；中途失敗的下次再跑一次即可（已補的會被跳過）。
-async function backfillThumbs() {
-  const el = document.getElementById('thumb-backfill-out');
+// 監看頁：一次性清掉 gallery 桶裡的孤兒圖檔（畫作資料列已刪、檔案還在）。
+// 比對與刪除都在後端做；這裡只負責觸發與把結果攤開給超管看。冪等，重按無害。
+async function pruneOrphans() {
+  const el = document.getElementById('storage-maint-out');
   if (!el) return;
+  if (!confirm('掃描 gallery 桶並刪除孤兒圖檔（畫作已刪、檔案還在的）？\n\n只會動檔名對得上畫作格式、又不屬於任何現存畫作的檔案。')) return;
   el.style.display = 'block';
   el.innerHTML = '<div class="spinner" style="margin:8px auto"></div>';
-  let list;
-  try { list = await api('/novels/thumb-missing', { background: true }) || []; }
-  catch (e) { el.textContent = '讀取清單失敗：' + (e.message || ''); return; }
-  if (!list.length) { el.textContent = '所有畫作都已經有牆面縮圖了。'; return; }
-  if (!confirm(`有 ${list.length} 幅畫作還沒有牆面縮圖。\n\n將逐幅下載原圖、在這台裝置縮成 1000 寬再上傳，會用掉一些你的流量，過程中請不要關掉頁面。要開始嗎？`)) {
-    el.style.display = 'none'; return;
-  }
-  let ok = 0, fail = 0;
-  for (let i = 0; i < list.length; i++) {
-    el.innerHTML = `<div style="font-size:13px;color:var(--ink-light)">補圖中 ${i + 1}/${list.length}　完成 ${ok}　失敗 ${fail}</div>`;
-    try {
-      const img = await _loadImgCors(list[i].image_url);
-      const srcMax = Math.max(img.naturalWidth, img.naturalHeight);
-      let w = img.naturalWidth, h = img.naturalHeight;
-      if (srcMax > 1000) { const r = 1000 / srcMax; w = Math.round(w * r); h = Math.round(h * r); }
-      const c = document.createElement('canvas'); c.width = w; c.height = h;
-      c.getContext('2d').drawImage(img, 0, 0, w, h);
-      await api(`/novels/${list[i].id}/thumb`, { method: 'POST', background: true,
-        body: JSON.stringify({ image: c.toDataURL('image/jpeg', 0.82) }) });
-      ok++;
-    } catch (e) { fail++; }
-  }
-  el.innerHTML = `<div style="font-size:13px">補圖完成：成功 ${ok} 幅${fail ? `，失敗 ${fail} 幅（可以再跑一次，已補的會跳過）` : ''}。</div>`;
-  _galleryItems = null;   // 牆面資料含縮圖網址，重抓才會吃到
+  try {
+    const r = await api('/novels/gallery/prune-orphans', { method: 'POST', background: true });
+    el.innerHTML = `<div style="font-size:13px">掃描 ${r.scanned} 個檔案，刪除孤兒檔 ${r.deleted} 個。</div>`
+      + ((r.files || []).length ? `<div style="font-size:11px;color:var(--ink-light);margin-top:6px;word-break:break-all">${r.files.map(escapeHtml).join('、')}${r.deleted > r.files.length ? ' …' : ''}</div>` : '');
+  } catch (e) { el.innerHTML = `<div style="font-size:13px;color:var(--accent)">清理失敗：${escapeHtml(e.message || '')}</div>`; }
 }
 
 async function runDbLatency() {
