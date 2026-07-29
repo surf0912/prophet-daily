@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.32';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.33';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2831,7 +2831,18 @@ function applyReaderSplit() {
   const rc = document.getElementById('reader-content');
   if (!rv || !rc) return;
   rv.classList.toggle('has-art', !!rc.querySelector('.reader-artwork'));
+  // 頂欄高度量給 CSS（--rhead-h）：分屏的圖欄 sticky top 用它把釘住點對準自然位置，
+  // 圖從頭到尾一動不動。標題折行、視窗改寬都會改變頂欄高，resize 時重量。
+  const head = rv.querySelector('.reader-header');
+  if (head) rv.style.setProperty('--rhead-h', head.offsetHeight + 'px');
 }
+window.addEventListener('resize', () => {
+  if (document.getElementById('reader-view')?.classList.contains('open')) applyReaderSplit();
+});
+// 自訂字體晚於首次量測到位時，頂欄高度會長高一截，釘住點就差那一截——字體就緒後重量一次
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => {
+  if (document.getElementById('reader-view')?.classList.contains('open')) applyReaderSplit();
+});
 
 // 文首圖 → 留影走廊畫作：文章只複製了 image_url，沒存畫作 id，故以 photoKey 回查牆上那幅。
 // 查得到就把畫名標在署名列、整張圖變成可點擊（跳畫作詳情）；查不到（畫被退件／隱藏）就維持原樣。
@@ -4404,12 +4415,8 @@ function openGalleryItem(id, fromAdmin) {
   const isOwner = currentUser && (it.owners || []).includes(currentUser.id);
   // 時段是策展動作，只有管理員能排；裁切框是作者對自己作品的顯示調整，作者或管理員都能開。
   if (_gdFromAdmin && (adminish || isOwner)) {
-    const cur = effectiveImageSlot(it);
-    const slots = [['am', '早晨'], ['pm', '下午'], ['night', '夜晚']];
     const slotBox = adminish
-      ? '<div style="font-size:12px;color:var(--ink-light);margin-bottom:6px">心動封面時段</div>'
-        + '<div style="display:flex;gap:8px">' + slots.map(([v, n]) =>
-          `<button data-onclick="setImageSlot('${it.id}','${v}')" style="flex:1;font-size:12px;padding:6px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:${cur === v ? 'var(--scarlet)' : 'var(--parchment2)'};color:${cur === v ? 'var(--on-dark)' : 'var(--ink-light)'}">${n}</button>`).join('') + '</div>'
+      ? `<div style="display:flex;gap:8px" data-slot-for="${it.id}">${coverSlotRowHtml(it.id, effectiveImageSlot(it))}</div>`
       : '';
     adminBox.style.display = '';
     adminBox.innerHTML = slotBox
@@ -4805,26 +4812,40 @@ function _afterCropChange(url) {
   if (typeof renderGreeting === 'function') renderGreeting(false);   // 心動 hero 依新框重繪同一張，不重抽
 }
 
+// 心動封面策展列（審核清單與走廊詳情卡共用）：一顆「心動封面」開關＋時段三選。
+// 開關亮的來源有二：已排時段（DB），或剛按下開關、時段還沒選（_coverIntent，僅前端暫存——
+// 不選時段就不會真的上架，審核也會被 approveNovel 擋下）。直接點時段＝上架到該檔。
+const _coverIntent = new Set();
+function coverSlotRowHtml(id, cur) {
+  const on = ['am', 'pm', 'night'].includes(cur) || _coverIntent.has(id);
+  // handler 寫成字面量（安全測試靜態掃 data-onclick，抽成參數會掃不到函式名），只抽共用樣式
+  const st = lit => `flex:1;font-size:12px;padding:6px 4px;border-radius:4px;cursor:pointer;white-space:nowrap;background:${lit ? 'var(--scarlet)' : 'var(--parchment2)'};color:${lit ? 'var(--on-dark)' : 'var(--ink-light)'}`;
+  return `<button data-onclick="toggleCoverPool('${id}')" style="border:1px solid var(--accent);${st(on)}">心動封面</button>`
+    + [['am', '早晨'], ['pm', '下午'], ['night', '夜晚']].map(([v, n]) =>
+      `<button data-onclick="setImageSlot('${id}','${v}')" style="border:1px solid var(--gold);${st(cur === v)}">${n}</button>`).join('');
+}
+// 開關本體：亮（已有時段）→下架；亮（只有意向）→取消意向；暗→記下意向、等選時段。
+function toggleCoverPool(id) {
+  const it = [_galleryDetailItem, ...(_galleryItems || []), ...(window._adminNovels || []), ...(window._reviewPending || [])]
+    .find(o => o && o.id === id);
+  const slot = it && ['am', 'pm', 'night'].includes(it.image_slot) ? it.image_slot : null;
+  if (slot) { _coverIntent.delete(id); setImageSlot(id, 'none'); return; }
+  if (_coverIntent.has(id)) _coverIntent.delete(id);
+  else { _coverIntent.add(id); toast('選一個時段，這幅畫才會排進輪播'); }
+  document.querySelectorAll(`[data-slot-for="${id}"]`).forEach(el => { el.innerHTML = coverSlotRowHtml(id, null); });
+}
 async function setImageSlot(id, slot) {
   try {
     await api(`/novels/${id}/image-slot`, { method: 'PATCH', body: JSON.stringify({ slot }) });
-    // 更新所有可能持有這件作品的快取，讓高亮即時反映（含審核清單 _reviewPending——沒更新它，
-    // 審核頁選了時段按鈕不會高亮，看起來像沒反應；approveNovel 的必選檢查也會讀到舊值）。
+    // 更新所有可能持有這件作品的快取（含審核清單 _reviewPending）。'none'＝下架，本地記 null 與後端一致。
+    const val = slot === 'none' ? null : slot;
+    _coverIntent.delete(id);   // 選了時段（或下架）之後，「還沒選時段」的暫存意向就結案了
     [_galleryDetailItem, ...(_galleryItems || []), ...(window._adminNovels || []), ...(window._reviewPending || [])]
-      .forEach(o => { if (o && o.id === id) o.image_slot = slot; });
-    // 審核清單：就地重刷這列三顆時段鈕的高亮（不整個重載、不閃 spinner）。
-    document.querySelectorAll(`#admin-review-list button[data-onclick^="setImageSlot('${id}'"]`).forEach(btn => {
-      const m = (btn.getAttribute('data-onclick') || '').match(/,'(\w+)'\)/);
-      const on = m && m[1] === slot;
-      btn.style.background = on ? 'var(--scarlet)' : 'var(--parchment2)';
-      btn.style.color = on ? 'var(--on-dark)' : 'var(--ink-light)';
-    });
-    // 留影走廊詳情卡若正開著這件作品 → 重繪它的高亮（審核清單的項目不在詳情卡快取裡，不會誤開浮層）。
-    if (_galleryDetailItem && _galleryDetailItem.id === id && document.getElementById('gallery-detail')?.style.display === 'flex') {
-      openGalleryItem(id, _gdFromAdmin);
-    }
+      .forEach(o => { if (o && o.id === id) o.image_slot = val; });
+    // 策展列整列重繪（開關按鈕的下一步動作隨狀態變，光改高亮不夠）；兩個版面同一個 wrapper 標記。
+    document.querySelectorAll(`[data-slot-for="${id}"]`).forEach(el => { el.innerHTML = coverSlotRowHtml(id, val); });
     loadHomeGalleryCovers();   // 立刻反映到心動封面池
-    toast('已設定心動封面時段');
+    toast(val ? '已上架心動封面（' + ({ am: '早晨', pm: '下午', night: '夜晚' })[val] + '）' : '已從心動封面下架');
   } catch (e) { toast(e.message); }
 }
 
@@ -4992,9 +5013,9 @@ async function loadReviewList() {
     const _kindTag = n => n.kind === 'image' ? ic('ic-gallery', 12) + ' 畫作'
                         : n.kind === 'forum' ? ic('ic-scroll', 12) + ' 論壇貼文'
                         : ic('ic-book', 12) + ' 小說';
-    const _slotBtns = n => { const slots = [['am', '早晨'], ['pm', '下午'], ['night', '夜晚']]; const cur = effectiveImageSlot(n);
-      return '<div style="font-size:12px;color:var(--ink-light);margin:8px 0 4px">心動封面時段（必選）</div><div style="display:flex;gap:6px">'
-        + slots.map(([v, name]) => `<button data-onclick="setImageSlot('${n.id}','${v}')" style="flex:1;font-size:12px;padding:5px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:${cur === v ? 'var(--scarlet)' : 'var(--parchment2)'};color:${cur === v ? 'var(--on-dark)' : 'var(--ink-light)'}">${name}</button>`).join('') + '</div>'; };
+    // 心動池是策展：預設不上架；「心動封面」開關亮＝在輪播，時段三選決定排在哪一輪。
+    const _slotBtns = n => '<div style="display:flex;gap:6px;margin:8px 0 4px" data-slot-for="' + n.id + '">'
+      + coverSlotRowHtml(n.id, effectiveImageSlot(n)) + '</div>';
     const novelBody = novelsPending.map(n => `
         <div style="padding:12px 0;border-bottom:1px solid rgba(26,10,0,.1)">
           <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)}</div>
@@ -5030,9 +5051,11 @@ async function reviewMqj(userId, approve) {
 }
 
 async function approveNovel(id) {
+  // 心動池是策展（預設不上架），過審＝上留影走廊而已。但「開了心動封面卻沒選時段」是
+  // 半套狀態——不擋下來的話，管理員以為排進輪播了，實際上沒有。
   const n = (window._reviewPending || []).find(x => x.id === id);
-  if (n && n.kind === 'image' && !['am', 'pm', 'night'].includes(n.image_slot)) {
-    toast('請先為這幅畫作選擇心動封面時段，再通過');
+  if (n && n.kind === 'image' && _coverIntent.has(id) && !['am', 'pm', 'night'].includes(n.image_slot)) {
+    toast('已開了心動封面但還沒選時段——選一個時段，或再按一次「心動封面」取消');
     return;
   }
   try { await api(`/novels/${id}/approve`, { method: 'PATCH' }); toast('已通過審核'); loadReviewList(); }
@@ -5503,6 +5526,17 @@ async function saveOwners() {
 
 let seriesNovelId = null;
 
+// 共創合集的建立者＝合集中最早那篇的投稿者（與後端同一條推導；建立者退出則順位給
+// 最早的留存成員）。資料來源：書架快取＋作品管理快取，去重後取 created_at 最小者。
+function _seriesFounder(name) {
+  const seen = new Set(); let best = null;
+  [...(typeof novels !== 'undefined' ? novels : []), ...(window._adminNovels || [])].forEach(n => {
+    if (!n || seen.has(n.id) || n.series !== name || !n.series_shared || n.kind !== 'novel') return;
+    seen.add(n.id);
+    if (!best || new Date(n.created_at || 0) < new Date(best.created_at || 0)) best = n;
+  });
+  return best ? best.created_by : null;
+}
 function openSeries(novelId) {
   const work = adminWorkById(novelId);
   const title = work.title || '';
@@ -5512,8 +5546,38 @@ function openSeries(novelId) {
   document.getElementById('series-novel-title').textContent = title || '';
   document.getElementById('series-name-input').value = series || '';
   document.getElementById('series-order-input').value = order || 0;
-  // suggest existing series names
-  const names = [...new Set((window._adminNovels || []).map(n => n.series).filter(Boolean))];
+  // 開關的意義依身份而變：非成員＝「共創系列」（要不要加入／建立合集）；
+  // 已是成員且為建立者＝「開放加入」（合集閘門：關了其他人加不進來，建立者自己不受限）。
+  // 已是成員但非建立者：閘門不歸他管，開關整排收起，只留說明。
+  const isAdminUser = ['admin', 'super_admin'].includes(currentUser.role);
+  const isMember = !!(series && work.series_shared && work.kind === 'novel');
+  const founder = isMember ? _seriesFounder(series) : null;
+  const canGate = isMember && (isAdminUser || !founder || founder === currentUser.id);
+  const row = document.getElementById('series-shared-row');
+  const sh = document.getElementById('series-shared-input');
+  const lab = document.getElementById('series-shared-label');
+  const hint = document.getElementById('series-shared-hint');
+  window._seriesCtx = { isMember, canGate, origName: series };
+  if (isMember && canGate) {
+    row.style.display = ''; lab.textContent = '開放加入';
+    sh.checked = !work.series_closed;
+    hint.textContent = '共創合集的門：開啟時，其他作者能以同名把文章加進來；關閉即截止，只有系列建立者還能加。已加入的不受影響。想讓這篇退出合集，清空或改掉系列名即可。';
+  } else if (isMember) {
+    row.style.display = 'none';
+    hint.textContent = '這篇屬於共創合集，加入許可由系列建立者管理。想退出，清空或改掉系列名即可。';
+  } else {
+    row.style.display = ''; lab.textContent = '共創系列';
+    sh.checked = false;
+    hint.textContent = '開啟後，其他作者以同名加入，合併為同一個合集。關閉時是你的個人系列，別人取同名也不會混進來。';
+  }
+  // 名字建議：自己的系列＋書架上「開放加入」的共創合集（截止的列出來也加不進去；
+  // 自己是建立者的照列——關著門自己仍能加）
+  const names = [...new Set([
+    ...(window._adminNovels || []).map(n => n.series),
+    ...(typeof novels !== 'undefined' ? novels : [])
+      .filter(n => n.series_shared && (!n.series_closed || _seriesFounder(n.series) === currentUser.id))
+      .map(n => n.series),
+  ].filter(Boolean))];
   document.getElementById('series-name-list').innerHTML = names.map(s => `<option value="${escapeHtml(s)}">`).join('');
   document.getElementById('series-modal').classList.add('open');
 }
@@ -5522,9 +5586,19 @@ async function saveSeries() {
   // 存乾淨的名字（外層《》剝掉）：《》由列表顯示層統一加，存了會變《《…》》
   const series = stripOuterBookQuotes(document.getElementById('series-name-input').value);
   const series_order = parseInt(document.getElementById('series-order-input').value) || 0;
+  const checked = !!(document.getElementById('series-shared-input') || {}).checked;
+  const ctx = window._seriesCtx || {};
+  // 成員視角的開關是合集閘門（series_open）；改了名字＝離開原合集、對新名字重新表態，
+  // 開關回到「要不要共創」的意義。非建立者的成員（開關收起）維持成員身份，不動閘門。
+  const asGate = ctx.isMember && series === ctx.origName;
+  const body = asGate
+    ? { series, series_order, series_shared: true, ...(ctx.canGate ? { series_open: checked } : {}) }
+    : { series: series || null, series_order, series_shared: checked };
   try {
-    await api(`/novels/${seriesNovelId}/series`, { method: 'PATCH', body: JSON.stringify({ series: series || null, series_order }) });
-    toast(series ? `已綁定系列「${series}」` : '已設為單篇');
+    await api(`/novels/${seriesNovelId}/series`, { method: 'PATCH', body: JSON.stringify(body) });
+    toast(!series ? '已設為單篇'
+      : asGate ? (ctx.canGate ? (checked ? `「${series}」已開放加入` : `「${series}」已截止加入`) : '已更新系列')
+      : `已綁定${checked ? '共創' : ''}系列「${series}」`);
     document.getElementById('series-modal').classList.remove('open');
     loadAdminNovelList(); loadNovels();
   } catch (e) { toast(e.message); }

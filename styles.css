@@ -698,17 +698,29 @@
     @media (prefers-reduced-motion: reduce) { #reader-dock { transition: opacity .2s ease; } }
     /* 桌機分屏（≥1100px 且有文首圖）：左邊留給畫、右邊是可獨立捲動的文字。
        畫用 sticky 釘住，讀者往下讀時圖一直在視野內；窄於 1100px 或沒有圖就維持單欄。
-       只動內距與定位，不改 DOM 順序——圖仍是 .reader-content 的第一個子元素。 */
-    @media (min-width: 1100px) {
+       只動內距與定位，不改 DOM 順序——圖仍是 .reader-content 的第一個子元素。
+       hover+pointer:fine＝真桌機（與 rotate-guard 的觸控判斷同一套）：iPad 橫放
+       雖寬過 1100，仍維持單欄——分屏是桌機版限定。 */
+    @media (min-width: 1100px) and (hover: hover) and (pointer: fine) {
       #reader-view.has-art .reader-content {
         max-width: 1180px; display: grid; grid-template-columns: 460px 1fr;
         column-gap: 40px; align-items: start;
       }
-      /* 圖欄跨滿所有列＋align-self:start，sticky 才有可移動的範圍（只佔一列時黏不住） */
+      /* 圖欄跨滿所有列＋align-self:start，sticky 才有可移動的範圍（只佔一列時黏不住）。
+         sticky top＝頂欄高（JS 量測寫進 --rhead-h）＋內距：釘住點就是圖的自然位置，
+         捲動時圖完全不動——差一點的話會先跟著文件跑一小段才釘住。 */
       #reader-view.has-art .reader-content > .rc-art {
-        grid-column: 1; grid-row: 1 / -1; position: sticky; top: 24px; align-self: start;
+        grid-column: 1; grid-row: 1 / -1; position: sticky;
+        /* 44px＝桌機閱讀欄的 padding-top（見 ≥820px 那條規則）——兩者必須同值，
+           釘住點才正好是圖的自然位置 */
+        top: calc(var(--rhead-h, 110px) + 44px); align-self: start;
       }
-      #reader-view.has-art .reader-content > .rc-art .reader-artwork { margin: 0; }
+      #reader-view.has-art .reader-content > .rc-art .reader-artwork {
+        margin: 0 auto; width: auto; max-width: 100%;
+        /* 圖高上限＝視窗扣掉頂欄、上緣內距與署名列：圖欄永遠不動，超高的直式圖不縮限
+           的話署名會被推出視窗、再也看不到 */
+        max-height: calc(100vh - var(--rhead-h, 110px) - 44px - 78px);
+      }
       #reader-view.has-art .reader-content > .rc-art .reader-byline { margin: 10px 0 0; }
       #reader-view.has-art .reader-content > .rc-body { grid-column: 2; grid-row: 1 / -1; min-width: 0; }
     }
