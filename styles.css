@@ -547,7 +547,7 @@
     .gd-frame img { display: block; width: 100%; height: auto; }
     .gd-title { font-size: 16px; font-weight: bold; color: var(--ink); margin-top: 16px; }
     .gd-author { font-size: 12px; color: var(--ink-light); margin-top: 3px; }
-    .gd-caption { font-size: 13px; color: var(--ink); margin-top: 12px; line-height: 1.75; }
+    .gd-caption { font-size: 13px; color: var(--ink); margin-top: 12px; line-height: 1.75; white-space: pre-wrap; }   /* 作者敘述裡的換行照打字時的樣子顯示 */
     .gd-hint { font-size: 11px; color: var(--ink-light); margin-top: 12px; text-align: center; letter-spacing: .04em; }
     /* 投稿的畫框小樣 */
     /* 上傳／編輯的畫框即時預覽：點哪個框，上方的圖就套哪個框（與牆上同一套 border-image） */
