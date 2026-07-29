@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.38';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.39';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4435,8 +4435,10 @@ function openGalleryItem(id, fromAdmin) {
   const adminBox = document.getElementById('gd-admin');
   const adminish = currentUser && ['admin', 'super_admin'].includes(currentUser.role);
   const isOwner = currentUser && (it.owners || []).includes(currentUser.id);
-  // 時段是策展動作，只有管理員能排；裁切框是作者對自己作品的顯示調整，作者或管理員都能開。
-  if (_gdFromAdmin && (adminish || isOwner)) {
+  // 心動封面策展（開關＋時段）：管理員不論從留影走廊或作品管理點開都看得到——
+  // 策展就是在牆上巡的時候做的，不該繞路回作品管理。裁切框是作者對自己作品的顯示調整，
+  // 作者要從作品管理進（自己的牆上詳情卡維持乾淨的觀賞視角）。
+  if (adminish || (_gdFromAdmin && isOwner)) {
     const slotBox = adminish
       ? `<div style="display:flex;gap:8px" data-slot-for="${it.id}">${coverSlotRowHtml(it.id, effectiveImageSlot(it))}</div>`
       : '';
