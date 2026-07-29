@@ -16,7 +16,7 @@
     'handleAvatarUpload', 'installPwaNow', 'loadChapter', 'loadForumPosts', 'loadNovels', 'letterUpdateOnce', 'loadTxtIntoUpload',
     'navigateChapter', 'navigateSeries', 'openBugReport', 'openCharProfileFromHome', 'openEditorLetter',
     'openEditClass', 'openEditWork', 'openFaq', 'openMqjDisclaimer', 'openNovel', 'openOwners',
-    'openSeries', 'owlOpenIdx', 'openWishPool', 'renderAdminNovels', 'renderForumList', 'renderShelf', 'renderUserRows',
+    'openSeries', 'owlOpenIdx', 'owlOpenCurate', 'openWishPool', 'renderAdminNovels', 'renderForumList', 'renderShelf', 'renderUserRows',
     'rejectNovel', 'insertRejectPhrase', 'replyFeedback', 'requestMqj', 'resetAdminNovelScope', 'resubmitNovel', 'retractNovel',
     'resetPassword', 'resumeReading', 'reviewMqj', 'revokeInvite', 'saveAvatarCrop',
     'saveEditClass', 'saveEditWork', 'saveFaqEditor', 'saveFeedbackReply', 'saveMyPassword',

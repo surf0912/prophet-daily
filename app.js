@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.41';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.42';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1604,6 +1604,19 @@ async function renderFavUpdates() {
       });
     }
   }
+  // 管理員：免審上牆、心動封面還沒人裁決的畫作（自動審核作者繞過審核佇列，
+  // 沒有這條的話只有進審核頁才看得到徽章）。彙整成一條，有新漏網會再亮。
+  if (all && currentUser && ['admin', 'super_admin'].includes(currentUser.role)) {
+    const todo = all.filter(n => n.kind === 'image' && n.status === 'approved'
+      && !n.image_slot && /^http/.test(n.image_url || '') && !n.locked);
+    if (todo.length) {
+      const newest = todo.reduce((x, n) => (!x || new Date(n.created_at || 0) > new Date(x.created_at || 0)) ? n : x, null);
+      const k = `curate:${todo.length}:${(newest && newest.created_at) || ''}`;
+      items.push({ kind: 'curate', key: k, readKey: k, title: '有畫作等待心動策展',
+        sub: `${todo.length} 幅免審上牆的畫作還沒人決定心動封面`,
+        at: (newest && newest.created_at) || new Date().toISOString(), unread: !read.has(k) });
+    }
+  }
   // 自己的作品審核刊出（執筆人以上）
   if (all && _writerPlus) {
     all.forEach(n => {
@@ -1646,8 +1659,9 @@ async function renderFavUpdates() {
           }
           return;
         }
-        // 畫師主動授權（offer_image）自己按了同意之後，圖還是要到編輯頁掛上——提醒一次
-        if (a.direction === 'offer_image' && a.status === 'approved') {
+        // 畫師主動授權（offer_image）自己按了同意之後，圖還是要到編輯頁掛上——提醒一次。
+        // 文首畫作的連動授權信是自己寄給自己的（requester==recipient），圖生下來就掛好了，跳過。
+        if (a.direction === 'offer_image' && a.status === 'approved' && a.requester !== a.recipient) {
           const kp = `authapply:${a.id}`;
           const tp = new Date(a.decided_at || a.created_at).getTime();
           if (!(read.has(kp) && tp < cutoff)) {
@@ -1712,6 +1726,7 @@ async function renderFavUpdates() {
     if (it.kind === 'chap' || it.kind === 'pub') return `<a href="#" data-onclick="owlOpenIdx(${i});return false" class="${cls}">${inner}</a>`;
     if (it.kind === 'wishreply') return `<a href="#" data-onclick="wishReplyOpen('${it.id}');return false" class="${cls}">${inner}</a>`;
     if (it.kind === 'authin' || it.kind === 'authout') return `<a href="#" data-onclick="owlOpenAuth(${i});return false" class="${cls}">${inner}</a>`;
+    if (it.kind === 'curate') return `<a href="#" data-onclick="owlOpenCurate(${i});return false" class="${cls}">${inner}</a>`;
     return `<a href="#" data-onclick="favOwlOpen('${it.id}');return false" class="${cls}">${inner}</a>`;
   }).join('');
 }
@@ -1748,6 +1763,13 @@ async function owlOpenIdx(i) {   // 章節更新/作品刊出：標記已讀（�
   openNovel(it.id);
 }
 function favOwlOpen(id) { const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true; _markInstallmentRead(id); openNovel(id); }
+function owlOpenCurate(i) {   // 心動策展通知 → 審核分頁的「心動策展」膠囊
+  const it = _owlItems[i]; if (!it) return;
+  const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true;
+  if (it.readKey) _markInstallmentRead(it.readKey);
+  showPage('admin', document.getElementById('admin-nav-btn'));
+  switchAdminTab('review'); setReviewMode('covers');
+}
 function owlOpenAuth(i) {   // 授權信通知 → 打開信箱（writer 進授權分頁；admin 進審核的授權信膠囊）
   const it = _owlItems[i]; if (!it) return;
   const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true;
@@ -3710,7 +3732,8 @@ async function onEditHeaderPick(input) {
     const r = await api(`/novels/${editWork.id}/header-image`, { method: 'PATCH', body: JSON.stringify({
       image: disp.data,
       image_thumb: disp.srcMax > 1000 * 1.2 ? th.data : null,
-      image_full: disp.srcMax > 1400 * 1.2 ? fu.data : null }) });
+      image_full: disp.srcMax > 1400 * 1.2 ? fu.data : null,
+      caption: (document.getElementById('editheader-caption') || { value: '' }).value.trim() }) });
     editWork.headerUrl = (r && r.image_url) || null;
     editWork.headerArts = (r && r.image_url)
       ? [{ url: r.image_url, artist: null, artwork_id: null },
@@ -5742,6 +5765,7 @@ async function openEditWork(id) {
   const isImage = n.kind === 'image';   // 畫作：純圖片投稿，沒有頁首圖、也沒有內文／章節
   // 複製作品編號（admin-only）：給文首插圖 artwork/<id>.jpg 等「以編號對應」的用途
   { const cp = document.getElementById('editwork-copyid'); if (cp) cp.setAttribute('data-onclick', `copyText('${id}', '已複製作品編號')`); }
+  { const hc = document.getElementById('editheader-caption'); if (hc) hc.value = ''; }   // 上一篇殘留的敘述不帶進來
   document.getElementById('editwork-title').value = n.title || '';
   document.getElementById('editwork-author').value = n.author || '';
   // 發佈日期以台灣時區帶入：直接 slice UTC 字串的話，台灣 00:00–08:00 投稿的作品
