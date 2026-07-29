@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.35';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.36';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -5367,12 +5367,13 @@ function _adminGroupBySeries(list) {
     // 作品管理專屬：收合時也要看得出「這個系列有事待辦」，否則得逐一點開才知道哪篇待審
     const pend = members.filter(m => m.status === 'pending').length;
     const rej = members.filter(m => m.status === 'rejected').length;
-    const flags = (pend ? `<span class="t-cat">${ic('ic-clock', 11)} 待審 ${pend}</span>` : '')
-      + (rej ? `<span class="t-cat" style="background:rgba(201,168,76,.28);color:var(--ink-light)">${ic('ic-x', 11)} 已退回 ${rej}</span>` : '');
+    const flags = (pend ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">${ic('ic-clock', 11)} 待審 ${pend}</span>` : '')
+      + (rej ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.28);color:var(--ink-light)">${ic('ic-x', 11)} 已退回 ${rej}</span>` : '');
     const newest = members.reduce((x, m) => (!x || new Date(m.created_at || 0) > new Date(x.created_at || 0)) ? m : x, null);
-    const meta = newest && newest.created_at ? `${ic('ic-calendar', 11)} ${fmtUpdated(newest.created_at)}` : '';
-    // 收合時就分得出畫作系列與文章系列：副標用不同說法（幅／篇），並掛上與單張卡片同款的種類徽章
-    const sub = isImg ? `畫作系列 · 共 ${members.length} 幅` : `系列合集 · 共 ${members.length} 篇`;
+    // 版式與單一作品卡同款（徽章列→標題→標籤列→作者日期列），只有標題列右側多了
+    // 「共 X 篇/幅」與 chevron；縮排歸零，成員就是一張張普通卡片。
+    const sub = isImg ? `畫作系列 · 共 ${members.length} 幅`
+      : `${n.series_shared ? '共創系列' : '系列合集'} · 共 ${members.length} 篇`;
     const kindBadge = isImg
       ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${ic('ic-gallery', 12)} 畫作</span>`
       : n.kind === 'forum'
@@ -5380,13 +5381,14 @@ function _adminGroupBySeries(list) {
         : `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">${ic('ic-book', 12)} 小說</span>`;
     out.push(`
       <div class="series-block${expanded ? ' expanded' : ''}" data-series="${escapeHtml(key)}">
-        <div class="novel-row series-head" data-onclick="toggleSeries(this)" role="button" aria-expanded="${expanded}">
-          <div class="series-title-line">
-            <h4>《${escapeHtml(stripOuterBookQuotes(n.series))}》</h4>
+        <div class="series-head" data-onclick="toggleSeries(this)" role="button" aria-expanded="${expanded}" style="padding:10px 0">
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:3px">${kindBadge}${flags}</div>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+            <div style="font-size:14px;font-weight:bold;min-width:0">《${escapeHtml(stripOuterBookQuotes(n.series))}》</div>
             <span class="series-sub">${sub} <span class="series-chev" aria-hidden="true"></span></span>
           </div>
-          <div class="row-meta">${meta}</div>
-          <div class="row-tags">${kindBadge}${flags}${cats.map(c => `<span class="t-cat${catCls(c)}">${escapeHtml(c)}</span>`).join('')}${chars.map(c => charPill(c)).join('')}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">${cats.map(c => `<span class="t-cat${catCls(c)}">${escapeHtml(c)}</span>`).join('')}${chars.map(c => charPill(c)).join('')}</div>
+          <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${escapeHtml((newest && newest.author) || '佚名')}${newest && newest.created_at ? ' · ' + ic('ic-calendar', 11) + ' ' + fmtUpdated(newest.created_at) : ''}</div>
         </div>
         <div class="series-members">${members.map(m => _adminNovelCard(m)).join('')}</div>
       </div>`);
