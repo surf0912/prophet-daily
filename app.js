@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.31';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.32';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2375,6 +2375,13 @@ function stripOuterBookQuotes(title) {
 }
 
 // Render a list of novels into the grid, grouping series members under a header.
+// 系列分組鍵：共創系列（series_shared）只看名字——不同作者綁同一個系列名就是要併成
+// 一個合集；個人系列綁原投稿者，別人取同名也不會混進來（與畫作牆的疊圖同一個道理）。
+// 書架與作品管理共用，_expandedSeries 也以此為鍵，兩邊開合才同步。
+function seriesKey(n) {
+  return n.series_shared ? '共::' + n.series : '私::' + (n.created_by || '') + '::' + n.series;
+}
+
 function renderNovelBlocks(list, grid, emptyMsg) {
   if (!list.length) { grid.innerHTML = `<div class="empty-shelf">${emptyMsg}</div>`; return; }
   const seen = new Set();
@@ -2382,11 +2389,13 @@ function renderNovelBlocks(list, grid, emptyMsg) {
   for (const n of list) {
     if (seen.has(n.id)) continue;
     if (n.series) {
-      const members = list.filter(m => m.series === n.series).sort((a, b) => (a.series_order || 0) - (b.series_order || 0));
+      const key = seriesKey(n);
+      const members = list.filter(m => m.series && seriesKey(m) === key)
+        .sort((a, b) => (a.series_order || 0) - (b.series_order || 0) || new Date(a.created_at || 0) - new Date(b.created_at || 0));   // 撞號時發佈早的在前（與上下篇一致）
       members.forEach(m => seen.add(m.id));
       // 收合的系列列＝與單篇同款卡片，只靠三個訊號區分：《》書名號、副標「系列合集 · 共 N 篇」、列尾 chevron。
       // 標籤列＝成員的 類型＋角色 去重彙整（類型前、角色後，保持首次出現順序）。
-      const expanded = _expandedSeries.has(n.series);
+      const expanded = _expandedSeries.has(key);
       const cats = [], chars = [], authorCount = new Map();
       members.forEach(m => {
         if (m.category && !cats.includes(m.category)) cats.push(m.category);
@@ -2396,17 +2405,19 @@ function renderNovelBlocks(list, grid, emptyMsg) {
       const tags = cats.map(c => `<span class="t-cat${catCls(c)}">${escapeHtml(c)}</span>`).join('')
         + chars.map(c => charPill(c)).join('');
       // 系列作者：一般同一人。取成員署名中「最多篇用的那個」（Map 保插入序，平手取序號最小的那篇），
-      // 避免個別篇署名打錯字（例：利/莉）被誤湊成「共同作者」。日期 = 系列最新更新那篇的日期。
+      // 避免個別篇署名打錯字（例：利/莉）被誤湊成「共同作者」。共創系列本來就是多人，
+      // 才照實列「X 等 N 人」。日期 = 系列最新更新那篇的日期。
       let author = '佚名', _best = -1;
       for (const [a, c] of authorCount) { if (c > _best) { _best = c; author = a; } }
+      if (n.series_shared && authorCount.size > 1) author = `${author} 等 ${authorCount.size} 人`;
       const newest = members.reduce((x, m) => (!x || new Date(m.created_at || 0) > new Date(x.created_at || 0)) ? m : x, null);
       const meta = `${escapeHtml(author)}${ownerTag(newest)}${newest && newest.created_at ? ` · ${ic('ic-calendar',11)} ${fmtUpdated(newest.created_at)}` : ''}`;
       blocks.push(`
-        <div class="series-block${expanded ? ' expanded' : ''}" data-series="${escapeHtml(n.series)}">
+        <div class="series-block${expanded ? ' expanded' : ''}" data-series="${escapeHtml(key)}">
           <div class="novel-row series-head" data-onclick="toggleSeries(this)" role="button" aria-expanded="${expanded}">
             <div class="series-title-line">
               <h4>《${escapeHtml(stripOuterBookQuotes(n.series))}》</h4>
-              <span class="series-sub">系列合集 · 共 ${members.length} 篇 <span class="series-chev" aria-hidden="true"></span></span>
+              <span class="series-sub">${n.series_shared ? '共創系列' : '系列合集'} · 共 ${members.length} 篇 <span class="series-chev" aria-hidden="true"></span></span>
             </div>
             <div class="row-meta">${meta}</div>
             <div class="row-tags">${tags}</div>
@@ -2552,7 +2563,7 @@ async function updateSeriesNav(novel) {
     if (sibs && sibs.length > 1) {
       _seriesSibs = sibs;
     } else {
-      _seriesSibs = novels.filter(n => n.series === novel.series)
+      _seriesSibs = novels.filter(n => n.series && seriesKey(n) === seriesKey(novel))
         .sort((a, b) => (a.series_order || 0) - (b.series_order || 0) || new Date(a.created_at) - new Date(b.created_at));
     }
     _seriesIdx = _seriesSibs.findIndex(n => n.id === novel.id);
@@ -5306,13 +5317,15 @@ function _adminGroupBySeries(list) {
     // 畫作系列與文章系列是兩件事（留影走廊自己也把畫作依系列疊起來），同名時不能併成一列——
     // 併了會出現「系列合集 共 2 篇」裡混著畫，點開才發現不是自己以為的那個系列。
     const isImg = n.kind === 'image';
-    const members = list.filter(m => m.series === n.series && (m.kind === 'image') === isImg)
+    // 展開狀態的鍵：文章走 seriesKey（共創／個人分流，與意若思鏡同步）；畫作另加前綴，
+    // 免得同名的兩個系列在兩邊互相牽動（意若思鏡沒有畫作系列，不會撞到）。
+    const key = isImg ? '圖::' + n.series : seriesKey(n);
+    const members = list.filter(m => m.series
+        && (m.kind === 'image') === isImg
+        && (isImg ? m.series === n.series : seriesKey(m) === key))
       .sort((a, b) => (a.series_order || 0) - (b.series_order || 0)
         || new Date(a.created_at || 0) - new Date(b.created_at || 0));
     members.forEach(m => seen.add(m.id));
-    // 展開狀態的鍵：文章系列沿用系列名，與意若思鏡同步；畫作系列另加前綴，
-    // 免得同名的兩個系列在兩邊互相牽動（意若思鏡沒有畫作系列，不會撞到）。
-    const key = isImg ? '圖::' + n.series : n.series;
     const expanded = _expandedSeries.has(key);
     // 標籤與意若思鏡同規：成員的類型＋角色去重彙整（類型前、角色後，保持首次出現順序）
     const cats = [], chars = [];
