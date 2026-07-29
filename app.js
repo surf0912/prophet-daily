@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.36';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.37';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2813,7 +2813,9 @@ function renderHeaderArt() {
   img.src = cur.url;
   img.onclick = null; img.style.cursor = ''; img.title = '';
   const wen = currentNovelByline && currentNovelByline.text;
-  by.textContent = cur.artist ? (wen ? `文／${wen}　圖／${cur.artist}` : `圖／${cur.artist}`) : '';
+  by.textContent = cur.artist
+    ? (wen ? (wen === cur.artist ? `文·圖／${wen}` : `文／${wen}　圖／${cur.artist}`) : `圖／${cur.artist}`)
+    : '';
   by.style.display = by.textContent ? '' : 'none';
   if (nav) {
     nav.style.display = list.length > 1 ? '' : 'none';
@@ -3661,14 +3663,20 @@ function pickFrame(code) {
 function pickImageFile() { const el = document.getElementById('image-file'); if (el) el.click(); }
 
 // ── 小說頁首圖：新增小說時選圖，送出建立後再 PATCH 上傳 ─────────────────────
-const _novelHeader = { data: null };
+const _novelHeader = { data: null, thumb: null, full: null };
 function pickNovelHeader() { const el = document.getElementById('nh-file'); if (el) el.click(); }
 async function onNovelHeaderPick(input) {
   const f = input.files[0]; input.value = '';
   if (!f) return;
   if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { toast('請選擇 JPG、PNG 或 WebP 圖片'); return; }
   try {
-    _novelHeader.data = await resizeImageContain(f, 1080, 0.82);   // 同 artwork 工具：≤1080 寬
+    // 文首圖同時成為畫作作品（上牆），尺寸與畫作投稿同規：縮圖／顯示版／高清版
+    { const [th, disp, fu] = await resizeImageVariants(f, [
+        { maxDim: 1000, quality: 0.82 }, { maxDim: 1400, quality: 0.85 }, { maxDim: 2560, quality: 0.9 }]);
+      _novelHeader.data = disp.data;
+      _novelHeader.thumb = disp.srcMax > 1000 * 1.2 ? th.data : null;
+      _novelHeader.full = disp.srcMax > 1400 * 1.2 ? fu.data : null; }
+    { const cap = document.getElementById('nh-caption-row'); if (cap) cap.style.display = ''; }
     const wrap = document.getElementById('nh-preview');
     wrap.style.display = '';
     wrap.innerHTML = `<img src="${_novelHeader.data}" alt="" style="max-width:100%;max-height:220px;border-radius:6px" /><div style="margin-top:6px"><button type="button" data-onclick="clearNovelHeader()" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">移除頁首圖</button></div>`;
@@ -3676,7 +3684,9 @@ async function onNovelHeaderPick(input) {
   } catch (e) { toast('圖片讀取失敗'); }
 }
 function clearNovelHeader() {
-  _novelHeader.data = null;
+  _novelHeader.data = null; _novelHeader.thumb = null; _novelHeader.full = null;
+  { const cap = document.getElementById('nh-caption-row');
+    if (cap) { cap.style.display = 'none'; const t = document.getElementById('nh-caption'); if (t) t.value = ''; } }
   const wrap = document.getElementById('nh-preview'); if (wrap) { wrap.style.display = 'none'; wrap.innerHTML = ''; }
   const drop = document.getElementById('nh-drop'); if (drop) drop.textContent = '選擇頁首圖';
 }
@@ -3695,8 +3705,12 @@ async function onEditHeaderPick(input) {
   if (!f || !editWork.id) return;
   if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { toast('請選擇 JPG、PNG 或 WebP 圖片'); return; }
   try {
-    const data = await resizeImageContain(f, 1080, 0.82);
-    const r = await api(`/novels/${editWork.id}/header-image`, { method: 'PATCH', body: JSON.stringify({ image: data }) });
+    const [th, disp, fu] = await resizeImageVariants(f, [
+      { maxDim: 1000, quality: 0.82 }, { maxDim: 1400, quality: 0.85 }, { maxDim: 2560, quality: 0.9 }]);
+    const r = await api(`/novels/${editWork.id}/header-image`, { method: 'PATCH', body: JSON.stringify({
+      image: disp.data,
+      image_thumb: disp.srcMax > 1000 * 1.2 ? th.data : null,
+      image_full: disp.srcMax > 1400 * 1.2 ? fu.data : null }) });
     editWork.headerUrl = (r && r.image_url) || null;
     editWork.headerArts = (r && r.image_url)
       ? [{ url: r.image_url, artist: null, artwork_id: null },
@@ -5158,7 +5172,9 @@ async function submitNewNovel(btn) {
       throw chErr;
     }
     // 頁首圖：作品建立後才有 id，補 PATCH 上傳（失敗不擋作品建立，提示即可）
-    if (_novelHeader.data) { try { await api(`/novels/${novel.id}/header-image`, { method: 'PATCH', body: JSON.stringify({ image: _novelHeader.data }) }); } catch (e) { toast('頁首圖上傳失敗：' + (e.message || '')); } }
+    if (_novelHeader.data) { try { await api(`/novels/${novel.id}/header-image`, { method: 'PATCH', body: JSON.stringify({
+      image: _novelHeader.data, image_thumb: _novelHeader.thumb, image_full: _novelHeader.full,
+      caption: (document.getElementById('nh-caption') || { value: '' }).value.trim() }) }); } catch (e) { toast('頁首圖上傳失敗：' + (e.message || '')); } }
     toast(novel.status === 'pending' ? '已送出，待管理員審核' : '小說已建立');
     ['new-novel-title', 'new-novel-author', 'new-novel-date', 'new-novel-content'].forEach(id => document.getElementById(id).value = '');
     prefillAuthor('new-novel-author');   // 清空後重新帶回暱稱：連續上傳系列時署名保持一致，免重打（避免手滑打錯）

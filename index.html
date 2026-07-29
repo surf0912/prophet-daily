@@ -453,6 +453,11 @@
             <div id="nh-drop" data-onclick="pickNovelHeader()" style="border:1.5px dashed var(--gold);border-radius:8px;padding:18px 12px;text-align:center;cursor:pointer;color:var(--ink-light);font-size:13px">選擇頁首圖</div>
             <input type="file" id="nh-file" accept="image/jpeg,image/png,image/webp" style="display:none" data-onchange="onNovelHeaderPick(this)" />
             <div id="nh-preview" style="display:none;margin-top:10px;text-align:center"></div>
+            <div id="nh-caption-row" style="display:none;margin-top:10px">
+              <label style="font-size:13px">圖片敘述（將隨畫作一起展示在留影走廊，選填）</label>
+              <textarea id="nh-caption" rows="2" maxlength="300" placeholder="這張圖畫的是……" style="width:100%;box-sizing:border-box;padding:9px 10px;font-family:inherit;font-size:13px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink);resize:vertical"></textarea>
+              <p style="font-size:12px;color:var(--ink-light);margin:6px 0 0;line-height:1.7">頁首圖會同時以畫作身份投稿：標題、作者、發布日期與這篇文章相同，隨文章一起審核，通過後掛上留影走廊。</p>
+            </div>
           </div>
           <div class="form-group"><label>故事類型</label><select id="new-novel-category"></select></div>
           <div class="form-group"><label>角色（可多選）</label><div id="new-novel-chars" class="char-picker"></div></div>
