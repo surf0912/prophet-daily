@@ -508,12 +508,15 @@
           <button class="cat-pill active" id="review-pill-works" data-onclick="setReviewMode('works')">待審作品</button>
           <button class="cat-pill" id="review-pill-auths" data-onclick="setReviewMode('auths')">授權信</button>
           <button class="cat-pill" id="review-pill-writers" data-onclick="setReviewMode('writers')">作者申請</button>
+          <button class="cat-pill" id="review-pill-covers" data-onclick="setReviewMode('covers')">心動策展</button>
         </div>
         <p id="review-works-note" style="font-size:12px;color:var(--ink-light);margin-bottom:12px">作者上傳的內容需審核通過才會公開給所有人。</p>
+        <p id="review-covers-note" style="display:none;font-size:12px;color:var(--ink-light);margin-bottom:12px">自動發佈（免審）上牆的畫作不會經過審核那一步，心動封面因此沒人決定過——都收在這裡等裁決。選一個時段＝上架進輪播；按「維持不上心動・結案」＝不進輪播、從清單移除。人工審核通過的作品會在通過時自動結案，不會出現在這裡。</p>
         <p id="review-auths-note" style="display:none;font-size:12px;color:var(--ink-light);margin-bottom:12px">授權信一來一回即封緘：對方回覆前可撤回；被婉拒的信無法重寄。</p>
         <p id="review-writers-note" style="display:none;font-size:12px;color:var(--ink-light);margin-bottom:12px">從閱報須知頁或站內留下聯絡方式、有意執筆或作畫的人。標「站內」者為登入讀者，可直接對到帳號。</p>
         <div id="admin-review-list"></div>
         <div id="admin-review-auths" style="display:none"></div>
+        <div id="admin-review-covers" style="display:none"></div>
         <div id="admin-review-writers" style="display:none"><div id="writer-app-list"></div></div>
       </div>
       <div id="admin-auths" class="admin-pane">

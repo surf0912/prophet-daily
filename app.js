@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.39';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.40';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3300,7 +3300,7 @@ function switchAdminTab(tab) {
   if (tab === 'novels') loadAdminNovelList();
   if (tab === 'users') loadAdminUsers();
   if (tab === 'upload') { setUploadKind('novel'); initUploadDraftWatch(); restoreUploadDraft(); }
-  if (tab === 'review') { setReviewMode('works'); loadReviewList(); refreshWriterAppBadge(); }
+  if (tab === 'review') { setReviewMode('works'); loadReviewList(); refreshWriterAppBadge(); refreshCurationBadge(); }
   if (tab === 'auths') renderAuthMailbox('auth-mailbox');
   if (tab === 'invites') {
     // super_admin only: 管理員邀請 button + 批次數量 selector (admins generate one at a time)
@@ -3924,6 +3924,7 @@ const REVIEW_MODES = {
   works:   { pill: 'review-pill-works',   pane: 'admin-review-list',    note: 'review-works-note' },
   auths:   { pill: 'review-pill-auths',   pane: 'admin-review-auths',  note: 'review-auths-note' },
   writers: { pill: 'review-pill-writers', pane: 'admin-review-writers', note: 'review-writers-note' },
+  covers:  { pill: 'review-pill-covers',  pane: 'admin-review-covers',  note: 'review-covers-note' },
 };
 function setReviewMode(mode) {
   if (!REVIEW_MODES[mode]) mode = 'works';
@@ -3938,6 +3939,47 @@ function setReviewMode(mode) {
   });
   if (mode === 'auths') renderAuthMailbox('admin-review-auths');
   if (mode === 'writers') loadWriterApps();
+  if (mode === 'covers') loadCurationList();
+}
+
+// ── 心動策展提醒：自動發佈（免審）上牆的畫作沒人經手過心動封面，集中列出等管理員裁決。
+// 三態：image_slot null＝沒人決定過（列在這）；'none'＝決定不上；時段＝上架。
+// 人審過的在通過那一刻自動蓋 'none'，所以這裡只會出現繞過人眼的。
+function _uncurated(list) {
+  return (list || []).filter(it => !it.image_slot && /^http/.test(it.image_url || ''));
+}
+async function refreshCurationBadge() {
+  try {
+    const list = await api('/novels/gallery', { background: true }) || [];
+    _galleryItems = list;
+    const n = _uncurated(list).length;
+    const pill = document.getElementById('review-pill-covers');
+    if (pill) pill.textContent = n ? `心動策展 ${n}` : '心動策展';
+  } catch (e) {}
+}
+async function loadCurationList() {
+  const el = document.getElementById('admin-review-covers');
+  if (!el) return;
+  el.innerHTML = '<div class="spinner"></div>';
+  let list;
+  try { list = await api('/novels/gallery') || []; _galleryItems = list; }
+  catch (e) { el.innerHTML = `<p style="font-size:12.5px;color:var(--accent)">讀取失敗：${escapeHtml(e.message)}</p>`; return; }
+  const todo = _uncurated(list);
+  { const pill = document.getElementById('review-pill-covers');
+    if (pill) pill.textContent = todo.length ? `心動策展 ${todo.length}` : '心動策展'; }
+  if (!todo.length) { el.innerHTML = '<p style="font-size:12.5px;color:var(--ink-light);padding:2px 0 6px">牆上每一幅畫的心動封面都有人決定過了。</p>'; return; }
+  el.innerHTML = todo.map(it => `
+    <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div data-onclick="openGalleryItem('${it.id}')" style="font-size:14px;font-weight:bold;cursor:pointer">${escapeHtml(it.title || '無題')} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye', 11)} 預覽</span></div>
+          <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${escapeHtml(it.author || '佚名')}${it.created_at ? ' · ' + ic('ic-calendar', 11) + ' ' + fmtUpdated(it.created_at) : ''}</div>
+        </div>
+        <img src="${escapeHtml(it.image_url_thumb || it.image_url)}" alt="" data-onclick="openGalleryItem('${it.id}')" style="width:64px;height:64px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:pointer" />
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px" data-slot-for="${it.id}">${coverSlotRowHtml(it.id, effectiveImageSlot(it))}</div>
+      <button data-onclick="setImageSlot('${it.id}','none')" style="margin-top:6px;font-size:12px;padding:5px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:4px;cursor:pointer">維持不上心動・結案</button>
+    </div>`).join('');
 }
 // 寫信彈窗
 let _authReqCtx = null;
@@ -4861,15 +4903,19 @@ function toggleCoverPool(id) {
 async function setImageSlot(id, slot) {
   try {
     await api(`/novels/${id}/image-slot`, { method: 'PATCH', body: JSON.stringify({ slot }) });
-    // 更新所有可能持有這件作品的快取（含審核清單 _reviewPending）。'none'＝下架，本地記 null 與後端一致。
-    const val = slot === 'none' ? null : slot;
+    // 更新所有可能持有這件作品的快取（含審核清單 _reviewPending）。三態與後端一致：
+    // null＝沒人決定過、'none'＝決定不上、時段＝上架。
+    const val = slot;
     _coverIntent.delete(id);   // 選了時段（或下架）之後，「還沒選時段」的暫存意向就結案了
     [_galleryDetailItem, ...(_galleryItems || []), ...(window._adminNovels || []), ...(window._reviewPending || [])]
       .forEach(o => { if (o && o.id === id) o.image_slot = val; });
     // 策展列整列重繪（開關按鈕的下一步動作隨狀態變，光改高亮不夠）；兩個版面同一個 wrapper 標記。
     document.querySelectorAll(`[data-slot-for="${id}"]`).forEach(el => { el.innerHTML = coverSlotRowHtml(id, val); });
     loadHomeGalleryCovers();   // 立刻反映到心動封面池
-    toast(val ? '已上架心動封面（' + ({ am: '早晨', pm: '下午', night: '夜晚' })[val] + '）' : '已從心動封面下架');
+    toast(val !== 'none' ? '已上架心動封面（' + ({ am: '早晨', pm: '下午', night: '夜晚' })[val] + '）' : '已從心動封面下架');
+    // 心動策展清單開著＝這個動作就是在結案，重載讓已決定的退出清單
+    { const pane = document.getElementById('admin-review-covers');
+      if (pane && pane.style.display !== 'none') loadCurationList(); }
   } catch (e) { toast(e.message); }
 }
 
