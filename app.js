@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.33';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.34';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2859,6 +2859,14 @@ async function _linkHeaderArtwork(img, byEl, url, artworkId) {
   img.title = `《${art.title || '畫作'}》— 點擊看畫作詳情`;
   img.addEventListener('click', () => openGalleryItem(art.id));
   const name = `《${art.title || '無題'}》`;
+  // 存的署名是空的（署名機制上線前掛的舊圖）→ 退回用牆上畫作本身的作者補「文／圖」，
+  // 舊文章不必逐篇補資料；文的署名照舊取文章作者。
+  if (byEl && !byEl.textContent && art.author) {
+    const nv = [...(typeof forumPosts !== 'undefined' ? forumPosts : []), ...(typeof novels !== 'undefined' ? novels : [])]
+      .find(n => n.id === currentNovelId);
+    const wen = (nv && nv.author) || '';
+    byEl.textContent = wen ? `文／${wen}　圖／${art.author}` : `圖／${art.author}`;
+  }
   if (byEl) { byEl.textContent = `${name}　${byEl.textContent}`.trim(); byEl.style.display = ''; }
   else {
     const cap = document.createElement('div');
