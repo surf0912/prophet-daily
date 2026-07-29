@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.37';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.38';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -6306,25 +6306,47 @@ async function loadWriterApps() {
     return;
   }
   _writerApps = list;
-  setWriterAppBadge(list.filter(r => r.status !== 'handled').length);
+  setWriterAppBadge(list.filter(r => r.status === 'new').length);
   if (!list.length) { el.innerHTML = '<p style="font-size:12.5px;color:var(--ink-light);padding:2px 0 6px">尚無申請</p>'; return; }
-  el.innerHTML = list.map(r => {
+  // 封存的收在清單底部的一行小字後面，預設不展開——聯絡方式留檔但不佔版面
+  const archived = list.filter(r => r.status === 'archived');
+  const active = list.filter(r => r.status !== 'archived');
+  const row = r => {
     const done = r.status === 'handled';
+    const arch = r.status === 'archived';
     return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08);font-size:13px;${done ? 'opacity:.55' : ''}">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
         <span style="font-weight:bold;color:var(--ink);word-break:break-all;min-width:0">${escapeHtml(r.contact || '')}</span>
         ${r.source === 'in_app' ? `<span style="background:rgba(45,74,30,.15);color:var(--series);padding:2px 8px;border-radius:10px;font-size:11px;flex-shrink:0">站內${r.applicant ? '·' + escapeHtml(r.applicant) : ''}</span>` : ''}
-        ${done ? '<span style="background:rgba(201,168,76,.28);color:var(--ink-light);padding:2px 8px;border-radius:10px;font-size:11px;flex-shrink:0;margin-left:auto">已處理</span>' : ''}
+        ${arch ? '<span style="background:rgba(26,10,0,.12);color:var(--ink-light);padding:2px 8px;border-radius:10px;font-size:11px;flex-shrink:0;margin-left:auto">已封存</span>'
+          : done ? '<span style="background:rgba(201,168,76,.28);color:var(--ink-light);padding:2px 8px;border-radius:10px;font-size:11px;flex-shrink:0;margin-left:auto">已處理</span>' : ''}
       </div>
       <div style="color:var(--ink-light);font-size:12px;margin-bottom:6px">${new Date(r.created_at).toLocaleString('zh-TW')}</div>
       ${r.note ? `<div style="color:var(--ink-light);line-height:1.7;margin-bottom:6px;white-space:pre-wrap">${escapeHtml(r.note)}</div>` : ''}
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button data-onclick="copyWriterApp('${r.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:5px;cursor:pointer">複製</button>
-        <button data-onclick="setWriterAppHandled('${r.id}',${done ? 'false' : 'true'})" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:5px;cursor:pointer">${done ? '標記未處理' : '標記已處理'}</button>
+        ${arch ? `<button data-onclick="archiveWriterApp('${r.id}', false)" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:5px;cursor:pointer">取消封存</button>`
+          : `<button data-onclick="setWriterAppHandled('${r.id}',${done ? 'false' : 'true'})" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:5px;cursor:pointer">${done ? '標記未處理' : '標記已處理'}</button>
+        <button data-onclick="archiveWriterApp('${r.id}', true)" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:5px;cursor:pointer">封存</button>`}
         <button data-onclick="deleteWriterApp('${r.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:5px;cursor:pointer">刪除</button>
       </div>
     </div>`;
-  })(n);
+  };
+  el.innerHTML = (active.map(row).join('') || '<p style="font-size:12.5px;color:var(--ink-light);padding:2px 0 6px">沒有進行中的申請</p>')
+    + (archived.length ? `
+      <button data-onclick="toggleWriterAppArchived(this)"
+        style="font-size:12px;background:none;border:none;color:var(--ink-light);cursor:pointer;padding:8px 0;text-decoration:underline">已封存 ${archived.length} 筆</button>
+      <div id="writer-app-archived" style="display:none">${archived.map(row).join('')}</div>` : '');
+}
+
+function toggleWriterAppArchived(btn) {
+  const box = document.getElementById('writer-app-archived');
+  if (box) box.style.display = box.style.display === 'none' ? '' : 'none';
+}
+// 封存＝從進行中的清單收走但留檔（聯絡方式可回查）；取消封存回到「已處理」。
+async function archiveWriterApp(id, on) {
+  try { await api(`/applications/writer/${id}`, { method: 'PATCH', body: JSON.stringify({ archived: on }) }); toast(on ? '已封存' : '已取消封存'); loadWriterApps(); }
+  catch (e) { toast(e.message); }
 }
 
 function copyWriterApp(id) {
