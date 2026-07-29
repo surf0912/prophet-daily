@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.42';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.43';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1043,7 +1043,7 @@ const AFTERNOON_COVERS = new Set([ // 下午：日落/黃昏金色光
 ]);
 // 照片識別鍵：去掉副檔名。封面 v3.49 從 .JPG 轉 .webp，但使用者帳號存的隱藏設定、
 // 留影走廊匯入時存下的 image_url 都還是 .JPG 路徑——所有比對一律用去副檔名 key，新舊通吃。
-function photoKey(u) { return String(u || '').replace(/\.(jpe?g|webp)$/i, ''); }
+function photoKey(u) { return String(u || '').split(/[?#]/)[0].replace(/\.(jpe?g|webp|png)$/i, ''); }   // 剝查詢字串（換圖的 ?v= 版本戳）與副檔名
 const _MORNING_KEYS = new Set([...MORNING_COVERS].map(photoKey));
 const _AFTERNOON_KEYS = new Set([...AFTERNOON_COVERS].map(photoKey));
 // 傳回某封面的時段：am=早晨中午、pm=下午、night=夜晚(預設)。
@@ -1603,6 +1603,34 @@ async function renderFavUpdates() {
         items.push({ kind: 'chap', id: n.id, key: k, readKey: k, title: '追蹤的作品有新章節', sub: n.title, at: n.last_chapter_at, unread: !read.has(k) });
       });
     }
+  }
+  // 共創系列：我建立的合集有新成員加入（別的作者帶著新作品綁進來）→ 通知建立者。
+  // 沒有「加入時間」欄位，以作品 created_at 推導：為共創新寫的會通知，舊作事後綁進來的不會。
+  if (all && _writerPlus) {
+    try {
+      const gal = (typeof _galleryItems !== 'undefined' && (_galleryItems || []).length) ? _galleryItems : [];
+      const pool = [...all, ...gal.filter(g => !all.some(a => a.id === g.id))];
+      const myFounded = new Map();   // key（共:: / 圖共::）→ 我最早那篇（我是建立者的證據）
+      pool.forEach(n => {
+        if (!n.series || !n.series_shared) return;
+        const k = n.kind === 'image' ? '圖共::' + n.series : '共::' + n.series;
+        const cur = myFounded.get(k);
+        if (!cur || new Date(n.created_at || 0) < new Date(cur.created_at || 0)) myFounded.set(k, n);
+      });
+      pool.forEach(n => {
+        if (!n.series || !n.series_shared || !n.created_at || n.created_by === currentUser.id) return;
+        const k = n.kind === 'image' ? '圖共::' + n.series : '共::' + n.series;
+        const f = myFounded.get(k);
+        if (!f || f.created_by !== currentUser.id) return;   // 我不是這個合集的建立者
+        const t = new Date(n.created_at).getTime();
+        if (isNaN(t) || t < cutoff) return;
+        const kk = `sjoin:${n.id}`;
+        items.push({ kind: n.kind === 'image' ? 'pub' : 'chap', workKind: n.kind, id: n.id, key: kk, readKey: kk,
+          title: '你的共創系列有新成員',
+          sub: `《${stripOuterBookQuotes(n.series)}》· ${n.author || '佚名'} 帶著「${n.title || ''}」加入`,
+          at: n.created_at, unread: !read.has(kk) });
+      });
+    } catch (e) {}
   }
   // 管理員：免審上牆、心動封面還沒人裁決的畫作（自動審核作者繞過審核佇列，
   // 沒有這條的話只有進審核頁才看得到徽章）。彙整成一條，有新漏網會再亮。
@@ -2402,6 +2430,10 @@ function stripOuterBookQuotes(title) {
 // 書架與作品管理共用，_expandedSeries 也以此為鍵，兩邊開合才同步。
 function seriesKey(n) {
   return n.series_shared ? '共::' + n.series : '私::' + (n.created_by || '') + '::' + n.series;
+}
+// 畫作版：規則同上，前綴不同——文與畫是兩個獨立命名空間，同名不互撞
+function imgSeriesKey(n) {
+  return n.series_shared ? '圖共::' + n.series : '圖私::' + (n.created_by || '') + '::' + n.series;
 }
 
 function renderNovelBlocks(list, grid, emptyMsg) {
@@ -4428,11 +4460,11 @@ function renderGallery() {
     cells = [];
     items.forEach(it => {
       if (it.series) {
-        // 綁原投稿者(created_by)：同名系列但不同投稿者不混組（擋撞名）
-        const gkey = it.series + '\u0000' + (it.created_by || '');
+        // 個人系列綁原投稿者（同名不混組）；共創系列以名字歸戶（跨畫師合辦系列展）
+        const gkey = imgSeriesKey(it);
         if (seen.has(gkey)) return;
         seen.add(gkey);
-        const members = items.filter(x => x.series === it.series && x.created_by === it.created_by).sort((x, y) => (x.series_order || 0) - (y.series_order || 0));
+        const members = items.filter(x => x.series && imgSeriesKey(x) === gkey).sort((x, y) => (x.series_order || 0) - (y.series_order || 0));
         cells.push({ rep: members[0], count: members.length });
       } else {
         cells.push({ rep: it, count: 1 });
@@ -4469,7 +4501,7 @@ function openGalleryItem(id, fromAdmin) {
   // 組圖：同系列成員（依 series_order；隱藏的不算入組），供詳情卡左右切換
   const hid = hiddenGallery();
   _galleryGroup = it.series
-    ? _galleryItems.filter(x => x.series === it.series && x.created_by === it.created_by && !hid.has(photoKey(x.image_url))).sort((x, y) => (x.series_order || 0) - (y.series_order || 0))
+    ? _galleryItems.filter(x => x.series && imgSeriesKey(x) === imgSeriesKey(it) && !hid.has(photoKey(x.image_url))).sort((x, y) => (x.series_order || 0) - (y.series_order || 0))
     : [it];
   _galleryGroupIdx = _galleryGroup.findIndex(x => x.id === it.id);
   if (_galleryGroupIdx === -1) { _galleryGroup = [it]; _galleryGroupIdx = 0; }   // 自己被隱藏（從已隱藏檢視開啟）→ 單張模式，不錯位
@@ -5437,10 +5469,10 @@ function _adminGroupBySeries(list) {
     const isImg = n.kind === 'image';
     // 展開狀態的鍵：文章走 seriesKey（共創／個人分流，與意若思鏡同步）；畫作另加前綴，
     // 免得同名的兩個系列在兩邊互相牽動（意若思鏡沒有畫作系列，不會撞到）。
-    const key = isImg ? '圖::' + n.series : seriesKey(n);
+    const key = isImg ? imgSeriesKey(n) : seriesKey(n);
     const members = list.filter(m => m.series
         && (m.kind === 'image') === isImg
-        && (isImg ? m.series === n.series : seriesKey(m) === key))
+        && (isImg ? imgSeriesKey(m) === key : seriesKey(m) === key))
       .sort((a, b) => (a.series_order || 0) - (b.series_order || 0)
         || new Date(a.created_at || 0) - new Date(b.created_at || 0));
     members.forEach(m => seen.add(m.id));
@@ -5459,7 +5491,7 @@ function _adminGroupBySeries(list) {
     const newest = members.reduce((x, m) => (!x || new Date(m.created_at || 0) > new Date(x.created_at || 0)) ? m : x, null);
     // 版式與單一作品卡同款（徽章列→標題→標籤列→作者日期列），只有標題列右側多了
     // 「共 X 篇/幅」與 chevron；縮排歸零，成員就是一張張普通卡片。
-    const sub = isImg ? `畫作系列 · 共 ${members.length} 幅`
+    const sub = isImg ? `${n.series_shared ? '共創畫作系列' : '畫作系列'} · 共 ${members.length} 幅`
       : `${n.series_shared ? '共創系列' : '系列合集'} · 共 ${members.length} 篇`;
     const kindBadge = isImg
       ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${ic('ic-gallery', 12)} 畫作</span>`
@@ -5568,6 +5600,31 @@ function _adminNovelCard(n) {
       </div>`;
 }
 
+// ── 畫作換圖：保留 id 與一切連結，只換圖檔並重產三尺寸（補高清版的正路） ──
+function pickReplaceImage() { const f = document.getElementById('replace-image-file'); if (f) f.click(); }
+async function onReplaceImagePick(input) {
+  const f = input.files[0]; input.value = '';
+  if (!f || !editWork.id) return;
+  if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { toast('請選擇 JPG、PNG 或 WebP 圖片'); return; }
+  if (!confirm('用這個檔案取代目前的圖？作品資料與所有連結都會保留。')) return;
+  toast('圖片處理中…');
+  try {
+    const [th, disp, fu] = await resizeImageVariants(f, [
+      { maxDim: 1000, quality: 0.82 }, { maxDim: 1400, quality: 0.85 }, { maxDim: 2560, quality: 0.9 }]);
+    const r = await api(`/novels/${editWork.id}/image-file`, { method: 'PATCH', body: JSON.stringify({
+      image: disp.data,
+      image_thumb: disp.srcMax > 1000 * 1.2 ? th.data : null,
+      image_full: disp.srcMax > 1400 * 1.2 ? fu.data : null }) });
+    // 本地快取同步新 URL（帶版本戳），畫框預覽即時換圖
+    [...(window._adminNovels || []), ...(_galleryItems || [])].forEach(o => {
+      if (o && o.id === editWork.id) { o.image_url = r.image_url; o.image_url_thumb = r.image_url_thumb; o.image_url_full = r.image_url_full; }
+    });
+    { const pv = document.getElementById('editwork-frame-preview');
+      const im = pv && pv.querySelector('img'); if (im) im.src = r.image_url; }
+    toast('圖檔已更換');
+  } catch (e) { toast(e.message || '換圖失敗'); }
+}
+
 // 作者把自己的作品鎖上：鎖住後除了作者本人和超管,其他人完全看不到這篇存在。
 function adminWorkById(id) { return (window._adminNovels || []).find(n => n.id === id) || {}; }
 
@@ -5625,10 +5682,13 @@ let seriesNovelId = null;
 
 // 共創合集的建立者＝合集中最早那篇的投稿者（與後端同一條推導；建立者退出則順位給
 // 最早的留存成員）。資料來源：書架快取＋作品管理快取，去重後取 created_at 最小者。
-function _seriesFounder(name) {
+function _seriesFounder(name, kind) {
   const seen = new Set(); let best = null;
-  [...(typeof novels !== 'undefined' ? novels : []), ...(window._adminNovels || [])].forEach(n => {
-    if (!n || seen.has(n.id) || n.series !== name || !n.series_shared || n.kind !== 'novel') return;
+  const pool = [...(typeof novels !== 'undefined' ? novels : []),
+                ...(kind === 'image' && typeof _galleryItems !== 'undefined' ? (_galleryItems || []) : []),
+                ...(window._adminNovels || [])];
+  pool.forEach(n => {
+    if (!n || seen.has(n.id) || n.series !== name || !n.series_shared || n.kind !== (kind || 'novel')) return;
     seen.add(n.id);
     if (!best || new Date(n.created_at || 0) < new Date(best.created_at || 0)) best = n;
   });
@@ -5647,8 +5707,9 @@ function openSeries(novelId) {
   // 已是成員且為建立者＝「開放加入」（合集閘門：關了其他人加不進來，建立者自己不受限）。
   // 已是成員但非建立者：閘門不歸他管，開關整排收起，只留說明。
   const isAdminUser = ['admin', 'super_admin'].includes(currentUser.role);
-  const isMember = !!(series && work.series_shared && work.kind === 'novel');
-  const founder = isMember ? _seriesFounder(series) : null;
+  const kind = work.kind === 'image' ? 'image' : 'novel';
+  const isMember = !!(series && work.series_shared && work.kind !== 'forum');
+  const founder = isMember ? _seriesFounder(series, kind) : null;
   const canGate = isMember && (isAdminUser || !founder || founder === currentUser.id);
   const row = document.getElementById('series-shared-row');
   const sh = document.getElementById('series-shared-input');
@@ -5669,10 +5730,12 @@ function openSeries(novelId) {
   }
   // 名字建議：自己的系列＋書架上「開放加入」的共創合集（截止的列出來也加不進去；
   // 自己是建立者的照列——關著門自己仍能加）
+  const pool = kind === 'image' ? (typeof _galleryItems !== 'undefined' ? (_galleryItems || []) : [])
+                                 : (typeof novels !== 'undefined' ? novels : []);
   const names = [...new Set([
-    ...(window._adminNovels || []).map(n => n.series),
-    ...(typeof novels !== 'undefined' ? novels : [])
-      .filter(n => n.series_shared && (!n.series_closed || _seriesFounder(n.series) === currentUser.id))
+    ...(window._adminNovels || []).filter(n => (n.kind === 'image') === (kind === 'image')).map(n => n.series),
+    ...pool.filter(n => n.series_shared && (n.kind === 'image') === (kind === 'image')
+        && (!n.series_closed || _seriesFounder(n.series, kind) === currentUser.id))
       .map(n => n.series),
   ].filter(Boolean))];
   document.getElementById('series-name-list').innerHTML = names.map(s => `<option value="${escapeHtml(s)}">`).join('');
