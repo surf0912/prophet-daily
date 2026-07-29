@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.34';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.35';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -5567,14 +5567,14 @@ function openSeries(novelId) {
   const hint = document.getElementById('series-shared-hint');
   window._seriesCtx = { isMember, canGate, origName: series };
   if (isMember && canGate) {
-    row.style.display = ''; lab.textContent = '開放加入';
+    row.style.display = 'flex'; lab.textContent = '開放加入';
     sh.checked = !work.series_closed;
     hint.textContent = '共創合集的門：開啟時，其他作者能以同名把文章加進來；關閉即截止，只有系列建立者還能加。已加入的不受影響。想讓這篇退出合集，清空或改掉系列名即可。';
   } else if (isMember) {
     row.style.display = 'none';
     hint.textContent = '這篇屬於共創合集，加入許可由系列建立者管理。想退出，清空或改掉系列名即可。';
   } else {
-    row.style.display = ''; lab.textContent = '共創系列';
+    row.style.display = 'flex'; lab.textContent = '共創系列';
     sh.checked = false;
     hint.textContent = '開啟後，其他作者以同名加入，合併為同一個合集。關閉時是你的個人系列，別人取同名也不會混進來。';
   }
