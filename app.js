@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.44';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.45';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4042,7 +4042,7 @@ async function loadCurationList() {
   const todo = _uncurated(list);
   { const pill = document.getElementById('review-pill-covers');
     if (pill) pill.textContent = todo.length ? `心動策展 ${todo.length}` : '心動策展'; }
-  if (!todo.length) { el.innerHTML = '<p style="font-size:12.5px;color:var(--ink-light);padding:2px 0 6px">牆上每一幅畫的心動封面都有人決定過了。</p>'; return; }
+  if (!todo.length) { el.innerHTML = '<p style="font-size:12.5px;color:var(--ink-light);padding:2px 0 6px">沒有待裁決的畫作。</p>'; return; }
   el.innerHTML = todo.map(it => `
     <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
       <div style="display:flex;gap:10px;align-items:flex-start">

@@ -316,7 +316,9 @@
     .cat-pill {
       padding: 5px 14px; border-radius: 16px; border: 1px solid var(--gold-lt);
       background: var(--parchment); color: var(--ink-light); font-size: 13px; cursor: pointer; transition: all .15s;
+      white-space: nowrap; flex-shrink: 0;   /* 四顆並排時寧可橫向捲，也不要把字折成「待審作／品」 */
     }
+    #review-mode-pills::-webkit-scrollbar { display: none; }   /* 捲軸不佔版面（同站內其他橫向列） */
     .cat-pill.active { background: var(--scarlet); color: var(--on-dark); border-color: var(--accent); }
     .char-chips { display: flex; gap: 10px; flex-wrap: wrap; }
     .char-chip {
