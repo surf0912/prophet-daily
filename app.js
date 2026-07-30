@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.43';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.44';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1350,10 +1350,13 @@ function renderGreeting(repick = true) {
   // P2：併入留影走廊已指定時段的畫作。依角色代碼對回 CHARS（一張多角色 → 每個角色都當候選），
   // 候選帶著自己的 slot（Supabase URL 無法用 coverSlot 推時段，靠後端給的 image_slot）。
   (_homeGalleryCovers || []).forEach(gc => {
-    (gc.characters || []).forEach(code => {
+    if (excluded.has(photoKey(gc.image_url))) return;
+    // 沒標角色的畫作（超管特權投稿）也上了心動架就該輪播——掛進每個角色池，不整筆丟棄
+    const codes = (gc.characters && gc.characters.length) ? gc.characters : CHAR_LIST.map(x => x.code);
+    codes.forEach(code => {
       const nm = (CHAR_LIST.find(x => x.code === code) || {}).name;
       const c = nm && CHARS.find(x => x.name === nm);
-      if (c && !excluded.has(photoKey(gc.image_url))) selected.push({ char: c, img: gc.image_url, slot: gc.slot });
+      if (c) selected.push({ char: c, img: gc.image_url, slot: gc.slot });
     });
   });
   // 時段門檻：06:00–14:30 早晨＆中午(am)、14:30–18:00 下午(pm)、其餘夜晚(night；無陽光者默認夜晚)。
@@ -1639,7 +1642,7 @@ async function renderFavUpdates() {
       && !n.image_slot && /^http/.test(n.image_url || '') && !n.locked);
     if (todo.length) {
       const newest = todo.reduce((x, n) => (!x || new Date(n.created_at || 0) > new Date(x.created_at || 0)) ? n : x, null);
-      const k = `curate:${todo.length}:${(newest && newest.created_at) || ''}`;
+      const k = `curate:${(newest && newest.created_at) || ''}`;   // 鍵只含最新時間：有新漏網才重亮，結案減量不重亮
       items.push({ kind: 'curate', key: k, readKey: k, title: '有畫作等待心動策展',
         sub: `${todo.length} 幅免審上牆的畫作還沒人決定心動封面`,
         at: (newest && newest.created_at) || new Date().toISOString(), unread: !read.has(k) });
@@ -1716,6 +1719,7 @@ async function renderFavUpdates() {
       });
       (mine.sent || []).forEach(a => {
         if (a.status === 'pending' || !a.decided_at) return;
+        if (a.requester === a.recipient) return;   // 文首畫作的自我授權信：對方＝自己，通知是噪音
         const t = new Date(a.decided_at).getTime();
         const k = `authout:${a.id}:${a.status}`;
         if (read.has(k) && t < cutoff) return;
@@ -2803,9 +2807,10 @@ async function loadChapter(idx) {
   } catch { document.getElementById('reader-content').innerHTML = '<div class="rc-body">載入失敗</div>'; }
   // 文首插圖：優先用上傳的頁首圖（image_url）；沒有才退回舊約定 artwork/<作品id>.jpg
   // （管理員手放 repo、走 Pages/鏡像＋SW 快取）。只在第一章文首顯示；載入失敗＝靜靜略過。
+  ++_artSeq;   // 每次換章都作廢進行中的探測——否則第 1 章的圖遲到，會插進第 2 章的文首
   if (idx === 0) {
     const artSrc = currentNovelHeader || `./artwork/${currentNovelId}.jpg`;
-    const artSeq = ++_artSeq, artNid = currentNovelId;
+    const artSeq = _artSeq, artNid = currentNovelId;
     const artIm = new Image();
     artIm.onload = () => {
       if (artSeq !== _artSeq || artNid !== currentNovelId) return;   // 已切到別的作品/章節
@@ -2823,6 +2828,11 @@ async function loadChapter(idx) {
           <button data-onclick="stepHeaderArt(1)" aria-label="下一張">›</button>
         </div>`;
       rc.prepend(art);
+      // 舊約定 artwork/<id>.jpg：資料裡沒有 header_arts 也沒有 image_url，探測載到了
+      // 就補成清單的一筆——否則 renderHeaderArt 看到空清單會立刻把元素拆掉，永遠不顯示。
+      if (!currentHeaderArts.length && !currentNovelHeader) {
+        currentHeaderArts = [{ url: artSrc, artist: null, artwork_id: null }];
+      }
       _artIdx = 0;
       renderHeaderArt();
       applyReaderSplit();   // 圖是非同步載入的，這時才真的知道「有圖」
@@ -2911,9 +2921,12 @@ async function _linkHeaderArtwork(img, byEl, url, artworkId) {
   const art = (_galleryItems || []).find(x => artworkId ? x.id === artworkId
     : (x.image_url && photoKey(x.image_url) === k));
   if (!art) return;
+  // 非同步回來時圖可能已被切走：src 對不上就整段作罷——舊圖的畫名與署名不能疊到新圖上
+  { const a = photoKey(img.src), b = photoKey(url).replace(/^\.\//, '');
+    if (a !== b && !a.endsWith(b)) return; }
   img.style.cursor = 'zoom-in';
   img.title = `《${art.title || '畫作'}》— 點擊看畫作詳情`;
-  img.addEventListener('click', () => openGalleryItem(art.id));
+  img.onclick = () => openGalleryItem(art.id);   // onclick 覆寫而非 addEventListener：切圖多次不疊聽器
   const name = `《${art.title || '無題'}》`;
   // 存的署名是空的（署名機制上線前掛的舊圖）→ 退回用牆上畫作本身的作者補「文／圖」，
   // 舊文章不必逐篇補資料；文的署名照舊取文章作者。
@@ -3767,13 +3780,16 @@ async function onEditHeaderPick(input) {
       image_full: disp.srcMax > 1400 * 1.2 ? fu.data : null,
       caption: (document.getElementById('editheader-caption') || { value: '' }).value.trim() }) });
     editWork.headerUrl = (r && r.image_url) || null;
+    // 後端把這張圖生成了文首畫作：artwork_id 與署名（＝文章作者）都要進本地清單，
+    // 否則管理器一次 PUT 就把 artwork_id:null 的斷鏈寫回 DB，畫作刪除卸載／換檔重掛全部失聯。
+    const _artist = (adminWorkById(editWork.id).author || '').trim() || null;
     editWork.headerArts = (r && r.image_url)
-      ? [{ url: r.image_url, artist: null, artwork_id: null },
-         ...((editWork.headerArts || []).filter(a => a.artwork_id))]
+      ? [{ url: r.image_url, artist: r.artwork_id ? _artist : null, artwork_id: r.artwork_id || null },
+         ...((editWork.headerArts || []).filter(a => a.artwork_id && a.artwork_id !== r.artwork_id))]
       : ((editWork.headerArts || []).filter(a => a.artwork_id));
     renderEditHeaderPreview(r && r.image_url);
     _syncAdminNovelField(editWork.id, 'image_url', r && r.image_url);
-    _syncAdminNovelField(editWork.id, 'image_caption', null);   // 自傳頁首圖沒有畫師署名（後端已清）
+    _syncAdminNovelField(editWork.id, 'image_caption', r && r.artwork_id ? _artist : null);   // 與後端 _sync_header_arts 一致
     renderEditAuthArts();   // 換成自己的圖＝授權畫作退回「可選用」
     toast('頁首圖已更新');
   } catch (e) { toast(e.message || '上傳失敗'); }
@@ -3970,7 +3986,11 @@ async function renderAuthMailbox(elId) {
   const sec = (title, rows, received) => `
     <div style="font-size:13px;font-weight:bold;margin:14px 0 8px">${title}<span style="font-weight:normal;color:var(--ink-light)">（${rows.length}）</span></div>
     ${rows.length ? rows.map(a => card(a, received)).join('') : '<p style="font-size:12.5px;color:var(--ink-light);padding:2px 0 6px">目前沒有信件</p>'}`;
-  el.innerHTML = sec('收到的信', box.received || [], true) + sec('寄出的信', box.sent || [], false);
+  // 自己寄給自己的信（入職指南沙盒練習）只列在「收到的信」——那側才有同意／婉拒；
+  // 兩側各列一次會出現兩顆動詞相反、作用相同的破壞性按鈕。
+  const _selfIds = new Set((box.received || []).filter(a => a.requester === a.recipient).map(a => a.id));
+  el.innerHTML = sec('收到的信', box.received || [], true)
+    + sec('寄出的信', (box.sent || []).filter(a => !_selfIds.has(a.id)), false);
 }
 // 審核分頁的膠囊：待審作品 ⇄ 授權信（僅管理員）
 // 審核分頁。原本是寫死的二選一（作品／授權信），加第三個就得整段改——改成表驅動，
@@ -4126,7 +4146,7 @@ async function revokeAuth(id) {
     const r = await api(`/authorizations/${id}/revoke`, { method: 'POST', body: JSON.stringify({}) });
     toast((r && r.status === 'cancelled' ? '已放棄授權' : '已收回授權') + (r && r.unapplied ? '，文首圖也已撤下' : ''));
     _myAuths = null;
-    if (_authBoxEl) renderAuthBox(_authBoxEl);
+    if (_authBoxEl) renderAuthMailbox(_authBoxEl);
     if (typeof loadNovels === 'function') loadNovels();
     if (typeof loadGallery === 'function' && forumTab === 'gallery') loadGallery();
   } catch (e) { toast(e.message || '收回失敗'); }
@@ -4949,7 +4969,10 @@ function coverSlotRowHtml(id, cur) {
 function toggleCoverPool(id) {
   const it = [_galleryDetailItem, ...(_galleryItems || []), ...(window._adminNovels || []), ...(window._reviewPending || [])]
     .find(o => o && o.id === id);
-  const slot = it && ['am', 'pm', 'night'].includes(it.image_slot) ? it.image_slot : null;
+  // 用 effectiveImageSlot 判斷「目前亮不亮」：批次匯入的官方封面 DB 是 null、
+  // 但檔名回退出時段而顯示為亮——只看原始值的話，開關按下去永遠走不到下架。
+  const eff = it && effectiveImageSlot(it);
+  const slot = ['am', 'pm', 'night'].includes(eff) ? eff : null;
   if (slot) { _coverIntent.delete(id); setImageSlot(id, 'none'); return; }
   if (_coverIntent.has(id)) _coverIntent.delete(id);
   else { _coverIntent.add(id); toast('選一個時段，這幅畫才會排進輪播'); }
