@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.47';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.48';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -5356,8 +5356,8 @@ async function loadAdminNovelList() {
     let ns;
     if (adminNovelScope) {
       // Admin viewing a member's detail (entered by tapping their name in 用戶管理).
-      const all = await api('/novels/') || [];
-      ns = all.filter(n => (n.owners || []).includes(adminNovelScope.id));
+      // 用 owner= 而非公開書架：書架對所有人都濾掉排程未來與已退回的稿，代看時會少一截。
+      ns = await api(`/novels/?owner=${encodeURIComponent(adminNovelScope.id)}`) || [];
       const sc = adminNovelScope;
       let head = `${ic('ic-books', 16)} <b>${escapeHtml(sc.name)}</b> 的作品　<a data-onclick="resetAdminNovelScope('users')" style="color:var(--accent);cursor:pointer">← 返回成員名單</a>`;
       if (sc.joined) head += `<div style="font-size:12px;color:var(--ink-light);margin-top:4px">${ic('ic-calendar',12)} 加入日期 ${fmtUpdated(sc.joined)}</div>`;
