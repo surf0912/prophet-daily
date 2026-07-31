@@ -890,6 +890,9 @@
       width: 100%; padding: 10px; border: 1px solid var(--gold-lt); border-radius: 3px;
       font-size: 14px; background: var(--parchment2); color: var(--ink);
     }
+    /* 原生打勾框／選鈕：預設是系統藍，與羊皮紙＋酒紅的配色格格不入。全站統一成站內酒紅。
+       （.toggle 那種自繪的撥動開關不受影響，它本來就把 input 藏起來。） */
+    input[type="checkbox"], input[type="radio"] { accent-color: var(--scarlet); }
     /* 桌機 Safari 的原生日期欄自帶分段樣式（橙色高亮、系統字型），與站內輸入框格格不入——
        關掉外觀、字型與墨色跟其他欄位對齊；分段選取色改用站內酒紅。 */
     .form-group input[type="date"] {
