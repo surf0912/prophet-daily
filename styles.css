@@ -400,6 +400,19 @@
     .el-btns { display: flex; gap: 9px; margin-top: 16px; font-family: -apple-system, system-ui, sans-serif; }
     .el-btn-ghost { flex: 1; padding: 10px; border-radius: 7px; border: 1px solid #c2a253; background: none; color: #5a4423; font-size: 13px; cursor: pointer; }
     .el-btn-solid { flex: 1; padding: 10px; border-radius: 7px; border: none; background: #2d2820; color: #e8d6a4; font-size: 13px; letter-spacing: 1px; cursor: pointer; }
+    /* 月末讀報回顧：與主編來信共用 .el-overlay/.el-card 的骨架，但不走信箋襯線字——
+       它是站內的一則訊息，字與配色跟著全站（圓體＋羊皮紙＋站內變數，夜間模式自動跟上）。
+       主編來信維持襯線信箋外觀，不受這裡影響。 */
+    .el-card.recap-card { background: var(--parchment); border-color: var(--gold-lt); }
+    .recap-inner { padding: 22px 22px 20px; }
+    .recap-title { text-align: center; font-size: 16px; letter-spacing: 2px; color: var(--accent); margin-bottom: 4px; }
+    .recap-body { font-size: 14px; line-height: 2; color: var(--ink); margin: 2px 0 0; }
+    .recap-foot { font-size: 13px; line-height: 1.9; color: var(--ink-light); margin: 16px 0 0; }
+    /* 署名獨立成行、靠右——原本用 float:right 擠在同一行，中間會裂出一大塊空白 */
+    .recap-sign { font-size: 13px; color: var(--ink-light); text-align: right; margin: 2px 0 0; }
+    .recap-btn { width: 100%; margin-top: 20px; padding: 11px; border: none; border-radius: 8px;
+      background: var(--scarlet); color: var(--on-dark); font-family: inherit; font-size: 13.5px; letter-spacing: 1px; cursor: pointer; }
+    .recap-btn:active { transform: scale(.98); }
     /* 檔案頁版本狀態按鈕 */
     .version-btn { display: flex; align-items: center; justify-content: center; gap: 7px; box-sizing: border-box; width: calc(100% - 36px); margin: 10px 18px 2px; padding: 11px 14px; border-radius: 10px; font-size: 13px; border: 1px solid var(--gold-lt); background: var(--parchment2); color: var(--ink-light); }
     .version-btn.checking { opacity: .6; }
