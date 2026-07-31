@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.50';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.51';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4541,11 +4541,13 @@ function renderGallery() {
 }
 
 let _galleryDetailItem = null;   // 詳情卡目前開的畫作（下載鈕用）
+let _reviewPreview = [];         // 審核頁預覽用的待審作品（不在牆上，見 openReviewImage）
 let _galleryGroup = [];        // 目前詳情卡所屬系列的成員（依 series_order）；單張時就一個元素
 let _galleryGroupIdx = 0;
 let _gdFromAdmin = false;   // 詳情卡是不是從作品管理開的（決定要不要顯示時段/裁切等策展工具）
 function openGalleryItem(id, fromAdmin) {
-  const it = _galleryItems.find(x => x.id === id) || (window._adminNovels || []).find(x => x.id === id);
+  const it = _galleryItems.find(x => x.id === id) || (window._adminNovels || []).find(x => x.id === id)
+    || _reviewPreview.find(x => x.id === id);   // 審核頁的待審作品（不在牆上，見 openReviewImage）
   if (!it) return;
   _gdFromAdmin = !!fromAdmin;
   _galleryDetailItem = it;
@@ -4873,11 +4875,16 @@ function openImageFull(src, fromGallery, hideMark) {
 }
 function closeGalleryFull() { clearTimeout(_zfCloseTimer); document.getElementById('gallery-full').style.display = 'none'; _zfReset(); }
 // 審核畫作：點縮圖看全螢幕大圖（單張、無組導覽、無浮水印，方便看清品質再決定通過）
+// 審核頁點圖：開真正的留影走廊詳情卡（畫框、標題、說明、角色、心動策展列都在），
+// 而不是只給一張裸圖——審核者要看的是「上牆後長什麼樣」。待審作品不在 _galleryItems
+// （牆只回已通過的），所以把待審那筆放進 _reviewPreview 供 openGalleryItem 取用。
 function openReviewImage(id) {
-  const n = (window._reviewPending || []).find(x => x.id === id);
+  const pend = window._reviewPending || [];
+  const n = pend.find(x => x.id === id)
+    || pend.map(x => x.header_art).find(a => a && a.id === id);
   if (!n || !n.image_url) return;
-  _galleryGroup = [];
-  openImageFull(n.image_url, false, true);
+  _reviewPreview = [n];
+  openGalleryItem(id, true);
 }
 
 // ── 心動封面裁切框編輯器 ────────────────────────────────────────────────────
@@ -5157,6 +5164,7 @@ async function submitForumPost(btn) {
 
 async function loadReviewList() {
   const el = document.getElementById('admin-review-list');
+  _reviewPreview = [];   // 上一輪的待審預覽資料作廢
   // 記住各區目前的展開狀態：按「通過/不通過」重畫列表時原樣還原，不會自己收合。
   const prevOpen = {};
   el.querySelectorAll('details.review-sec').forEach(d => {
@@ -5205,9 +5213,11 @@ async function loadReviewList() {
         <div style="padding:12px 0;border-bottom:1px solid rgba(26,10,0,.1)">
           <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)}</div>
           <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${_kindTag(n)}・${escapeHtml(n.author || '匿名')}・${fmtUpdated(n.created_at)}</div>
-          ${n.kind === 'image' && n.image_url ? `<div style="margin-top:8px"><img src="${escapeHtml(n.image_url)}" alt="" data-onclick="openReviewImage('${n.id}')" style="max-width:160px;max-height:180px;border-radius:6px;cursor:zoom-in" title="點擊看大圖" /></div>` : ''}
-          ${n.header_art && n.header_art.image_url ? `<div style="margin-top:8px"><div style="font-size:12px;color:var(--ink-light);margin-bottom:4px">文首圖</div><img src="${escapeHtml(n.header_art.image_url_thumb || n.header_art.image_url)}" alt="" data-onclick="openReviewImage('${n.header_art.id}')" style="max-width:160px;max-height:180px;border-radius:6px;cursor:zoom-in" title="點擊看大圖" /></div>` : ''}
+          ${n.kind === 'image' && n.image_url ? `<div style="margin-top:8px"><img src="${escapeHtml(n.image_url)}" alt="" data-onclick="openReviewImage('${n.id}')" style="max-width:160px;max-height:180px;border-radius:6px;cursor:zoom-in" title="點擊看完整畫作詳情" /></div>` : ''}
+          ${n.header_art && n.header_art.image_url ? `<div style="margin-top:8px"><div style="font-size:12px;color:var(--ink-light);margin-bottom:4px">文首圖</div><img src="${escapeHtml(n.header_art.image_url_thumb || n.header_art.image_url)}" alt="" data-onclick="openReviewImage('${n.header_art.id}')" style="max-width:160px;max-height:180px;border-radius:6px;cursor:zoom-in" title="點擊看完整畫作詳情" /></div>` : ''}
           ${(n.kind === 'image' || (n.header_art && n.header_art.image_url)) ? _wallToggle(n) : ''}
+          ${(n.kind === 'image' && n.image_caption) || (n.header_art && n.header_art.image_caption)
+            ? `<div style="font-size:12.5px;color:var(--ink-light);line-height:1.7;margin-top:6px;white-space:pre-wrap">${escapeHtml(n.kind === 'image' ? n.image_caption : n.header_art.image_caption)}</div>` : ''}
           <div class="row-tags" style="margin-top:6px">
             ${n.category ? `<span class="t-cat${catCls(n.category)}">${escapeHtml(n.category)}</span>` : ''}
             ${(n.characters || []).map(c => charPill(c)).join('')}
