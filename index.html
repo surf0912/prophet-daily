@@ -864,6 +864,16 @@
         <input type="file" id="replace-image-file" accept="image/jpeg,image/png,image/webp" style="display:none" data-onchange="onReplaceImagePick(this)" />
         <p style="font-size:12px;color:var(--ink-light);margin:6px 0 0;line-height:1.7">換圖只換圖檔本身：作品編號、授權連結、收藏、心動時段、文章掛載全部保留。適合補上高解析度版本。</p>
       </div>
+      <div class="form-group" id="editwork-wall-row" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <span style="font-size:13px;font-weight:bold">陳列在留影走廊</span>
+          <label class="toggle" style="flex-shrink:0">
+            <input type="checkbox" id="editwork-wall-input" data-onchange="setOffWall(!this.checked)" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <p style="font-size:12px;color:var(--ink-light);margin:6px 0 0;line-height:1.7">關閉＝不進走廊與心動池，但仍可作文章的文首圖。畫面沒有站內角色時用。</p>
+      </div>
       <div class="form-group"><button type="button" id="editwork-crop-btn" style="width:100%;font-size:12px;padding:8px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:var(--parchment2);color:var(--ink-light)">調整心動封面顯示（裁切框）</button></div>
     </div>
     <div class="form-group" id="editwork-header-group">

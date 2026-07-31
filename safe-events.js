@@ -29,7 +29,7 @@
     'openCoverCrop', 'closeCoverCrop', 'saveCoverCrop', 'clearCoverCrop', 'ccrDragStart', 'ccrZoom',
     'setGalleryView', 'setGalleryCat', 'renderGallery', 'galleryGroupNav', 'galleryFullNav', 'toggleHideGalleryImage',
     'setWriterAppHandled', 'archiveWriterApp', 'toggleWriterAppArchived', 'deleteWriterApp', 'copyWriterApp', 'clearGrabOpens', 'copyThisLink', 'openWriterApply', 'submitWriterApplication',
-    'setReviewMode', 'openReviewImage', 'galleryAuthAsk', 'sendAuthRequest', 'openAuthDecide', 'saveAuthDecide', 'runDbLatency', 'pickActivityDay',
+    'setReviewMode', 'openReviewImage', 'toggleReviewWall', 'setOffWall', 'galleryAuthAsk', 'sendAuthRequest', 'openAuthDecide', 'saveAuthDecide', 'runDbLatency', 'pickActivityDay',
     'withdrawAuth', 'revokeAuth', 'readerOfferClick', 'adminResetAuth', 'applyAuthArt', 'moveHeaderArt', 'removeHeaderArt', 'galleryOpenWork', 'readerAuthClick', 'owlOpenAuth',
     'submitForumPost', 'submitNewNovel', 'switchAdminTab', 'tempBan', 'toggleCharAnd', 'toggleCoverPhoto', 'toggleCoverPool',
     'toggleDark', 'toggleFavOwl', 'toggleFont', 'toggleForumFav', 'toggleGalleryFavorite', 'toggleLike', 'toggleLock', 'toggleOwlAlways', 'togglePwEdit', 'toggleTapFx',

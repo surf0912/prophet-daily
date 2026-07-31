@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.48';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.49';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -5195,11 +5195,19 @@ async function loadReviewList() {
     // 心動池是策展：預設不上架；「心動封面」開關亮＝在輪播，時段三選決定排在哪一輪。
     const _slotBtns = n => '<div style="display:flex;gap:6px;margin:8px 0 4px" data-slot-for="' + n.id + '">'
       + coverSlotRowHtml(n.id, effectiveImageSlot(n)) + '</div>';
+    // 通過但不上牆：畫面內容不適合陳列在角色牆（例如只有 OC、沒有站內角色）時，
+    // 圖仍可當文首圖用，只是不進留影走廊與心動池。勾選狀態存在 _noWall，通過時一起送。
+    const _wallToggle = n => `<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-light);margin:8px 0 2px;cursor:pointer">
+        <input type="checkbox" ${_noWall.has(n.id) ? 'checked' : ''} data-onchange="toggleReviewWall('${n.id}', this.checked)" style="width:auto;margin:0" />
+        <span>通過後${n.kind === 'image' ? '' : '文首圖'}不上留影走廊（畫面沒有站內角色時用）</span>
+      </label>`;
     const novelBody = novelsPending.map(n => `
         <div style="padding:12px 0;border-bottom:1px solid rgba(26,10,0,.1)">
           <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)}</div>
           <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${_kindTag(n)}・${escapeHtml(n.author || '匿名')}・${fmtUpdated(n.created_at)}</div>
           ${n.kind === 'image' && n.image_url ? `<div style="margin-top:8px"><img src="${escapeHtml(n.image_url)}" alt="" data-onclick="openReviewImage('${n.id}')" style="max-width:160px;max-height:180px;border-radius:6px;cursor:zoom-in" title="點擊看大圖" /></div>` : ''}
+          ${n.header_art && n.header_art.image_url ? `<div style="margin-top:8px"><div style="font-size:12px;color:var(--ink-light);margin-bottom:4px">文首圖</div><img src="${escapeHtml(n.header_art.image_url_thumb || n.header_art.image_url)}" alt="" data-onclick="openReviewImage('${n.header_art.id}')" style="max-width:160px;max-height:180px;border-radius:6px;cursor:zoom-in" title="點擊看大圖" /></div>` : ''}
+          ${(n.kind === 'image' || (n.header_art && n.header_art.image_url)) ? _wallToggle(n) : ''}
           <div class="row-tags" style="margin-top:6px">
             ${n.category ? `<span class="t-cat${catCls(n.category)}">${escapeHtml(n.category)}</span>` : ''}
             ${(n.characters || []).map(c => charPill(c)).join('')}
@@ -5229,6 +5237,8 @@ async function reviewMqj(userId, approve) {
   } catch (e) { toast(e.message); }
 }
 
+const _noWall = new Set();   // 審核頁勾了「不上留影走廊」的作品（送出後清掉）
+function toggleReviewWall(id, on) { if (on) _noWall.add(id); else _noWall.delete(id); }
 async function approveNovel(id) {
   // 心動池是策展（預設不上架），過審＝上留影走廊而已。但「開了心動封面卻沒選時段」是
   // 半套狀態——不擋下來的話，管理員以為排進輪播了，實際上沒有。
@@ -5237,7 +5247,12 @@ async function approveNovel(id) {
     toast('已開了心動封面但還沒選時段——選一個時段，或再按一次「心動封面」取消');
     return;
   }
-  try { await api(`/novels/${id}/approve`, { method: 'PATCH' }); toast('已通過審核'); loadReviewList(); }
+  const offWall = _noWall.has(id);
+  try {
+    await api(`/novels/${id}/approve`, { method: 'PATCH', body: JSON.stringify({ off_wall: offWall }) });
+    _noWall.delete(id);
+    toast(offWall ? '已通過審核（不上留影走廊）' : '已通過審核'); loadReviewList();
+  }
   catch (e) { toast(e.message); }
 }
 // 退回修改（不刪除）：開彈窗讓管理員留一段修改建議給作者，標記 rejected 退回作者的作品管理。
@@ -5610,6 +5625,7 @@ function _adminNovelCard(n) {
           : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-book', 12) + ' 小說</span>')
         + statusTag
         + (n.is_guide ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-book', 12) + ' 範例·可刪除</span>' : '')
+        + (n.off_wall ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(26,10,0,.12);color:var(--ink-light)">' + ic('ic-eye', 11) + ' 不上走廊·僅作文首圖</span>' : '')
         + (n.locked ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.2);color:var(--accent)">' + ic('ic-key',11) + ' 已鎖 · 唯你可見</span>' : '');
       const tags = (n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : '')
         + (n.category ? `<span class="t-cat${catCls(n.category)}">${escapeHtml(n.category)}</span>` : '')
@@ -5652,6 +5668,20 @@ function _adminNovelCard(n) {
         ${rejectNoteRow}
         <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${resubmitBtn}${editBtn}${manageBtns}${ownerAssignBtn}${lockBtn}${retractBtn}${delBtn}</div>
       </div>`;
+}
+
+// 事後把畫作撤出／放回留影走廊（不影響它作為文首圖）。管理員限定。
+async function setOffWall(off) {
+  if (!editWork.id) return;
+  try {
+    await api(`/novels/${editWork.id}/off-wall`, { method: 'PATCH', body: JSON.stringify({ off_wall: !!off }) });
+    _syncAdminNovelField(editWork.id, 'off_wall', !!off);
+    _galleryItems = null;   // 牆面資料變了，下次進留影走廊重抓
+    toast(off ? '已從留影走廊撤下（仍可作文首圖）' : '已放回留影走廊');
+  } catch (e) {
+    toast(e.message || '設定失敗');
+    const wi = document.getElementById('editwork-wall-input'); if (wi) wi.checked = !off;   // 失敗回復開關
+  }
 }
 
 // ── 畫作換圖：保留 id 與一切連結，只換圖檔並重產三尺寸（補高清版的正路） ──
@@ -5924,6 +5954,10 @@ async function openEditWork(id) {
         else { pv.style.display = 'none'; pv.innerHTML = ''; }
       } }
     document.getElementById('editwork-caption').value = n.image_caption || '';
+    // 陳列在留影走廊（管理員限定）：關掉＝仍是文首圖但不上牆
+    { const wr = document.getElementById('editwork-wall-row'), wi = document.getElementById('editwork-wall-input');
+      if (wr) wr.style.display = isAdminUser() ? '' : 'none';
+      if (wi) wi.checked = !n.off_wall; }
     // setAttribute 走 DOM 屬性、不經 HTML 解析——escapeHtml 會把 & 變 &amp; 留在真值裡害 photoKey 對不上。
     // 這裡要的是「宣告式語法的引號安全」：跳脫反斜線與單引號即可（分派器 parseArgument 支援 \'）。
     { const cb = document.getElementById('editwork-crop-btn');
