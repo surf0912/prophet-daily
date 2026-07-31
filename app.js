@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.54';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.55';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1889,13 +1889,17 @@ async function maybeShowMonthlyRecap() {
   const markSeen = () => { try { localStorage.setItem('pd_recap_seen', key); } catch (e) {} pushClientState({ recap_seen: key }); };
   if (!r || r.month !== key || !r.reads) { markSeen(); return; }
   const zh = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
-  let charPart = '';
+  let charPart = '', topName = '';
   if (r.top_char) {
     const c = (typeof CHAR_LIST !== 'undefined' ? CHAR_LIST : []).find(x => x.code === r.top_char);
-    if (c && c.name) charPart = `，最常相遇的是 ${c.name}`;
+    if (c && c.name) { topName = c.name; charPart = `，最常相遇的是 ${c.name}`; }
   }
   const body = document.getElementById('recap-body');
   if (body) body.textContent = `${zh[prev.getMonth()]}月，你翻開日報 ${r.active_days} 天，讀過 ${r.works} 篇作品${charPart}。`;
+  // 署名＝上個月最常相遇的那個人——這封回顧由他來說「也請多指教」。
+  // 上月沒讀到帶角色的作品（topName 空）時退回主編，句子才不會沒有落款。
+  { const sign = document.getElementById('recap-sign');
+    if (sign) sign.textContent = `—— ${topName || '主編'}`; }
   const m = document.getElementById('recap-card'); if (m) m.style.display = 'flex';
   markSeen();
 }
