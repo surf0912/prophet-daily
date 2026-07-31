@@ -555,6 +555,9 @@
       display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px);
       -webkit-tap-highlight-color: transparent; }
     #gf-prev { left: 12px; } #gf-next { right: 12px; }
+    /* 關閉鈕在右上（不與左右箭頭同一條水平線）；字比箭頭小一點，視覺重量相當 */
+    #gf-close { top: calc(12px + var(--safe-top)); right: 12px; transform: none; font-size: 19px; padding: 0;
+      background: rgba(244,232,193,.3); box-shadow: 0 2px 10px rgba(0,0,0,.45); }   /* 唯一的出口，深色圖上要看得見 */
     /* 畫作詳情 */
     .gd-card { width: 330px; max-width: 92vw; max-height: 88dvh; overflow-y: auto; background: var(--parchment); border-radius: 14px; padding: 18px; box-shadow: 0 22px 60px rgba(0,0,0,.45); }
     .gd-frame { position: relative; border-style: solid; border-width: 22px; display: block; cursor: zoom-in; line-height: 0; box-shadow: 0 4px 14px rgba(26,10,0,.3); }

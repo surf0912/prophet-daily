@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.53';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.54';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1419,11 +1419,25 @@ function renderGreeting(repick = true) {
   let candidates = [pick.img, ...photosOf(char).filter(u => !excluded.has(photoKey(u))), ...photosOf(char)];
   candidates = [...new Set(candidates.filter(Boolean))];   // dedup, keep order
   const seq = ++_heroSeq;   // 防舊一輪回呼污染新渲染（切頁、整點換圖時 renderGreeting 會重跑）
+  // 方向不合就跳過：官方封面有手機／桌機兩套檔案，但留影走廊的畫作只有一張——
+  // 橫幅畫作放進直式手機版面會被裁掉兩側（反之亦然）。量到真實比例才判斷，
+  // 最後一張候選不再挑（寧可顯示比例不佳的圖，也不要空白）。
+  const wideScreen = isWideCover();
+  const orientationOk = (im) => {
+    if (!im.naturalWidth || !im.naturalHeight) return true;
+    const imgWide = im.naturalWidth > im.naturalHeight * 1.15;   // 1.15 容差：接近方形的兩邊都可用
+    const imgTall = im.naturalHeight > im.naturalWidth * 1.15;
+    return wideScreen ? !imgTall : !imgWide;
+  };
   (function tryLoad(i) {
     if (seq !== _heroSeq) return;
     if (i >= candidates.length) return;   // 全部失敗 → 線稿底稿留守（或漸層+emoji）
     const im = new Image();
-    im.onload = () => { if (seq === _heroSeq) showHero(candidates[i], im); };
+    im.onload = () => {
+      if (seq !== _heroSeq) return;
+      if (i < candidates.length - 1 && !orientationOk(im)) { tryLoad(i + 1); return; }
+      showHero(candidates[i], im);
+    };
     im.onerror = () => tryLoad(i + 1);
     im.src = candidates[i];
   })(0);
@@ -4794,6 +4808,7 @@ function _zfInit() {
   let lastTap = { t: 0, x: 0, y: 0 };  // 觸控雙點偵測
   gf.addEventListener('pointerdown', (e) => {
     try { gf.setPointerCapture(e.pointerId); } catch (_) {}   // 視窗外放開也收得到 up，不留殘存指標
+    if (pts.size === 0) _zf.drag = false;   // 新手勢起點：清掉上一輪殘留的 drag，否則會吞掉這次的點擊
     pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pts.size === 2) {
       const [a, b] = [...pts.values()];
@@ -4841,6 +4856,10 @@ function _zfInit() {
   };
   gf.addEventListener('pointerup', lift);
   gf.addEventListener('pointercancel', lift);
+  // 桌機：Esc 關閉（與站內其他浮層一致）
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && gf.style.display !== 'none') closeGalleryFull();
+  });
 }
 
 function openImageFull(src, fromGallery, hideMark) {
@@ -4873,7 +4892,7 @@ function openImageFull(src, fromGallery, hideMark) {
   if (img.complete && img.naturalWidth) applyRot();
   document.getElementById('gallery-full').style.display = 'flex';
 }
-function closeGalleryFull() { clearTimeout(_zfCloseTimer); document.getElementById('gallery-full').style.display = 'none'; _zfReset(); }
+function closeGalleryFull() { clearTimeout(_zfCloseTimer); document.getElementById('gallery-full').style.display = 'none'; _zf.drag = false; _zfReset(); }
 // 審核畫作：點縮圖看全螢幕大圖（單張、無組導覽、無浮水印，方便看清品質再決定通過）
 // 審核頁點圖：開真正的留影走廊詳情卡（畫框、標題、說明、角色、心動策展列都在），
 // 而不是只給一張裸圖——審核者要看的是「上牆後長什麼樣」。待審作品不在 _galleryItems
