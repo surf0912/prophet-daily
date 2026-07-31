@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.55';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.56';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -1897,9 +1897,14 @@ async function maybeShowMonthlyRecap() {
   const body = document.getElementById('recap-body');
   if (body) body.textContent = `${zh[prev.getMonth()]}月，你翻開日報 ${r.active_days} 天，讀過 ${r.works} 篇作品${charPart}。`;
   // 署名＝上個月最常相遇的那個人——這封回顧由他來說「也請多指教」。
-  // 上月沒讀到帶角色的作品（topName 空）時退回主編，句子才不會沒有落款。
+  // 上月沒讀到帶角色的作品（topName 空）時，從四位裡隨機挑一個來落款（不用主編）。
   { const sign = document.getElementById('recap-sign');
-    if (sign) sign.textContent = `—— ${topName || '主編'}`; }
+    let who = topName;
+    if (!who) {
+      const pool = (typeof CHAR_LIST !== 'undefined' ? CHAR_LIST : []).map(c => c.name).filter(Boolean);
+      if (pool.length) who = pool[Math.floor(Math.random() * pool.length)];
+    }
+    if (sign) sign.textContent = `—— ${who || ''}`; }
   const m = document.getElementById('recap-card'); if (m) m.style.display = 'flex';
   markSeen();
 }
