@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.46';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.47';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3432,6 +3432,30 @@ function startMonitor() {
 // ── 讀者活躍（監看頁頂端）──────────────────────────────────────────────
 // 與下方「在線」不同：那個存記憶體、重啟歸零；這裡查 novel_views（DB），以「當天真的
 // 開啟作品閱讀」為準，重啟不受影響。
+let _activityDays = [];   // 長條圖的資料（點選時查得到那天的日期與人數）
+function fmtActDay(iso) {
+  const p = String(iso || '').split('-');
+  return p.length === 3 ? `${+p[1]}/${+p[2]}` : String(iso || '');
+}
+// 點某一天：把日期與人數顯示在圖下方（手機沒有 hover，title 看不到）。再點同一天＝取消。
+let _actPicked = -1;
+function pickActivityDay(i) {
+  const out = document.getElementById('activity-pick');
+  const bars = document.getElementById('activity-bars');
+  if (!out || !bars) return;
+  const d = _activityDays[i];
+  if (!d) return;
+  const same = _actPicked === i;
+  _actPicked = same ? -1 : i;
+  [...bars.children].forEach((el, k) => {
+    const inner = el.firstElementChild;
+    if (inner) inner.style.outline = (!same && k === i) ? '2px solid var(--accent)' : '';
+    if (inner) inner.style.outlineOffset = '1px';
+  });
+  const isToday = i === _activityDays.length - 1;
+  out.textContent = same ? '　'
+    : `${fmtActDay(d.d)}　${d.n} 人${isToday ? '（今天，還沒過完）' : ''}`;
+}
 async function loadActivityStats() {
   const el = document.getElementById('activity-body');
   if (!el) return;
@@ -3450,11 +3474,17 @@ async function loadActivityStats() {
       <div style="font-size:11px;color:var(--ink-light);opacity:.85;margin-top:3px">${sub}</div>
     </div>`;
   const days = s.daily || [];
+  _activityDays = days; _actPicked = -1;
   const mx = Math.max(...days.map(d => d.n), 1);
+  // 每根 bar 可點：手機沒有 hover，title 看不到，改成點一下把那天的數字顯示在圖下方。
+  // 命中區比視覺的 bar 高（整欄可點），細瘦的低值 bar 才不會難按。
   const bars = days.map((d, i) => {
     const h = d.n ? Math.max(4, Math.round(d.n / mx * 56)) : 1;
     const isToday = i === days.length - 1;
-    return `<div title="${escapeHtml(d.d)}：${d.n} 人" style="flex:1;height:${h}px;border-radius:2px 2px 0 0;background:${isToday ? 'var(--scarlet)' : 'var(--gold)'}"></div>`;
+    return `<div data-onclick="pickActivityDay(${i})" title="${escapeHtml(d.d)}：${d.n} 人" role="button" aria-label="${escapeHtml(fmtActDay(d.d))} ${d.n} 人"
+      style="flex:1;height:100%;display:flex;align-items:flex-end;cursor:pointer;-webkit-tap-highlight-color:transparent">
+      <div style="width:100%;height:${h}px;border-radius:2px 2px 0 0;background:${isToday ? 'var(--scarlet)' : 'var(--gold)'}"></div>
+    </div>`;
   }).join('');
   const fmtMd = iso => { const p = String(iso).split('-'); return p.length === 3 ? `${+p[1]}/${+p[2]}` : iso; };
   el.innerHTML = `
@@ -3466,11 +3496,12 @@ async function loadActivityStats() {
     </div>
     <div style="margin-top:12px;background:var(--parchment);border:1px solid var(--gold-lt);border-radius:10px;padding:12px 14px">
       <div style="font-size:11px;color:var(--ink-light)">每日活躍人數（近 14 天）</div>
-      <div style="display:flex;align-items:flex-end;gap:3px;height:56px;margin-top:8px">${bars}</div>
+      <div id="activity-bars" style="display:flex;align-items:stretch;gap:3px;height:56px;margin-top:8px">${bars}</div>
       <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink-light);opacity:.7;margin-top:4px">
         <span>${fmtMd(days[0] && days[0].d)}</span><span>${fmtMd(days[7] && days[7].d)}</span><span>今天</span>
       </div>
-      <div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:8px;line-height:1.6">※ 活躍＝當天實際開啟作品閱讀的人（以閱讀紀錄計，非僅開啟 App）。資料存於資料庫，伺服器重啟不影響。</div>
+      <div id="activity-pick" style="font-size:12px;color:var(--ink);margin-top:8px;min-height:17px">${days.length ? '　' : ''}</div>
+      <div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:8px;line-height:1.6">※ 點任一天可看該日人數。活躍＝當天實際開啟作品閱讀的人（以閱讀紀錄計，非僅開啟 App）。今天那根是紅的，只是標記「還沒過完」。</div>
     </div>
     <div style="height:16px"></div>`;
 }
