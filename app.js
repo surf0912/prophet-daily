@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.51';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.52';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -5215,7 +5215,6 @@ async function loadReviewList() {
           <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${_kindTag(n)}・${escapeHtml(n.author || '匿名')}・${fmtUpdated(n.created_at)}</div>
           ${n.kind === 'image' && n.image_url ? `<div style="margin-top:8px"><img src="${escapeHtml(n.image_url)}" alt="" data-onclick="openReviewImage('${n.id}')" style="max-width:160px;max-height:180px;border-radius:6px;cursor:zoom-in" title="點擊看完整畫作詳情" /></div>` : ''}
           ${n.header_art && n.header_art.image_url ? `<div style="margin-top:8px"><div style="font-size:12px;color:var(--ink-light);margin-bottom:4px">文首圖</div><img src="${escapeHtml(n.header_art.image_url_thumb || n.header_art.image_url)}" alt="" data-onclick="openReviewImage('${n.header_art.id}')" style="max-width:160px;max-height:180px;border-radius:6px;cursor:zoom-in" title="點擊看完整畫作詳情" /></div>` : ''}
-          ${(n.kind === 'image' || (n.header_art && n.header_art.image_url)) ? _wallToggle(n) : ''}
           ${(n.kind === 'image' && n.image_caption) || (n.header_art && n.header_art.image_caption)
             ? `<div style="font-size:12.5px;color:var(--ink-light);line-height:1.7;margin-top:6px;white-space:pre-wrap">${escapeHtml(n.kind === 'image' ? n.image_caption : n.header_art.image_caption)}</div>` : ''}
           <div class="row-tags" style="margin-top:6px">
@@ -5223,6 +5222,7 @@ async function loadReviewList() {
             ${(n.characters || []).map(c => charPill(c)).join('')}
           </div>
           ${n.kind === 'image' ? _slotBtns(n) : ''}
+          ${(n.kind === 'image' || (n.header_art && n.header_art.image_url)) ? _wallToggle(n) : ''}
           <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
             ${n.kind === 'image' ? '' : `<button data-onclick="openNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer;white-space:nowrap">預覽</button>`}
             <button data-onclick="approveNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:#2d4a1e;border:none;color:#fff;border-radius:3px;cursor:pointer;white-space:nowrap">${ic('ic-check',12)} 通過</button>
