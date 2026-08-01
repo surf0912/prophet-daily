@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.56';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.57';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -96,18 +96,29 @@ let _refreshing = null;
 async function tryRefreshToken() {
   const rt = localStorage.getItem('pd_refresh');
   if (!rt) return false;
+  const _post = async (t) => {
+    const res = await fetch(API + '/auth/refresh', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: t }),
+    });
+    if (!res.ok) return null;
+    const d = await res.json();
+    return d.access_token ? d : null;
+  };
   if (!_refreshing) {
     // Tie the reset to the promise itself (.finally), so a single in-flight refresh is shared by
     // every concurrent caller and never nulled out from under a later refresh.
     _refreshing = (async () => {
       try {
-        const res = await fetch(API + '/auth/refresh', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh_token: rt }),
-        });
-        if (!res.ok) return false;
-        const d = await res.json();
-        if (!d.access_token) return false;
+        let d = await _post(rt);
+        if (!d) {
+          // Supabase 的 refresh token 是一次性的：同一個帳號在別處（PWA／瀏覽器分頁／另一台
+          // 裝置）先續期過，本地這顆就已作廢。重讀 localStorage——那邊若剛寫入新的，用它再試
+          // 一次；沒有變才算真的過期。這是「登入完幾秒又被要求登入」最常見的成因。
+          const rt2 = localStorage.getItem('pd_refresh');
+          if (rt2 && rt2 !== rt) d = await _post(rt2);
+        }
+        if (!d) return false;
         token = d.access_token;
         localStorage.setItem('pd_token', token);
         if (d.refresh_token) localStorage.setItem('pd_refresh', d.refresh_token);
@@ -185,6 +196,10 @@ async function api(path, opts = {}, _retried) {
       if (!_retried && path !== '/auth/refresh' && await tryRefreshToken()) {
         return await api(path, opts, true);
       }
+      // 背景／盡力而為的請求（signal、client-state、hot…）不得把使用者踢出去：
+      // 它們在登入後成批發出，任何一個瞬間 401 都會讓整個工作階段陪葬。
+      // 真正代表「工作階段死了」的是前景請求——由它負責登出。
+      if (bg) return null;
       doLogout(); return null;
     }
     if (!res.ok) {
@@ -608,7 +623,7 @@ if (uiScript !== 'orig') {
 // 夜間模式、字級等裝置偏好刻意不同步（同一人不同裝置要不同設定是合理需求）。
 function pushClientState(delta) {
   if (!token) return;
-  try { api('/auth/me/client-state', { method: 'PATCH', body: JSON.stringify(delta) }).catch(() => {}); } catch (e) {}
+  try { api('/auth/me/client-state', { method: 'PATCH', background: true, body: JSON.stringify(delta) }).catch(() => {}); } catch (e) {}
 }
 let _readingPushT = null;
 function _pushReadingNow() {
@@ -693,7 +708,7 @@ async function initApp() {
   // Record this device's signal (IP + fingerprint) once per launch, so existing members have signals
   // on file before any ban — a later re-registration from the same device can then be flagged. Best-
   // effort, never blocks the UI.
-  try { api('/auth/me/signal', { method: 'POST', body: JSON.stringify({ fingerprint: deviceFingerprint(), device: deviceToken() }) }); } catch (e) {}
+  try { api('/auth/me/signal', { method: 'POST', background: true, body: JSON.stringify({ fingerprint: deviceFingerprint(), device: deviceToken() }) }).catch(() => {}); } catch (e) {}
   syncClientState();   // 先跟帳號合併已讀狀態/語言，再讓主編來信與貓頭鷹用合併後的狀態判斷
   document.getElementById('auth-overlay').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
@@ -726,7 +741,7 @@ async function initApp() {
   renderTourBanner();
   renderInstallHint();   // persistent home prompt for anyone not yet onboarded
   setTimeout(maybeShowEditorLetter, 700);   // 主編來信：登入後跳一次（已看過導覽的人才跳，不與新手導覽撞窗）
-  setTimeout(maybeShowMonthlyRecap, 1600);  // 月末讀報回顧：每月第一次開啟時回顧上月（不與主編來信撞窗）
+  loadMonthlyRecap();   // 月末讀報回顧：改成貓頭鷹裡的一封信（不自動彈窗，漏看也還在）
   // Run the first-time tour only AFTER the shelf finishes loading — i.e. once the
   // backend is awake and the 喚醒中 overlay is gone — so it isn't shown over (and
   // accidentally dismissed during) a cold start. .catch keeps the chain alive even if
@@ -917,7 +932,7 @@ function markTourSeen() {
   const tag = tourTag();   // 'r2' / 'w2' — role-scoped
   localStorage.setItem(tourSeenKey(), tag);   // device fast-path
   if (currentUser) currentUser.tour_seen = tag;
-  api('/auth/me/tour-seen', { method: 'PATCH', body: JSON.stringify({ version: tag }) }).catch(() => {});  // cross-device record (best effort)
+  api('/auth/me/tour-seen', { method: 'PATCH', background: true, body: JSON.stringify({ version: tag }) }).catch(() => {});  // cross-device record (best effort)
 }
 
 // markSeen=true only when the tour is COMPLETED. A mere 跳過 just closes it and leaves the
@@ -1489,7 +1504,7 @@ async function loadNovels() {
   catch { novels = []; novelsError = true; }
   renderShelf();              // 立即顯示（此時純發佈日期序，尚無 hot 浮頂）
   renderContinueBar();
-  api('/novels/hot').then(ids => {   // hot 背景回來 → 重排把 top-3 浮頂（renderShelf 內部自判浮頂條件）
+  api('/novels/hot', { background: true }).then(ids => {   // hot 背景回來 → 重排把 top-3 浮頂（renderShelf 內部自判浮頂條件）
     hotIds = ids || [];
     if (hotIds.length) renderShelf();
   }).catch(() => {});
@@ -1589,6 +1604,13 @@ async function renderFavUpdates() {
   const ld = EDITOR_LETTER.date ? new Date(EDITOR_LETTER.date) : null;
   if (ld && ld.getTime() >= cutoff) {
     items.push({ kind: 'letter', key: `letter:${EDITOR_LETTER.id}`, title: '主編來信', sub: '本期更新與最新版本', at: EDITOR_LETTER.date, unread: !editorLetterSeen() });
+  }
+  // 月末讀報回顧：上個月的回顧信（未讀會亮）。與主編來信同層級，不受收藏／身分影響。
+  if (_recap) {
+    const zhm = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
+    items.push({ kind: 'recap', key: `recap:${_recap.key}`,
+      title: '月末讀報回顧', sub: `${zhm[_recap.month]}月，你翻開日報 ${_recap.active_days} 天`,
+      at: `${_recap.key}-28T00:00:00Z`, unread: !recapSeen() });
   }
   const _writerPlus = currentUser && ['writer', 'admin', 'super_admin'].includes(currentUser.role);
   let all = null;
@@ -1760,7 +1782,7 @@ async function renderFavUpdates() {
   pop.hidden = true;
   if (!_owlItems.length) { pop.innerHTML = `<p class="fav-pop-empty">目前沒有新通知</p>`; return; }
   pop.innerHTML = `<p class="fav-pop-title">通知</p>` + _owlItems.map((it, i) => {
-    const gold = it.kind === 'letter' || it.kind === 'wishreply' || it.kind === 'pub' || it.kind === 'authin' || it.kind === 'authout';   // 個人信件類＝金點
+    const gold = it.kind === 'letter' || it.kind === 'recap' || it.kind === 'wishreply' || it.kind === 'pub' || it.kind === 'authin' || it.kind === 'authout';   // 個人信件類＝金點
     const dotClass = it.unread ? (gold ? 'fav-dot gold' : 'fav-dot') : 'fav-dot read';
     const cls = `fav-row${it.unread ? '' : ' read'}`;
     // 叉叉用索引指到 _owlItems（key 可能含任意文字，不能塞進屬性）
@@ -1773,6 +1795,7 @@ async function renderFavUpdates() {
     if (it.kind === 'wishreply') return `<a href="#" data-onclick="wishReplyOpen('${it.id}');return false" class="${cls}">${inner}</a>`;
     if (it.kind === 'authin' || it.kind === 'authout') return `<a href="#" data-onclick="owlOpenAuth(${i});return false" class="${cls}">${inner}</a>`;
     if (it.kind === 'curate') return `<a href="#" data-onclick="owlOpenCurate(${i});return false" class="${cls}">${inner}</a>`;
+    if (it.kind === 'recap') return `<a href="#" data-onclick="openRecap();return false" class="${cls}">${inner}</a>`;
     return `<a href="#" data-onclick="favOwlOpen('${it.id}');return false" class="${cls}">${inner}</a>`;
   }).join('');
 }
@@ -1875,19 +1898,32 @@ function letterUpdateOnce() {
   markEditorLetterSeen();
   updateToLatest();   // 清快取＋重載，拿最新一期
 }
-// ── 月末讀報回顧：每月第一次打開時回顧上一個月；帳號級只跳一次，上月沒讀就靜靜略過 ──
-async function maybeShowMonthlyRecap() {
+// ── 月末讀報回顧：上個月的閱讀回顧。原本是開 App 就自動彈窗，漏看（或被登入問題打斷）
+// 就再也看不到；改成貓頭鷹裡的一封信——沒讀會留著未讀標記，點開才顯示卡片。 ──
+let _recap = null;   // { key, active_days, works, topName } — 供貓頭鷹列出與卡片渲染
+async function loadMonthlyRecap() {
   if (!currentUser) return;
-  if (!editorLetterSeen()) return;   // 主編來信優先，回顧留到下次開啟
   const now = new Date();
   const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const key = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
-  const cs = (currentUser && currentUser.client_state) || {};
-  if (cs.recap_seen === key || localStorage.getItem('pd_recap_seen') === key) return;
   let r = null;
-  try { r = await api('/auth/me/monthly-recap'); } catch (e) { return; }
+  try { r = await api('/auth/me/monthly-recap', { background: true }); } catch (e) { return; }
+  if (!r || r.month !== key || !r.reads) return;   // 上月沒讀 → 這個月沒有這封信
+  _recap = { key, active_days: r.active_days, works: r.works, top_char: r.top_char, month: prev.getMonth() };
+  renderFavUpdates();   // 讓貓頭鷹把這封信列進去
+}
+function recapSeen() {
+  if (!_recap) return true;
+  const cs = (currentUser && currentUser.client_state) || {};
+  return cs.recap_seen === _recap.key || localStorage.getItem('pd_recap_seen') === _recap.key;
+}
+// 點貓頭鷹裡那封信 → 顯示回顧卡並標記已讀
+function openRecap() {
+  const r = _recap; if (!r) return;
+  const p = document.getElementById('fav-owl-pop'); if (p) p.hidden = true;
+  const key = r.key;
   const markSeen = () => { try { localStorage.setItem('pd_recap_seen', key); } catch (e) {} pushClientState({ recap_seen: key }); };
-  if (!r || r.month !== key || !r.reads) { markSeen(); return; }
+  const prev = { getMonth: () => r.month };
   const zh = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
   let charPart = '', topName = '';
   if (r.top_char) {
@@ -1907,6 +1943,7 @@ async function maybeShowMonthlyRecap() {
     if (sign) sign.textContent = `—— ${who || ''}`; }
   const m = document.getElementById('recap-card'); if (m) m.style.display = 'flex';
   markSeen();
+  renderFavUpdates();   // 標記已讀後把貓頭鷹的未讀點收掉
 }
 function dismissRecap() { const m = document.getElementById('recap-card'); if (m) m.style.display = 'none'; }
 function dismissEditorLetter() {
