@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.57';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.58';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3830,9 +3830,9 @@ async function onNovelHeaderPick(input) {
   try {
     // 文首圖同時成為畫作作品（上牆），尺寸與畫作投稿同規：縮圖／顯示版／高清版
     { const [th, disp, fu] = await resizeImageVariants(f, [
-        { maxDim: 1000, quality: 0.82 }, { maxDim: 1400, quality: 0.85 }, { maxDim: 2560, quality: 0.9 }]);
+        { maxDim: 700, quality: 0.8 }, { maxDim: 1400, quality: 0.85 }, { maxDim: 2560, quality: 0.9 }]);
       _novelHeader.data = disp.data;
-      _novelHeader.thumb = disp.srcMax > 1000 * 1.2 ? th.data : null;
+      _novelHeader.thumb = disp.srcMax > 700 * 1.2 ? th.data : null;
       _novelHeader.full = disp.srcMax > 1400 * 1.2 ? fu.data : null; }
     { const cap = document.getElementById('nh-caption-row'); if (cap) cap.style.display = ''; }
     const wrap = document.getElementById('nh-preview');
@@ -3864,10 +3864,10 @@ async function onEditHeaderPick(input) {
   if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { toast('請選擇 JPG、PNG 或 WebP 圖片'); return; }
   try {
     const [th, disp, fu] = await resizeImageVariants(f, [
-      { maxDim: 1000, quality: 0.82 }, { maxDim: 1400, quality: 0.85 }, { maxDim: 2560, quality: 0.9 }]);
+      { maxDim: 700, quality: 0.8 }, { maxDim: 1400, quality: 0.85 }, { maxDim: 2560, quality: 0.9 }]);
     const r = await api(`/novels/${editWork.id}/header-image`, { method: 'PATCH', body: JSON.stringify({
       image: disp.data,
-      image_thumb: disp.srcMax > 1000 * 1.2 ? th.data : null,
+      image_thumb: disp.srcMax > 700 * 1.2 ? th.data : null,
       image_full: disp.srcMax > 1400 * 1.2 ? fu.data : null,
       caption: (document.getElementById('editheader-caption') || { value: '' }).value.trim() }) });
     editWork.headerUrl = (r && r.image_url) || null;
@@ -3938,14 +3938,16 @@ async function onImagePick(input) {
   if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { toast('請選擇 JPG、PNG 或 WebP 圖片'); return; }
   try {
     // 三個尺寸各有用途：牆上的縮圖（流量大宗）、詳情卡與全螢幕的顯示版、下載的高清版。
-    // 牆上一格最寬的情境是桌機四欄（約 250 CSS px），3 倍螢幕也只要 ~750 實體像素，
-    // 縮圖取最長邊 1000 仍有餘裕；直式圖 1000 高＝750 寬，同樣夠。
+    // 牆上一格最寬的情境是桌機四欄（約 250 CSS px），3 倍螢幕約需 750 實體像素；
+    // 縮圖取最長邊 700（2026-08-03 由 1000 下修）——直式圖 700 高＝525 寬，
+    // 覆蓋 250px 格子的 2 倍螢幕仍有餘裕，位元組卻少一半以上。
+    // 想再省就往下調這個數，但別低於 500：桌機視窗越寬欄位越寬（.gallery-wall 沒有 max-width）。
     const [thumb, disp, full] = await resizeImageVariants(f, [
-      { maxDim: 1000, quality: 0.82 }, { maxDim: 1400, quality: 0.85 }, { maxDim: 2560, quality: 0.9 }]);
+      { maxDim: 700, quality: 0.8 }, { maxDim: 1400, quality: 0.85 }, { maxDim: 2560, quality: 0.9 }]);
     const data = disp.data;
     _imgWork.data = data;
     // 原圖沒比某一版大多少就不多存那一份——只會佔 Storage，換不到解析度。
-    _imgWork.thumb = disp.srcMax > 1000 * 1.2 ? thumb.data : null;
+    _imgWork.thumb = disp.srcMax > 700 * 1.2 ? thumb.data : null;
     _imgWork.full = disp.srcMax > 1400 * 1.2 ? full.data : null;
     const wrap = document.getElementById('image-preview-wrap');
     wrap.style.display = '';
@@ -5769,10 +5771,10 @@ async function onReplaceImagePick(input) {
   toast('圖片處理中…');
   try {
     const [th, disp, fu] = await resizeImageVariants(f, [
-      { maxDim: 1000, quality: 0.82 }, { maxDim: 1400, quality: 0.85 }, { maxDim: 2560, quality: 0.9 }]);
+      { maxDim: 700, quality: 0.8 }, { maxDim: 1400, quality: 0.85 }, { maxDim: 2560, quality: 0.9 }]);
     const r = await api(`/novels/${editWork.id}/image-file`, { method: 'PATCH', body: JSON.stringify({
       image: disp.data,
-      image_thumb: disp.srcMax > 1000 * 1.2 ? th.data : null,
+      image_thumb: disp.srcMax > 700 * 1.2 ? th.data : null,
       image_full: disp.srcMax > 1400 * 1.2 ? fu.data : null }) });
     // 本地快取同步新 URL（帶版本戳），畫框預覽即時換圖
     [...(window._adminNovels || []), ...(_galleryItems || [])].forEach(o => {
