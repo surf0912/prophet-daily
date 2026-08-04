@@ -431,7 +431,7 @@
             <div id="image-preview-wrap" style="display:none;margin-top:12px;text-align:center"></div>
           </div>
           <div class="form-group"><label>標題</label><input type="text" id="new-image-title" placeholder="畫作標題" /></div>
-          <div class="form-group"><label>作者署名（選填）</label><input type="text" id="new-image-author" placeholder="留空則佚名" /></div>
+          <div class="form-group"><label>作者署名（選填）</label><input type="text" id="new-image-author" maxlength="60" placeholder="留空則佚名；合創可寫兩個名字，例：Vale／阿源" /></div>
           <div class="form-group"><label>說明（選填）</label><textarea id="new-image-caption" maxlength="300" placeholder="給這幅畫留幾句話（至多三百字，可留白）"></textarea></div>
           <div class="form-group" id="new-image-source-row" style="display:none"><label>源自（經授權的文章，選填）</label><select id="new-image-source" style="width:100%;padding:9px 10px;font-family:inherit;font-size:13px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></select></div>
           <div class="form-group"><label>畫框</label><div id="image-frame-picker" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
@@ -850,7 +850,7 @@
       <button id="editwork-copyid" class="admin-only" style="margin-left:auto;background:none;border:1px solid var(--gold-lt);color:var(--ink-light);font-size:11px;font-weight:normal;padding:3px 10px;border-radius:3px;cursor:pointer">複製作品編號</button>
     </h3>
     <div class="form-group"><label>標題</label><input type="text" id="editwork-title" /></div>
-    <div class="form-group"><label>作者署名</label><input type="text" id="editwork-author" placeholder="留空則佚名" /></div>
+    <div class="form-group"><label>作者署名</label><input type="text" id="editwork-author" maxlength="60" placeholder="合創可寫兩個名字，例：Vale／阿源" /></div>
     <div class="form-group"><label>發佈日期</label><input type="date" id="editwork-date" /></div>
     <div id="editwork-image-group" style="display:none">
       <div class="form-group"><label>說明（選填）</label><textarea id="editwork-caption" maxlength="300" placeholder="給這幅畫留幾句話（至多三百字）"></textarea></div>
