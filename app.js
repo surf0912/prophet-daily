@@ -4635,7 +4635,11 @@ function openGalleryItem(id, fromAdmin) {
   frameEl.className = 'gd-frame fr-' + fr;
   document.getElementById('gd-img').src = it.image_url;
   document.getElementById('gd-title').textContent = it.title || '';
-  document.getElementById('gd-author').textContent = it.author ? ('— ' + it.author) : '— 佚名';
+  // 超管在署名後看得到真正的擁有者（巫師入學全名），與意若思鏡的文章列同一套 ownerTag：
+  // 畫師改了署名也藏不住作品屬於誰。ownerTag 回傳 HTML，所以這裡從 textContent 換成
+  // innerHTML——署名是自由填寫的文字，一律先 escapeHtml 再接上去。
+  document.getElementById('gd-author').innerHTML =
+    escapeHtml(it.author ? ('— ' + it.author) : '— 佚名') + ownerTag(it);
   document.getElementById('gd-chars').innerHTML =
     (it.category ? `<span class="t-cat${catCls(it.category)}">${escapeHtml(it.category)}</span>` : '')
     + (it.characters || []).map(c => charPill(c)).join('');
