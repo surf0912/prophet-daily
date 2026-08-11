@@ -995,7 +995,7 @@
       <p style="margin-bottom:10px">本限制適用於所有魔法通訊裝置、《預言家日報》網路版、私人閱讀終端、魔法鏡面投影、壁爐訊息傳輸，以及任何可連接本站之巫師設備。</p>
       <p style="margin-bottom:10px">進入「迷情劑」標記內容前，使用者須確認自己已年滿十八歲，並理解該區域可能包含不適合未成年巫師閱讀之文字、情節或討論內容。若未滿十八歲，請立即離開該頁面，不得繼續瀏覽。</p>
       <p style="margin-bottom:10px">若有未成年巫師透過增齡劑、混淆咒、複方湯劑、變形術、借用他人帳號、偽造身分、共享邀請連結，或任何其他方式蓄意規避已設立之魔法年齡線，將視為嚴重違規行為。經查明後，可能依情節採取以下處置：</p>
-      <p style="margin-bottom:10px"><b>年齡驗證</b>：送出申請後，請至微信群私訊《預言家日報》客服完成年齡驗證——未完成驗證的申請不會通過。</p>
+      <p style="margin-bottom:10px"><b>年齡驗證</b>：請於下方上傳一份成年證明——大學證書、證照，或任何帶有出生年月日的有效文件照片皆可（與年齡無關的欄位可自行遮蓋）。未附證明的申請不會通過。</p>
       <ol style="margin:0 0 10px 0;padding-left:20px">
         <li style="margin-bottom:8px"><b>年齡線反制</b><br>系統將自動識別異常進入行為，並立即中斷該名使用者對「迷情劑」內容之存取權限。相關帳號可能被暫時凍結、限制登入，或要求重新驗證身分。</li>
         <li style="margin-bottom:8px"><b>閱讀權限暫停</b><br>違規者之帳號可能被移出相關內容區域，並於一定期間內限制閱讀、留言、收藏、發布或互動功能。情節嚴重者，相關閱讀權限將被永久撤銷。</li>
@@ -1008,7 +1008,16 @@
       <p style="margin-bottom:10px">未滿十八歲者，請自行遠離。<br>迷情劑的力量，遠比你想像中更危險。</p>
       <p style="margin-bottom:4px;color:var(--ink);opacity:.85">本公告為《預言家日報》站內世界觀提示與使用規則說明。進入受限內容區，即代表你已確認自己年滿十八歲，並同意遵守本站相關內容限制與管理規則。</p>
     </div>
-    <label style="display:flex;align-items:flex-start;gap:8px;margin:16px 0 12px;font-size:14px;color:var(--ink);cursor:pointer">
+    <div style="margin:16px 0 0">
+      <input type="file" id="mqj-proof-file" accept="image/*" style="display:none" data-onchange="onMqjProofPick(this)" />
+      <button id="mqj-proof-btn" style="width:100%;padding:11px;font-size:13px;background:none;border:1px dashed var(--gold);color:var(--ink-light);border-radius:6px;cursor:pointer" data-onclick="document.getElementById('mqj-proof-file').click()">上傳成年證明（大學證書、證照等帶出生年月日的文件）</button>
+      <div id="mqj-proof-preview" style="display:none;text-align:center">
+        <img id="mqj-proof-img" alt="成年證明預覽" style="max-width:100%;max-height:200px;border-radius:6px;border:1px solid var(--gold-lt)" />
+        <div style="margin-top:6px"><button style="font-size:12px;padding:4px 14px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:4px;cursor:pointer" data-onclick="clearMqjProof()">重新選擇</button></div>
+      </div>
+      <p style="font-size:11.5px;color:var(--ink-light);opacity:.8;margin:6px 0 0;line-height:1.7">檔案僅供管理員核對年齡，存於私人保管庫；審核完成後（無論通過與否）即刪除，不會留存。</p>
+    </div>
+    <label style="display:flex;align-items:flex-start;gap:8px;margin:14px 0 12px;font-size:14px;color:var(--ink);cursor:pointer">
       <input type="checkbox" id="mqj-age-check" style="margin-top:2px;flex-shrink:0;width:18px;height:18px" data-onchange="document.getElementById('mqj-confirm-btn').disabled=!this.checked">
       <span>我確認我已年滿 18 歲，並同意以上內容限制與管理規則</span>
     </label>
@@ -1016,6 +1025,14 @@
       <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('mqj-disclaimer-modal').classList.remove('open')">取消</button>
       <button class="btn-primary" id="mqj-confirm-btn" disabled style="flex:1;padding:12px;font-size:13px" data-onclick="requestMqj()">送出申請</button>
     </div>
+  </div>
+</div>
+
+<!-- 迷情劑申請：成年證明檢視（管理員；點背景關閉） -->
+<div id="mqj-proof-view" class="el-overlay" style="display:none" data-onclick="closeMqjProofView()">
+  <div style="max-width:92vw;max-height:88vh;overflow:auto" data-onclick="event.stopPropagation()">
+    <img id="mqj-proof-view-img" alt="成年證明" style="max-width:100%;border-radius:6px" />
+    <div style="text-align:center;margin-top:8px"><button style="font-size:13px;padding:6px 20px;background:none;border:1px solid var(--on-dark);color:var(--on-dark);border-radius:6px;cursor:pointer" data-onclick="closeMqjProofView()">關閉</button></div>
   </div>
 </div>
 
