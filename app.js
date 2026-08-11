@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.60';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.61';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2349,9 +2349,44 @@ function openMqjDisclaimer() {
   if (cb) cb.checked = false;
   const btn = document.getElementById('mqj-confirm-btn');
   if (btn) btn.disabled = true;
+  clearMqjProof();
   const inner = document.querySelector('#mqj-disclaimer-modal .perm-modal-inner');
   if (inner) inner.scrollTop = 0;
   document.getElementById('mqj-disclaimer-modal').classList.add('open');
+}
+
+// ── 迷情劑成年證明：選檔 → 縮到 2000px（文件的字要讀得清，別壓太狠）→ 暫存，送出時一併上傳 ──
+let _mqjProofData = null;
+async function onMqjProofPick(input) {
+  const f = input.files && input.files[0];
+  input.value = '';   // 同一檔可重選（change 事件才會再觸發）
+  if (!f) return;
+  try {
+    _mqjProofData = await resizeImageContain(f, 2000, 0.85);
+    const img = document.getElementById('mqj-proof-img');
+    if (img) img.src = _mqjProofData;
+    const pv = document.getElementById('mqj-proof-preview'); if (pv) pv.style.display = '';
+    const btn = document.getElementById('mqj-proof-btn'); if (btn) btn.style.display = 'none';
+  } catch (e) { toast('圖片讀取失敗，請換一張試試'); }
+}
+function clearMqjProof() {
+  _mqjProofData = null;
+  const pv = document.getElementById('mqj-proof-preview'); if (pv) pv.style.display = 'none';
+  const img = document.getElementById('mqj-proof-img'); if (img) img.removeAttribute('src');
+  const btn = document.getElementById('mqj-proof-btn'); if (btn) btn.style.display = '';
+}
+// 管理員核對：取 5 分鐘簽名連結，全螢幕看證明（桶是私有的，連結過期自動失效）
+async function viewMqjProof(userId) {
+  try {
+    const r = await api(`/permissions/users/${userId}/mqj-proof`);
+    const img = document.getElementById('mqj-proof-view-img');
+    if (img) img.src = r.url;
+    document.getElementById('mqj-proof-view').style.display = 'flex';
+  } catch (e) { toast(e.message); }
+}
+function closeMqjProofView() {
+  const el = document.getElementById('mqj-proof-view'); if (el) el.style.display = 'none';
+  const img = document.getElementById('mqj-proof-view-img'); if (img) img.removeAttribute('src');
 }
 
 // Re-fetch the caller's profile to pick up a freshly-granted 迷情劑 approval without
@@ -2373,11 +2408,21 @@ async function refreshMqjStatus() {
 }
 
 async function requestMqj() {
+  // 沒帶證明不收件。裁決（含被拒）當下檔案就刪了，所以重新申請一定要重傳；
+  // 只有 pending 補件過（mqj_proof_at 還在）才允許不重選檔直接送。
+  if (!_mqjProofData && !currentUser?.mqj_proof_at) { toast('請先上傳成年證明文件'); return; }
   document.getElementById('mqj-disclaimer-modal').classList.remove('open');
   try {
-    const res = await api('/permissions/me/request-mqj', { method: 'POST' });
-    currentUser.mqj_access = res.mqj_access;
-    toast(res.mqj_access === 'approved' ? '你已可閱讀迷情劑' : '已送出申請，等管理員開放');
+    if (_mqjProofData) {
+      await api('/permissions/me/mqj-proof', { method: 'POST', body: JSON.stringify({ image: _mqjProofData }) });
+      currentUser.mqj_proof_at = new Date().toISOString();
+      _mqjProofData = null;
+    }
+    if (currentUser.mqj_access !== 'pending') {   // pending 純補件：狀態不動，申請計數也不多算
+      const res = await api('/permissions/me/request-mqj', { method: 'POST' });
+      currentUser.mqj_access = res.mqj_access;
+    }
+    toast(currentUser.mqj_access === 'approved' ? '你已可閱讀迷情劑' : '證明已收到，靜候管理員審核');
     renderShelf();
   } catch (e) { toast(e.message); }
 }
@@ -2388,17 +2433,21 @@ function mqjGateBody() {
   const a = currentUser?.mqj_access;
   const eIc = (id) => `<span style="display:block;margin-bottom:8px">${ic(id, 30)}</span>`;
   const applyBtn = (label) => `<button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" data-onclick="openMqjDisclaimer()">${ic('ic-send', 14)} ${label}</button>`;
-  if (a === 'pending')
-    return `${eIc('ic-clock')}你已申請開放「迷情劑」<br><small>請至微信群私訊《預言家日報》客服完成年齡驗證<br>驗證通過後，管理員才會開放</small>`;
+  if (a === 'pending') {
+    if (currentUser?.mqj_proof_at)
+      return `${eIc('ic-clock')}你已申請開放「迷情劑」<br><small>成年證明已收到，靜候管理員核對後開放</small>`;
+    // 舊制申請（還沒上傳過證明）：補一份文件即完成驗證，不必重新申請
+    return `${eIc('ic-clock')}你已申請開放「迷情劑」<br><small style="display:block;margin-bottom:14px">還差一步：請上傳成年證明——大學證書、證照等任何帶出生年月日的有效文件</small>${applyBtn('上傳證明文件')}`;
+  }
   if (a === 'rejected') {
     // 被拒後 7 天冷卻：期間不給按鈕，只留說明；期滿恢復再次申請
     const ra = currentUser?.mqj_rejected_at ? new Date(currentUser.mqj_rejected_at) : null;
     const left = ra ? 7 - Math.floor((Date.now() - ra.getTime()) / 86400000) : 0;
     if (left > 0)
-      return `${eIc('ic-ban')}你的「迷情劑」閱讀申請未通過<br><small>通常是尚未完成年齡驗證——請先至微信群私訊客服驗證<br>${left} 天後可再次提出申請</small>`;
-    return `${eIc('ic-ban')}你的「迷情劑」閱讀申請未通過<br><small style="display:block;margin-bottom:14px">請先至微信群私訊客服完成年齡驗證，再提出申請</small>${applyBtn('再次申請')}`;
+      return `${eIc('ic-ban')}你的「迷情劑」閱讀申請未通過<br><small>通常是成年證明無法核對——請備妥更清楚的文件<br>${left} 天後可再次提出申請</small>`;
+    return `${eIc('ic-ban')}你的「迷情劑」閱讀申請未通過<br><small style="display:block;margin-bottom:14px">請備妥帶出生年月日的成年證明，再次提出申請</small>${applyBtn('再次申請')}`;
   }
-  return `${eIc('ic-key')}「迷情劑」分類需開放才能閱讀<br><small style="display:block;margin-bottom:14px">點下方按鈕申請，並至微信群私訊客服完成年齡驗證</small>${applyBtn('要求管理員開放')}`;
+  return `${eIc('ic-key')}「迷情劑」分類需開放才能閱讀<br><small style="display:block;margin-bottom:14px">點下方按鈕申請，並上傳成年證明——大學證書、證照等任何帶出生年月日的有效文件</small>${applyBtn('要求管理員開放')}`;
 }
 
 // 自創角色（custom character）功能與實驗開關（isBeta/setBetaFlag/?beta/pd_beta）已於 2026-07-13 全數下架。
@@ -5290,7 +5339,9 @@ async function loadReviewList() {
         <div style="padding:12px 0;border-bottom:1px solid rgba(26,10,0,.1)">
           <div style="font-size:14px;font-weight:bold">${escapeHtml(u.nickname || u.username)} <span style="font-size:12px;color:var(--ink-light);font-weight:normal">@${escapeHtml(u.username)}</span></div>
           <div style="font-size:12px;color:var(--ink-light);margin-top:3px">申請閱讀「迷情劑」分類${(u.mqj_request_count || 0) > 1 ? `・第 ${u.mqj_request_count} 次申請` : ''}${u.mqj_rejected_at ? `・上次未通過：${fmtUpdated(u.mqj_rejected_at)}` : ''}</div>
-          <div style="display:flex;gap:8px;margin-top:8px">
+          <div style="font-size:12px;margin-top:3px;color:${u.mqj_proof_at ? 'var(--series)' : 'var(--accent)'}">${u.mqj_proof_at ? ic('ic-check', 11) + ' 已附成年證明・' + fmtUpdated(u.mqj_proof_at) : ic('ic-clock', 11) + ' 尚未上傳成年證明'}</div>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            ${u.mqj_proof_at ? `<button data-onclick="viewMqjProof('${u.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-eye',12)} 查看證明</button>` : ''}
             <button data-onclick="reviewMqj('${u.id}', true)" style="font-size:12px;padding:4px 12px;background:#2d4a1e;border:none;color:#fff;border-radius:3px;cursor:pointer">${ic('ic-check',12)} 通過</button>
             <button data-onclick="reviewMqj('${u.id}', false)" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-x',12)} 不通過</button>
           </div>
