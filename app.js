@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.59';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.60';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3997,7 +3997,7 @@ async function submitImageWork(btn) {
     { const m = document.getElementById('new-image-cat'); if (m) m.value = '吐真劑'; }
     const wrap = document.getElementById('image-preview-wrap'); wrap.style.display = 'none'; wrap.innerHTML = '';
     document.getElementById('image-drop').textContent = '選擇畫作';
-    _myAuths = null; renderImageSourceRow();   // 掛了源自的授權信已用掉，下拉重整
+    _myAuths = null; renderImageSourceRow();   // 重抓源自下拉——信仍可再用（系列多張），選項要立刻回到可選
   } catch (e) { toast(e.message); }
   finally { _uploadBusy = false; _restore(); if (hint) hint.textContent = ''; }
 }
@@ -4154,13 +4154,22 @@ let _authReqCtx = null;
 async function openAuthRequest(direction, targetId, targetTitle, targetOwnerName) {
   const mine = await loadMyAuths(true);   // 強制重抓：對方同意/婉拒發生在別的 session，快取不會自己更新
   // 已收回的信不算「已寄過」——收回後可再申請一次（後端同規）
-  const dupe = (mine.sent || []).filter(a => a.status !== 'revoked' && a.status !== 'cancelled').find(a => a.direction === direction
-    && (direction === 'use_image' ? a.artwork_id === targetId : a.work_id === targetId));
-  if (dupe) {
-    toast(dupe.status === 'pending' ? '授權信已寄出，等待對方回覆'
-      : dupe.status === 'approved' ? '你已獲得這件作品的授權'
-      : '這封授權信曾被婉拒，無法重寄');
-    return;
+  const active = (mine.sent || []).filter(a => a.status !== 'revoked' && a.status !== 'cancelled');
+  // offer_image 的查重是「文章 × 畫作」成對（同一篇可以收系列多張）——畫作選了才知道，
+  // 改在下方下拉裡濾掉已寄過的畫，這裡不擋
+  if (direction !== 'offer_image') {
+    const dupe = active.find(a => a.direction === direction
+      && (direction === 'use_image' ? a.artwork_id === targetId : a.work_id === targetId));
+    if (dupe) {
+      toast(direction === 'derive_art'
+        ? (dupe.status === 'pending' ? '求畫授權信已寄出，等待對方回覆'
+          : dupe.status === 'approved' ? '你已獲得為這篇作畫的授權——上傳畫作時在「源自」選這篇即可，系列可多張'
+          : '這封授權信曾被婉拒，無法重寄')
+        : (dupe.status === 'pending' ? '授權信已寄出，等待對方回覆'
+          : dupe.status === 'approved' ? '你已獲得這件作品的授權'
+          : '這封授權信曾被婉拒，無法重寄'));
+      return;
+    }
   }
   _authReqCtx = { direction, targetId };
   const head = document.getElementById('auth-req-target');
@@ -4191,6 +4200,18 @@ async function openAuthRequest(direction, targetId, targetTitle, targetOwnerName
         ? ((await api('/novels/?mine=true&kind=image')) || []).filter(n => n.status === 'approved' && !n.locked)
         : (await api('/authorizations/eligible-works')) || [];
     } catch (e) {}
+    let hadArts = opts.length;
+    if (offering) {
+      // 與這篇文章之間已有信的畫作不再列（查重是「文章 × 畫作」成對）：
+      // 自己獻過的（sent offer_image）＋對方來借過的（received use_image，後端 twin 查重會擋）
+      const used = new Set([
+        ...active.filter(a => a.direction === 'offer_image' && a.work_id === targetId).map(a => a.artwork_id),
+        ...(mine.received || []).filter(a => a.direction === 'use_image' && a.work_id === targetId
+          && (a.status === 'pending' || a.status === 'approved')).map(a => a.artwork_id),
+      ]);
+      opts = opts.filter(n => !used.has(n.id));
+      if (hadArts && !opts.length && hint) hint.textContent = '你的畫作都已經有這篇文章的授權信了。';
+    }
     if (!opts.length) { sel.style.display = 'none'; hint.style.display = ''; send.disabled = true; return; }
     sel.innerHTML = opts.map(w => offering
       ? `<option value="${w.id}">《${escapeHtml(w.title || '無題')}》</option>`
@@ -4425,12 +4446,19 @@ async function applyAuthArt(authId) {
     toast(n > 1 ? `已掛上，這篇目前有 ${n} 張文首圖` : '已掛上獲授權的畫作');
   } catch (e) { toast(e.message); }
 }
-// 上傳畫作的「源自」下拉：只列自己已同意、還沒掛過畫的 derive_art 授權信
+// 上傳畫作的「源自」下拉：列自己已同意的 derive_art 授權信。掛過畫的信也能再選——
+// 一封求畫信涵蓋整個系列（第二張起後端會複製一筆同意紀錄綁新畫）。一篇只列一次，
+// 優先挑還沒掛畫的那封（後端直接回寫、不必複製）。
 async function renderImageSourceRow() {
   const row = document.getElementById('new-image-source-row'); if (!row) return;
   row.style.display = 'none';
   const mine = await loadMyAuths(true);   // 強制重抓：對方同意/婉拒發生在別的 session，快取不會自己更新
-  const opts = (mine.sent || []).filter(a => a.direction === 'derive_art' && a.status === 'approved' && !a.artwork_id);
+  const all = (mine.sent || []).filter(a => a.direction === 'derive_art' && a.status === 'approved');
+  const opts = [], seen = new Set();
+  for (const a of [...all.filter(x => !x.artwork_id), ...all.filter(x => x.artwork_id)]) {
+    if (!a.work_id || seen.has(a.work_id)) continue;
+    seen.add(a.work_id); opts.push(a);
+  }
   if (!opts.length) return;
   row.style.display = '';
   document.getElementById('new-image-source').innerHTML = '<option value="">不掛（一般投稿）</option>'
