@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.63';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.64';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2400,6 +2400,7 @@ async function refreshMqjStatus() {
     if (me && me.mqj_access !== currentUser.mqj_access) {
       const becameApproved = me.mqj_access === 'approved';
       currentUser.mqj_access = me.mqj_access;
+      currentUser.mqj_proof_at = me.mqj_proof_at || null;   // 裁決時證明已刪；不同步的話下次申請會誤放行
       if (becameApproved) { toast('你的迷情劑權限已開放'); loadNovels(); }
       else renderShelf();
     }
