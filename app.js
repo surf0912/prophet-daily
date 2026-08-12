@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.61';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.62';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4365,6 +4365,21 @@ async function renderGdAuth(it) {
         `<a href="#" data-onclick="galleryOpenWork('${l.work_id}');return false" style="color:var(--accent)">${l.kind === 'source' ? '源自' : '授權予'}《${escapeHtml(l.work_title)}》</a>`).join('　');
     } else { al.style.display = 'none'; al.innerHTML = ''; }
   }
+  // 補掛源自（畫師本人／管理員）：這幅已上牆的畫若還有談成的求畫信沒連到它，列出來一鍵補掛。
+  // 2026-08-11 前上傳的系列後續張數被舊查重擋住沒建連結，靠這顆鈕收拾。
+  const at = document.getElementById('gd-attach');
+  if (at) {
+    at.style.display = 'none'; at.innerHTML = '';
+    const canAttach = currentUser && ((it.owners || []).includes(currentUser.id) || ['admin', 'super_admin'].includes(currentUser.role));
+    if (canAttach) {
+      api(`/authorizations/attachable/${it.id}`).then(opts => {
+        if (!_galleryDetailItem || _galleryDetailItem.id !== it.id || !opts || !opts.length) return;
+        at.style.display = '';
+        at.innerHTML = opts.map(o =>
+          `<button data-onclick="attachDeriveArt('${o.id}')" style="background:none;border:1px solid var(--gold);color:var(--accent);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;margin:2px">補掛 源自《${escapeHtml(o.work_title)}》</button>`).join('');
+      }).catch(() => {});
+    }
+  }
   const b = document.getElementById('gd-auth'); if (!b) return;
   const isOwner = currentUser && (it.owners || []).includes(currentUser.id);
   if (!_isWriterPlus() || isOwner) { b.style.display = 'none'; return; }
@@ -4386,6 +4401,19 @@ async function renderGdAuth(it) {
 function galleryAuthAsk() {
   const it = _galleryDetailItem; if (!it) return;
   openAuthRequest('use_image', it.id, it.title || '', it.author || '佚名');
+}
+// 補掛源自：把已上牆的畫連回談成的求畫授權（畫師本人／管理員）。成功後就地補上
+// 「源自」連結並重畫授權區——不重抓整份畫廊清單。
+async function attachDeriveArt(authId) {
+  const it = _galleryDetailItem; if (!it) return;
+  if (!confirm('把這幅畫掛上這封求畫授權？\n\n畫作會標「源自」該篇文章，並進入作者的獲授權畫作清單。')) return;
+  try {
+    const r = await api(`/authorizations/${authId}/attach`, { method: 'POST', body: JSON.stringify({ artwork_id: it.id }) });
+    it.auth_links = [...(it.auth_links || []), { kind: 'source', work_id: r.work_id, work_title: r.work_title }];
+    _myAuths = null;
+    toast(`已掛上 源自《${r.work_title}》`);
+    renderGdAuth(it);
+  } catch (e) { toast(e.message); }
 }
 function galleryOpenWork(id) { closeGalleryDetail(); openNovel(id); }
 // 閱讀器篇末：向文章作者請求衍生創作授權
