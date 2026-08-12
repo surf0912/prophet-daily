@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.62';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.63';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -4365,19 +4365,35 @@ async function renderGdAuth(it) {
         `<a href="#" data-onclick="galleryOpenWork('${l.work_id}');return false" style="color:var(--accent)">${l.kind === 'source' ? '源自' : '授權予'}《${escapeHtml(l.work_title)}》</a>`).join('　');
     } else { al.style.display = 'none'; al.innerHTML = ''; }
   }
-  // 補掛源自（畫師本人／管理員）：這幅已上牆的畫若還有談成的求畫信沒連到它，列出來一鍵補掛。
-  // 2026-08-11 前上傳的系列後續張數被舊查重擋住沒建連結，靠這顆鈕收拾。
-  const at = document.getElementById('gd-attach');
+  // 補掛源自（只給超管的修補工具）：這幅已上牆的畫若還有談成的求畫信沒連到它，一鍵補掛。
+  // 2026-08-11 前上傳的系列後續張數被舊查重擋住、沒建連結，靠這顆鈕收拾，不必重傳圖。
+  // 容器缺了就地補一個——舊 index.html 還在快取時，先前是整段安靜消失、超管無從察覺。
+  let at = document.getElementById('gd-attach');
+  if (!at && al && al.parentNode) {
+    at = document.createElement('div');
+    at.id = 'gd-attach';
+    at.style.cssText = 'display:none;margin-top:8px;text-align:center';
+    al.parentNode.insertBefore(at, al.nextSibling);
+  }
   if (at) {
     at.style.display = 'none'; at.innerHTML = '';
-    const canAttach = currentUser && ((it.owners || []).includes(currentUser.id) || ['admin', 'super_admin'].includes(currentUser.role));
-    if (canAttach) {
-      api(`/authorizations/attachable/${it.id}`).then(opts => {
-        if (!_galleryDetailItem || _galleryDetailItem.id !== it.id || !opts || !opts.length) return;
+    if (currentUser && currentUser.role === 'super_admin') {
+      // 沒得掛時也要講原因（後端會回 reason）——但只在「這幅畫還沒有源自」時才說，
+      // 已經掛好的畫每張都掛一句說明只是雜訊。
+      const hasSource = (it.auth_links || []).some(l => l.kind === 'source');
+      const note = msg => {
+        if (!_galleryDetailItem || _galleryDetailItem.id !== it.id || hasSource) return;
+        at.style.display = '';
+        at.innerHTML = `<span style="font-size:11.5px;color:var(--ink-light);opacity:.8">${escapeHtml(msg)}</span>`;
+      };
+      api(`/authorizations/attachable/${it.id}`).then(r => {
+        if (!_galleryDetailItem || _galleryDetailItem.id !== it.id) return;
+        const opts = (r && r.options) || [];
+        if (!opts.length) { note((r && r.reason) || '目前沒有可補掛的求畫授權'); return; }
         at.style.display = '';
         at.innerHTML = opts.map(o =>
           `<button data-onclick="attachDeriveArt('${o.id}')" style="background:none;border:1px solid var(--gold);color:var(--accent);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;margin:2px">補掛 源自《${escapeHtml(o.work_title)}》</button>`).join('');
-      }).catch(() => {});
+      }).catch(e => note('補掛清單讀取失敗：' + (e.message || '')));
     }
   }
   const b = document.getElementById('gd-auth'); if (!b) return;
@@ -4409,7 +4425,9 @@ async function attachDeriveArt(authId) {
   if (!confirm('把這幅畫掛上這封求畫授權？\n\n畫作會標「源自」該篇文章，並進入作者的獲授權畫作清單。')) return;
   try {
     const r = await api(`/authorizations/${authId}/attach`, { method: 'POST', body: JSON.stringify({ artwork_id: it.id }) });
-    it.auth_links = [...(it.auth_links || []), { kind: 'source', work_id: r.work_id, work_title: r.work_title }];
+    // 與後端同規：同一篇文章只留一條關係，源自蓋掉「授權予同一篇」
+    it.auth_links = [...(it.auth_links || []).filter(l => l.work_id !== r.work_id),
+                     { kind: 'source', work_id: r.work_id, work_title: r.work_title }];
     _myAuths = null;
     toast(`已掛上 源自《${r.work_title}》`);
     renderGdAuth(it);
