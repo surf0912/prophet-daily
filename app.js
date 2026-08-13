@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.65';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.66';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2415,19 +2415,26 @@ async function requestMqj() {
   // 只有 pending 補件過（mqj_proof_at 還在）才允許不重選檔直接送。
   if (!_mqjProofData && !currentUser?.mqj_proof_at) { toast('請先上傳成年證明文件'); return; }
   document.getElementById('mqj-disclaimer-modal').classList.remove('open');
+  // 先立案、再送檔。順序反過來時，證明上傳一失敗整筆申請就不存在——申請人只看到一句
+  // 錯誤提示，管理端的申請區是空的，兩邊都不知道卡在哪。先申請的話，最壞情況是
+  // 「待審但缺證明」：審核頁看得到、申請人也會看到補上傳的入口，是可以收拾的狀態。
+  try {
+    if (currentUser.mqj_access !== 'pending') {   // pending 純補件：狀態不動，申請計數也不多算
+      const res = await api('/permissions/me/request-mqj', { method: 'POST' });
+      currentUser.mqj_access = res.mqj_access;
+    }
+  } catch (e) { toast(e.message); renderShelf(); return; }
   try {
     if (_mqjProofData) {
       await api('/permissions/me/mqj-proof', { method: 'POST', body: JSON.stringify({ image: _mqjProofData }) });
       currentUser.mqj_proof_at = new Date().toISOString();
       _mqjProofData = null;
     }
-    if (currentUser.mqj_access !== 'pending') {   // pending 純補件：狀態不動，申請計數也不多算
-      const res = await api('/permissions/me/request-mqj', { method: 'POST' });
-      currentUser.mqj_access = res.mqj_access;
-    }
     toast(currentUser.mqj_access === 'approved' ? '你已可閱讀迷情劑' : '證明已收到，靜候管理員審核');
-    renderShelf();
-  } catch (e) { toast(e.message); }
+  } catch (e) {
+    toast('申請已送出，但證明上傳失敗：' + (e.message || '') + '，請再傳一次');
+  }
+  renderShelf();
 }
 
 // Shared 迷情劑 access-gate body — used by the 迷情 shelf tab AND the in-reader 上下篇 gate.
