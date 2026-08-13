@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.64';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.65';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -209,7 +209,9 @@ async function api(path, opts = {}, _retried) {
       let d = e.detail;
       if (Array.isArray(d)) d = d.map(x => (x && x.msg) || '').filter(Boolean).join('；') || '輸入格式有誤';
       else if (d && typeof d === 'object') d = d.msg || JSON.stringify(d);
-      throw new Error(d || 'Request failed');
+      // 沒有 detail 的錯誤要把狀態碼講出來：500＝程式炸了、502/503＝伺服器正在重啟或睡著、
+      // 404＝這版後端還沒有這支端點。先前一律顯示「Request failed」，三種完全不同的病因長得一樣。
+      throw new Error(d || `Request failed (HTTP ${res.status})`);
     }
     return await res.json();
   } finally {
@@ -4426,9 +4428,11 @@ async function attachDeriveArt(authId) {
   if (!confirm('把這幅畫掛上這封求畫授權？\n\n畫作會標「源自」該篇文章，並進入作者的獲授權畫作清單。')) return;
   try {
     const r = await api(`/authorizations/${authId}/attach`, { method: 'POST', body: JSON.stringify({ artwork_id: it.id }) });
-    // 與後端同規：同一篇文章只留一條關係，源自蓋掉「授權予同一篇」
-    it.auth_links = [...(it.auth_links || []).filter(l => l.work_id !== r.work_id),
-                     { kind: 'source', work_id: r.work_id, work_title: r.work_title }];
+    // 與後端同規：同一篇文章只留一條關係，且「授權予」優先——那篇已經掛著這張圖時，
+    // 補掛只是把來歷補進資料庫，卡片上顯示的仍是授權予，不必也不該改成源自。
+    const links = it.auth_links || [];
+    if (!links.some(l => l.work_id === r.work_id))
+      it.auth_links = [...links, { kind: 'source', work_id: r.work_id, work_title: r.work_title }];
     _myAuths = null;
     toast(`已掛上 源自《${r.work_title}》`);
     renderGdAuth(it);
