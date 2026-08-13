@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.66';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.67';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2996,10 +2996,12 @@ function renderHeaderArt() {
   img.src = cur.url;
   img.onclick = null; img.style.cursor = ''; img.title = '';
   const wen = currentNovelByline && currentNovelByline.text;
-  by.textContent = cur.artist
+  const credit = cur.artist
     ? (wen ? (wen === cur.artist ? `文·圖／${wen}` : `文／${wen}　圖／${cur.artist}`) : `圖／${cur.artist}`)
     : '';
-  by.style.display = by.textContent ? '' : 'none';
+  by.textContent = credit;
+  by.dataset.credit = credit;   // 純署名另存一份：_linkHeaderArtwork 補畫名時不會把上一輪的畫名再疊一次
+  by.style.display = credit ? '' : 'none';
   if (nav) {
     nav.style.display = list.length > 1 ? '' : 'none';
     const c = nav.querySelector('.rc-art-count');
@@ -3053,9 +3055,18 @@ async function _linkHeaderArtwork(img, byEl, url, artworkId) {
     const nv = [...(typeof forumPosts !== 'undefined' ? forumPosts : []), ...(typeof novels !== 'undefined' ? novels : [])]
       .find(n => n.id === currentNovelId);
     const wen = (nv && nv.author) || '';
-    byEl.textContent = wen ? `文／${wen}　圖／${art.author}` : `圖／${art.author}`;
+    const c = wen ? `文／${wen}　圖／${art.author}` : `圖／${art.author}`;
+    byEl.textContent = c; byEl.dataset.credit = c;
   }
-  if (byEl) { byEl.textContent = `${name}　${byEl.textContent}`.trim(); byEl.style.display = ''; }
+  // 畫名一行、署名一行。先前是把畫名接在署名字串前面（同一個文字節點），
+  // 標題長一點就從「圖／」中間折斷，變成「…圖／」換行「阿源」。
+  if (byEl) {
+    const credit = (byEl.dataset.credit != null ? byEl.dataset.credit : byEl.textContent).trim();
+    byEl.dataset.credit = credit;
+    byEl.innerHTML = `<span class="rc-art-name">${escapeHtml(name)}</span>`
+      + (credit ? `<span class="rc-art-credit">${escapeHtml(credit)}</span>` : '');
+    byEl.style.display = '';
+  }
   else {
     const cap = document.createElement('div');
     cap.className = 'reader-byline';
