@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.67';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.68';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3467,15 +3467,16 @@ async function loadAuthMonitor() {
   try {
     const rows = await api('/authorizations/all', { background: true });
     if (!rows || !rows.length) { el.innerHTML = '<p style="font-size:13px;color:var(--ink-light)">尚無授權往來</p>'; return; }
-    const DIR = { use_image: '借圖', derive_art: '求畫' };
+    const DIR = { use_image: '借圖', derive_art: '求畫', offer_image: '獻圖' };
     const STAT = { pending: ['待回覆', 'var(--ink-light)'], approved: ['已同意', 'var(--series)'], declined: ['已婉拒', 'var(--accent)'], revoked: ['已收回', 'var(--accent)'], cancelled: ['已放棄', 'var(--ink-light)'] };
     el.innerHTML = rows.map(a => {
       const dir = DIR[a.direction] || a.direction;
       const st = STAT[a.status] || [a.status, 'var(--ink-light)'];
       const when = a.created_at ? new Date(a.created_at).toLocaleString('zh-TW', { hour12: false }) : '';
-      const target = a.direction === 'use_image'
-        ? `借《${escapeHtml(a.artwork_title || '畫作')}》用於《${escapeHtml(a.work_title || '文章')}》`
-        : `為《${escapeHtml(a.work_title || '文章')}》作畫`;
+      // offer_image（畫師主動獻圖）先前落到 else，被寫成「作畫」——它其實是把既有的畫授權給那篇
+      const target = a.direction === 'derive_art'
+        ? `為《${escapeHtml(a.work_title || '文章')}》作畫`
+        : `${a.direction === 'offer_image' ? '獻' : '借'}《${escapeHtml(a.artwork_title || '畫作')}》用於《${escapeHtml(a.work_title || '文章')}》`;
       const noteLine = a.note ? `<div style="font-size:12.5px;color:var(--ink);margin-top:4px">${escapeHtml(a.requester_name)}：「${escapeHtml(a.note)}」</div>` : '';
       const replyLine = a.reply_note ? `<div style="font-size:12.5px;color:var(--ink);margin-top:2px">${escapeHtml(a.recipient_name)}：「${escapeHtml(a.reply_note)}」</div>` : '';
       return `<div style="padding:9px 2px;border-bottom:1px solid rgba(26,10,0,.07)">
@@ -4081,8 +4082,10 @@ function _isWriterPlus() { return currentUser && ['writer', 'admin', 'super_admi
 async function loadMyAuths(force) {
   if (!_isWriterPlus()) return { sent: [], received: [] };
   if (_myAuths && !force) return _myAuths;
+  // 讀取失敗不再假裝「沒有信」——先前一律回空陣列，連線出問題時收信人看到的是一個
+  // 空信箱，會直覺認為對方根本沒寄。失敗改帶 error 讓呼叫端說明，且不寫進快取（可重試）。
   try { _myAuths = await api('/authorizations/mine') || { sent: [], received: [] }; }
-  catch (e) { _myAuths = { sent: [], received: [] }; }
+  catch (e) { return { sent: [], received: [], error: e.message || '讀取失敗' }; }
   return _myAuths;
 }
 const AUTH_STATUS = { pending: '待回覆', approved: '已同意', declined: '已婉拒', revoked: '已收回', cancelled: '已放棄' };
@@ -4109,6 +4112,11 @@ async function renderAuthMailbox(elId) {
   _authBoxEl = elId;
   el.innerHTML = '<div class="spinner" style="margin:10px auto"></div>';
   const box = await loadMyAuths(true);
+  if (box.error) {
+    el.innerHTML = `<p style="font-size:12.5px;color:var(--accent);padding:6px 0">信箱讀取失敗：${escapeHtml(box.error)}</p>`
+      + `<button data-onclick="renderAuthMailbox('${elId}')" style="font-size:12px;padding:5px 14px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;cursor:pointer">重新載入</button>`;
+    return;
+  }
   const admin = isAdminUser();
   const noteLine = (t, label) => (t || '').trim()
     ? `<div style="font-size:12px;color:var(--ink-light);margin-top:4px;padding-left:8px;border-left:2px solid var(--gold-lt)">${label}「${escapeHtml(t.trim())}」</div>` : '';
