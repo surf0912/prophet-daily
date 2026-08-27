@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.68';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.69';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -5387,6 +5387,7 @@ async function submitForumPost(btn) {
   finally { _uploadBusy = false; _restore(); }
 }
 
+let _reviewSeq = 0;   // 連續審核時多輪重疊，只讓最新的一輪寫回畫面
 async function loadReviewList() {
   const el = document.getElementById('admin-review-list');
   _reviewPreview = [];   // 上一輪的待審預覽資料作廢
@@ -5397,19 +5398,30 @@ async function loadReviewList() {
     prevOpen[t.includes('迷情劑') ? 'mqj' : 'novel'] = d.open;
   });
   el.innerHTML = '<div class="spinner"></div>';
+  // 連按「通過」時這支會重疊執行；舊的一輪若比新的晚回來，就會把過期的清單蓋回畫面。
+  // 用序號讓「只有最新的一輪」有權寫入 DOM。
+  const seq = ++_reviewSeq;
   try {
-    const [pending, users] = await Promise.all([
-      api('/novels/pending').catch(() => []),
-      api('/permissions/users').catch(() => []),
+    // 兩支各自回報成敗：一支掛掉不該連累另一區，但也絕不能把「讀取失敗」畫成「沒有待審核」
+    // ——先前兩支都是 .catch(() => [])，任何一次失敗都讓整頁看起來歸零，必須切到別頁再回來
+    // 才會恢復（那只是換來一次成功的重抓）。
+    const [pRes, uRes] = await Promise.all([
+      api('/novels/pending').then(v => ({ v })).catch(e => ({ err: e.message || '讀取失敗' })),
+      api('/permissions/users').then(v => ({ v })).catch(e => ({ err: e.message || '讀取失敗' })),
     ]);
-    const mqjReqs = (users || []).filter(u => u.mqj_access === 'pending');
-    const novelsPending = pending || [];
+    if (seq !== _reviewSeq) return;   // 已有更新的一輪在跑，這批結果作廢
+    const mqjErr = uRes.err, novelErr = pRes.err;
+    const mqjReqs = (uRes.v || []).filter(u => u.mqj_access === 'pending');
+    const novelsPending = pRes.v || [];
     window._reviewPending = novelsPending;
     const arrow = `<svg class="rv-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>`;
-    const section = (icon, title, count, bodyHtml, open) => `
-      <details class="review-sec"${open ? ' open' : ''}>
-        <summary>${arrow}${ic(icon, 14)} ${title}<span class="rv-count${count ? '' : ' zero'}">${count}</span></summary>
-        <div class="rv-body">${count ? bodyHtml : '<p style="color:var(--ink-light);font-size:13px;padding:8px 0 14px">目前沒有待審核的項目</p>'}</div>
+    const section = (icon, title, count, bodyHtml, open, err) => `
+      <details class="review-sec"${open || err ? ' open' : ''}>
+        <summary>${arrow}${ic(icon, 14)} ${title}<span class="rv-count${count && !err ? '' : ' zero'}">${err ? '—' : count}</span></summary>
+        <div class="rv-body">${err
+          ? `<p style="color:var(--accent);font-size:13px;padding:8px 0 10px">讀取失敗：${escapeHtml(err)}</p>`
+            + `<button data-onclick="loadReviewList()" style="font-size:12px;padding:5px 14px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;cursor:pointer;margin-bottom:12px">重新載入</button>`
+          : (count ? bodyHtml : '<p style="color:var(--ink-light);font-size:13px;padding:8px 0 14px">目前沒有待審核的項目</p>')}</div>
       </details>`;
 
     const mqjBody = mqjReqs.map(u => `
@@ -5461,9 +5473,13 @@ async function loadReviewList() {
     // 首次載入：迷情劑預設收起、作品審核有件數才展開；重畫（審核操作後）：還原剛才的狀態。
     const mqjOpen = prevOpen.mqj !== undefined ? prevOpen.mqj : false;
     const novelOpen = prevOpen.novel !== undefined ? prevOpen.novel : novelsPending.length > 0;
-    el.innerHTML = section('ic-wine', '迷情劑閱讀權申請', mqjReqs.length, mqjBody, mqjOpen)
-                 + section('ic-book', '作品審核', novelsPending.length, novelBody, novelOpen);
-  } catch (e) { el.innerHTML = '<p>載入失敗</p>'; }
+    el.innerHTML = section('ic-wine', '迷情劑閱讀權申請', mqjReqs.length, mqjBody, mqjOpen, mqjErr)
+                 + section('ic-book', '作品審核', novelsPending.length, novelBody, novelOpen, novelErr);
+  } catch (e) {
+    if (seq !== _reviewSeq) return;
+    el.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${escapeHtml(e.message || '')}</p>`
+      + `<button data-onclick="loadReviewList()" style="font-size:12px;padding:5px 14px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;cursor:pointer;margin-top:8px">重新載入</button>`;
+  }
 }
 
 async function reviewMqj(userId, approve) {
