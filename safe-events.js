@@ -17,7 +17,7 @@
     'navigateChapter', 'navigateSeries', 'openBugReport', 'openCharProfileFromHome', 'openEditorLetter',
     'openEditClass', 'openEditWork', 'openFaq', 'openMqjDisclaimer', 'openNovel', 'openOwners',
     'onMqjProofPick', 'clearMqjProof', 'viewMqjProof', 'closeMqjProofView',
-    'openSeries', 'owlOpenIdx', 'owlOpenCurate', 'openRecap', 'openWishPool', 'renderAdminNovels', 'renderForumList', 'renderShelf', 'renderUserRows',
+    'openSeries', 'owlOpenIdx', 'owlOpenCurate', 'openRecap', 'openWishPool', 'renderAdminNovels', 'renderForumList', 'renderShelf', 'renderUserRows', 'loadReviewList',
     'rejectNovel', 'insertRejectPhrase', 'replyFeedback', 'requestMqj', 'resetAdminNovelScope', 'resubmitNovel', 'retractNovel',
     'resetPassword', 'resumeReading', 'reviewMqj', 'revokeInvite', 'saveAvatarCrop',
     'saveEditClass', 'saveEditWork', 'saveFaqEditor', 'saveFeedbackReply', 'saveMyPassword',
