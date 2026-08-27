@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.69';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.70';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2216,8 +2216,13 @@ function _openFaqEditor(id, q, a) {
 }
 function addFaq() { _openFaqEditor(null, '', ''); }
 async function editFaq(id) {
-  const faqs = await api('/feedback/faqs').catch(() => []);
-  const f = (faqs || []).find(x => x.id === id) || {};
+  // 讀取失敗時不能開編輯器：先前 catch 回空陣列，找不到就以空字串開窗，看起來像這則問答的
+  // 內容整個不見了；管理員若照著重打一份送出，等於用殘缺內容覆蓋掉原本的。
+  let faqs;
+  try { faqs = await api('/feedback/faqs'); }
+  catch (e) { toast('讀取常見問題失敗：' + (e.message || '')); return; }
+  const f = (faqs || []).find(x => x.id === id);
+  if (!f) { toast('找不到這則問答，請重新整理後再試'); return; }
   _openFaqEditor(id, f.question || '', f.answer || '');
 }
 async function saveFaqEditor() {
