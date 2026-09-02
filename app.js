@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.70';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.71';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -3932,17 +3932,30 @@ function renderEditHeaderPreview(url) {
   if (!box) return;
   if (url) { box.innerHTML = `<img src="${escapeHtml(url)}" alt="" style="max-width:100%;max-height:180px;border-radius:6px" />`; if (rm) rm.style.display = ''; }
   else { box.innerHTML = '<span style="font-size:12px;color:var(--ink-light)">尚無頁首圖</span>'; if (rm) rm.style.display = 'none'; }
+  // 「再加一張」：已經有圖、且還沒滿 5 張才出現（沒圖時「選擇／更換」就是第一張）
+  const add = document.getElementById('editwork-header-add');
+  if (add) {
+    const n = (editWork.headerArts || []).filter(a => a && a.url).length;
+    add.style.display = (url && n < 5) ? '' : 'none';
+  }
 }
-function pickEditHeader() { const el = document.getElementById('editwork-header-file'); if (el) el.click(); }
+// append=true → 在現有清單後面再加一張（不動封面與順序）；預設是更換自己那張。
+let _headerAppend = false;
+function pickEditHeader(append) {
+  _headerAppend = !!append;
+  const el = document.getElementById('editwork-header-file'); if (el) el.click();
+}
 async function onEditHeaderPick(input) {
   const f = input.files[0]; input.value = '';
   if (!f || !editWork.id) return;
+  const _wasAppend = _headerAppend; _headerAppend = false;
   if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { toast('請選擇 JPG、PNG 或 WebP 圖片'); return; }
   try {
     const [th, disp, fu] = await resizeImageVariants(f, [
       { maxDim: 700, quality: 0.8 }, { maxDim: 1400, quality: 0.85 }, { maxDim: 2560, quality: 0.9 }]);
     const r = await api(`/novels/${editWork.id}/header-image`, { method: 'PATCH', body: JSON.stringify({
       image: disp.data,
+      append: _wasAppend,
       image_thumb: disp.srcMax > 700 * 1.2 ? th.data : null,
       image_full: disp.srcMax > 1400 * 1.2 ? fu.data : null,
       caption: (document.getElementById('editheader-caption') || { value: '' }).value.trim() }) });
@@ -3950,15 +3963,16 @@ async function onEditHeaderPick(input) {
     // 後端把這張圖生成了文首畫作：artwork_id 與署名（＝文章作者）都要進本地清單，
     // 否則管理器一次 PUT 就把 artwork_id:null 的斷鏈寫回 DB，畫作刪除卸載／換檔重掛全部失聯。
     const _artist = (adminWorkById(editWork.id).author || '').trim() || null;
+    const _entry = { url: r.image_url, artist: r.artwork_id ? _artist : null, artwork_id: r.artwork_id || null };
+    const _rest = (editWork.headerArts || []).filter(a => a.artwork_id && a.artwork_id !== r.artwork_id);
     editWork.headerArts = (r && r.image_url)
-      ? [{ url: r.image_url, artist: r.artwork_id ? _artist : null, artwork_id: r.artwork_id || null },
-         ...((editWork.headerArts || []).filter(a => a.artwork_id && a.artwork_id !== r.artwork_id))]
-      : ((editWork.headerArts || []).filter(a => a.artwork_id));
+      ? (_wasAppend ? [..._rest, _entry] : [_entry, ..._rest])
+      : _rest;
     renderEditHeaderPreview(r && r.image_url);
     _syncAdminNovelField(editWork.id, 'image_url', r && r.image_url);
     _syncAdminNovelField(editWork.id, 'image_caption', r && r.artwork_id ? _artist : null);   // 與後端 _sync_header_arts 一致
     renderEditAuthArts();   // 換成自己的圖＝授權畫作退回「可選用」
-    toast('頁首圖已更新');
+    toast(_wasAppend ? '已再加一張文首圖' : '頁首圖已更新');
   } catch (e) { toast(e.message || '上傳失敗'); }
 }
 async function removeEditHeader() {
