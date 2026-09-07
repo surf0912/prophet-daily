@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.73';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.74';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -237,11 +237,6 @@ function toast(msg) {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-function fmtDate(iso) {
-  const d = new Date(iso);
-  return d.toLocaleDateString('zh-TW') + ' ' + d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
-}
-
 function initials(name) { return name ? name[0].toUpperCase() : '?'; }
 
 // Only image data URLs produced by our cropper are allowed into CSS/HTML. The backend enforces
@@ -258,28 +253,6 @@ function avatarHTML(u, px, extra) {
   if (avatar) return `<div style="${base}background-image:url(&quot;${avatar}&quot;);background-position:center;background-size:cover;background-repeat:no-repeat"></div>`;
   const name = (u && (u.nickname || u.username)) || '?';
   return `<div style="${base}background:var(--scarlet);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:${Math.round(px * 0.44)}px">${escapeHtml(initials(name))}</div>`;
-}
-
-// Resize/center-crop an image file to a square data URL (keeps avatars tiny ~10-20KB).
-function resizeImage(file, size) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const c = document.createElement('canvas');
-        c.width = c.height = size;
-        const ctx = c.getContext('2d');
-        const s = Math.min(img.width, img.height);
-        ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
-        resolve(c.toDataURL('image/jpeg', 0.82));
-      };
-      img.onerror = reject;
-      img.src = reader.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 // ── Avatar crop (drag to move, slider to zoom, before saving) ──
