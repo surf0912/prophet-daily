@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.71';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.72';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -83,13 +83,19 @@ let replyToId = null;
 let currentForumChapterId = null;
 
 // ── API helper ───────────────────────────────────────────────
-// 顯示連線中覆蓋層：任何前景請求超過 ~3.5 秒就浮出（升 Starter 後伺服器不再休眠，
-// 這裡攔的是網路層的慢／掛住，不是冷啟動）。
+// 顯示連線中覆蓋層：任何前景請求超過 ~3.5 秒就浮出。免費方案的機器閒置就睡，冷啟動要
+// 30–60 秒，所以這個覆蓋層回到它原本的用途——讓讀者知道正在喚醒，而不是以為壞了。
 let _wakeCount = 0;
 function _wakeToggle(on) {
   const el = document.getElementById('waking-overlay');
   if (el) el.classList.toggle('show', on);
 }
+// 每次嘗試的逾時（毫秒）。前兩次維持 5 秒：那是為了抓「PWA 啟動時第一發瞬間掛住」——
+// 伺服器根本沒收到，快點放棄重試才對。第三次起大幅拉長，因為免費方案的機器閒置就睡，
+// 冷啟動要 30–60 秒（2026-09-07 實測書海 32.8 秒）。原本固定 5 秒的話，含退避總預算只有
+// 約 34 秒，會在伺服器醒來之前就放棄——讀者看到的是錯誤，而不是慢。這道階梯把總預算
+// 推到約 95 秒，蓋得住冷啟動；等待期間有喚醒覆蓋層交代，不是空白畫面。
+const _ATTEMPT_TIMEOUTS = [5000, 5000, 20000, 30000, 30000];
 // Silently swap an expired access token for a fresh one using the stored refresh token,
 // so the ~1h expiry doesn't force-logout active users. Deduped across concurrent calls.
 let _refreshing = null;
@@ -167,14 +173,15 @@ async function api(path, opts = {}, _retried) {
     for (let attempt = 0; ; attempt++) {
       // PWA 啟動時第一發連線常常「瞬間失敗」或「掛住不回」——伺服器端其實從沒收到（監看的
       // per-endpoint 最慢也只有幾百毫秒），所以那十秒全花在這個迴圈上。兩個對策：
-      //  (1) 無 body 的請求（GET 與簡單 POST）加 5 秒逾時，掛住就中止改重試，不再乾等；
-      //      有 body 的（上傳畫作等）不設限，免得大圖被砍。
+      //  (1) 無 body 的請求（GET 與簡單 POST）加逾時，掛住就中止改重試，不再乾等；
+      //      有 body 的（上傳畫作等）不設限，免得大圖被砍。逾時走 _ATTEMPT_TIMEOUTS
+      //      這道階梯而非固定值——理由見該常數的說明（冷啟動要等得起）。
       //  (2) 退避改成「首次極快」：300ms → 1s → 2.5s → 5s，取代原本的 2s → 4s → 6s。
       let _sig, _tid;
       if (!opts.body && typeof AbortController !== 'undefined') {
         const _c = new AbortController();
         _sig = _c.signal;
-        _tid = setTimeout(() => _c.abort(), 5000);
+        _tid = setTimeout(() => _c.abort(), _ATTEMPT_TIMEOUTS[attempt] || 30000);
       }
       try {
         res = await fetch(API + path, { ...opts, headers, ...(_sig ? { signal: _sig } : {}) });
