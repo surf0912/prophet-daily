@@ -85,6 +85,11 @@
     if (token === 'this') return element;
     if (token === 'this.value') return element.value;
     if (token === 'this.checked') return element.checked;
+    // 否定形只收這一個確切字串，不是通用的 ! 運算子——語義相反的開關需要它
+    //（「勾選＝陳列在留影走廊」對上後端的 off_wall）。少了這一行，
+    // setOffWall(!this.checked) 會在這裡拋例外、被 dispatch 的 catch 吞掉，
+    // 開關看起來滑動了卻什麼都沒送出——v5.49 到 v5.72 一直是這樣。
+    if (token === '!this.checked') return !element.checked;
     if (/^[A-Za-z_$][\w$]*$/.test(token) && ALLOWED_ACTIONS.has(token)) return window[token];
     throw new Error(`Unsupported declarative event argument: ${token}`);
   }
