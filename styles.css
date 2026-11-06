@@ -207,7 +207,7 @@
     .field input:focus { border-color: var(--gold); }
     #auth-overlay .btn-primary { border-radius: 10px; }
     .btn-primary {
-      width: 100%; padding: 12px; background: var(--scarlet);
+      width: 100%; min-height: 44px; padding: 12px; background: var(--scarlet);
       border: 1px solid var(--scarlet-dk); border-radius: 3px;
       color: var(--on-dark); font-size: 0.9375rem; cursor: pointer;
       letter-spacing: .05em; transition: opacity .2s;
@@ -302,9 +302,11 @@
     /* ── Category + character filter bar (卷軸 + 論壇) ── */
     .filter-bar { padding: 12px 18px 4px; background: var(--parchment2); border-bottom: 1px solid var(--gold-lt); }
     .filter-label { font-size: 0.75rem; color: var(--accent); letter-spacing: .1em; margin-bottom: 6px; }
-    .cat-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-    /* 作品管理：種類分頁膠囊（附件數） */
-    .admin-kind-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    /* gap 的列距從 8 拉到 14、下緣從 12 拉到 18：藥丸的透明感應層上下各外擴，
+       換行時兩排之間、以及下方「同框」那一排，間距不夠就會互相搶走點擊。 */
+    .cat-pills { display: flex; gap: 14px 8px; flex-wrap: wrap; margin-bottom: 18px; }
+    /* 作品管理：種類分頁膠囊（附件數）。列距同樣拉到 14，理由見下方 .cat-pill 的感應層註解。 */
+    .admin-kind-row { display: flex; gap: 14px 8px; flex-wrap: wrap; margin-bottom: 10px; }
     /* 留影走廊收藏夾內的小分頁：已收藏 ⇄ 已隱藏（木紋牆上，用淺色藥丸） */
     #gallery-fav-tabs { display: flex; }
     .gfav-tab { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; font-size: 0.8125rem; border: 1px solid var(--gold); border-radius: 16px; background: rgba(244,232,193,.92); color: var(--ink-light); cursor: pointer; }
@@ -319,6 +321,22 @@
       white-space: nowrap; flex-shrink: 0;   /* 字級被放大時整顆換行，不折成「待審作／品」也不截斷 */
     }
     .cat-pill.active { background: var(--scarlet); color: var(--on-dark); border-color: var(--accent); }
+    /* ── 觸控目標 44x44：藥丸家族與幾顆小圖示鈕 ──────────────────────
+       這些控制項原本是 31、23、20px 高，拇指按不準。它們都在講究密度的列裡
+       （篩選列一排四五顆、檔案頁的欄位旁），把看得見的框撐到 44 會讓整列變厚，
+       所以改成疊一層透明的感應層：外觀一個像素都不動，可按範圍補到 44x44。
+       寬度用 100% 取 max(自身, 44)，所以只有真的太窄的（? 說明鈕、鉛筆鈕）才左右外擴。
+       基準是介面字體「小」（--app-zoom: 1），最小設定下也成立；放大只會更大。
+       .tap44 給 index.html 裡那幾顆沒有 class、各自寫 inline style 的鈕共用。 */
+    .tap44,
+    .cat-pill, .kind-pill, .gfav-tab, .char-and-btn, .entry-hint-btn,
+    [id$="-wish-btn"], [id$="-fav-btn"]:not(#reader-fav-btn) { position: relative; }
+    .tap44::after,
+    .cat-pill::after, .kind-pill::after, .gfav-tab::after, .char-and-btn::after, .entry-hint-btn::after,
+    [id$="-wish-btn"]::after, [id$="-fav-btn"]:not(#reader-fav-btn)::after {
+      content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 100%; height: 100%; min-width: 44px; min-height: 44px;
+    }
     .char-chips { display: flex; gap: 10px; flex-wrap: wrap; }
     .char-chip {
       display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer;
@@ -414,7 +432,7 @@
       background: var(--scarlet); color: var(--on-dark); font-family: inherit; font-size: 0.84375rem; letter-spacing: 1px; cursor: pointer; }
     .recap-btn:active { transform: scale(.98); }
     /* 檔案頁版本狀態按鈕 */
-    .version-btn { display: flex; align-items: center; justify-content: center; gap: 7px; box-sizing: border-box; width: calc(100% - 36px); margin: 10px 18px 2px; padding: 11px 14px; border-radius: 10px; font-size: 0.8125rem; border: 1px solid var(--gold-lt); background: var(--parchment2); color: var(--ink-light); }
+    .version-btn { display: flex; align-items: center; justify-content: center; gap: 7px; box-sizing: border-box; width: calc(100% - 36px); min-height: 44px; margin: 10px 18px 2px; padding: 11px 14px; border-radius: 10px; font-size: 0.8125rem; border: 1px solid var(--gold-lt); background: var(--parchment2); color: var(--ink-light); }
     .version-btn.checking { opacity: .6; }
     .version-btn.latest { color: var(--series); border-color: rgba(45,74,30,.3); }
     .version-btn.outdated { background: var(--scarlet); color: var(--on-dark); border-color: var(--scarlet); font-weight: bold; cursor: pointer; }
@@ -846,7 +864,10 @@
     .settings-body { padding: 14px 18px; }
     .settings-section { margin-bottom: 14px; }   /* 摺疊時四區收緊，整頁含版本號一屏可見 */
     .settings-section h3 { font-size: 0.75rem; color: var(--accent); letter-spacing: .1em; margin-bottom: 12px; }
-    .profile-details > summary { font-size: 0.75rem; color: var(--accent); letter-spacing: .1em; cursor: pointer; padding: 4px 0; }
+    /* padding 4→14：四個區塊標題是整頁的主要導覽，原本只有 26px 高。這裡不用感應層，
+       因為上下相鄰的標題只差 14px，透明層會互相搶點擊。實量摺疊後整頁 582px、螢幕 812px，
+       仍符合上面 .settings-section 那條「摺疊時整頁含版本號一屏可見」的設計。 */
+    .profile-details > summary { font-size: 0.75rem; color: var(--accent); letter-spacing: .1em; cursor: pointer; padding: 14px 0; }
     .profile-details > summary::-webkit-details-marker { color: var(--accent); }
     .review-sec { border: 1px solid var(--gold-lt); border-radius: 10px; margin-bottom: 10px; overflow: hidden; background: var(--parchment); }
     .review-sec > summary { list-style: none; cursor: pointer; padding: 12px 14px; display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; font-weight: bold; color: var(--ink); }
@@ -864,12 +885,13 @@
     .entry-hint-btn { width: 20px; height: 20px; border-radius: 50%; border: 1px dashed var(--gold); background: none; color: var(--ink-light); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0; }
     .entry-note { font-size: 0.75rem; color: var(--ink-light); line-height: 1.7; background: var(--parchment2); border-radius: 6px; padding: 8px 10px; margin-top: 8px; }
     .entry-btns { display: flex; gap: 8px; margin-top: 8px; }
-    .entry-btns button { flex: 1; padding: 9px 4px; font-size: 0.8125rem; white-space: nowrap; border-radius: 6px; cursor: pointer; border: 1px solid var(--gold); }
+    .entry-btns button { flex: 1; min-height: 44px; padding: 9px 4px; font-size: 0.8125rem; white-space: nowrap; border-radius: 6px; cursor: pointer; border: 1px solid var(--gold); }
     .entry-main { background: var(--parchment2); color: var(--ink); }
     .entry-backup { background: var(--chrome); color: var(--gold-lt); border-color: var(--chrome); }
     /* 完全自訂：去掉原生外觀＋鎖死文字色與自訂箭頭，否則部分 iOS 會把原生 select 畫成系統藍字/藍箭頭。 */
     .settings-row select {
       -webkit-appearance: none; -moz-appearance: none; appearance: none;
+      min-height: 44px;   /* 下拉選單是這頁最常按的控制項，原本只有 29px 高 */
       padding: 6px 30px 6px 10px; border: 1px solid var(--gold-lt); border-radius: 3px; font-size: 0.8125rem;
       background-color: var(--parchment2); color: var(--ink-light); -webkit-text-fill-color: var(--ink-light);
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%233d1f0d' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 6.5 8 3l3.5 3.5'/%3E%3Cpath d='M4.5 9.5 8 13l3.5-3.5'/%3E%3C/svg%3E");

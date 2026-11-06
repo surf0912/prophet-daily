@@ -156,7 +156,7 @@
           <span id="continue-bar-text" style="font-size:0.8125rem;font-weight:bold;color:var(--accent);min-width:0;overflow:hidden;text-overflow:ellipsis"></span>
         </span>
         <span style="color:var(--ink-light);font-size:1.25rem;flex-shrink:0;line-height:1">→</span>
-        <span data-onclick="event.preventDefault();event.stopPropagation();dismissContinueBar()" role="button" aria-label="收起繼續閱讀" style="flex-shrink:0;color:var(--ink-light);font-size:1.0625rem;line-height:1;padding:6px 0 6px 8px;cursor:pointer;opacity:.65">✕</span>
+        <span class="tap44" data-onclick="event.preventDefault();event.stopPropagation();dismissContinueBar()" role="button" aria-label="收起繼續閱讀" style="flex-shrink:0;color:var(--ink-light);font-size:1.0625rem;line-height:1;padding:6px 0 6px 8px;cursor:pointer;opacity:.65">✕</span>
       </a>
       <div id="tour-banner" style="display:none;margin:14px 18px;padding:14px 16px;background:var(--parchment2);border:1.5px solid var(--gold);border-radius:12px">
         <div style="font-size:0.875rem;color:var(--ink);line-height:1.6">歡迎來到《預言家日報》！要不要花 30 秒看一下新手導覽，快速上手？</div>
@@ -250,7 +250,7 @@
         <div class="profile-box">
           <div class="avatar-lg" id="settings-avatar" data-onclick="document.getElementById('avatar-input').click()" style="cursor:pointer" title="點擊更換頭像"></div>
           <input type="file" id="avatar-input" accept="image/*" style="display:none" data-onchange="handleAvatarUpload(event)" />
-          <div><button data-onclick="document.getElementById('avatar-input').click()" style="background:none;border:none;color:var(--accent);font-size:0.75rem;cursor:pointer;margin-bottom:6px"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-camera"/></svg> 更換頭像</button></div>
+          <div><button class="tap44" data-onclick="document.getElementById('avatar-input').click()" style="background:none;border:none;color:var(--accent);font-size:0.75rem;cursor:pointer;margin-bottom:6px"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-camera"/></svg> 更換頭像</button></div>
           <h3 id="settings-username">載入中</h3>
           <p id="settings-email">—</p>
           <p id="settings-role" style="font-size:0.75rem;color:var(--accent);margin-top:4px"></p>
@@ -267,7 +267,7 @@
               <label>巫師暱稱</label>
               <div id="nick-view" style="display:flex;align-items:center;gap:8px">
                 <span id="nick-display" style="font-size:0.875rem;color:var(--ink)">—</span>
-                <button data-onclick="editNick()" aria-label="編輯暱稱" style="background:none;border:none;cursor:pointer;padding:0 2px;line-height:1;color:var(--accent)"><svg width="15" height="15" aria-hidden="true" style="display:block"><use href="#ic-edit"/></svg></button>
+                <button class="tap44" data-onclick="editNick()" aria-label="編輯暱稱" style="background:none;border:none;cursor:pointer;padding:0 2px;line-height:1;color:var(--accent)"><svg width="15" height="15" aria-hidden="true" style="display:block"><use href="#ic-edit"/></svg></button>
               </div>
               <div id="nick-edit" style="display:none;align-items:center;gap:8px">
                 <input type="text" id="profile-nickname" maxlength="7" style="width:130px;padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:0.875rem" />
@@ -279,7 +279,7 @@
               <label>密碼</label>
               <div id="pw-view" style="display:flex;align-items:center;gap:8px">
                 <span style="font-size:0.875rem;color:var(--ink-light)">••••••••</span>
-                <button data-onclick="togglePwEdit(true)" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;font-size:0.75rem;padding:4px 10px;cursor:pointer">修改</button>
+                <button class="tap44" data-onclick="togglePwEdit(true)" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;font-size:0.75rem;padding:4px 10px;cursor:pointer">修改</button>
               </div>
               <div id="pw-edit" style="display:none;flex-direction:column;gap:6px;width:100%;max-width:240px">
                 <input type="password" id="pw-current" placeholder="目前的密碼" autocomplete="current-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:0.875rem" />
