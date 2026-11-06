@@ -599,19 +599,37 @@
     /* 兩行式：上行＝返回＋標題＋收藏（長標題不再被工具擠成三四行）；下行＝字級/夜間工具 */
     .reader-header {
       position: sticky; top: 0; background: var(--chrome-dk); color: var(--gold);
-      padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 8px;
+      padding: calc(6px + env(safe-area-inset-top, 0px)) 16px 4px;
       border-bottom: 1px solid var(--gold); z-index: 5;
     }
-    .reader-head-main { display: flex; align-items: center; gap: 12px; }
-    .reader-head-main > button { background: none; border: none; color: var(--gold); font-size: 1.375rem; cursor: pointer; }
-    .reader-header h3 { flex: 1; font-size: 0.9375rem; }
-    .reader-head-tools { display: flex; align-items: center; justify-content: flex-end; gap: 16px; margin-top: 8px; }
-    .reader-font-ctrl { display: flex; align-items: center; gap: 8px; }
-    .reader-font-ctrl button {
-      background: rgba(201,168,76,.15); border: 1px solid var(--gold);
-      color: var(--gold); font-size: 0.8125rem; padding: 4px 9px; border-radius: 4px; cursor: pointer;
+    /* 觸控目標 44x44：返回、收藏、A−／A+、夜間這四顆先前是 39x21／26x22／36x26／23x19，
+       都小於單手拇指能穩按的範圍——返回是離開作品的唯一出口，A−／A+ 更是給看不清楚的人
+       放大字體用的，自己最難按。字級與圖示尺寸一律不動，只放大外框；header 自身的上下
+       padding 與兩行間距同步收窄來折抵，實測 375px 寬：短標題 70→101px，長標題 77→99px。
+       收藏與夜間這兩顆上下同欄，各佔 44 就是 88px，這條版頭的高度下限由它們決定。 */
+    .reader-head-main { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+    .reader-head-main > button {
+      background: none; border: none; color: var(--gold); font-size: 1.375rem; cursor: pointer;
+      min-width: 44px; min-height: 44px; padding: 0;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-    .reader-font-ctrl span { color: var(--gold-lt); font-size: 0.75rem; min-width: 18px; text-align: center; }
+    .reader-header h3 { flex: 1; font-size: 0.9375rem; }
+    .reader-head-tools { display: flex; align-items: center; justify-content: flex-end; gap: 16px; margin-top: 0; min-height: 44px; }
+    .reader-head-tools > button { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+    /* 字級控制：外框收攏成一枚膠囊，A−／A+ 各佔 44x44 但自身不再描邊——
+       兩個 44 見方的獨立方塊在這條版頭裡太重，整組一枚的輪廓才接得上旁邊的線性圖示。
+       看得見的膠囊只有 32 高：按鈕仍是 44 高的感應範圍，上下各 6px 用負邊界收進膠囊外，
+       所以框線不會跟著長高。左右沒有別的觸控目標，溢出的部分不會誤觸到誰。 */
+    .reader-font-ctrl {
+      display: flex; align-items: center; min-height: 32px;
+      background: rgba(201,168,76,.12); border: 1px solid var(--gold); border-radius: 6px;
+    }
+    .reader-font-ctrl button {
+      background: none; border: none;
+      color: var(--gold); font-size: 0.8125rem; padding: 0; cursor: pointer;
+      min-width: 44px; min-height: 44px; margin-block: -6px;
+    }
+    .reader-font-ctrl span { color: var(--gold-lt); font-size: 0.75rem; min-width: 26px; text-align: center; }
     /* 文首插圖（artwork/<作品id>.jpg）：深木框＋內圈金髮絲線（V2），像掛在牆上的一幅畫。
        --chrome/--gold 不隨夜間翻轉，日夜模式都成立。 */
     /* 授權畫作的雙署名：文首圖下方一行「文／X　圖／Y」 */
