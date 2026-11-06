@@ -7,9 +7,6 @@
   <meta name="description" content="《預言家日報》——邀請制的魔法閱讀平台。入站前，請先讀過這裡的規則。" />
   <link rel="icon" href="./favicon.png" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" />
   <link rel="stylesheet" href="./styles.css" />
   <style>
     /* 獨立公開頁：沿用 styles.css 的品牌變數與字型，但不載入 app.js，故無登入牆。 */
@@ -20,77 +17,81 @@
            font-family: 'YuseiMagic','HuninnUI','SimpRound',-apple-system,"PingFang TC","PingFang SC",system-ui,sans-serif; }
     .rules-wrap { max-width: 720px; margin: 0 auto;
                   padding: calc(28px + var(--safe-top)) 20px calc(56px + var(--safe-bottom)); }
+    /* 羊皮紙上的金色「文字」專用。--gold (#c9a84c) 在深色底上是對的，但放在羊皮紙上
+       只有 1.87:1，遠低於 WCAG AA 的 4.5。這個色是同一個色相壓深後的陳年金墨，
+       主底 5.03:1、次底 4.80:1，兩個都過。邊框與分隔線仍用 --gold，那些不是文字。 */
+    :root { --gold-ink: #7d5c0c; }
     .masthead { text-align: center; padding: 8px 0 22px; border-bottom: 2px solid var(--gold); margin-bottom: 8px; }
-    .masthead .kicker { font-size: 17px; letter-spacing: .35em; color: var(--gold); text-indent: .35em; }
-    .masthead h1 { font-size: 30px; margin: 10px 0 6px; color: var(--ink); letter-spacing: .06em; }
-    .masthead .sub { font-size: 14px; color: var(--ink-light); opacity: .85; line-height: 1.7; }
-    .lede { font-size: 15px; line-height: 1.95; color: var(--ink-light); margin: 26px 0 8px; }
+    .masthead .kicker { font-size: 1.0625rem; letter-spacing: .35em; color: var(--gold-ink); text-indent: .35em; }
+    .masthead h1 { font-size: 1.875rem; margin: 10px 0 6px; color: var(--ink); letter-spacing: .06em; }
+    .masthead .sub { font-size: 0.875rem; color: var(--ink-light); opacity: .85; line-height: 1.7; }
+    .lede { font-size: 0.9375rem; line-height: 1.95; color: var(--ink-light); margin: 26px 0 8px; }
     .lede .sign { color: var(--accent); }
     .callout { background: var(--parchment2); border: 1.5px solid var(--gold); border-radius: 12px;
-               padding: 15px 18px; margin: 18px 0; font-size: 14.5px; line-height: 1.9; color: var(--ink-light); }
+               padding: 15px 18px; margin: 18px 0; font-size: 0.90625rem; line-height: 1.9; color: var(--ink-light); }
     section.rule { margin: 30px 0; }
-    section.rule > h2 { font-size: 18.5px; color: var(--accent); margin: 0 0 4px;
+    section.rule > h2 { font-size: 1.15625rem; color: var(--accent); margin: 0 0 4px;
                         display: flex; align-items: baseline; gap: 10px; }
-    section.rule > h2 .no { font-size: 16px; color: var(--gold); flex-shrink: 0; letter-spacing: .1em; }
+    section.rule > h2 .no { font-size: 1rem; color: var(--gold-ink); flex-shrink: 0; letter-spacing: .1em; }
     section.rule > .divider { height: 1px; background: var(--gold-lt); margin: 10px 0 14px; }
-    section.rule p { font-size: 14.5px; line-height: 1.95; color: var(--ink-light); margin: 0 0 12px; }
+    section.rule p { font-size: 0.90625rem; line-height: 1.95; color: var(--ink-light); margin: 0 0 12px; }
     section.rule ul { margin: 0 0 12px; padding-left: 0; list-style: none; }
-    section.rule li { font-size: 14.5px; line-height: 1.9; color: var(--ink-light);
+    section.rule li { font-size: 0.90625rem; line-height: 1.9; color: var(--ink-light);
                       position: relative; padding-left: 20px; margin-bottom: 9px; }
-    section.rule ul.bullet li::before { content: '❧'; position: absolute; left: 0; top: 0; color: var(--gold); font-size: 13px; }
+    section.rule ul.bullet li::before { content: '❧'; position: absolute; left: 0; top: 0; color: var(--gold-ink); font-size: 0.8125rem; }
     section.rule ol.steps { margin: 0 0 12px; padding-left: 0; list-style: none; counter-reset: step; }
-    section.rule ol.steps li { font-size: 14.5px; line-height: 1.9; color: var(--ink-light);
+    section.rule ol.steps li { font-size: 0.90625rem; line-height: 1.9; color: var(--ink-light);
                                position: relative; padding-left: 40px; margin-bottom: 10px; counter-increment: step; }
     section.rule ol.steps li::before { content: counter(step); position: absolute; left: 0; top: 1px;
-                                       width: 26px; height: 26px; line-height: 26px; text-align: center; font-size: 14px;
+                                       width: 26px; height: 26px; line-height: 26px; text-align: center; font-size: 0.875rem;
                                        color: var(--on-dark); background: var(--scarlet); border-radius: 50%; }
     .path { background: var(--parchment2); border-left: 3px solid var(--gold); border-radius: 4px;
-            padding: 12px 16px; margin: 4px 0 12px; font-size: 14px; line-height: 2; color: var(--ink); }
-    .path .arw { color: var(--gold); padding: 0 4px; }
+            padding: 12px 16px; margin: 4px 0 12px; font-size: 0.875rem; line-height: 2; color: var(--ink); }
+    .path .arw { color: var(--gold-ink); padding: 0 4px; }
     .warnline { color: var(--accent); font-weight: bold; }
-    .tag { display: inline-block; font-size: 12px; padding: 1px 9px; border-radius: 10px; vertical-align: 1px; }
+    .tag { display: inline-block; font-size: 0.75rem; padding: 1px 9px; border-radius: 10px; vertical-align: 1px; }
     .tag.amor { background: rgba(138,45,45,.15); color: var(--accent); }
     .entry { text-align: center; margin: 40px 0 8px; padding: 26px 20px;
              background: var(--parchment2); border: 1.5px dashed var(--gold); border-radius: 14px; }
-    .entry p { font-size: 14px; color: var(--ink-light); line-height: 1.85; margin: 0 0 14px; }
+    .entry p { font-size: 0.875rem; color: var(--ink-light); line-height: 1.85; margin: 0 0 14px; }
     .entry a.btn { display: inline-block; background: var(--scarlet); color: var(--on-dark);
-                   text-decoration: none; font-size: 15px; padding: 11px 30px; border-radius: 8px; }
+                   text-decoration: none; font-size: 0.9375rem; padding: 11px 30px; border-radius: 8px; }
     /* 登入是另一件事，和領取邀請函分開：獨立一區、樣式次一級，且永遠在。 */
     .entry .signin { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--gold-lt); }
-    .entry .signin .label { font-size: 13px; color: var(--ink-light); margin-bottom: 10px; }
+    .entry .signin .label { font-size: 0.8125rem; color: var(--ink-light); margin-bottom: 10px; }
     .entry a.btn-ghost { display: inline-block; background: transparent; color: var(--accent);
-                         border: 1px solid var(--gold); text-decoration: none; font-size: 14px;
-                         padding: 9px 24px; border-radius: 8px; }
+                         border: 1px solid var(--gold); text-decoration: none; font-size: 0.875rem;
+                         padding: 11px 24px; border-radius: 8px; }
     /* 作家申請：入口是守則頁最底下一條不張揚的連結，點開才展開表單。 */
-    .wa-toggle { display: block; text-align: center; margin: 18px 0 0; font-size: 14px; }
+    .wa-toggle { display: block; text-align: center; margin: 18px 0 0; font-size: 0.875rem; }
     .wa-box { margin: 14px 0 0; padding: 18px 16px; background: var(--parchment2);
               border: 1px solid var(--gold-lt); border-radius: 12px; text-align: left; }
-    .wa-box p { font-size: 13px; color: var(--ink-light); line-height: 1.85; margin: 0 0 12px; }
-    .wa-box label { display: block; font-size: 13px; color: var(--ink); margin: 0 0 5px; }
+    .wa-box p { font-size: 0.8125rem; color: var(--ink-light); line-height: 1.85; margin: 0 0 12px; }
+    .wa-box label { display: block; font-size: 0.8125rem; color: var(--ink); margin: 0 0 5px; }
     .wa-box input, .wa-box textarea {
       width: 100%; box-sizing: border-box; padding: 9px 11px; margin: 0 0 12px;
       border: 1px solid var(--gold-lt); border-radius: 4px; background: var(--parchment);
-      color: var(--ink); font-size: 14px; font-family: inherit; }
+      color: var(--ink); font-size: 0.875rem; font-family: inherit; }
     .wa-box textarea { min-height: 76px; resize: vertical; }
     .wa-box button { width: 100%; padding: 11px; border: 0; border-radius: 8px;
-                     background: var(--scarlet); color: var(--on-dark); font-size: 15px;
+                     background: var(--scarlet); color: var(--on-dark); font-size: 0.9375rem;
                      font-family: inherit; cursor: pointer; }
     .wa-box button[disabled] { opacity: .55; cursor: default; }
-    .wa-msg { font-size: 13px; line-height: 1.85; margin: 10px 0 0; }
+    .wa-msg { font-size: 0.8125rem; line-height: 1.85; margin: 10px 0 0; }
     .wa-msg.ok { color: var(--accent); }
     /* 微信內建瀏覽器提示。無法強制跳轉——微信封死了所有導向外部瀏覽器的手段，
        任何網站能做的都只是引導。所以把指引做得夠明顯，並附上複製連結這條後路。 */
     .wx-note { display: none; position: relative; margin: 0 0 22px; padding: 15px 17px;
                background: var(--parchment2); border: 1.5px solid var(--gold); border-radius: 12px; }
-    .wx-note h3 { margin: 0 0 7px; font-size: 15px; color: var(--accent);
+    .wx-note h3 { margin: 0 0 7px; font-size: 0.9375rem; color: var(--accent);
                   display: flex; align-items: center; gap: 7px; }
-    .wx-note p { font-size: 13.5px; line-height: 1.9; color: var(--ink-light); margin: 0 0 10px; }
-    .wx-note .corner { position: absolute; top: -6px; right: 10px; color: var(--gold); }
-    .wx-note button { font-family: inherit; font-size: 13px; padding: 8px 18px; border-radius: 8px;
+    .wx-note p { font-size: 0.84375rem; line-height: 1.9; color: var(--ink-light); margin: 0 0 10px; }
+    .wx-note .corner { position: absolute; top: -6px; right: 10px; color: var(--gold-ink); }
+    .wx-note button { font-family: inherit; font-size: 0.8125rem; padding: 8px 18px; border-radius: 8px;
                       border: 1px solid var(--gold); background: transparent; color: var(--accent); cursor: pointer; }
-    .colophon { text-align: center; font-size: 13px; color: var(--ink-light); margin-top: 38px;
+    .colophon { text-align: center; font-size: 0.8125rem; color: var(--ink-light); margin-top: 38px;
                 padding-top: 20px; border-top: 1px solid var(--gold-lt); line-height: 2; }
-    .colophon .quote { color: var(--accent); font-size: 14px; }
+    .colophon .quote { color: var(--accent); font-size: 0.875rem; }
     a { color: var(--accent); }
   </style>
 </head>
@@ -272,7 +273,7 @@
     <div class="entry">
       <p id="entry-copy">讀過了，也認同了？<br />邀請函不定期開放領取，開放時這裡會亮起入口。</p>
       <a class="btn" id="entry-grab" href="./" style="display:none">領取邀請函 →</a>
-      <p id="entry-note" style="display:none;font-size:12px;opacity:.8;margin:10px 0 0"></p>
+      <p id="entry-note" style="display:none;font-size:0.75rem;opacity:.8;margin:10px 0 0"></p>
       <div class="signin">
         <div class="label">已有帳號的讀者</div>
         <a class="btn-ghost" href="./">翻開日報 →</a>

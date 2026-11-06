@@ -10,15 +10,11 @@
   <!-- Strict script CSP: all JavaScript is external and event attributes are inert data-* actions
        handled by an allowlisted, eval-free dispatcher. `unsafe-inline` remains style-only because
        the UI has many dynamic style attributes; CSS cannot execute application JavaScript. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://the-prophet-daily.onrender.com; frame-src https://ai-ocr-protector.streamlit.app; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; style-src-elem 'self'; style-src-attr 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://the-prophet-daily.onrender.com; frame-src https://ai-ocr-protector.streamlit.app; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <title>預言家日報</title>
   <link rel="manifest" href="./manifest.json" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
   <link rel="icon" href="./favicon.png" />
-  <!-- 粉圓 Huninn — full set via Google Fonts (auto-sharded, covers 繁/簡 without us subsetting) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -36,9 +32,9 @@
     <!-- 微信內建瀏覽器提示：無法強制跳轉（微信全數攔截），只能把指引做明顯並附複製連結 -->
     <div id="wx-note" style="display:none;position:relative;margin:0 0 16px;padding:14px 16px;background:rgba(201,168,76,.10);border:1px solid var(--gold);border-radius:10px;text-align:left">
       <svg style="position:absolute;top:-7px;right:9px;color:var(--gold)" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg>
-      <div style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--gold);margin-bottom:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>你正在微信中開啟</div>
-      <p style="font-size:12.5px;line-height:1.85;color:var(--gold-lt);margin:0 0 10px">微信的內建瀏覽器無法將日報加入主畫面，閱讀體驗也會打折。請點<b>右上角的「⋯」</b>，選「在瀏覽器打開」，再繼續。</p>
-      <button type="button" data-onclick="copyThisLink(this)" style="font-family:inherit;font-size:12.5px;padding:7px 16px;border-radius:8px;border:1px solid var(--gold);background:none;color:var(--gold);cursor:pointer">複製本頁連結</button>
+      <div style="display:flex;align-items:center;gap:6px;font-size:0.875rem;color:var(--gold);margin-bottom:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>你正在微信中開啟</div>
+      <p style="font-size:0.78125rem;line-height:1.85;color:var(--gold-lt);margin:0 0 10px">微信的內建瀏覽器無法將日報加入主畫面，閱讀體驗也會打折。請點<b>右上角的「⋯」</b>，選「在瀏覽器打開」，再繼續。</p>
+      <button type="button" data-onclick="copyThisLink(this)" style="font-family:inherit;font-size:0.78125rem;padding:7px 16px;border-radius:8px;border:1px solid var(--gold);background:none;color:var(--gold);cursor:pointer">複製本頁連結</button>
     </div>
 
     <!-- Normal login -->
@@ -50,38 +46,38 @@
 
     <!-- Invite registration (shown only when ?invite=TOKEN in URL) -->
     <div id="invite-form" style="display:none">
-      <div style="text-align:center;margin-bottom:16px;font-size:13px;color:var(--gold-lt)">
+      <div style="text-align:center;margin-bottom:16px;font-size:0.8125rem;color:var(--gold-lt)">
         <svg width="15" height="15" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-ticket"/></svg> 你持有一張邀請通行證
-        <div id="invite-role-badge" style="margin-top:4px;font-size:13px;color:var(--gold)"></div>
+        <div id="invite-role-badge" style="margin-top:4px;font-size:0.8125rem;color:var(--gold)"></div>
       </div>
       <div class="field">
         <label>巫師入學全名</label>
         <input type="text" id="inv-name" placeholder="英文＋數字，不可空格" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="username" />
-        <small style="color:var(--gold-lt);font-size:13px">登入用，只能英文、數字、底線</small>
+        <small style="color:var(--gold-lt);font-size:0.8125rem">登入用，只能英文、數字、底線</small>
       </div>
       <div class="field">
         <label>巫師姓名（暱稱）</label>
         <input type="text" id="inv-nickname" placeholder="顯示用，可用中文" maxlength="7" />
-        <small style="color:var(--gold-lt);font-size:13px">大家看到的名字，之後可自行更改</small>
+        <small style="color:var(--gold-lt);font-size:0.8125rem">大家看到的名字，之後可自行更改</small>
       </div>
       <div class="field">
         <label>個人密碼</label>
         <input type="password" id="inv-pass" placeholder="至少 8 字" autocomplete="new-password" />
-        <small style="color:var(--gold-lt);font-size:13px">登入用，由你自己設定並牢記</small>
+        <small style="color:var(--gold-lt);font-size:0.8125rem">登入用，由你自己設定並牢記</small>
       </div>
       <button class="btn-primary" data-onclick="doInviteRegister()">領取通行證</button>
-      <button data-onclick="showLoginForm()" style="display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--gold-lt);font-size:12px;cursor:pointer">已有帳號？直接登入</button>
+      <button data-onclick="showLoginForm()" style="display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--gold-lt);font-size:0.75rem;cursor:pointer">已有帳號？直接登入</button>
     </div>
 
     <!-- Invalid / used invite -->
     <div id="invite-invalid" style="display:none;text-align:center;padding:20px 0">
-      <div style="font-size:40px"></div>
-      <p style="color:var(--gold);margin-top:12px;font-size:15px" id="invite-invalid-msg">此邀請連結已失效</p>
-      <button data-onclick="showLoginForm()" style="margin-top:16px;background:none;border:1px solid var(--gold-lt);color:var(--gold-lt);padding:8px 20px;border-radius:3px;cursor:pointer;font-size:13px">返回登入</button>
+      <div style="font-size:2.5rem"></div>
+      <p style="color:var(--gold);margin-top:12px;font-size:0.9375rem" id="invite-invalid-msg">此邀請連結已失效</p>
+      <button data-onclick="showLoginForm()" style="margin-top:16px;background:none;border:1px solid var(--gold-lt);color:var(--gold-lt);padding:8px 20px;border-radius:3px;cursor:pointer;font-size:0.8125rem">返回登入</button>
     </div>
 
     <p class="auth-msg" id="auth-msg"></p>
-    <p id="mirror-hint" style="display:none;text-align:center;margin-top:6px;font-size:12px;color:var(--gold-lt)">連線不順？可改用<a href="https://the-prophet-daily.onrender.com/" style="color:var(--gold);text-decoration:underline">鏡像入口</a></p>
+    <p id="mirror-hint" style="display:none;text-align:center;margin-top:6px;font-size:0.75rem;color:var(--gold-lt)">連線不順？可改用<a href="https://the-prophet-daily.onrender.com/" style="color:var(--gold);text-decoration:underline">鏡像入口</a></p>
   </div>
 </div>
 
@@ -156,25 +152,25 @@
       <a id="continue-bar" href="#" data-onclick="resumeReading();return false;" style="display:none;text-decoration:none;background:var(--parchment2);border-top:1px solid var(--gold-lt);padding:10px 18px;align-items:center;gap:10px">
         <span style="flex-shrink:0;color:var(--accent);display:flex" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" style="display:block"><path d="M4 8C4 5.17157 4 3.75736 4.87868 2.87868C5.75736 2 7.17157 2 10 2H14C16.8284 2 18.2426 2 19.1213 2.87868C20 3.75736 20 5.17157 20 8V16C20 18.8284 20 20.2426 19.1213 21.1213C18.2426 22 16.8284 22 14 22H10C7.17157 22 5.75736 22 4.87868 21.1213C4 20.2426 4 18.8284 4 16V8Z" stroke="currentColor" stroke-width="1.5"/><path d="M19.8978 16H7.89778C6.96781 16 6.50282 16 6.12132 16.1022C5.08604 16.3796 4.2774 17.1883 4 18.2235" stroke="currentColor" stroke-width="1.5"/><path d="M7 16V2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13 16V19.5309C13 19.8065 13 19.9443 12.9051 20C12.8103 20.0557 12.6806 19.9941 12.4211 19.8708L11.1789 19.2808C11.0911 19.2391 11.0472 19.2182 11 19.2182C10.9528 19.2182 10.9089 19.2391 10.8211 19.2808L9.57889 19.8708C9.31943 19.9941 9.18971 20.0557 9.09485 20C9 19.9443 9 19.8065 9 19.5309V16.45" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
         <span style="flex:1;min-width:0;display:flex;align-items:baseline;gap:6px;white-space:nowrap">
-          <span style="font-size:13px;color:var(--ink-light);flex-shrink:0">繼續閱讀</span>
-          <span id="continue-bar-text" style="font-size:13px;font-weight:bold;color:var(--accent);min-width:0;overflow:hidden;text-overflow:ellipsis"></span>
+          <span style="font-size:0.8125rem;color:var(--ink-light);flex-shrink:0">繼續閱讀</span>
+          <span id="continue-bar-text" style="font-size:0.8125rem;font-weight:bold;color:var(--accent);min-width:0;overflow:hidden;text-overflow:ellipsis"></span>
         </span>
-        <span style="color:var(--ink-light);font-size:20px;flex-shrink:0;line-height:1">→</span>
-        <span data-onclick="event.preventDefault();event.stopPropagation();dismissContinueBar()" role="button" aria-label="收起繼續閱讀" style="flex-shrink:0;color:var(--ink-light);font-size:17px;line-height:1;padding:6px 0 6px 8px;cursor:pointer;opacity:.65">✕</span>
+        <span style="color:var(--ink-light);font-size:1.25rem;flex-shrink:0;line-height:1">→</span>
+        <span data-onclick="event.preventDefault();event.stopPropagation();dismissContinueBar()" role="button" aria-label="收起繼續閱讀" style="flex-shrink:0;color:var(--ink-light);font-size:1.0625rem;line-height:1;padding:6px 0 6px 8px;cursor:pointer;opacity:.65">✕</span>
       </a>
       <div id="tour-banner" style="display:none;margin:14px 18px;padding:14px 16px;background:var(--parchment2);border:1.5px solid var(--gold);border-radius:12px">
-        <div style="font-size:14px;color:var(--ink);line-height:1.6">歡迎來到《預言家日報》！要不要花 30 秒看一下新手導覽，快速上手？</div>
+        <div style="font-size:0.875rem;color:var(--ink);line-height:1.6">歡迎來到《預言家日報》！要不要花 30 秒看一下新手導覽，快速上手？</div>
         <div style="display:flex;gap:8px;margin-top:12px">
-          <button class="btn-primary" style="flex:1;padding:10px;font-size:13px" data-onclick="startTour()">開始導覽</button>
-          <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="dismissTourBanner()">先略過</button>
+          <button class="btn-primary" style="flex:1;padding:10px;font-size:0.8125rem" data-onclick="startTour()">開始導覽</button>
+          <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="dismissTourBanner()">先略過</button>
         </div>
       </div>
       <div id="install-hint" style="display:none;margin:14px 18px;padding:14px 16px;background:var(--parchment2);border:1.5px solid var(--gold);border-radius:12px">
-        <div style="font-size:14px;color:var(--ink);font-weight:bold;margin-bottom:6px">把日報放進口袋</div>
-        <div id="install-hint-body" style="font-size:13px;color:var(--ink-light);line-height:1.7">用 Safari 開啟本站 → 點下方<b>分享</b>鈕 → 選「<b>加入主畫面</b>」——之後像 App 一樣一鍵翻開，全螢幕、更快，貓頭鷹也在。</div>
+        <div style="font-size:0.875rem;color:var(--ink);font-weight:bold;margin-bottom:6px">把日報放進口袋</div>
+        <div id="install-hint-body" style="font-size:0.8125rem;color:var(--ink-light);line-height:1.7">用 Safari 開啟本站 → 點下方<b>分享</b>鈕 → 選「<b>加入主畫面</b>」——之後像 App 一樣一鍵翻開，全螢幕、更快，貓頭鷹也在。</div>
         <div style="display:flex;gap:8px;margin-top:12px">
-          <button id="install-hint-go" class="btn-primary" style="flex:1;padding:10px;font-size:13px;display:none" data-onclick="installPwaNow()">安裝</button>
-          <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="dismissInstallHint()">知道了</button>
+          <button id="install-hint-go" class="btn-primary" style="flex:1;padding:10px;font-size:0.8125rem;display:none" data-onclick="installPwaNow()">安裝</button>
+          <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="dismissInstallHint()">知道了</button>
         </div>
       </div>
     </div>
@@ -184,8 +180,8 @@
       <div class="shelf-header" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <h2 style="margin:0"><svg width="20" height="20" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-mirror"/></svg> 意若思鏡</h2>
         <div style="display:flex;gap:6px;flex-shrink:0">
-          <button id="shelf-wish-btn" data-onclick="openWishPool()" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-shine"/></svg> 許願池</button>
-          <button id="shelf-fav-btn" data-onclick="toggleShelfFav()" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-circle"/></svg> 收藏夾</button>
+          <button id="shelf-wish-btn" data-onclick="openWishPool()" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:16px;padding:5px 12px;font-size:0.8125rem;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-shine"/></svg> 許願池</button>
+          <button id="shelf-fav-btn" data-onclick="toggleShelfFav()" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:16px;padding:5px 12px;font-size:0.8125rem;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-circle"/></svg> 收藏夾</button>
         </div>
       </div>
       <div class="forum-search">
@@ -205,9 +201,9 @@
       <div class="forum-header" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <h2 id="forum-title" style="margin:0"><svg width="20" height="20" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-scroll"/></svg> 匿名羊皮紙</h2>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-          <button id="forum-gallery-toggle" data-onclick="toggleForumMode()" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 留影走廊</button>
-          <button id="forum-wish-btn" data-onclick="openWishPool()" style="display:none;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-shine"/></svg> 許願池</button>
-          <button id="forum-fav-btn" data-onclick="toggleForumFav()" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-circle"/></svg> 收藏夾</button>
+          <button id="forum-gallery-toggle" data-onclick="toggleForumMode()" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:16px;padding:5px 12px;font-size:0.8125rem;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 留影走廊</button>
+          <button id="forum-wish-btn" data-onclick="openWishPool()" style="display:none;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:16px;padding:5px 12px;font-size:0.8125rem;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-shine"/></svg> 許願池</button>
+          <button id="forum-fav-btn" data-onclick="toggleForumFav()" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:16px;padding:5px 12px;font-size:0.8125rem;cursor:pointer"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-circle"/></svg> 收藏夾</button>
         </div>
       </div>
       <div id="forum-normal">
@@ -254,44 +250,44 @@
         <div class="profile-box">
           <div class="avatar-lg" id="settings-avatar" data-onclick="document.getElementById('avatar-input').click()" style="cursor:pointer" title="點擊更換頭像"></div>
           <input type="file" id="avatar-input" accept="image/*" style="display:none" data-onchange="handleAvatarUpload(event)" />
-          <div><button data-onclick="document.getElementById('avatar-input').click()" style="background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;margin-bottom:6px"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-camera"/></svg> 更換頭像</button></div>
+          <div><button data-onclick="document.getElementById('avatar-input').click()" style="background:none;border:none;color:var(--accent);font-size:0.75rem;cursor:pointer;margin-bottom:6px"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-camera"/></svg> 更換頭像</button></div>
           <h3 id="settings-username">載入中</h3>
           <p id="settings-email">—</p>
-          <p id="settings-role" style="font-size:12px;color:var(--accent);margin-top:4px"></p>
+          <p id="settings-role" style="font-size:0.75rem;color:var(--accent);margin-top:4px"></p>
         </div>
         <div class="settings-section">
           <details class="profile-details">
             <summary>個人資料</summary>
-            <p style="font-size:12px;color:var(--ink-light);opacity:.8;margin:10px 0 14px">巫師入學全名如需更改，請找管理員。</p>
+            <p style="font-size:0.75rem;color:var(--ink-light);opacity:.8;margin:10px 0 14px">巫師入學全名如需更改，請找管理員。</p>
             <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:4px">
               <label>巫師入學全名</label>
-              <div style="font-size:14px;color:var(--ink-light)" id="profile-fullname">—</div>
+              <div style="font-size:0.875rem;color:var(--ink-light)" id="profile-fullname">—</div>
             </div>
             <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:6px">
               <label>巫師暱稱</label>
               <div id="nick-view" style="display:flex;align-items:center;gap:8px">
-                <span id="nick-display" style="font-size:14px;color:var(--ink)">—</span>
+                <span id="nick-display" style="font-size:0.875rem;color:var(--ink)">—</span>
                 <button data-onclick="editNick()" aria-label="編輯暱稱" style="background:none;border:none;cursor:pointer;padding:0 2px;line-height:1;color:var(--accent)"><svg width="15" height="15" aria-hidden="true" style="display:block"><use href="#ic-edit"/></svg></button>
               </div>
               <div id="nick-edit" style="display:none;align-items:center;gap:8px">
-                <input type="text" id="profile-nickname" maxlength="7" style="width:130px;padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
-                <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" data-onclick="saveNickname()">儲存</button>
+                <input type="text" id="profile-nickname" maxlength="7" style="width:130px;padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:0.875rem" />
+                <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:0.8125rem" data-onclick="saveNickname()">儲存</button>
               </div>
               <small style="color:var(--ink-light);opacity:.7">大家看到的名字，最多 7 字，可用中文</small>
             </div>
             <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:6px">
               <label>密碼</label>
               <div id="pw-view" style="display:flex;align-items:center;gap:8px">
-                <span style="font-size:14px;color:var(--ink-light)">••••••••</span>
-                <button data-onclick="togglePwEdit(true)" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;font-size:12px;padding:4px 10px;cursor:pointer">修改</button>
+                <span style="font-size:0.875rem;color:var(--ink-light)">••••••••</span>
+                <button data-onclick="togglePwEdit(true)" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;font-size:0.75rem;padding:4px 10px;cursor:pointer">修改</button>
               </div>
               <div id="pw-edit" style="display:none;flex-direction:column;gap:6px;width:100%;max-width:240px">
-                <input type="password" id="pw-current" placeholder="目前的密碼" autocomplete="current-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
-                <input type="password" id="pw-new" placeholder="新密碼（至少 8 字）" autocomplete="new-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
-                <input type="password" id="pw-new2" placeholder="再次輸入新密碼" autocomplete="new-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:14px" />
+                <input type="password" id="pw-current" placeholder="目前的密碼" autocomplete="current-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:0.875rem" />
+                <input type="password" id="pw-new" placeholder="新密碼（至少 8 字）" autocomplete="new-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:0.875rem" />
+                <input type="password" id="pw-new2" placeholder="再次輸入新密碼" autocomplete="new-password" style="padding:8px 10px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink);font-size:0.875rem" />
                 <div style="display:flex;gap:8px">
-                  <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="togglePwEdit(false)">取消</button>
-                  <button class="btn-primary" style="flex:1;padding:8px;font-size:13px" data-onclick="saveMyPassword()">儲存</button>
+                  <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="togglePwEdit(false)">取消</button>
+                  <button class="btn-primary" style="flex:1;padding:8px;font-size:0.8125rem" data-onclick="saveMyPassword()">儲存</button>
                 </div>
               </div>
             </div>
@@ -363,15 +359,15 @@
           </div>
           <div class="settings-row super-only" style="display:none">
             <label><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" style="vertical-align:-2px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></svg> 通知保留天數</label>
-            <input type="number" id="notice-days" min="1" max="365" value="30" data-onchange="saveNoticeDays(this.value)" style="width:64px;padding:6px 8px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink);font-size:14px;text-align:center" />
+            <input type="number" id="notice-days" min="1" max="365" value="30" data-onchange="saveNoticeDays(this.value)" style="width:64px;padding:6px 8px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink);font-size:0.875rem;text-align:center" />
           </div>
           <div class="settings-row">
             <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-compass"/></svg> 新手導覽</label>
-            <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" data-onclick="startTour()">重看導覽</button>
+            <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:0.8125rem" data-onclick="startTour()">重看導覽</button>
           </div>
           <div class="settings-row staff-only" style="display:none">
             <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-shield"/></svg> 防窺工坊</label>
-            <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" data-onclick="showPage('protect')">進入</button>
+            <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:0.8125rem" data-onclick="showPage('protect')">進入</button>
           </div>
           </details>
         </div>
@@ -380,22 +376,22 @@
             <summary>幫助 & 反饋</summary>
           <div class="settings-row">
             <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-help"/></svg> 常見問題</label>
-            <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" data-onclick="openFaq()">查看</button>
+            <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:0.8125rem" data-onclick="openFaq()">查看</button>
           </div>
           <div class="settings-row">
             <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-bug"/></svg> 回報問題</label>
-            <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" data-onclick="openBugReport()">回報</button>
+            <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:0.8125rem" data-onclick="openBugReport()">回報</button>
           </div>
           <!-- 站內申請成為作者／製圖師：僅讀者顯示（writer 以上已在列，無需申請） -->
           <div class="settings-row" id="writer-apply-row" style="display:none">
             <label><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-scroll"/></svg> 加入創作行列</label>
-            <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" data-onclick="openWriterApply()">申請</button>
+            <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:0.8125rem" data-onclick="openWriterApply()">申請</button>
           </div>
           </details>
         </div>
         <button id="version-status" class="version-btn checking" data-onclick="updateToLatest()">檢查更新中…</button>
         <button class="btn-logout" data-onclick="doLogout()"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-logout"/></svg> 登出魔法世界</button>
-        <p id="app-version" style="text-align:center;font-size:11px;color:var(--ink-light);opacity:.55;margin-top:10px"></p>
+        <p id="app-version" style="text-align:center;font-size:0.6875rem;color:var(--ink-light);opacity:.55;margin-top:10px"></p>
       </div>
     </div>
 
@@ -413,50 +409,50 @@
       </div>
       <div id="admin-upload" class="admin-pane active">
         <div id="upload-draft-banner" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:var(--parchment2);border:1px solid var(--gold-lt);border-radius:6px;padding:8px 12px;margin-bottom:14px">
-          <span style="font-size:13px;color:var(--ink-light)">已還原上次未送出的草稿</span>
-          <button data-onclick="discardUploadDraft()" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer;flex-shrink:0">清空</button>
+          <span style="font-size:0.8125rem;color:var(--ink-light)">已還原上次未送出的草稿</span>
+          <button data-onclick="discardUploadDraft()" style="font-size:0.75rem;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer;flex-shrink:0">清空</button>
         </div>
         <!-- 新增小說 vs 論壇貼文 -->
         <div data-tour="upload-kind" style="display:flex;gap:0;margin-bottom:16px;border:1px solid var(--gold);border-radius:4px;overflow:hidden">
-          <button id="kind-novel-btn" data-onclick="setUploadKind('novel')" style="flex:1;padding:10px;font-size:13px;border:none;cursor:pointer;background:var(--scarlet);color:var(--on-dark)"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-book"/></svg> 新增小說</button>
-          <button id="kind-forum-btn" data-onclick="setUploadKind('forum')" style="flex:1;padding:10px;font-size:13px;border:none;cursor:pointer;background:var(--parchment2);color:var(--ink-light)"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-scroll"/></svg> 論壇貼文</button>
-          <button id="kind-image-btn" data-onclick="setUploadKind('image')" style="flex:1;padding:10px;font-size:13px;border:none;cursor:pointer;background:var(--parchment2);color:var(--ink-light);border-left:1px solid var(--gold)"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 畫作</button>
+          <button id="kind-novel-btn" data-onclick="setUploadKind('novel')" style="flex:1;padding:10px;font-size:0.8125rem;border:none;cursor:pointer;background:var(--scarlet);color:var(--on-dark)"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-book"/></svg> 新增小說</button>
+          <button id="kind-forum-btn" data-onclick="setUploadKind('forum')" style="flex:1;padding:10px;font-size:0.8125rem;border:none;cursor:pointer;background:var(--parchment2);color:var(--ink-light)"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-scroll"/></svg> 論壇貼文</button>
+          <button id="kind-image-btn" data-onclick="setUploadKind('image')" style="flex:1;padding:10px;font-size:0.8125rem;border:none;cursor:pointer;background:var(--parchment2);color:var(--ink-light);border-left:1px solid var(--gold)"><svg width="15" height="15" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 畫作</button>
         </div>
 
         <!-- 新增小說（單篇：作品資料＋內文一次填完） -->
         <div id="upload-kind-image" style="display:none">
           <div class="form-group"><label>畫作</label>
-            <div id="image-drop" data-onclick="pickImageFile()" style="border:1.5px dashed var(--gold);border-radius:8px;padding:26px 12px;text-align:center;cursor:pointer;color:var(--ink-light);font-size:13px">選擇畫作</div>
+            <div id="image-drop" data-onclick="pickImageFile()" style="border:1.5px dashed var(--gold);border-radius:8px;padding:26px 12px;text-align:center;cursor:pointer;color:var(--ink-light);font-size:0.8125rem">選擇畫作</div>
             <input type="file" id="image-file" accept="image/jpeg,image/png,image/webp" style="display:none" data-onchange="onImagePick(this)" />
             <div id="image-preview-wrap" style="display:none;margin-top:12px;text-align:center"></div>
           </div>
           <div class="form-group"><label>標題</label><input type="text" id="new-image-title" placeholder="畫作標題" /></div>
           <div class="form-group"><label>作者署名（選填）</label><input type="text" id="new-image-author" maxlength="60" placeholder="留空則佚名；合創可寫兩個名字，例：Vale／阿源" /></div>
           <div class="form-group"><label>說明（選填）</label><textarea id="new-image-caption" maxlength="300" placeholder="給這幅畫留幾句話（至多三百字，可留白）"></textarea></div>
-          <div class="form-group" id="new-image-source-row" style="display:none"><label>源自（經授權的文章，選填）</label><select id="new-image-source" style="width:100%;padding:9px 10px;font-family:inherit;font-size:13px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></select></div>
+          <div class="form-group" id="new-image-source-row" style="display:none"><label>源自（經授權的文章，選填）</label><select id="new-image-source" style="width:100%;padding:9px 10px;font-family:inherit;font-size:0.8125rem;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></select></div>
           <div class="form-group"><label>畫框</label><div id="image-frame-picker" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
           <div class="form-group"><label>角色（至少選一位）</label><div id="new-image-chars" class="char-picker"></div></div>
           <!-- 畫作分級：四選（迷情劑/吐真劑/白日夢咒/儲思盆），可留白＝一般。
                僅迷情劑有權限語義（無權讀者看不到這幅畫），選項也只對持權者出現；其餘為展示分類。 -->
           <div class="form-group" id="new-image-cat-row">
             <label>分級</label>
-            <select id="new-image-cat" style="width:100%;padding:9px 10px;font-family:inherit;font-size:13px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></select>
+            <select id="new-image-cat" style="width:100%;padding:9px 10px;font-family:inherit;font-size:0.8125rem;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></select>
           </div>
           <button class="btn-primary" data-onclick="submitImageWork(this)" style="width:100%"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-send"/></svg> 送出畫作</button>
-          <p id="new-image-hint" style="font-size:12px;color:var(--ink-light);text-align:center;margin-top:8px"></p>
+          <p id="new-image-hint" style="font-size:0.75rem;color:var(--ink-light);text-align:center;margin-top:8px"></p>
         </div>
         <div id="upload-kind-novel">
           <div class="form-group"><label>作品名稱</label><input type="text" id="new-novel-title" placeholder="例：火焰杯後" /></div>
           <div class="form-group"><label>作者署名（選填）</label><input type="text" id="new-novel-author" placeholder="留空則佚名" /></div>
           <div class="form-group"><label>發佈日期（選填；填未來日期＝排程，到當天才自動公開）</label><input type="date" id="new-novel-date" /></div>
           <div class="form-group"><label>頁首圖（選填；顯示在文章開頭）</label>
-            <div id="nh-drop" data-onclick="pickNovelHeader()" style="border:1.5px dashed var(--gold);border-radius:8px;padding:18px 12px;text-align:center;cursor:pointer;color:var(--ink-light);font-size:13px">選擇頁首圖</div>
+            <div id="nh-drop" data-onclick="pickNovelHeader()" style="border:1.5px dashed var(--gold);border-radius:8px;padding:18px 12px;text-align:center;cursor:pointer;color:var(--ink-light);font-size:0.8125rem">選擇頁首圖</div>
             <input type="file" id="nh-file" accept="image/jpeg,image/png,image/webp" style="display:none" data-onchange="onNovelHeaderPick(this)" />
             <div id="nh-preview" style="display:none;margin-top:10px;text-align:center"></div>
             <div id="nh-caption-row" style="display:none;margin-top:10px">
-              <label style="font-size:13px">圖片敘述（將隨畫作一起展示在留影走廊，選填）</label>
-              <textarea id="nh-caption" rows="2" maxlength="300" placeholder="這張圖畫的是……" style="width:100%;box-sizing:border-box;padding:9px 10px;font-family:inherit;font-size:13px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink);resize:vertical"></textarea>
-              <p style="font-size:12px;color:var(--ink-light);margin:6px 0 0;line-height:1.7">頁首圖會同時以畫作身份投稿：標題、作者、發布日期與這篇文章相同，隨文章一起審核，通過後掛上留影走廊。</p>
+              <label style="font-size:0.8125rem">圖片敘述（將隨畫作一起展示在留影走廊，選填）</label>
+              <textarea id="nh-caption" rows="2" maxlength="300" placeholder="這張圖畫的是……" style="width:100%;box-sizing:border-box;padding:9px 10px;font-family:inherit;font-size:0.8125rem;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink);resize:vertical"></textarea>
+              <p style="font-size:0.75rem;color:var(--ink-light);margin:6px 0 0;line-height:1.7">頁首圖會同時以畫作身份投稿：標題、作者、發布日期與這篇文章相同，隨文章一起審核，通過後掛上留影走廊。</p>
             </div>
           </div>
           <div class="form-group"><label>故事類型</label><select id="new-novel-category"></select></div>
@@ -464,12 +460,12 @@
           <div class="form-group">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
               <label style="margin:0">內文</label>
-              <label style="font-size:12px;padding:4px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer;display:inline-flex;align-items:center;gap:4px"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-scroll"/></svg> 上傳 txt<input type="file" accept=".txt,text/plain" data-onchange="loadTxtIntoUpload(this)" style="display:none" /></label>
+              <label style="font-size:0.75rem;padding:4px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer;display:inline-flex;align-items:center;gap:4px"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-scroll"/></svg> 上傳 txt<input type="file" accept=".txt,text/plain" data-onchange="loadTxtIntoUpload(this)" style="display:none" /></label>
             </div>
-            <textarea id="new-novel-content" rows="12" placeholder="在此貼上小說內文…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
+            <textarea id="new-novel-content" rows="12" placeholder="在此貼上小說內文…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:0.875rem;resize:vertical;box-sizing:border-box"></textarea>
           </div>
           <button class="btn-primary" data-tour="upload-submit" data-onclick="submitNewNovel(this)" style="margin-bottom:8px"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-send"/></svg> 建立小說</button>
-          <p id="new-novel-hint" style="font-size:12px;color:var(--ink-light);text-align:center"></p>
+          <p id="new-novel-hint" style="font-size:0.75rem;color:var(--ink-light);text-align:center"></p>
         </div>
 
         <!-- 論壇貼文 -->
@@ -492,15 +488,15 @@
           </div>
           <div class="form-group">
             <label>主文（開場白）</label>
-            <textarea id="forum-post-content" rows="8" placeholder="貼上開樓的主文…（顯示在最上面，不帶樓層號）" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
+            <textarea id="forum-post-content" rows="8" placeholder="貼上開樓的主文…（顯示在最上面，不帶樓層號）" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:0.875rem;resize:vertical;box-sizing:border-box"></textarea>
           </div>
           <div class="form-group">
             <label>留言區（選填）</label>
-            <textarea id="forum-post-comments" rows="10" placeholder="貼上各樓回覆，每則用 1L／2L… 開頭，例：&#10;1L 暱稱｜留言內容&#10;2L 暱稱｜留言內容&#10;（系統會自動排成 01L、02L… 蓋樓）" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
-            <p style="font-size:12px;color:var(--ink-light);opacity:.8;margin-top:4px">每樓用 <b>1L / 2L / 01L…</b> 開頭切換;暱稱與內容之間用「｜」分隔(沒有也可以)。</p>
+            <textarea id="forum-post-comments" rows="10" placeholder="貼上各樓回覆，每則用 1L／2L… 開頭，例：&#10;1L 暱稱｜留言內容&#10;2L 暱稱｜留言內容&#10;（系統會自動排成 01L、02L… 蓋樓）" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:0.875rem;resize:vertical;box-sizing:border-box"></textarea>
+            <p style="font-size:0.75rem;color:var(--ink-light);opacity:.8;margin-top:4px">每樓用 <b>1L / 2L / 01L…</b> 開頭切換;暱稱與內容之間用「｜」分隔(沒有也可以)。</p>
           </div>
           <button class="btn-primary" data-onclick="submitForumPost(this)" style="margin-bottom:8px"><svg width="14" height="14" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-send"/></svg> 發佈貼文</button>
-          <p id="forum-post-hint" style="font-size:12px;color:var(--ink-light);text-align:center"></p>
+          <p id="forum-post-hint" style="font-size:0.75rem;color:var(--ink-light);text-align:center"></p>
         </div>
       </div>
       <div id="admin-review" class="admin-pane">
@@ -510,21 +506,21 @@
           <button class="cat-pill" id="review-pill-writers" data-onclick="setReviewMode('writers')">作者申請</button>
           <button class="cat-pill" id="review-pill-covers" data-onclick="setReviewMode('covers')">心動策展</button>
         </div>
-        <p id="review-works-note" style="font-size:12px;color:var(--ink-light);margin-bottom:12px">作者上傳的內容需審核通過才會公開給所有人。</p>
-        <p id="review-covers-note" style="display:none;font-size:12px;color:var(--ink-light);margin-bottom:12px">免審上牆、心動封面還沒人決定過的畫作。選時段＝上架；「維持不上心動」＝結案。</p>
-        <p id="review-auths-note" style="display:none;font-size:12px;color:var(--ink-light);margin-bottom:12px">授權信一來一回即封緘：對方回覆前可撤回；被婉拒的信無法重寄。</p>
-        <p id="review-writers-note" style="display:none;font-size:12px;color:var(--ink-light);margin-bottom:12px">從閱報須知頁或站內留下聯絡方式、有意執筆或作畫的人。標「站內」者為登入讀者，可直接對到帳號。</p>
+        <p id="review-works-note" style="font-size:0.75rem;color:var(--ink-light);margin-bottom:12px">作者上傳的內容需審核通過才會公開給所有人。</p>
+        <p id="review-covers-note" style="display:none;font-size:0.75rem;color:var(--ink-light);margin-bottom:12px">免審上牆、心動封面還沒人決定過的畫作。選時段＝上架；「維持不上心動」＝結案。</p>
+        <p id="review-auths-note" style="display:none;font-size:0.75rem;color:var(--ink-light);margin-bottom:12px">授權信一來一回即封緘：對方回覆前可撤回；被婉拒的信無法重寄。</p>
+        <p id="review-writers-note" style="display:none;font-size:0.75rem;color:var(--ink-light);margin-bottom:12px">從閱報須知頁或站內留下聯絡方式、有意執筆或作畫的人。標「站內」者為登入讀者，可直接對到帳號。</p>
         <div id="admin-review-list"></div>
         <div id="admin-review-auths" style="display:none"></div>
         <div id="admin-review-covers" style="display:none"></div>
         <div id="admin-review-writers" style="display:none"><div id="writer-app-list"></div></div>
       </div>
       <div id="admin-auths" class="admin-pane">
-        <p style="font-size:12px;color:var(--ink-light);margin-bottom:12px">授權信一來一回即封緘：對方回覆前可撤回；被婉拒的信無法重寄。</p>
+        <p style="font-size:0.75rem;color:var(--ink-light);margin-bottom:12px">授權信一來一回即封緘：對方回覆前可撤回；被婉拒的信無法重寄。</p>
         <div id="auth-mailbox"></div>
       </div>
       <div id="admin-novels" class="admin-pane">
-        <p id="admin-novel-scope-note" style="font-size:12px;color:var(--ink-light);margin-bottom:10px"></p>
+        <p id="admin-novel-scope-note" style="font-size:0.75rem;color:var(--ink-light);margin-bottom:10px"></p>
         <div id="admin-novel-searchbar" style="display:none;margin-bottom:10px">
           <div class="search-wrap"><span class="search-ic"><svg width="16" height="16" aria-hidden="true"><use href="#ic-search"/></svg></span><input type="search" id="admin-novel-search" placeholder="搜尋標題、作者…" data-oninput="renderAdminNovels()" /></div>
         </div>
@@ -534,48 +530,48 @@
       </div>
       <div id="admin-users" class="admin-pane">
         <div id="user-stats" style="margin-bottom:10px"></div>
-        <input id="user-search" type="text" data-oninput="renderUserRows(this.value)" placeholder="搜尋暱稱或入學全名…" style="width:100%;box-sizing:border-box;padding:9px 12px;margin-bottom:10px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment2);color:var(--ink);font-size:14px" />
+        <input id="user-search" type="text" data-oninput="renderUserRows(this.value)" placeholder="搜尋暱稱或入學全名…" style="width:100%;box-sizing:border-box;padding:9px 12px;margin-bottom:10px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment2);color:var(--ink);font-size:0.875rem" />
         <div class="user-list" id="user-list"></div>
       </div>
       <div id="admin-invites" class="admin-pane">
         <!-- 報紙入口：管理員可複製任一入口的登入連結貼給需要的人；閱報須知頁另附一鍵複製 -->
         <div style="background:var(--parchment2);border:1px solid var(--gold-lt);border-radius:4px;padding:10px 12px;margin-bottom:14px">
-          <div style="font-size:12px;color:var(--accent);margin-bottom:8px">報紙入口</div>
+          <div style="font-size:0.75rem;color:var(--accent);margin-bottom:8px">報紙入口</div>
           <div style="display:flex;gap:6px">
-            <button class="btn-primary" style="flex:1;padding:8px 4px;font-size:13px;white-space:nowrap" data-onclick="copyText('https://surf0912.github.io/prophet-daily/','已複製 GitHub 登入連結')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-link"/></svg> GitHub</button>
-            <button class="btn-primary" style="flex:1;padding:8px 4px;font-size:13px;white-space:nowrap;background:var(--chrome)" data-onclick="copyText('https://the-prophet-daily.onrender.com/','已複製 鏡像登入連結')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-link"/></svg> 鏡像</button>
+            <button class="btn-primary" style="flex:1;padding:8px 4px;font-size:0.8125rem;white-space:nowrap" data-onclick="copyText('https://surf0912.github.io/prophet-daily/','已複製 GitHub 登入連結')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-link"/></svg> GitHub</button>
+            <button class="btn-primary" style="flex:1;padding:8px 4px;font-size:0.8125rem;white-space:nowrap;background:var(--chrome)" data-onclick="copyText('https://the-prophet-daily.onrender.com/','已複製 鏡像登入連結')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-link"/></svg> 鏡像</button>
           </div>
-          <button class="btn-primary" style="width:100%;margin-top:6px;padding:8px 4px;font-size:13px;white-space:nowrap;background:none;border:1px solid var(--gold);color:var(--ink-light)" data-onclick="copyText('https://surf0912.github.io/prophet-daily/rules','已複製 閱報須知連結')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-scroll"/></svg> 閱報須知</button>
+          <button class="btn-primary" style="width:100%;margin-top:6px;padding:8px 4px;font-size:0.8125rem;white-space:nowrap;background:none;border:1px solid var(--gold);color:var(--ink-light)" data-onclick="copyText('https://surf0912.github.io/prophet-daily/rules','已複製 閱報須知連結')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-scroll"/></svg> 閱報須知</button>
         </div>
         <div id="invite-qty-row" style="display:none;align-items:center;gap:8px;margin-bottom:8px">
-          <span style="font-size:13px;color:var(--ink-light)">一次產生</span>
-          <select id="invite-qty" style="padding:5px 8px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:13px">
+          <span style="font-size:0.8125rem;color:var(--ink-light)">一次產生</span>
+          <select id="invite-qty" style="padding:5px 8px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment2);color:var(--ink);font-size:0.8125rem">
             <option value="1">1 個</option><option value="3">3 個</option><option value="5">5 個</option><option value="10">10 個</option><option value="15">15 個</option>
           </select>
         </div>
         <div style="display:flex;gap:6px;margin-bottom:16px">
-          <button class="btn-primary" style="flex:1;padding:9px 4px;font-size:13px;white-space:nowrap" data-onclick="generateInvite('reader')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 讀者</button>
-          <button class="btn-primary" style="flex:1;padding:9px 4px;font-size:13px;white-space:nowrap;background:var(--chrome)" data-onclick="generateInvite('writer')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 作家</button>
-          <button id="invite-admin-btn" class="btn-primary" style="flex:1;padding:9px 4px;font-size:13px;white-space:nowrap;background:#2d4a1e;display:none" data-onclick="generateInvite('admin')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 管理員</button>
+          <button class="btn-primary" style="flex:1;padding:9px 4px;font-size:0.8125rem;white-space:nowrap" data-onclick="generateInvite('reader')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 讀者</button>
+          <button class="btn-primary" style="flex:1;padding:9px 4px;font-size:0.8125rem;white-space:nowrap;background:var(--chrome)" data-onclick="generateInvite('writer')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 作家</button>
+          <button id="invite-admin-btn" class="btn-primary" style="flex:1;padding:9px 4px;font-size:0.8125rem;white-space:nowrap;background:#2d4a1e;display:none" data-onclick="generateInvite('admin')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 管理員</button>
         </div>
         <!-- 邀請函開放領取：/rules 到點自動亮起入口；名額領完或 3 天後失效 -->
         <div style="background:var(--parchment2);border:1px solid var(--gold-lt);border-radius:8px;padding:12px;margin-bottom:16px">
-          <div style="font-size:13px;font-weight:bold;color:var(--ink);margin-bottom:4px"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-shine"/></svg> 邀請函開放領取</div>
-          <div style="font-size:12px;color:var(--ink-light);line-height:1.6;margin-bottom:8px">領完或 3 天後自動失效。</div>
+          <div style="font-size:0.8125rem;font-weight:bold;color:var(--ink);margin-bottom:4px"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-star-shine"/></svg> 邀請函開放領取</div>
+          <div style="font-size:0.75rem;color:var(--ink-light);line-height:1.6;margin-bottom:8px">領完或 3 天後自動失效。</div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-            <span style="font-size:13px;color:var(--ink-light);flex-shrink:0">名額</span>
+            <span style="font-size:0.8125rem;color:var(--ink-light);flex-shrink:0">名額</span>
             <input id="grab-qty" type="number" inputmode="numeric" min="1" max="50" step="1" value="15"
-                   style="width:62px;flex-shrink:0;padding:5px 8px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment);color:var(--ink);font-size:13px;text-align:center">
-            <span style="font-size:12px;color:var(--ink-light);flex-shrink:0">份</span>
+                   style="width:62px;flex-shrink:0;padding:5px 8px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment);color:var(--ink);font-size:0.8125rem;text-align:center">
+            <span style="font-size:0.75rem;color:var(--ink-light);flex-shrink:0">份</span>
           </div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-            <span style="font-size:13px;color:var(--ink-light);flex-shrink:0">開放時間</span>
+            <span style="font-size:0.8125rem;color:var(--ink-light);flex-shrink:0">開放時間</span>
             <input id="grab-opens" type="datetime-local"
-                   style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment);color:var(--ink);font-size:13px">
-            <button data-onclick="clearGrabOpens()" style="flex-shrink:0;font-size:12px;padding:5px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:4px;cursor:pointer">清除</button>
+                   style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--gold-lt);border-radius:4px;background:var(--parchment);color:var(--ink);font-size:0.8125rem">
+            <button data-onclick="clearGrabOpens()" style="flex-shrink:0;font-size:0.75rem;padding:5px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:4px;cursor:pointer">清除</button>
           </div>
-          <div style="font-size:11.5px;color:var(--ink-light);margin-bottom:8px">留空＝立刻開放。</div>
-          <button class="btn-primary" style="width:100%;padding:9px 4px;font-size:13px;white-space:nowrap;margin-bottom:8px" data-onclick="generateGroupInvite('reader')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 開放讀者名額</button>
+          <div style="font-size:0.71875rem;color:var(--ink-light);margin-bottom:8px">留空＝立刻開放。</div>
+          <button class="btn-primary" style="width:100%;padding:9px 4px;font-size:0.8125rem;white-space:nowrap;margin-bottom:8px" data-onclick="generateGroupInvite('reader')"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-plus"/></svg> 開放讀者名額</button>
           <div id="grab-result" style="display:none"></div>
         </div>
         <!-- freshly generated links (with per-link + 複製全部) -->
@@ -585,11 +581,11 @@
       </div>
       <div id="admin-monitor" class="admin-pane">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px">
-          <p style="font-size:12px;color:var(--ink-light);margin:0">即時負載快照（每 10 秒自動刷新）。數據自伺服器上次啟動後累計，發版重啟才歸零；統計保留 24 小時。</p>
+          <p style="font-size:0.75rem;color:var(--ink-light);margin:0">即時負載快照（每 10 秒自動刷新）。數據自伺服器上次啟動後累計，發版重啟才歸零；統計保留 24 小時。</p>
           <div style="flex-shrink:0;display:flex;flex-direction:column;gap:6px">
-            <button data-onclick="forceRefresh()" title="清除本機快取並重新載入最新版本" style="font-size:13px;padding:7px 13px;background:var(--chrome);border:none;color:var(--on-dark);border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>強制刷新</button>
-            <button id="export-backup-btn" data-onclick="exportBackup()" title="下載一份全站內容備份（JSON）" style="font-size:13px;padding:7px 13px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap"><svg width="14" height="14" aria-hidden="true"><use href="#ic-send"/></svg>匯出備份</button>
-            <button data-onclick="runDbLatency()" title="連續打 6 次最小查詢，測 Supabase 往返冷熱" style="font-size:13px;padding:7px 13px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap"><svg width="14" height="14" aria-hidden="true"><use href="#ic-gear"/></svg>測 Supabase 往返</button>
+            <button data-onclick="forceRefresh()" title="清除本機快取並重新載入最新版本" style="font-size:0.8125rem;padding:7px 13px;background:var(--chrome);border:none;color:var(--on-dark);border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>強制刷新</button>
+            <button id="export-backup-btn" data-onclick="exportBackup()" title="下載一份全站內容備份（JSON）" style="font-size:0.8125rem;padding:7px 13px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap"><svg width="14" height="14" aria-hidden="true"><use href="#ic-send"/></svg>匯出備份</button>
+            <button data-onclick="runDbLatency()" title="連續打 6 次最小查詢，測 Supabase 往返冷熱" style="font-size:0.8125rem;padding:7px 13px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap"><svg width="14" height="14" aria-hidden="true"><use href="#ic-gear"/></svg>測 Supabase 往返</button>
           </div>
         </div>
         <div id="db-latency-out" style="display:none;background:var(--parchment);border:1px solid var(--gold-lt);border-radius:10px;padding:12px 14px;margin-bottom:12px"></div>
@@ -653,12 +649,12 @@
       <div id="gd-author" class="gd-author"></div>
       <div id="gd-chars" class="row-tags" style="margin-top:8px"></div>
       <div id="gd-caption" class="gd-caption"></div>
-      <div id="gd-authlinks" style="display:none;font-size:12px;margin-top:8px;text-align:center"></div>
+      <div id="gd-authlinks" style="display:none;font-size:0.75rem;margin-top:8px;text-align:center"></div>
       <div id="gd-attach" style="display:none;margin-top:8px;text-align:center"></div>
-      <button id="gd-auth" style="display:none;margin-top:12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer"></button>
+      <button id="gd-auth" style="display:none;margin-top:12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;padding:7px 14px;font-size:0.75rem;cursor:pointer"></button>
       <div class="gd-hint">輕觸畫作可全螢幕欣賞</div>
-      <button id="gd-hide" data-onclick="toggleHideGalleryImage()" style="display:none;margin-top:12px;background:none;border:1px solid var(--ink-light);color:var(--ink-light);border-radius:6px;padding:7px 12px;font-size:12px;cursor:pointer;align-items:center;gap:6px"></button>
-      <button id="gd-retract" data-onclick="retractNovel()" style="display:none;margin-top:12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:7px 12px;font-size:12px;cursor:pointer;align-items:center;gap:6px"></button>
+      <button id="gd-hide" data-onclick="toggleHideGalleryImage()" style="display:none;margin-top:12px;background:none;border:1px solid var(--ink-light);color:var(--ink-light);border-radius:6px;padding:7px 12px;font-size:0.75rem;cursor:pointer;align-items:center;gap:6px"></button>
+      <button id="gd-retract" data-onclick="retractNovel()" style="display:none;margin-top:12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:7px 12px;font-size:0.75rem;cursor:pointer;align-items:center;gap:6px"></button>
       <div id="gd-admin" class="admin-only" style="display:none;margin-top:12px"></div>
     </div>
   </div>
@@ -681,9 +677,9 @@
 <div id="reader-view">
   <div class="reader-header">
     <div class="reader-head-main">
-      <button data-onclick="closeReader()" aria-label="返回" style="font-size:15px;display:flex;align-items:center;gap:3px;white-space:nowrap">‹&nbsp;返回</button>
+      <button data-onclick="closeReader()" aria-label="返回" style="font-size:0.9375rem;display:flex;align-items:center;gap:3px;white-space:nowrap">‹&nbsp;返回</button>
       <h3 id="reader-title">—</h3>
-      <button id="reader-fav-btn" data-onclick="toggleReaderFavorite()" aria-label="收藏" style="display:none;background:none;border:none;color:var(--gold-lt);font-size:22px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0"><svg width="22" height="22" aria-hidden="true" style="display:block"><use href="#ic-starline"/></svg></button>
+      <button id="reader-fav-btn" data-onclick="toggleReaderFavorite()" aria-label="收藏" style="display:none;background:none;border:none;color:var(--gold-lt);font-size:1.375rem;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0"><svg width="22" height="22" aria-hidden="true" style="display:block"><use href="#ic-starline"/></svg></button>
     </div>
     <div class="reader-head-tools">
       <div class="reader-font-ctrl">
@@ -691,7 +687,7 @@
         <span id="reader-font-label">15</span>
         <button data-onclick="stepReaderFont(1)" aria-label="放大字體">A+</button>
       </div>
-      <button id="reader-dark-btn" data-onclick="toggleReaderDark()" aria-label="夜間模式" style="background:none;border:none;color:var(--gold-lt);font-size:19px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0"><svg width="19" height="19" aria-hidden="true" style="display:block"><use href="#ic-moon"/></svg></button>
+      <button id="reader-dark-btn" data-onclick="toggleReaderDark()" aria-label="夜間模式" style="background:none;border:none;color:var(--gold-lt);font-size:1.1875rem;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0"><svg width="19" height="19" aria-hidden="true" style="display:block"><use href="#ic-moon"/></svg></button>
     </div>
   </div>
   <div class="chapter-list-panel" id="reader-toc-panel">
@@ -706,21 +702,21 @@
   <div id="reader-auth-wrap" style="display:none;padding:4px 16px 6px">
     <!-- 兩個入口並排（各自太長就自動折行）：向作者請求作畫／把自己已上牆的畫授權給這篇 -->
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-      <button id="reader-auth-btn" data-onclick="readerAuthClick()" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;padding:8px 14px;font-size:12.5px;cursor:pointer;font-family:inherit;white-space:nowrap"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 想為這篇作畫</button>
-      <button id="reader-offer-btn" data-onclick="readerOfferClick()" style="display:none;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;padding:8px 14px;font-size:12.5px;cursor:pointer;font-family:inherit;white-space:nowrap"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 授權我的畫作</button>
+      <button id="reader-auth-btn" data-onclick="readerAuthClick()" style="background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;padding:8px 14px;font-size:0.78125rem;cursor:pointer;font-family:inherit;white-space:nowrap"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 想為這篇作畫</button>
+      <button id="reader-offer-btn" data-onclick="readerOfferClick()" style="display:none;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;padding:8px 14px;font-size:0.78125rem;cursor:pointer;font-family:inherit;white-space:nowrap"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 授權我的畫作</button>
     </div>
   </div>
   <!-- 章節／系列導覽底座（照搬書海）：閱讀時收起，往回滑或捲到底才滑出 -->
   <div id="reader-dock">
     <div class="chapter-nav" id="reader-chapter-nav">
       <button id="prev-ch-btn" data-onclick="navigateChapter(-1)" disabled>← 上一章</button>
-      <span id="reader-ch-label" style="font-size:12px;color:var(--ink-light);align-self:center">—</span>
+      <span id="reader-ch-label" style="font-size:0.75rem;color:var(--ink-light);align-self:center">—</span>
       <button id="next-ch-btn" data-onclick="navigateChapter(1)">下一章 →</button>
     </div>
     <!-- 系列(上下集)導覽：在同系列的「不同作品」之間切換 -->
     <div class="chapter-nav" id="reader-series-nav" style="display:none">
       <button id="prev-series-btn" data-onclick="navigateSeries(-1)">← 上一篇</button>
-      <span id="reader-series-label" style="font-size:12px;color:var(--ink-light);align-self:center">—</span>
+      <span id="reader-series-label" style="font-size:0.75rem;color:var(--ink-light);align-self:center">—</span>
       <button id="next-series-btn" data-onclick="navigateSeries(1)">下一篇 →</button>
     </div>
   </div>
@@ -738,12 +734,12 @@
 <!-- Manage owners (co-authors) modal -->
 <div class="perm-modal" id="transfer-modal">
   <div class="perm-modal-inner">
-    <h3><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-users"/></svg> 管理作者 — <span id="transfer-novel-title" style="font-size:14px"></span></h3>
-    <p style="font-size:12px;color:var(--ink-light);margin:6px 0 10px">勾選擁有此作品的帳號（可多人共同擁有）：</p>
+    <h3><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-users"/></svg> 管理作者 — <span id="transfer-novel-title" style="font-size:0.875rem"></span></h3>
+    <p style="font-size:0.75rem;color:var(--ink-light);margin:6px 0 10px">勾選擁有此作品的帳號（可多人共同擁有）：</p>
     <div id="transfer-user-list"></div>
     <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('transfer-modal').classList.remove('open')">取消</button>
-      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" data-onclick="saveOwners()">儲存</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="document.getElementById('transfer-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:0.8125rem" data-onclick="saveOwners()">儲存</button>
     </div>
   </div>
 </div>
@@ -752,12 +748,12 @@
 <div class="perm-modal" id="fb-reply-modal">
   <div class="perm-modal-inner">
     <h3><svg width="17" height="17" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-megaphone"/></svg> 回覆</h3>
-    <p style="font-size:12px;color:var(--ink-light);margin:6px 0 10px">寫下要公開給對方看見的回覆（留白送出可清除）：</p>
-    <textarea id="fb-reply-text" rows="6" maxlength="600" placeholder="……" style="width:100%;box-sizing:border-box;resize:vertical;min-height:120px;padding:11px 12px;font-family:inherit;font-size:14px;line-height:1.7;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></textarea>
-    <div style="text-align:right;font-size:11px;color:var(--ink-light);margin-top:4px"><span id="fb-reply-count">0</span>/600</div>
+    <p style="font-size:0.75rem;color:var(--ink-light);margin:6px 0 10px">寫下要公開給對方看見的回覆（留白送出可清除）：</p>
+    <textarea id="fb-reply-text" rows="6" maxlength="600" placeholder="……" style="width:100%;box-sizing:border-box;resize:vertical;min-height:120px;padding:11px 12px;font-family:inherit;font-size:0.875rem;line-height:1.7;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></textarea>
+    <div style="text-align:right;font-size:0.6875rem;color:var(--ink-light);margin-top:4px"><span id="fb-reply-count">0</span>/600</div>
     <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('fb-reply-modal').classList.remove('open')">取消</button>
-      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" data-onclick="saveFeedbackReply()">送出回覆</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="document.getElementById('fb-reply-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:0.8125rem" data-onclick="saveFeedbackReply()">送出回覆</button>
     </div>
   </div>
 </div>
@@ -765,15 +761,15 @@
 <div class="perm-modal" id="reject-note-modal">
   <div class="perm-modal-inner">
     <h3><svg width="17" height="17" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-edit"/></svg> 退回修改</h3>
-    <p id="reject-note-work" style="font-size:13px;color:var(--accent);margin:6px 0 4px"></p>
-    <p style="font-size:12px;color:var(--ink-light);margin:0 0 10px">告訴作者哪裡需要修改（可留空）。稿件不會刪除，會退回作者的「作品管理」，這段話也會顯示給作者。</p>
+    <p id="reject-note-work" style="font-size:0.8125rem;color:var(--accent);margin:6px 0 4px"></p>
+    <p style="font-size:0.75rem;color:var(--ink-light);margin:0 0 10px">告訴作者哪裡需要修改（可留空）。稿件不會刪除，會退回作者的「作品管理」，這段話也會顯示給作者。</p>
     <!-- 常用話術：點一下插入文字框，仍可自行增改 -->
     <div id="reject-quick-row" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px"></div>
-    <textarea id="reject-note-text" rows="5" maxlength="500" data-oninput="updateRejectCount()" placeholder="例如：第三段情節與設定衝突，麻煩調整後再送；或分類選錯了……" style="width:100%;box-sizing:border-box;resize:vertical;min-height:110px;padding:11px 12px;font-family:inherit;font-size:14px;line-height:1.7;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></textarea>
-    <div style="text-align:right;font-size:11px;color:var(--ink-light);margin-top:4px"><span id="reject-note-count">0</span>/500</div>
+    <textarea id="reject-note-text" rows="5" maxlength="500" data-oninput="updateRejectCount()" placeholder="例如：第三段情節與設定衝突，麻煩調整後再送；或分類選錯了……" style="width:100%;box-sizing:border-box;resize:vertical;min-height:110px;padding:11px 12px;font-family:inherit;font-size:0.875rem;line-height:1.7;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></textarea>
+    <div style="text-align:right;font-size:0.6875rem;color:var(--ink-light);margin-top:4px"><span id="reject-note-count">0</span>/500</div>
     <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('reject-note-modal').classList.remove('open')">取消</button>
-      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" data-onclick="saveRejectNote()">確定退回</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="document.getElementById('reject-note-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:0.8125rem" data-onclick="saveRejectNote()">確定退回</button>
     </div>
   </div>
 </div>
@@ -782,17 +778,17 @@
 <div class="perm-modal" id="auth-request-modal" style="z-index:1100">
   <div class="perm-modal-inner">
     <h3><svg width="17" height="17" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-edit"/></svg> 寄一封授權信</h3>
-    <p id="auth-req-target" style="font-size:13px;margin:6px 0 10px"></p>
+    <p id="auth-req-target" style="font-size:0.8125rem;margin:6px 0 10px"></p>
     <div id="auth-req-work-row">
-      <p id="auth-req-work-label" style="font-size:12px;color:var(--ink-light);margin:0 0 6px">用於哪篇文章</p>
-      <select id="auth-req-work" style="width:100%;padding:9px 10px;font-family:inherit;font-size:13px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></select>
-      <p id="auth-req-work-hint" style="display:none;font-size:12px;color:var(--accent);margin:6px 0 0">你還沒有任何文章可以掛頁首圖。</p>
+      <p id="auth-req-work-label" style="font-size:0.75rem;color:var(--ink-light);margin:0 0 6px">用於哪篇文章</p>
+      <select id="auth-req-work" style="width:100%;padding:9px 10px;font-family:inherit;font-size:0.8125rem;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></select>
+      <p id="auth-req-work-hint" style="display:none;font-size:0.75rem;color:var(--accent);margin:6px 0 0">你還沒有任何文章可以掛頁首圖。</p>
     </div>
-    <p style="font-size:12px;color:var(--ink-light);margin:12px 0 6px">附言（至多 140 字，只此一句）</p>
-    <textarea id="auth-req-note" rows="3" maxlength="140" placeholder="……" style="width:100%;box-sizing:border-box;resize:vertical;min-height:70px;padding:10px 12px;font-family:inherit;font-size:13.5px;line-height:1.7;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></textarea>
+    <p style="font-size:0.75rem;color:var(--ink-light);margin:12px 0 6px">附言（至多 140 字，只此一句）</p>
+    <textarea id="auth-req-note" rows="3" maxlength="140" placeholder="……" style="width:100%;box-sizing:border-box;resize:vertical;min-height:70px;padding:10px 12px;font-family:inherit;font-size:0.84375rem;line-height:1.7;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></textarea>
     <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('auth-request-modal').classList.remove('open')">取消</button>
-      <button class="btn-primary" id="auth-req-send" style="flex:1;padding:12px;font-size:13px" data-onclick="sendAuthRequest()">寄出授權信</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="document.getElementById('auth-request-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" id="auth-req-send" style="flex:1;padding:12px;font-size:0.8125rem" data-onclick="sendAuthRequest()">寄出授權信</button>
     </div>
   </div>
 </div>
@@ -801,12 +797,12 @@
 <div class="perm-modal" id="auth-decide-modal" style="z-index:1100">
   <div class="perm-modal-inner">
     <h3 id="auth-decide-title">回覆授權信</h3>
-    <p id="auth-decide-sub" style="font-size:13px;margin:6px 0 10px;color:var(--ink-light)"></p>
-    <p style="font-size:12px;color:var(--ink-light);margin:0 0 6px">留一句話給對方（可留白）</p>
-    <textarea id="auth-decide-note" rows="3" maxlength="140" placeholder="……" style="width:100%;box-sizing:border-box;resize:vertical;min-height:70px;padding:10px 12px;font-family:inherit;font-size:13.5px;line-height:1.7;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></textarea>
+    <p id="auth-decide-sub" style="font-size:0.8125rem;margin:6px 0 10px;color:var(--ink-light)"></p>
+    <p style="font-size:0.75rem;color:var(--ink-light);margin:0 0 6px">留一句話給對方（可留白）</p>
+    <textarea id="auth-decide-note" rows="3" maxlength="140" placeholder="……" style="width:100%;box-sizing:border-box;resize:vertical;min-height:70px;padding:10px 12px;font-family:inherit;font-size:0.84375rem;line-height:1.7;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></textarea>
     <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('auth-decide-modal').classList.remove('open')">取消</button>
-      <button class="btn-primary" id="auth-decide-confirm" style="flex:1;padding:12px;font-size:13px" data-onclick="saveAuthDecide()">確定</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="document.getElementById('auth-decide-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" id="auth-decide-confirm" style="flex:1;padding:12px;font-size:0.8125rem" data-onclick="saveAuthDecide()">確定</button>
     </div>
   </div>
 </div>
@@ -814,33 +810,33 @@
 <!-- Series binding modal -->
 <div class="perm-modal" id="series-modal">
   <div class="perm-modal-inner">
-    <h3><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-link"/></svg> 綁定系列 — <span id="series-novel-title" style="font-size:14px"></span></h3>
-    <p style="font-size:12px;color:var(--ink-light);margin:6px 0 10px">填一樣的「系列名」即可把上下部綁在一起；留空則為單篇。</p>
+    <h3><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-link"/></svg> 綁定系列 — <span id="series-novel-title" style="font-size:0.875rem"></span></h3>
+    <p style="font-size:0.75rem;color:var(--ink-light);margin:6px 0 10px">填一樣的「系列名」即可把上下部綁在一起；留空則為單篇。</p>
     <div class="form-group"><label>系列名（留空 = 單篇）</label><input type="text" id="series-name-input" list="series-name-list" placeholder="例：火焰杯后" /><datalist id="series-name-list"></datalist></div>
     <div class="form-group"><label>第幾部（順序，1=上、2=下…）</label><input type="number" id="series-order-input" min="0" value="0" /></div>
     <div id="series-shared-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 4px">
-      <span id="series-shared-label" style="font-size:13px;font-weight:bold">共創系列</span>
+      <span id="series-shared-label" style="font-size:0.8125rem;font-weight:bold">共創系列</span>
       <label class="toggle" style="flex-shrink:0">
         <input type="checkbox" id="series-shared-input" />
         <span class="slider"></span>
       </label>
     </div>
-    <p id="series-shared-hint" style="font-size:12px;color:var(--ink-light);margin:0 0 12px;line-height:1.7"></p>
+    <p id="series-shared-hint" style="font-size:0.75rem;color:var(--ink-light);margin:0 0 12px;line-height:1.7"></p>
     <div style="display:flex;gap:8px;margin-top:6px">
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('series-modal').classList.remove('open')">取消</button>
-      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" data-onclick="saveSeries()">儲存</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="document.getElementById('series-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:0.8125rem" data-onclick="saveSeries()">儲存</button>
     </div>
   </div>
 </div>
 
 <div class="perm-modal" id="editclass-modal">
   <div class="perm-modal-inner">
-    <h3><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-edit"/></svg> 編輯分類 — <span id="editclass-novel-title" style="font-size:14px"></span></h3>
+    <h3><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-edit"/></svg> 編輯分類 — <span id="editclass-novel-title" style="font-size:0.875rem"></span></h3>
     <div class="form-group" id="editclass-cat-group"><label>故事類型</label><select id="editclass-category"></select></div>
     <div class="form-group"><label>角色（可多選）</label><div id="editclass-chars" class="char-picker"></div></div>
     <div style="display:flex;gap:8px;margin-top:6px">
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('editclass-modal').classList.remove('open')">取消</button>
-      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" data-onclick="saveEditClass()">儲存</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="document.getElementById('editclass-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:0.8125rem" data-onclick="saveEditClass()">儲存</button>
     </div>
   </div>
 </div>
@@ -848,7 +844,7 @@
 <div class="perm-modal" id="editwork-modal">
   <div class="perm-modal-inner">
     <h3 style="display:flex;align-items:center;gap:8px"><svg width="17" height="17" aria-hidden="true" style="vertical-align:-3px;flex-shrink:0"><use href="#ic-edit"/></svg> 編輯作品
-      <button id="editwork-copyid" class="admin-only" style="margin-left:auto;background:none;border:1px solid var(--gold-lt);color:var(--ink-light);font-size:11px;font-weight:normal;padding:3px 10px;border-radius:3px;cursor:pointer">複製作品編號</button>
+      <button id="editwork-copyid" class="admin-only" style="margin-left:auto;background:none;border:1px solid var(--gold-lt);color:var(--ink-light);font-size:0.6875rem;font-weight:normal;padding:3px 10px;border-radius:3px;cursor:pointer">複製作品編號</button>
     </h3>
     <div class="form-group"><label>標題</label><input type="text" id="editwork-title" /></div>
     <div class="form-group"><label>作者署名</label><input type="text" id="editwork-author" maxlength="60" placeholder="合創可寫兩個名字，例：Vale／阿源" /></div>
@@ -857,39 +853,39 @@
       <div class="form-group"><label>說明（選填）</label><textarea id="editwork-caption" maxlength="300" placeholder="給這幅畫留幾句話（至多三百字）"></textarea></div>
       <div class="form-group" id="editwork-cat-row">
         <label>分級（迷情劑＝僅持權讀者可見）</label>
-        <select id="editwork-cat" style="width:100%;padding:9px 10px;font-family:inherit;font-size:13px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></select>
+        <select id="editwork-cat" style="width:100%;padding:9px 10px;font-family:inherit;font-size:0.8125rem;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink)"></select>
       </div>
       <div class="form-group" id="editwork-frame-preview" style="display:none;text-align:center"></div>
       <div class="form-group"><label>畫框</label><div id="editwork-frame-picker" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
       <div class="form-group">
-        <button type="button" data-onclick="pickReplaceImage()" style="width:100%;font-size:12px;padding:8px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:var(--parchment2);color:var(--ink-light)"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 更換圖檔（保留連結與收藏）</button>
+        <button type="button" data-onclick="pickReplaceImage()" style="width:100%;font-size:0.75rem;padding:8px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:var(--parchment2);color:var(--ink-light)"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 更換圖檔（保留連結與收藏）</button>
         <input type="file" id="replace-image-file" accept="image/jpeg,image/png,image/webp" style="display:none" data-onchange="onReplaceImagePick(this)" />
-        <p style="font-size:12px;color:var(--ink-light);margin:6px 0 0;line-height:1.7">換圖只換圖檔本身：作品編號、授權連結、收藏、心動時段、文章掛載全部保留。適合補上高解析度版本。</p>
+        <p style="font-size:0.75rem;color:var(--ink-light);margin:6px 0 0;line-height:1.7">換圖只換圖檔本身：作品編號、授權連結、收藏、心動時段、文章掛載全部保留。適合補上高解析度版本。</p>
       </div>
       <div class="form-group" id="editwork-wall-row" style="display:none">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-          <span style="font-size:13px;font-weight:bold">陳列在留影走廊</span>
+          <span style="font-size:0.8125rem;font-weight:bold">陳列在留影走廊</span>
           <label class="toggle" style="flex-shrink:0">
             <input type="checkbox" id="editwork-wall-input" data-onchange="setOffWall(!this.checked)" />
             <span class="slider"></span>
           </label>
         </div>
-        <p style="font-size:12px;color:var(--ink-light);margin:6px 0 0;line-height:1.7">關閉＝不進走廊與心動池，但仍可作文章的文首圖。畫面沒有站內角色時用。</p>
+        <p style="font-size:0.75rem;color:var(--ink-light);margin:6px 0 0;line-height:1.7">關閉＝不進走廊與心動池，但仍可作文章的文首圖。畫面沒有站內角色時用。</p>
       </div>
-      <div class="form-group"><button type="button" id="editwork-crop-btn" style="width:100%;font-size:12px;padding:8px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:var(--parchment2);color:var(--ink-light)">調整心動封面顯示（裁切框）</button></div>
+      <div class="form-group"><button type="button" id="editwork-crop-btn" style="width:100%;font-size:0.75rem;padding:8px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:var(--parchment2);color:var(--ink-light)">調整心動封面顯示（裁切框）</button></div>
     </div>
     <div class="form-group" id="editwork-header-group">
       <label>頁首圖</label>
       <div id="editwork-header-preview" style="margin-bottom:6px"></div>
       <div style="margin-bottom:8px">
-        <label style="font-size:13px">圖片敘述（隨新上傳的文首畫作存檔，選填）</label>
-        <textarea id="editheader-caption" rows="2" maxlength="300" placeholder="先寫敘述，再按下方「選擇／更換」上傳" style="width:100%;box-sizing:border-box;padding:9px 10px;font-family:inherit;font-size:13px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink);resize:vertical"></textarea>
+        <label style="font-size:0.8125rem">圖片敘述（隨新上傳的文首畫作存檔，選填）</label>
+        <textarea id="editheader-caption" rows="2" maxlength="300" placeholder="先寫敘述，再按下方「選擇／更換」上傳" style="width:100%;box-sizing:border-box;padding:9px 10px;font-family:inherit;font-size:0.8125rem;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment);color:var(--ink);resize:vertical"></textarea>
       </div>
       <div id="editwork-auth-arts" style="display:none;margin-bottom:8px"></div>
       <div style="display:flex;gap:8px">
-        <button type="button" data-onclick="pickEditHeader()" style="flex:1;font-size:12px;padding:8px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 選擇／更換</button>
-        <button type="button" id="editwork-header-add" data-onclick="pickEditHeader(true)" style="flex:1;font-size:12px;padding:8px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer;display:none"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 再加一張</button>
-        <button type="button" id="editwork-header-remove" data-onclick="removeEditHeader()" style="flex:1;font-size:12px;padding:8px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">移除頁首圖</button>
+        <button type="button" data-onclick="pickEditHeader()" style="flex:1;font-size:0.75rem;padding:8px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 選擇／更換</button>
+        <button type="button" id="editwork-header-add" data-onclick="pickEditHeader(true)" style="flex:1;font-size:0.75rem;padding:8px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer;display:none"><svg width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><use href="#ic-gallery"/></svg> 再加一張</button>
+        <button type="button" id="editwork-header-remove" data-onclick="removeEditHeader()" style="flex:1;font-size:0.75rem;padding:8px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">移除頁首圖</button>
       </div>
       <input type="file" id="editwork-header-file" accept="image/jpeg,image/png,image/webp" style="display:none" data-onchange="onEditHeaderPick(this)" />
     </div>
@@ -899,8 +895,8 @@
       <textarea id="editwork-comments" rows="10" placeholder="每樓用 1L／2L… 開頭，例：1L 暱稱｜內容"></textarea>
     </div>
     <div style="display:flex;gap:8px;margin-top:6px">
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('editwork-modal').classList.remove('open')">取消</button>
-      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" data-onclick="saveEditWork()">儲存</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="document.getElementById('editwork-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:0.8125rem" data-onclick="saveEditWork()">儲存</button>
     </div>
   </div>
 </div>
@@ -913,13 +909,13 @@
       <img id="avatar-crop-img" alt="" style="position:absolute;left:0;top:0;transform-origin:0 0;user-select:none;-webkit-user-drag:none;pointer-events:none;max-width:none" />
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:0 6px;margin-bottom:8px">
-      <span style="font-size:12px;color:var(--ink)">縮放</span>
+      <span style="font-size:0.75rem;color:var(--ink)">縮放</span>
       <input type="range" id="avatar-crop-zoom" min="1" max="3" step="0.01" value="1" style="flex:1" data-oninput="avatarZoom(this.value)" />
     </div>
-    <p style="font-size:12px;color:var(--ink-light);opacity:.8;margin-bottom:4px">拖曳移動、滑桿縮放，圓圈內就是你的頭像</p>
+    <p style="font-size:0.75rem;color:var(--ink-light);opacity:.8;margin-bottom:4px">拖曳移動、滑桿縮放，圓圈內就是你的頭像</p>
     <div style="display:flex;gap:8px;margin-top:6px">
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('avatar-crop-modal').classList.remove('open')">取消</button>
-      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" data-onclick="saveAvatarCrop()">儲存</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="document.getElementById('avatar-crop-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:0.8125rem" data-onclick="saveAvatarCrop()">儲存</button>
     </div>
   </div>
 </div>
@@ -932,14 +928,14 @@
       <img id="cc-img" alt="" style="position:absolute;left:0;top:0;transform-origin:0 0;user-select:none;-webkit-user-drag:none;pointer-events:none;max-width:none" />
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:0 6px;margin-bottom:8px">
-      <span style="font-size:12px;color:var(--ink)">縮放</span>
+      <span style="font-size:0.75rem;color:var(--ink)">縮放</span>
       <input type="range" id="cc-zoom" min="1" max="3" step="0.01" value="1" style="flex:1" data-oninput="ccrZoom(this.value)" />
     </div>
-    <p style="font-size:12px;color:var(--ink-light);opacity:.8;margin-bottom:4px">拖曳移動、滑桿縮放，框內就是心動與角色頁會顯示的部分</p>
+    <p style="font-size:0.75rem;color:var(--ink-light);opacity:.8;margin-bottom:4px">拖曳移動、滑桿縮放，框內就是心動與角色頁會顯示的部分</p>
     <div style="display:flex;gap:8px;margin-top:6px">
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="closeCoverCrop()">取消</button>
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="clearCoverCrop()">清除</button>
-      <button class="btn-primary" style="flex:1;padding:12px;font-size:13px" data-onclick="saveCoverCrop()">儲存</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="closeCoverCrop()">取消</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="clearCoverCrop()">清除</button>
+      <button class="btn-primary" style="flex:1;padding:12px;font-size:0.8125rem" data-onclick="saveCoverCrop()">儲存</button>
     </div>
   </div>
 </div>
@@ -948,7 +944,7 @@
   <div class="box">
     <div class="spinner" style="margin:0 auto 12px"></div>
     <svg width="16" height="16" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-wand"/></svg> 連線中…
-    <div style="font-size:12px;color:var(--gold-lt);margin-top:6px;opacity:.85">正在為你接通貓頭鷹，請稍候</div>
+    <div style="font-size:0.75rem;color:var(--gold-lt);margin-top:6px;opacity:.85">正在為你接通貓頭鷹，請稍候</div>
   </div>
 </div>
 
@@ -969,12 +965,12 @@
 <div class="perm-modal" id="writer-apply-modal">
   <div class="perm-modal-inner">
     <h3><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-scroll"/></svg> 想為日報執筆或作畫？</h3>
-    <p style="font-size:13px;color:var(--ink-light);line-height:1.85;margin:10px 0 14px">《預言家日報》的作者與製圖師，皆由編務處逐一邀請。留下能找到你的方式，我們讀過你的作品後，貓頭鷹便會啟程。</p>
+    <p style="font-size:0.8125rem;color:var(--ink-light);line-height:1.85;margin:10px 0 14px">《預言家日報》的作者與製圖師，皆由編務處逐一邀請。留下能找到你的方式，我們讀過你的作品後，貓頭鷹便會啟程。</p>
     <div class="form-group"><label>聯絡方式</label><input type="text" id="writer-apply-contact" maxlength="100" placeholder="微信號、郵箱等，能找到你就好" /></div>
     <div class="form-group"><label>想說的話（選填）</label><textarea id="writer-apply-note" maxlength="300" placeholder="平常寫什麼、畫什麼，在哪裡發表過，都可以寫在這裡"></textarea></div>
     <div style="display:flex;gap:8px;margin-top:4px">
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('writer-apply-modal').classList.remove('open')">取消</button>
-      <button class="btn-primary" style="flex:1;padding:11px;font-size:13px" data-onclick="submitWriterApplication()">送出</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="document.getElementById('writer-apply-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" style="flex:1;padding:11px;font-size:0.8125rem" data-onclick="submitWriterApplication()">送出</button>
     </div>
   </div>
 </div>
@@ -983,7 +979,7 @@
   <div class="perm-modal-inner" style="text-align:center;padding:28px 20px">
     <div style="margin-bottom:10px"><svg width="44" height="44" aria-hidden="true" style="vertical-align:0px"><use href="#ic-camera"/></svg></div>
     <h3 style="margin-bottom:6px">圖片辨識（OCR）</h3>
-    <p style="font-size:14px;color:var(--ink-light)">敬請期待 </p>
+    <p style="font-size:0.875rem;color:var(--ink-light)">敬請期待 </p>
     <button class="btn-close-modal" data-onclick="document.getElementById('soon-modal').classList.remove('open')">知道了</button>
   </div>
 </div>
@@ -991,7 +987,7 @@
 <div class="perm-modal" id="mqj-disclaimer-modal">
   <div class="perm-modal-inner" style="max-height:85vh">
     <h3 style="text-align:center;line-height:1.5">迷情劑內容｜魔法部特別公告</h3>
-    <div style="font-size:13px;line-height:1.75;color:var(--ink-light)">
+    <div style="font-size:0.8125rem;line-height:1.75;color:var(--ink-light)">
       <p style="margin-bottom:10px">依據《未成年巫師保護條例》及《迷情劑流通管理辦法》相關規定，魔法部傲羅辦公室與《預言家日報》編務處聯合發布以下公告：</p>
       <p style="margin-bottom:10px">凡未滿十八歲之巫師、女巫、魔法學徒，均不得以任何形式瀏覽、閱讀、取得、儲存、轉傳或接觸標記為「迷情劑」之內容。</p>
       <p style="margin-bottom:10px">本限制適用於所有魔法通訊裝置、《預言家日報》網路版、私人閱讀終端、魔法鏡面投影、壁爐訊息傳輸，以及任何可連接本站之巫師設備。</p>
@@ -1012,20 +1008,20 @@
     </div>
     <div style="margin:16px 0 0">
       <input type="file" id="mqj-proof-file" accept="image/*" style="display:none" data-onchange="onMqjProofPick(this)" />
-      <button id="mqj-proof-btn" style="width:100%;padding:11px;font-size:13px;background:none;border:1px dashed var(--gold);color:var(--ink-light);border-radius:6px;cursor:pointer" data-onclick="document.getElementById('mqj-proof-file').click()">上傳成年證明（大學證書、證照等帶出生年月日的文件）</button>
+      <button id="mqj-proof-btn" style="width:100%;padding:11px;font-size:0.8125rem;background:none;border:1px dashed var(--gold);color:var(--ink-light);border-radius:6px;cursor:pointer" data-onclick="document.getElementById('mqj-proof-file').click()">上傳成年證明（大學證書、證照等帶出生年月日的文件）</button>
       <div id="mqj-proof-preview" style="display:none;text-align:center">
         <img id="mqj-proof-img" alt="成年證明預覽" style="max-width:100%;max-height:200px;border-radius:6px;border:1px solid var(--gold-lt)" />
-        <div style="margin-top:6px"><button style="font-size:12px;padding:4px 14px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:4px;cursor:pointer" data-onclick="clearMqjProof()">重新選擇</button></div>
+        <div style="margin-top:6px"><button style="font-size:0.75rem;padding:4px 14px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:4px;cursor:pointer" data-onclick="clearMqjProof()">重新選擇</button></div>
       </div>
-      <p style="font-size:11.5px;color:var(--ink-light);opacity:.8;margin:6px 0 0;line-height:1.7">檔案僅供管理員核對年齡，存於私人保管庫；審核完成後（無論通過與否）即刪除，不會留存。</p>
+      <p style="font-size:0.71875rem;color:var(--ink-light);opacity:.8;margin:6px 0 0;line-height:1.7">檔案僅供管理員核對年齡，存於私人保管庫；審核完成後（無論通過與否）即刪除，不會留存。</p>
     </div>
-    <label style="display:flex;align-items:flex-start;gap:8px;margin:14px 0 12px;font-size:14px;color:var(--ink);cursor:pointer">
+    <label style="display:flex;align-items:flex-start;gap:8px;margin:14px 0 12px;font-size:0.875rem;color:var(--ink);cursor:pointer">
       <input type="checkbox" id="mqj-age-check" style="margin-top:2px;flex-shrink:0;width:18px;height:18px" data-onchange="document.getElementById('mqj-confirm-btn').disabled=!this.checked">
       <span>我確認我已年滿 18 歲，並同意以上內容限制與管理規則</span>
     </label>
     <div style="display:flex;gap:8px">
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('mqj-disclaimer-modal').classList.remove('open')">取消</button>
-      <button class="btn-primary" id="mqj-confirm-btn" disabled style="flex:1;padding:12px;font-size:13px" data-onclick="requestMqj()">送出申請</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="document.getElementById('mqj-disclaimer-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" id="mqj-confirm-btn" disabled style="flex:1;padding:12px;font-size:0.8125rem" data-onclick="requestMqj()">送出申請</button>
     </div>
   </div>
 </div>
@@ -1034,7 +1030,7 @@
 <div id="mqj-proof-view" class="el-overlay" style="display:none" data-onclick="closeMqjProofView()">
   <div style="max-width:92vw;max-height:88vh;overflow:auto" data-onclick="event.stopPropagation()">
     <img id="mqj-proof-view-img" alt="成年證明" style="max-width:100%;border-radius:6px" />
-    <div style="text-align:center;margin-top:8px"><button style="font-size:13px;padding:6px 20px;background:none;border:1px solid var(--on-dark);color:var(--on-dark);border-radius:6px;cursor:pointer" data-onclick="closeMqjProofView()">關閉</button></div>
+    <div style="text-align:center;margin-top:8px"><button style="font-size:0.8125rem;padding:6px 20px;background:none;border:1px solid var(--on-dark);color:var(--on-dark);border-radius:6px;cursor:pointer" data-onclick="closeMqjProofView()">關閉</button></div>
   </div>
 </div>
 
@@ -1048,7 +1044,7 @@
       <div class="tour-btns">
         <button class="tour-skip" data-onclick="endTour(false)">跳過</button>
         <button id="tour-back" class="tour-skip" data-onclick="tourBack()" style="display:none">‹ 上一步</button>
-        <button id="tour-next" class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px" data-onclick="tourNext()">下一步 ›</button>
+        <button id="tour-next" class="btn-primary" style="width:auto;padding:8px 16px;font-size:0.8125rem" data-onclick="tourNext()">下一步 ›</button>
       </div>
     </div>
   </div>
@@ -1058,14 +1054,14 @@
 <div class="perm-modal" id="wish-modal">
   <div class="perm-modal-inner">
     <h3><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-star-shine"/></svg> 許願池</h3>
-    <p style="font-size:13px;color:var(--ink-light);margin-bottom:10px">寫下你想看的主題、角色，或希望網站新增的小功能。願望會匿名送出，作者與管理員都看得到，放心許下吧。</p>
-    <textarea id="wish-input" maxlength="140" rows="2" data-oninput="updateWishCount()" placeholder="例：想看更多 Sean 吃醋、或 Adrian 的雨天告白…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
-    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink-light);margin:6px 0 10px">
+    <p style="font-size:0.8125rem;color:var(--ink-light);margin-bottom:10px">寫下你想看的主題、角色，或希望網站新增的小功能。願望會匿名送出，作者與管理員都看得到，放心許下吧。</p>
+    <textarea id="wish-input" maxlength="140" rows="2" data-oninput="updateWishCount()" placeholder="例：想看更多 Sean 吃醋、或 Adrian 的雨天告白…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:0.875rem;resize:vertical;box-sizing:border-box"></textarea>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:var(--ink-light);margin:6px 0 10px">
       <span id="wish-quota"></span><span id="wish-count">0/140</span>
     </div>
     <div style="display:flex;gap:8px">
-      <button class="btn-primary" id="wish-submit" style="flex:1;padding:11px;font-size:14px" data-onclick="submitFeedback('wish')">許願</button>
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('wish-modal').classList.remove('open')">關閉</button>
+      <button class="btn-primary" id="wish-submit" style="flex:1;padding:11px;font-size:0.875rem" data-onclick="submitFeedback('wish')">許願</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="document.getElementById('wish-modal').classList.remove('open')">關閉</button>
     </div>
     <div id="wish-tabs" style="display:flex;gap:6px;margin-top:16px;margin-bottom:4px;flex-wrap:wrap"></div>
     <div id="wish-list"></div>
@@ -1076,14 +1072,14 @@
 <div class="perm-modal" id="bug-modal">
   <div class="perm-modal-inner">
     <h3><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-bug"/></svg> 回報問題</h3>
-    <p style="font-size:13px;color:var(--ink-light);margin-bottom:10px">遇到 bug、卡頓、顯示怪怪的?描述一下,會自動附上你的裝置與版本。</p>
-    <textarea id="bug-input" maxlength="600" rows="4" data-oninput="updateBugCount()" placeholder="發生什麼、在哪一頁、怎麼重現…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
-    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink-light);margin:6px 0 10px">
+    <p style="font-size:0.8125rem;color:var(--ink-light);margin-bottom:10px">遇到 bug、卡頓、顯示怪怪的?描述一下,會自動附上你的裝置與版本。</p>
+    <textarea id="bug-input" maxlength="600" rows="4" data-oninput="updateBugCount()" placeholder="發生什麼、在哪一頁、怎麼重現…" style="width:100%;padding:10px;border:1px solid var(--gold-lt);border-radius:6px;background:var(--parchment2);color:var(--ink);font-size:0.875rem;resize:vertical;box-sizing:border-box"></textarea>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:var(--ink-light);margin:6px 0 10px">
       <span id="bug-quota"></span><span id="bug-count">0/600</span>
     </div>
     <div style="display:flex;gap:8px">
-      <button class="btn-primary" id="bug-submit" style="flex:1;padding:11px;font-size:14px" data-onclick="submitFeedback('bug')">送出回報</button>
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:13px" data-onclick="document.getElementById('bug-modal').classList.remove('open')">關閉</button>
+      <button class="btn-primary" id="bug-submit" style="flex:1;padding:11px;font-size:0.875rem" data-onclick="submitFeedback('bug')">送出回報</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.8125rem" data-onclick="document.getElementById('bug-modal').classList.remove('open')">關閉</button>
     </div>
     <div id="bug-list" style="margin-top:16px"></div>
   </div>
@@ -1103,13 +1099,13 @@
 <div class="perm-modal" id="faq-edit-modal">
   <div class="perm-modal-inner">
     <h3 id="faq-edit-title"><svg width="18" height="18" aria-hidden="true" style="vertical-align:-3px"><use href="#ic-help"/></svg> 新增問答</h3>
-    <label style="display:block;font-size:12px;color:var(--ink-light);margin-bottom:4px">問題</label>
-    <input id="faq-edit-q" type="text" placeholder="輸入問題…" style="width:100%;box-sizing:border-box;padding:9px 12px;margin-bottom:12px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment2);color:var(--ink);font-size:14px" />
-    <label style="display:block;font-size:12px;color:var(--ink-light);margin-bottom:4px">答案（可直接貼上多行）</label>
-    <textarea id="faq-edit-a" rows="6" placeholder="輸入答案…可換行、可整段貼上" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment2);color:var(--ink);font-size:14px;line-height:1.6;resize:vertical;white-space:pre-wrap"></textarea>
+    <label style="display:block;font-size:0.75rem;color:var(--ink-light);margin-bottom:4px">問題</label>
+    <input id="faq-edit-q" type="text" placeholder="輸入問題…" style="width:100%;box-sizing:border-box;padding:9px 12px;margin-bottom:12px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment2);color:var(--ink);font-size:0.875rem" />
+    <label style="display:block;font-size:0.75rem;color:var(--ink-light);margin-bottom:4px">答案（可直接貼上多行）</label>
+    <textarea id="faq-edit-a" rows="6" placeholder="輸入答案…可換行、可整段貼上" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--gold-lt);border-radius:8px;background:var(--parchment2);color:var(--ink);font-size:0.875rem;line-height:1.6;resize:vertical;white-space:pre-wrap"></textarea>
     <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn-close-modal" style="flex:1;margin:0;font-size:14px" data-onclick="document.getElementById('faq-edit-modal').classList.remove('open')">取消</button>
-      <button class="btn-primary" id="faq-edit-save" style="flex:1;padding:11px;font-size:14px" data-onclick="saveFaqEditor()">儲存</button>
+      <button class="btn-close-modal" style="flex:1;margin:0;font-size:0.875rem" data-onclick="document.getElementById('faq-edit-modal').classList.remove('open')">取消</button>
+      <button class="btn-primary" id="faq-edit-save" style="flex:1;padding:11px;font-size:0.875rem" data-onclick="saveFaqEditor()">儲存</button>
     </div>
   </div>
 </div>

@@ -29,7 +29,7 @@
 const API = location.hostname.endsWith('.onrender.com') ? location.origin : 'https://the-prophet-daily.onrender.com';
 
 // ── Font toggle ───────────────────────────────────────────────
-const APP_VERSION = 'v5.74';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
+const APP_VERSION = 'v5.75';   // MUST match service-worker CACHE_NAME (self-heal compares them). Bump as v1.13, v1.14…
 let magicFont = localStorage.getItem('pd_magic_font') !== 'off';
 
 const MAGIC_FONT_CSS = `
@@ -2034,14 +2034,14 @@ function renderWishFiltered() {
   _wishItems.forEach(i => { if (i.status === 'done') c.done++; else if (i.status !== 'declined') c.open++; });
   const tabs = [['open', `待處理 ${c.open}`], ['done', `已實現 ${c.done}`], ['all', `全部 ${c.all}`]];
   document.getElementById('wish-tabs').innerHTML = tabs.map(([k, l]) =>
-    `<button data-onclick="setWishFilter('${k}')" style="font-size:12px;padding:5px 12px;border-radius:14px;cursor:pointer;border:1px solid var(--gold-lt);background:${wishFilter === k ? 'var(--scarlet)' : 'none'};color:${wishFilter === k ? 'var(--on-dark)' : 'var(--ink-light)'}">${l}</button>`).join('');
+    `<button data-onclick="setWishFilter('${k}')" style="font-size:0.75rem;padding:5px 12px;border-radius:14px;cursor:pointer;border:1px solid var(--gold-lt);background:${wishFilter === k ? 'var(--scarlet)' : 'none'};color:${wishFilter === k ? 'var(--on-dark)' : 'var(--ink-light)'}">${l}</button>`).join('');
   let items = _wishItems.slice();
   if (wishFilter === 'open') items = items.filter(i => i.status !== 'done' && i.status !== 'declined');
   else if (wishFilter === 'done') items = items.filter(i => i.status === 'done');
   else { const rank = s => s === 'done' ? 1 : s === 'declined' ? 2 : 0; items.sort((a, b) => rank(a.status) - rank(b.status)); }
   if (!items.length) {
     const msg = wishFilter === 'open' ? '沒有待處理的願望' : wishFilter === 'done' ? '還沒有實現的願望,加油' : '還沒有人許願,當第一個吧';
-    document.getElementById('wish-list').innerHTML = `<p style="color:var(--ink-light);font-size:13px;text-align:center;padding:14px">${msg}</p>`;
+    document.getElementById('wish-list').innerHTML = `<p style="color:var(--ink-light);font-size:0.8125rem;text-align:center;padding:14px">${msg}</p>`;
     return;
   }
   renderFeedbackList('wish', items);
@@ -2055,7 +2055,7 @@ async function loadFeedback(kind) {
   listEl.innerHTML = '<div class="spinner" style="margin:10px auto"></div>';
   let items = [];
   try { items = await api(`/feedback/?kind=${kind}`) || []; }
-  catch (e) { listEl.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${escapeHtml(e.message || '')}</p>`; return; }
+  catch (e) { listEl.innerHTML = `<p style="color:var(--accent);font-size:0.8125rem">載入失敗：${escapeHtml(e.message || '')}</p>`; return; }
   // daily quota — counted on the viewer's OWN local calendar day (resets at their midnight).
   const localDay = ts => { const d = ts ? new Date(ts) : new Date(); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
   const today = localDay();
@@ -2078,7 +2078,7 @@ async function loadFeedback(kind) {
 
 function renderFeedbackList(kind, items) {
   const listEl = document.getElementById(kind + '-list');
-  if (!items.length) { listEl.innerHTML = `<p style="color:var(--ink-light);font-size:13px;text-align:center;padding:14px">${kind === 'wish' ? '還沒有人許願,當第一個吧' : '目前沒有回報'}</p>`; return; }
+  if (!items.length) { listEl.innerHTML = `<p style="color:var(--ink-light);font-size:0.8125rem;text-align:center;padding:14px">${kind === 'wish' ? '還沒有人許願,當第一個吧' : '目前沒有回報'}</p>`; return; }
   const admin = isAdminUser();
   // 作家獲得「許願池回覆權」後，也能回覆許願並標記「考慮中」或「已實現」（不能婉拒，且僅限許願）。
   const wishReplier = !admin && kind === 'wish' && currentUser?.role === 'writer' && !!currentUser?.wish_reply;
@@ -2086,24 +2086,24 @@ function renderFeedbackList(kind, items) {
   listEl.innerHTML = items.map(it => {
     const label = (FB_STATUS[kind][it.status] || '');
     const badge = it.status && it.status !== 'open'
-      ? `<span style="font-size:11px;padding:1px 8px;border-radius:9px;background:rgba(45,74,30,.15);color:var(--series)">${label}</span>` : '';
+      ? `<span style="font-size:0.6875rem;padding:1px 8px;border-radius:9px;background:rgba(45,74,30,.15);color:var(--series)">${label}</span>` : '';
     // 多重回覆：完整串在 replies；沒有 replies 欄位的舊資料退回單則 admin_reply
     const _rs = (Array.isArray(it.replies) && it.replies.length) ? it.replies
       : ((it.admin_reply || '').trim() ? [{ t: it.admin_reply }] : []);
-    const reply = _rs.map(r => `<div style="font-size:12px;color:var(--accent);margin-top:5px;padding-left:8px;border-left:2px solid var(--gold-lt)">${ic('ic-megaphone',12)} ${escapeHtml(r.t || '')}</div>`).join('');
+    const reply = _rs.map(r => `<div style="font-size:0.75rem;color:var(--accent);margin-top:5px;padding-left:8px;border-left:2px solid var(--gold-lt)">${ic('ic-megaphone',12)} ${escapeHtml(r.t || '')}</div>`).join('');
     const _statusKeys = admin ? Object.keys(FB_STATUS[kind]) : (wishReplier ? ['considering', 'done'] : []);
     const statusBtns = _statusKeys.map(s =>
-      `<button data-onclick="setFeedbackStatus('${it.id}','${kind}','${s}')" style="font-size:11px;padding:2px 7px;border:1px solid var(--gold-lt);background:${it.status===s?'var(--scarlet)':'none'};color:${it.status===s?'var(--on-dark)':'var(--ink-light)'};border-radius:10px;cursor:pointer">${FB_STATUS[kind][s].replace(/^[^\s]+\s/, '')}</button>`).join('');
-    const adminRow = canReply ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center">${statusBtns}<button data-onclick="replyFeedback('${it.id}','${kind}')" style="font-size:11px;padding:2px 8px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:10px;cursor:pointer">${ic('ic-megaphone',12)} 回覆</button></div>` : '';
-    const del = (admin || it.mine) ? `<button data-onclick="deleteFeedbackItem('${it.id}','${kind}')" style="font-size:11px;background:none;border:none;color:var(--ink-light);cursor:pointer;flex-shrink:0">${ic('ic-trash',14)}</button>` : '';
+      `<button data-onclick="setFeedbackStatus('${it.id}','${kind}','${s}')" style="font-size:0.6875rem;padding:2px 7px;border:1px solid var(--gold-lt);background:${it.status===s?'var(--scarlet)':'none'};color:${it.status===s?'var(--on-dark)':'var(--ink-light)'};border-radius:10px;cursor:pointer">${FB_STATUS[kind][s].replace(/^[^\s]+\s/, '')}</button>`).join('');
+    const adminRow = canReply ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center">${statusBtns}<button data-onclick="replyFeedback('${it.id}','${kind}')" style="font-size:0.6875rem;padding:2px 8px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:10px;cursor:pointer">${ic('ic-megaphone',12)} 回覆</button></div>` : '';
+    const del = (admin || it.mine) ? `<button data-onclick="deleteFeedbackItem('${it.id}','${kind}')" style="font-size:0.6875rem;background:none;border:none;color:var(--ink-light);cursor:pointer;flex-shrink:0">${ic('ic-trash',14)}</button>` : '';
     // Wishes are anonymous and dateless — show only a status badge (if any). Bug reports keep author + date.
     const metaInner = kind === 'wish'
       ? badge
       : `<span>${escapeHtml(it.author || '讀者')}</span><span>${fmtUpdated(it.created_at)}</span>${badge}`;
-    const meta = metaInner ? `<div style="font-size:11px;color:var(--ink-light);margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${metaInner}</div>` : '';
+    const meta = metaInner ? `<div style="font-size:0.6875rem;color:var(--ink-light);margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${metaInner}</div>` : '';
     return `<div id="fb-item-${it.id}" style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
       <div style="display:flex;justify-content:space-between;gap:8px">
-        <div style="font-size:14px;color:var(--ink);line-height:1.5;white-space:pre-wrap;flex:1">${escapeHtml(it.content)}</div>${del}
+        <div style="font-size:0.875rem;color:var(--ink);line-height:1.5;white-space:pre-wrap;flex:1">${escapeHtml(it.content)}</div>${del}
       </div>${meta}${reply}${adminRow}
     </div>`;
   }).join('');
@@ -2173,16 +2173,16 @@ async function loadFaqs() {
   listEl.innerHTML = '<div class="spinner" style="margin:10px auto"></div>';
   const admin = isAdminUser();
   addEl.style.display = admin ? '' : 'none';
-  if (admin) addEl.innerHTML = `<button class="btn-primary" style="width:auto;padding:7px 14px;font-size:13px" data-onclick="addFaq()">＋ 新增問答</button>`;
+  if (admin) addEl.innerHTML = `<button class="btn-primary" style="width:auto;padding:7px 14px;font-size:0.8125rem" data-onclick="addFaq()">＋ 新增問答</button>`;
   let faqs = [];
   try { faqs = await api('/feedback/faqs') || []; }
-  catch (e) { listEl.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${escapeHtml(e.message || '')}</p>`; return; }
-  if (!faqs.length) { listEl.innerHTML = '<p style="color:var(--ink-light);font-size:13px;text-align:center;padding:14px">尚無常見問題</p>'; return; }
+  catch (e) { listEl.innerHTML = `<p style="color:var(--accent);font-size:0.8125rem">載入失敗：${escapeHtml(e.message || '')}</p>`; return; }
+  if (!faqs.length) { listEl.innerHTML = '<p style="color:var(--ink-light);font-size:0.8125rem;text-align:center;padding:14px">尚無常見問題</p>'; return; }
   listEl.innerHTML = faqs.map(f => `
     <details style="border-bottom:1px solid rgba(26,10,0,.08);padding:8px 0">
-      <summary style="font-size:14px;font-weight:bold;color:var(--ink);cursor:pointer">${escapeHtml(f.question)}</summary>
-      <div style="font-size:13px;color:var(--ink-light);line-height:1.7;margin-top:8px;white-space:pre-wrap">${escapeHtml(f.answer)}</div>
-      ${admin ? `<div style="margin-top:6px;display:flex;gap:8px"><button data-onclick="editFaq('${f.id}')" style="font-size:11px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:10px;padding:2px 10px;cursor:pointer">編輯</button><button data-onclick="deleteFaq('${f.id}')" style="font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer">${ic('ic-trash',12)} 刪除</button></div>` : ''}
+      <summary style="font-size:0.875rem;font-weight:bold;color:var(--ink);cursor:pointer">${escapeHtml(f.question)}</summary>
+      <div style="font-size:0.8125rem;color:var(--ink-light);line-height:1.7;margin-top:8px;white-space:pre-wrap">${escapeHtml(f.answer)}</div>
+      ${admin ? `<div style="margin-top:6px;display:flex;gap:8px"><button data-onclick="editFaq('${f.id}')" style="font-size:0.6875rem;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:10px;padding:2px 10px;cursor:pointer">編輯</button><button data-onclick="deleteFaq('${f.id}')" style="font-size:0.6875rem;background:none;border:none;color:var(--accent);cursor:pointer">${ic('ic-trash',12)} 刪除</button></div>` : ''}
     </details>`).join('');
 }
 let _faqEditId = null;   // null = 新增；否則為編輯中的 id
@@ -2427,7 +2427,7 @@ async function requestMqj() {
 function mqjGateBody() {
   const a = currentUser?.mqj_access;
   const eIc = (id) => `<span style="display:block;margin-bottom:8px">${ic(id, 30)}</span>`;
-  const applyBtn = (label) => `<button class="btn-primary" style="width:auto;padding:8px 20px;font-size:13px" data-onclick="openMqjDisclaimer()">${ic('ic-send', 14)} ${label}</button>`;
+  const applyBtn = (label) => `<button class="btn-primary" style="width:auto;padding:8px 20px;font-size:0.8125rem" data-onclick="openMqjDisclaimer()">${ic('ic-send', 14)} ${label}</button>`;
   if (a === 'pending') {
     if (currentUser?.mqj_proof_at)
       return `${eIc('ic-clock')}你已申請開放「迷情劑」<br><small>成年證明已收到，靜候管理員核對後開放</small>`;
@@ -3430,7 +3430,7 @@ async function loadAuditLog() {
     ]);
     const nameById = {};
     (users || []).forEach(u => { nameById[u.id] = u.username; });
-    if (!rows || !rows.length) { el.innerHTML = '<p style="font-size:13px;color:var(--ink-light)">尚無紀錄</p>'; return; }
+    if (!rows || !rows.length) { el.innerHTML = '<p style="font-size:0.8125rem;color:var(--ink-light)">尚無紀錄</p>'; return; }
     el.innerHTML = rows.map(r => {
       const label = AUDIT_LABELS[r.action] || r.action;
       const when = r.created_at ? new Date(r.created_at).toLocaleString('zh-TW', { hour12: false }) : '';
@@ -3441,7 +3441,7 @@ async function loadAuditLog() {
       const meta = (r.target_type === 'user' && r.detail) ? ` <span style="color:var(--ink-light);opacity:.8">${escapeHtml(r.detail)}</span>` : '';
       return `<div class="log-line"><span class="log-time">${escapeHtml(when)}</span><span class="log-actor">${escapeHtml(r.actor_name || '?')}</span><span class="log-act">${escapeHtml(label)}${tgt ? ` <span class="log-tgt">${escapeHtml(String(tgt))}</span>` : ''}${meta}</span></div>`;
     }).join('');
-  } catch (e) { el.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${escapeHtml((e && e.message) || '')}</p>`; }
+  } catch (e) { el.innerHTML = `<p style="color:var(--accent);font-size:0.8125rem">載入失敗：${escapeHtml((e && e.message) || '')}</p>`; }
 }
 
 // 監看：全站授權信一覽（超管）——誰向誰借圖／求畫、同意與否，以及雙方留給對方的話。
@@ -3451,7 +3451,7 @@ async function loadAuthMonitor() {
   el.innerHTML = '<div class="spinner"></div>';
   try {
     const rows = await api('/authorizations/all', { background: true });
-    if (!rows || !rows.length) { el.innerHTML = '<p style="font-size:13px;color:var(--ink-light)">尚無授權往來</p>'; return; }
+    if (!rows || !rows.length) { el.innerHTML = '<p style="font-size:0.8125rem;color:var(--ink-light)">尚無授權往來</p>'; return; }
     const DIR = { use_image: '借圖', derive_art: '求畫', offer_image: '獻圖' };
     const STAT = { pending: ['待回覆', 'var(--ink-light)'], approved: ['已同意', 'var(--series)'], declined: ['已婉拒', 'var(--accent)'], revoked: ['已收回', 'var(--accent)'], cancelled: ['已放棄', 'var(--ink-light)'] };
     el.innerHTML = rows.map(a => {
@@ -3462,16 +3462,16 @@ async function loadAuthMonitor() {
       const target = a.direction === 'derive_art'
         ? `為《${escapeHtml(a.work_title || '文章')}》作畫`
         : `${a.direction === 'offer_image' ? '獻' : '借'}《${escapeHtml(a.artwork_title || '畫作')}》用於《${escapeHtml(a.work_title || '文章')}》`;
-      const noteLine = a.note ? `<div style="font-size:12.5px;color:var(--ink);margin-top:4px">${escapeHtml(a.requester_name)}：「${escapeHtml(a.note)}」</div>` : '';
-      const replyLine = a.reply_note ? `<div style="font-size:12.5px;color:var(--ink);margin-top:2px">${escapeHtml(a.recipient_name)}：「${escapeHtml(a.reply_note)}」</div>` : '';
+      const noteLine = a.note ? `<div style="font-size:0.78125rem;color:var(--ink);margin-top:4px">${escapeHtml(a.requester_name)}：「${escapeHtml(a.note)}」</div>` : '';
+      const replyLine = a.reply_note ? `<div style="font-size:0.78125rem;color:var(--ink);margin-top:2px">${escapeHtml(a.recipient_name)}：「${escapeHtml(a.reply_note)}」</div>` : '';
       return `<div style="padding:9px 2px;border-bottom:1px solid rgba(26,10,0,.07)">
-        <div style="font-size:13px;color:var(--ink)"><b>${escapeHtml(a.requester_name)}</b> <span style="color:var(--gold)">→</span> <b>${escapeHtml(a.recipient_name)}</b>　<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(201,168,76,.2);color:var(--ink-light)">${dir}</span> <span style="font-size:11px;color:${st[1]}">${st[0]}</span></div>
-        <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${target}</div>
+        <div style="font-size:0.8125rem;color:var(--ink)"><b>${escapeHtml(a.requester_name)}</b> <span style="color:var(--gold)">→</span> <b>${escapeHtml(a.recipient_name)}</b>　<span style="font-size:0.6875rem;padding:1px 7px;border-radius:9px;background:rgba(201,168,76,.2);color:var(--ink-light)">${dir}</span> <span style="font-size:0.6875rem;color:${st[1]}">${st[0]}</span></div>
+        <div style="font-size:0.75rem;color:var(--ink-light);margin-top:3px">${target}</div>
         ${noteLine}${replyLine}
-        <div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:3px">${escapeHtml(when)}</div>
+        <div style="font-size:0.6875rem;color:var(--ink-light);opacity:.7;margin-top:3px">${escapeHtml(when)}</div>
       </div>`;
     }).join('');
-  } catch (e) { el.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${escapeHtml((e && e.message) || '')}</p>`; }
+  } catch (e) { el.innerHTML = `<p style="color:var(--accent);font-size:0.8125rem">載入失敗：${escapeHtml((e && e.message) || '')}</p>`; }
 }
 
 function switchAdminTab(tab) {
@@ -3585,9 +3585,9 @@ async function loadActivityStats() {
     : `<span style="color:${delta > 0 ? 'var(--series)' : 'var(--accent)'}">${delta > 0 ? '▲' : '▼'} ${Math.abs(delta)}</span> 較昨日`;
   const card = (label, val, sub) => `
     <div style="flex:1;min-width:96px;box-sizing:border-box;background:var(--parchment);border:1px solid var(--gold-lt);border-radius:10px;padding:12px 14px">
-      <div style="font-size:12px;color:var(--ink-light)">${label}</div>
-      <div style="font-size:22px;font-weight:bold;color:var(--ink);line-height:1.3">${val}</div>
-      <div style="font-size:11px;color:var(--ink-light);opacity:.85;margin-top:3px">${sub}</div>
+      <div style="font-size:0.75rem;color:var(--ink-light)">${label}</div>
+      <div style="font-size:1.375rem;font-weight:bold;color:var(--ink);line-height:1.3">${val}</div>
+      <div style="font-size:0.6875rem;color:var(--ink-light);opacity:.85;margin-top:3px">${sub}</div>
     </div>`;
   const days = s.daily || [];
   _activityDays = days; _actPicked = -1;
@@ -3604,20 +3604,20 @@ async function loadActivityStats() {
   }).join('');
   const fmtMd = iso => { const p = String(iso).split('-'); return p.length === 3 ? `${+p[1]}/${+p[2]}` : iso; };
   el.innerHTML = `
-    <div style="font-size:13px;color:var(--accent);letter-spacing:.06em;margin-bottom:10px">${ic('ic-users', 13)} 讀者活躍</div>
+    <div style="font-size:0.8125rem;color:var(--accent);letter-spacing:.06em;margin-bottom:10px">${ic('ic-users', 13)} 讀者活躍</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px">
       ${card('今日活躍', s.today, deltaTxt)}
       ${card('昨日', s.yesterday, `近 7 天平均 ${s.avg7}`)}
       ${card('近 7 天', s.uniq7, `近 30 天 ${s.uniq30} 人`)}
     </div>
     <div style="margin-top:12px;background:var(--parchment);border:1px solid var(--gold-lt);border-radius:10px;padding:12px 14px">
-      <div style="font-size:11px;color:var(--ink-light)">每日活躍人數（近 14 天）</div>
+      <div style="font-size:0.6875rem;color:var(--ink-light)">每日活躍人數（近 14 天）</div>
       <div id="activity-bars" style="display:flex;align-items:stretch;gap:3px;height:56px;margin-top:8px">${bars}</div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink-light);opacity:.7;margin-top:4px">
+      <div style="display:flex;justify-content:space-between;font-size:0.625rem;color:var(--ink-light);opacity:.7;margin-top:4px">
         <span>${fmtMd(days[0] && days[0].d)}</span><span>${fmtMd(days[7] && days[7].d)}</span><span>今天</span>
       </div>
-      <div id="activity-pick" style="font-size:12px;color:var(--ink);margin-top:8px;min-height:17px">${days.length ? '　' : ''}</div>
-      <div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:8px;line-height:1.6">※ 點任一天可看該日人數。活躍＝當天實際開啟作品閱讀的人（以閱讀紀錄計，非僅開啟 App）。今天那根是紅的，只是標記「還沒過完」。</div>
+      <div id="activity-pick" style="font-size:0.75rem;color:var(--ink);margin-top:8px;min-height:17px">${days.length ? '　' : ''}</div>
+      <div style="font-size:0.6875rem;color:var(--ink-light);opacity:.7;margin-top:8px;line-height:1.6">※ 點任一天可看該日人數。活躍＝當天實際開啟作品閱讀的人（以閱讀紀錄計，非僅開啟 App）。今天那根是紅的，只是標記「還沒過完」。</div>
     </div>
     <div style="height:16px"></div>`;
 }
@@ -3653,10 +3653,10 @@ async function runDbLatency() {
       : coldPenalty >= 2
       ? ['#a8761f', `首發 ${first} 明顯比熱查詢 ${warm} 慢 → 往返稅來自連線建立（TLS 握手），修連線重用即可，不必搬。`]
       : ['#2d4a1e', `Supabase 連線穩定，單次小型查詢約 ${warm} ms（首發僅多 ${coldExtra} ms）。慢是慢在「多次連續查詢」與較大回傳的累積——優化方向是把 sequential 合成一次，不必搬 region。`];
-    el.innerHTML = `<div style="font-size:12px;color:var(--ink-light);margin-bottom:4px">${ic('ic-gear', 12)} Supabase 往返（連續 6 次撈一行，ms；首發粗體）</div>
-      <div style="font-size:14px;color:var(--ink);font-family:monospace">${s.map((v, i) => i === 0 ? `<b>${v}</b>` : v).join('　·　')}</div>
-      <div style="font-size:12px;margin-top:6px;color:var(--ink-light)">首發 <b style="color:var(--ink)">${first}</b> ms　｜　熱查詢中位數 <b style="color:var(--ink)">${warm}</b> ms</div>
-      <div style="font-size:12.5px;color:${verdict[0]};margin-top:7px;line-height:1.55">${verdict[1]}</div>`;
+    el.innerHTML = `<div style="font-size:0.75rem;color:var(--ink-light);margin-bottom:4px">${ic('ic-gear', 12)} Supabase 往返（連續 6 次撈一行，ms；首發粗體）</div>
+      <div style="font-size:0.875rem;color:var(--ink);font-family:monospace">${s.map((v, i) => i === 0 ? `<b>${v}</b>` : v).join('　·　')}</div>
+      <div style="font-size:0.75rem;margin-top:6px;color:var(--ink-light)">首發 <b style="color:var(--ink)">${first}</b> ms　｜　熱查詢中位數 <b style="color:var(--ink)">${warm}</b> ms</div>
+      <div style="font-size:0.78125rem;color:${verdict[0]};margin-top:7px;line-height:1.55">${verdict[1]}</div>`;
   } catch (e) { el.innerHTML = `<span style="color:var(--scarlet)">測試失敗：${escapeHtml(e.message || '')}</span>`; }
 }
 let _monSnap = null;     // 最近一次 server-stats 快照（視窗切換時免重抓）
@@ -3695,9 +3695,9 @@ function renderMonitorBody() {
       : ['var(--scarlet)', '吃緊'];
     const card = (label, val, sub, wide) => `
       <div style="${wide ? 'flex-basis:100%;' : 'flex:1;min-width:128px;'}box-sizing:border-box;background:var(--parchment);border:1px solid var(--gold-lt);border-radius:10px;padding:12px 14px">
-        <div style="font-size:12px;color:var(--ink-light)">${label}</div>
-        <div style="font-size:22px;font-weight:bold;color:var(--ink);line-height:1.3">${val}</div>
-        ${sub ? `<div style="font-size:11px;color:var(--ink-light);opacity:.85;margin-top:3px;line-height:1.5">${sub}</div>` : ''}
+        <div style="font-size:0.75rem;color:var(--ink-light)">${label}</div>
+        <div style="font-size:1.375rem;font-weight:bold;color:var(--ink);line-height:1.3">${val}</div>
+        ${sub ? `<div style="font-size:0.6875rem;color:var(--ink-light);opacity:.85;margin-top:3px;line-height:1.5">${sub}</div>` : ''}
       </div>`;
     // 效能定位：最慢 Endpoint／Supabase 查詢（15 分鐘窗，p95 由高到低）。p95 上色：紅≥1s、橙≥500ms。
     const slowTable = (title, rows, col1, right) => {
@@ -3707,10 +3707,10 @@ function renderMonitorBody() {
       // 這樣切換視窗不會因標題字數變化而讓按鈕跳行。
       return `<div style="margin-top:14px">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;margin-bottom:5px">
-          <div style="font-size:12px;font-weight:bold;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</div>
+          <div style="font-size:0.75rem;font-weight:bold;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</div>
           ${right ? `<div style="flex-shrink:0;display:inline-flex;gap:5px;margin-left:auto">${right}</div>` : ''}
         </div>
-        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:0.75rem">
           <thead><tr style="color:var(--ink-light)">
             <th style="text-align:left;padding:3px 7px;font-weight:normal">${col1}</th>
             <th style="text-align:right;padding:3px 7px;font-weight:normal">次數</th>
@@ -3751,7 +3751,7 @@ function renderMonitorBody() {
     if (s.hourly && s.hourly.some(b => b.n > 0)) {
       const mx = Math.max(...s.hourly.map(b => b.n), 1);
       hourlyRow = `<div style="margin-top:10px">
-        <div style="font-size:11px;color:var(--ink-light);margin-bottom:4px">${ic('ic-clock', 11)} 每小時請求（近 24 小時）</div>
+        <div style="font-size:0.6875rem;color:var(--ink-light);margin-bottom:4px">${ic('ic-clock', 11)} 每小時請求（近 24 小時）</div>
         <div style="display:flex;align-items:flex-end;gap:2px;height:30px">${s.hourly.map(b => {
           const h = b.n ? Math.max(3, Math.round(b.n / mx * 30)) : 1;
           const t = new Date(b.t * 1000).getHours();
@@ -3761,7 +3761,7 @@ function renderMonitorBody() {
     }
     // 慢表視窗切換：15 分鐘看「現在」、24 小時看「全貌」（樣本足、p95 有代表性）。
     const is24 = _monWin === '24h' && s.endpoints_24h;
-    const winBtn = (w, label) => `<button data-onclick="setMonWin('${w}')" style="font-size:11px;padding:2px 10px;border:1px solid ${(_monWin === w) ? 'var(--scarlet)' : 'var(--gold-lt)'};background:${(_monWin === w) ? 'var(--scarlet)' : 'none'};color:${(_monWin === w) ? 'var(--on-dark)' : 'var(--ink-light)'};border-radius:10px;cursor:pointer">${label}</button>`;
+    const winBtn = (w, label) => `<button data-onclick="setMonWin('${w}')" style="font-size:0.6875rem;padding:2px 10px;border:1px solid ${(_monWin === w) ? 'var(--scarlet)' : 'var(--gold-lt)'};background:${(_monWin === w) ? 'var(--scarlet)' : 'none'};color:${(_monWin === w) ? 'var(--on-dark)' : 'var(--ink-light)'};border-radius:10px;cursor:pointer">${label}</button>`;
     const winToggle = s.endpoints_24h ? `${winBtn('15m', '15 分鐘')}${winBtn('24h', '24 小時')}` : '';
     el.innerHTML = `
       <div style="display:flex;flex-wrap:wrap;gap:8px">
@@ -3775,11 +3775,11 @@ function renderMonitorBody() {
       </div>
       ${hourlyRow}
       ${jwtPct === null ? '' : (jwtPct >= 80
-        ? `<div style="font-size:11px;color:#2d4a1e;margin-top:10px">${ic('ic-shield', 11)} JWT 本機驗證：<b>啟用中</b>（${jwtPct}%）— 已省去每次請求對 Supabase 的一次往返</div>`
-        : `<div style="font-size:12px;color:var(--scarlet);margin-top:10px;line-height:1.5">${ic('ic-shield', 11)} JWT 本機驗證：<b>未啟用</b>（本機僅 ${jwtPct}%）— 請把 Render 的 <b>JWT_SECRET</b> 設成你的 Supabase JWT 密鑰，回應時間才會降下來</div>`)}
+        ? `<div style="font-size:0.6875rem;color:#2d4a1e;margin-top:10px">${ic('ic-shield', 11)} JWT 本機驗證：<b>啟用中</b>（${jwtPct}%）— 已省去每次請求對 Supabase 的一次往返</div>`
+        : `<div style="font-size:0.75rem;color:var(--scarlet);margin-top:10px;line-height:1.5">${ic('ic-shield', 11)} JWT 本機驗證：<b>未啟用</b>（本機僅 ${jwtPct}%）— 請把 Render 的 <b>JWT_SECRET</b> 設成你的 Supabase JWT 密鑰，回應時間才會降下來</div>`)}
       ${slowTable(ic('ic-clock', 12) + ' 最慢 Endpoint', is24 ? s.endpoints_24h : s.endpoints, 'Endpoint', winToggle)}
       ${slowTable(ic('ic-gear', 12) + ' 最慢 Supabase 查詢', is24 ? s.queries_24h : s.queries, '查詢')}
-      <div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:10px">※「在線」以近 5 分鐘有送出請求的登入用戶計；純閱讀時前端不送請求，故為活躍下限值。慢表可切 15 分鐘（看現在）／24 小時（看全貌，樣本足）。</div>`;
+      <div style="font-size:0.6875rem;color:var(--ink-light);opacity:.7;margin-top:10px">※「在線」以近 5 分鐘有送出請求的登入用戶計；純閱讀時前端不送請求，故為活躍下限值。慢表可切 15 分鐘（看現在）／24 小時（看全貌，樣本足）。</div>`;
   }
 }
 
@@ -3893,7 +3893,7 @@ async function onNovelHeaderPick(input) {
     { const cap = document.getElementById('nh-caption-row'); if (cap) cap.style.display = ''; }
     const wrap = document.getElementById('nh-preview');
     wrap.style.display = '';
-    wrap.innerHTML = `<img src="${_novelHeader.data}" alt="" style="max-width:100%;max-height:220px;border-radius:6px" /><div style="margin-top:6px"><button type="button" data-onclick="clearNovelHeader()" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">移除頁首圖</button></div>`;
+    wrap.innerHTML = `<img src="${_novelHeader.data}" alt="" style="max-width:100%;max-height:220px;border-radius:6px" /><div style="margin-top:6px"><button type="button" data-onclick="clearNovelHeader()" style="font-size:0.75rem;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">移除頁首圖</button></div>`;
     document.getElementById('nh-drop').textContent = '已選擇頁首圖，點此可更換';
   } catch (e) { toast('圖片讀取失敗'); }
 }
@@ -3911,7 +3911,7 @@ function renderEditHeaderPreview(url) {
   const rm = document.getElementById('editwork-header-remove');
   if (!box) return;
   if (url) { box.innerHTML = `<img src="${escapeHtml(url)}" alt="" style="max-width:100%;max-height:180px;border-radius:6px" />`; if (rm) rm.style.display = ''; }
-  else { box.innerHTML = '<span style="font-size:12px;color:var(--ink-light)">尚無頁首圖</span>'; if (rm) rm.style.display = 'none'; }
+  else { box.innerHTML = '<span style="font-size:0.75rem;color:var(--ink-light)">尚無頁首圖</span>'; if (rm) rm.style.display = 'none'; }
   // 「再加一張」：已經有圖、且還沒滿 5 張才出現（沒圖時「選擇／更換」就是第一張）
   const add = document.getElementById('editwork-header-add');
   if (add) {
@@ -4112,50 +4112,50 @@ async function renderAuthMailbox(elId) {
   el.innerHTML = '<div class="spinner" style="margin:10px auto"></div>';
   const box = await loadMyAuths(true);
   if (box.error) {
-    el.innerHTML = `<p style="font-size:12.5px;color:var(--accent);padding:6px 0">信箱讀取失敗：${escapeHtml(box.error)}</p>`
-      + `<button data-onclick="renderAuthMailbox('${elId}')" style="font-size:12px;padding:5px 14px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;cursor:pointer">重新載入</button>`;
+    el.innerHTML = `<p style="font-size:0.78125rem;color:var(--accent);padding:6px 0">信箱讀取失敗：${escapeHtml(box.error)}</p>`
+      + `<button data-onclick="renderAuthMailbox('${elId}')" style="font-size:0.75rem;padding:5px 14px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;cursor:pointer">重新載入</button>`;
     return;
   }
   const admin = isAdminUser();
   const noteLine = (t, label) => (t || '').trim()
-    ? `<div style="font-size:12px;color:var(--ink-light);margin-top:4px;padding-left:8px;border-left:2px solid var(--gold-lt)">${label}「${escapeHtml(t.trim())}」</div>` : '';
-  const badge = a => `<span style="font-size:11px;padding:1px 8px;border-radius:9px;background:${a.status === 'approved' ? 'rgba(45,74,30,.15)' : (a.status === 'declined' || a.status === 'revoked') ? 'rgba(122,42,42,.12)' : a.status === 'cancelled' ? 'rgba(160,130,60,.18)' : 'rgba(160,130,60,.18)'};color:${a.status === 'approved' ? 'var(--series)' : (a.status === 'declined' || a.status === 'revoked') ? 'var(--accent)' : 'var(--ink-light)'}">${AUTH_STATUS[a.status] || ''}</span>`;
+    ? `<div style="font-size:0.75rem;color:var(--ink-light);margin-top:4px;padding-left:8px;border-left:2px solid var(--gold-lt)">${label}「${escapeHtml(t.trim())}」</div>` : '';
+  const badge = a => `<span style="font-size:0.6875rem;padding:1px 8px;border-radius:9px;background:${a.status === 'approved' ? 'rgba(45,74,30,.15)' : (a.status === 'declined' || a.status === 'revoked') ? 'rgba(122,42,42,.12)' : a.status === 'cancelled' ? 'rgba(160,130,60,.18)' : 'rgba(160,130,60,.18)'};color:${a.status === 'approved' ? 'var(--series)' : (a.status === 'declined' || a.status === 'revoked') ? 'var(--accent)' : 'var(--ink-light)'}">${AUTH_STATUS[a.status] || ''}</span>`;
   const thumb = a => a.artwork_url ? `<img src="${escapeHtml(a.artwork_url)}" alt="" style="width:46px;height:60px;object-fit:cover;border-radius:3px;border:3px solid var(--gold-lt);flex-shrink:0" />` : '';
   const card = (a, received) => {
     const acts = [];
     if (received && a.status === 'pending') {
-      acts.push(`<button data-onclick="openAuthDecide('${a.id}', false)" style="flex:1;font-size:12px;padding:6px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:6px;cursor:pointer">婉拒</button>`);
-      acts.push(`<button data-onclick="openAuthDecide('${a.id}', true)" style="flex:1;font-size:12px;padding:6px;border:1px solid #2d4a1e;background:#2d4a1e;color:#e9f0dd;border-radius:6px;cursor:pointer">同意授權</button>`);
+      acts.push(`<button data-onclick="openAuthDecide('${a.id}', false)" style="flex:1;font-size:0.75rem;padding:6px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:6px;cursor:pointer">婉拒</button>`);
+      acts.push(`<button data-onclick="openAuthDecide('${a.id}', true)" style="flex:1;font-size:0.75rem;padding:6px;border:1px solid #2d4a1e;background:#2d4a1e;color:#e9f0dd;border-radius:6px;cursor:pointer">同意授權</button>`);
     }
     if (!received && a.status === 'pending') {
-      acts.push(`<button data-onclick="withdrawAuth('${a.id}')" style="font-size:12px;padding:6px 14px;border:1px solid var(--ink-light);background:none;color:var(--ink-light);border-radius:6px;cursor:pointer">撤回</button>`);
+      acts.push(`<button data-onclick="withdrawAuth('${a.id}')" style="font-size:0.75rem;padding:6px 14px;border:1px solid var(--ink-light);background:none;color:var(--ink-light);border-radius:6px;cursor:pointer">撤回</button>`);
     }
     if ((received || admin) && a.status === 'approved') {
-      acts.push(`<button data-onclick="revokeAuth('${a.id}')" style="font-size:12px;padding:6px 14px;border:1px solid var(--accent);background:none;color:var(--accent);border-radius:6px;cursor:pointer">收回授權</button>`);
+      acts.push(`<button data-onclick="revokeAuth('${a.id}')" style="font-size:0.75rem;padding:6px 14px;border:1px solid var(--accent);background:none;color:var(--accent);border-radius:6px;cursor:pointer">收回授權</button>`);
     }
     if (!received && a.status === 'approved') {
       // 寄件方放棄：寄錯人、後來用不到——與收信方的「收回」對稱，善後一致
-      acts.push(`<button data-onclick="revokeAuth('${a.id}')" style="font-size:12px;padding:6px 14px;border:1px solid var(--ink-light);background:none;color:var(--ink-light);border-radius:6px;cursor:pointer">放棄授權</button>`);
+      acts.push(`<button data-onclick="revokeAuth('${a.id}')" style="font-size:0.75rem;padding:6px 14px;border:1px solid var(--ink-light);background:none;color:var(--ink-light);border-radius:6px;cursor:pointer">放棄授權</button>`);
     }
     if (admin && received && a.status === 'declined') {
-      acts.push(`<button data-onclick="adminResetAuth('${a.id}')" style="font-size:12px;padding:6px 14px;border:1px solid var(--accent);background:none;color:var(--accent);border-radius:6px;cursor:pointer">刪除信（允許重寄）</button>`);
+      acts.push(`<button data-onclick="adminResetAuth('${a.id}')" style="font-size:0.75rem;padding:6px 14px;border:1px solid var(--accent);background:none;color:var(--accent);border-radius:6px;cursor:pointer">刪除信（允許重寄）</button>`);
     }
     const inUse = a.direction === 'use_image' && a.status === 'approved' && a.in_use
-      ? `<span style="font-size:11px;padding:1px 8px;border-radius:9px;background:rgba(160,130,60,.18);color:var(--ink-light)">畫作使用中</span>` : '';
+      ? `<span style="font-size:0.6875rem;padding:1px 8px;border-radius:9px;background:rgba(160,130,60,.18);color:var(--ink-light)">畫作使用中</span>` : '';
     return `<div style="background:var(--parchment2);border:1px solid var(--gold-lt);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;gap:10px">
       ${thumb(a)}
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;line-height:1.6">${_authSummary(a, received)} ${badge(a)} ${inUse}</div>
+        <div style="font-size:0.8125rem;line-height:1.6">${_authSummary(a, received)} ${badge(a)} ${inUse}</div>
         ${noteLine(a.note, '附言：')}
         ${noteLine(a.reply_note, '回覆：')}
-        <div style="font-size:11px;color:var(--ink-light);margin-top:4px">${fmtUpdated(a.created_at)}</div>
+        <div style="font-size:0.6875rem;color:var(--ink-light);margin-top:4px">${fmtUpdated(a.created_at)}</div>
         ${acts.length ? `<div style="display:flex;gap:8px;margin-top:8px">${acts.join('')}</div>` : ''}
       </div>
     </div>`;
   };
   const sec = (title, rows, received) => `
-    <div style="font-size:13px;font-weight:bold;margin:14px 0 8px">${title}<span style="font-weight:normal;color:var(--ink-light)">（${rows.length}）</span></div>
-    ${rows.length ? rows.map(a => card(a, received)).join('') : '<p style="font-size:12.5px;color:var(--ink-light);padding:2px 0 6px">目前沒有信件</p>'}`;
+    <div style="font-size:0.8125rem;font-weight:bold;margin:14px 0 8px">${title}<span style="font-weight:normal;color:var(--ink-light)">（${rows.length}）</span></div>
+    ${rows.length ? rows.map(a => card(a, received)).join('') : '<p style="font-size:0.78125rem;color:var(--ink-light);padding:2px 0 6px">目前沒有信件</p>'}`;
   // 自己寄給自己的信（入職指南沙盒練習）只列在「收到的信」——那側才有同意／婉拒；
   // 兩側各列一次會出現兩顆動詞相反、作用相同的破壞性按鈕。
   const _selfIds = new Set((box.received || []).filter(a => a.requester === a.recipient).map(a => a.id));
@@ -4208,22 +4208,22 @@ async function loadCurationList() {
   el.innerHTML = '<div class="spinner"></div>';
   let list;
   try { list = await api('/novels/gallery') || []; _galleryItems = list; }
-  catch (e) { el.innerHTML = `<p style="font-size:12.5px;color:var(--accent)">讀取失敗：${escapeHtml(e.message)}</p>`; return; }
+  catch (e) { el.innerHTML = `<p style="font-size:0.78125rem;color:var(--accent)">讀取失敗：${escapeHtml(e.message)}</p>`; return; }
   const todo = _uncurated(list);
   { const pill = document.getElementById('review-pill-covers');
     if (pill) pill.textContent = todo.length ? `心動策展 ${todo.length}` : '心動策展'; }
-  if (!todo.length) { el.innerHTML = '<p style="font-size:12.5px;color:var(--ink-light);padding:2px 0 6px">沒有待裁決的畫作。</p>'; return; }
+  if (!todo.length) { el.innerHTML = '<p style="font-size:0.78125rem;color:var(--ink-light);padding:2px 0 6px">沒有待裁決的畫作。</p>'; return; }
   el.innerHTML = todo.map(it => `
     <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
       <div style="display:flex;gap:10px;align-items:flex-start">
         <div style="flex:1;min-width:0">
-          <div data-onclick="openGalleryItem('${it.id}')" style="font-size:14px;font-weight:bold;cursor:pointer">${escapeHtml(it.title || '無題')} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye', 11)} 預覽</span></div>
-          <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${escapeHtml(it.author || '佚名')}${it.created_at ? ' · ' + ic('ic-calendar', 11) + ' ' + fmtUpdated(it.created_at) : ''}</div>
+          <div data-onclick="openGalleryItem('${it.id}')" style="font-size:0.875rem;font-weight:bold;cursor:pointer">${escapeHtml(it.title || '無題')} <span style="font-size:0.6875rem;font-weight:normal;color:var(--accent)">${ic('ic-eye', 11)} 預覽</span></div>
+          <div style="font-size:0.75rem;color:var(--ink-light);margin-top:3px">${escapeHtml(it.author || '佚名')}${it.created_at ? ' · ' + ic('ic-calendar', 11) + ' ' + fmtUpdated(it.created_at) : ''}</div>
         </div>
         <img src="${escapeHtml(it.image_url_thumb || it.image_url)}" alt="" data-onclick="openGalleryItem('${it.id}')" style="width:64px;height:64px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:pointer" />
       </div>
       <div style="display:flex;gap:6px;margin-top:8px" data-slot-for="${it.id}">${coverSlotRowHtml(it.id, effectiveImageSlot(it))}</div>
-      <button data-onclick="setImageSlot('${it.id}','none')" style="margin-top:6px;font-size:12px;padding:5px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:4px;cursor:pointer">維持不上心動・結案</button>
+      <button data-onclick="setImageSlot('${it.id}','none')" style="margin-top:6px;font-size:0.75rem;padding:5px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:4px;cursor:pointer">維持不上心動・結案</button>
     </div>`).join('');
 }
 // 寫信彈窗
@@ -4412,7 +4412,7 @@ async function renderGdAuth(it) {
       const note = msg => {
         if (!_galleryDetailItem || _galleryDetailItem.id !== it.id || hasSource) return;
         at.style.display = '';
-        at.innerHTML = `<span style="font-size:11.5px;color:var(--ink-light);opacity:.8">${escapeHtml(msg)}</span>`;
+        at.innerHTML = `<span style="font-size:0.71875rem;color:var(--ink-light);opacity:.8">${escapeHtml(msg)}</span>`;
       };
       api(`/authorizations/attachable/${it.id}`).then(r => {
         if (!_galleryDetailItem || _galleryDetailItem.id !== it.id) return;
@@ -4420,7 +4420,7 @@ async function renderGdAuth(it) {
         if (!opts.length) { note((r && r.reason) || '目前沒有可補掛的求畫授權'); return; }
         at.style.display = '';
         at.innerHTML = opts.map(o =>
-          `<button data-onclick="attachDeriveArt('${o.id}')" style="background:none;border:1px solid var(--gold);color:var(--accent);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;margin:2px">補掛 源自《${escapeHtml(o.work_title)}》</button>`).join('');
+          `<button data-onclick="attachDeriveArt('${o.id}')" style="background:none;border:1px solid var(--gold);color:var(--accent);border-radius:6px;padding:6px 14px;font-size:0.75rem;cursor:pointer;margin:2px">補掛 源自《${escapeHtml(o.work_title)}》</button>`).join('');
       }).catch(e => note('補掛清單讀取失敗：' + (e.message || '')));
     }
   }
@@ -4491,7 +4491,7 @@ async function renderEditAuthArts() {
   }
   if (!grants.length) return;
   box.style.display = '';
-  box.innerHTML = '<div style="font-size:12px;color:var(--ink-light);margin-bottom:6px">獲授權畫作（僅限本篇）</div>'
+  box.innerHTML = '<div style="font-size:0.75rem;color:var(--ink-light);margin-bottom:6px">獲授權畫作（僅限本篇）</div>'
     + '<div style="display:flex;gap:10px;flex-wrap:wrap">'
     + grants.map(a => {
       const inUse = a.artwork_url && (editWork.headerArts || []).some(x =>
@@ -4499,10 +4499,10 @@ async function renderEditAuthArts() {
       const forThis = a.direction === 'derive_art';   // 為本篇而畫的衍生作品
       return `<div style="text-align:center">
         <img src="${escapeHtml(a.artwork_url || '')}" alt="" title="${forThis ? '為本篇而畫' : ''}" style="width:64px;height:84px;object-fit:cover;border-radius:3px;border:3px solid ${inUse ? 'var(--gold)' : 'var(--gold-lt)'}" />
-        ${forThis ? '<div style="font-size:10px;color:var(--series);margin-top:2px">為本篇而畫</div>' : ''}
+        ${forThis ? '<div style="font-size:0.625rem;color:var(--series);margin-top:2px">為本篇而畫</div>' : ''}
         <div style="margin-top:4px">${inUse
-          ? '<span style="font-size:11px;color:var(--series)">使用中</span>'
-          : `<button data-onclick="applyAuthArt('${a.id}')" style="font-size:11px;padding:3px 12px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:4px;cursor:pointer">選用</button>`}</div>
+          ? '<span style="font-size:0.6875rem;color:var(--series)">使用中</span>'
+          : `<button data-onclick="applyAuthArt('${a.id}')" style="font-size:0.6875rem;padding:3px 12px;border:1px solid var(--gold);background:none;color:var(--ink-light);border-radius:4px;cursor:pointer">選用</button>`}</div>
       </div>`;
     }).join('') + '</div>' + _headerArtsManager();
 }
@@ -4514,20 +4514,20 @@ function _headerArtsManager() {
   if (!arts.length) return '';
   const many = arts.length > 1;
   return `<div style="margin-top:10px;border-top:1px solid var(--gold-lt);padding-top:8px">
-    <div style="font-size:12px;color:var(--ink-light);margin-bottom:6px">目前的文首圖（${arts.length} / 5，第一張為封面）</div>
+    <div style="font-size:0.75rem;color:var(--ink-light);margin-bottom:6px">目前的文首圖（${arts.length} / 5，第一張為封面）</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">${arts.map((a, i) => `
       <div style="text-align:center">
         <div style="position:relative">
           <img src="${escapeHtml(a.url)}" alt="" style="width:64px;height:84px;object-fit:cover;border-radius:3px;border:3px solid ${i === 0 ? 'var(--gold)' : 'var(--gold-lt)'}" />
-          <span style="position:absolute;top:2px;left:2px;background:rgba(26,10,0,.6);color:var(--on-dark);font-size:10px;padding:0 5px;border-radius:8px">${i + 1}</span>
+          <span style="position:absolute;top:2px;left:2px;background:rgba(26,10,0,.6);color:var(--on-dark);font-size:0.625rem;padding:0 5px;border-radius:8px">${i + 1}</span>
         </div>
         <div style="margin-top:4px;display:flex;gap:3px;justify-content:center">
-          ${many ? `<button data-onclick="moveHeaderArt(${i}, -1)" ${i === 0 ? 'disabled' : ''} style="font-size:11px;padding:2px 6px;border:1px solid var(--gold-lt);background:none;color:var(--ink-light);border-radius:4px;cursor:pointer">‹</button>
-          <button data-onclick="moveHeaderArt(${i}, 1)" ${i === arts.length - 1 ? 'disabled' : ''} style="font-size:11px;padding:2px 6px;border:1px solid var(--gold-lt);background:none;color:var(--ink-light);border-radius:4px;cursor:pointer">›</button>` : ''}
-          <button data-onclick="removeHeaderArt(${i})" style="font-size:11px;padding:2px 7px;border:1px solid var(--accent);background:none;color:var(--accent);border-radius:4px;cursor:pointer">移除</button>
+          ${many ? `<button data-onclick="moveHeaderArt(${i}, -1)" ${i === 0 ? 'disabled' : ''} style="font-size:0.6875rem;padding:2px 6px;border:1px solid var(--gold-lt);background:none;color:var(--ink-light);border-radius:4px;cursor:pointer">‹</button>
+          <button data-onclick="moveHeaderArt(${i}, 1)" ${i === arts.length - 1 ? 'disabled' : ''} style="font-size:0.6875rem;padding:2px 6px;border:1px solid var(--gold-lt);background:none;color:var(--ink-light);border-radius:4px;cursor:pointer">›</button>` : ''}
+          <button data-onclick="removeHeaderArt(${i})" style="font-size:0.6875rem;padding:2px 7px;border:1px solid var(--accent);background:none;color:var(--accent);border-radius:4px;cursor:pointer">移除</button>
         </div>
       </div>`).join('')}</div>
-    <div style="font-size:11px;color:var(--ink-light);opacity:.75;margin-top:6px;line-height:1.6">※ 移除只是不掛在這篇文章上，授權與畫作本身都還在，可再從上方「選用」掛回。</div>
+    <div style="font-size:0.6875rem;color:var(--ink-light);opacity:.75;margin-top:6px;line-height:1.6">※ 移除只是不掛在這篇文章上，授權與畫作本身都還在，可再從上方「選用」掛回。</div>
   </div>`;
 }
 async function _saveHeaderArts(arts) {
@@ -4813,7 +4813,7 @@ function openGalleryItem(id, fromAdmin) {
       : '';
     adminBox.style.display = '';
     adminBox.innerHTML = slotBox
-      + `<button data-onclick="openCoverCrop('${escapeHtml(it.image_url)}')" style="width:100%;margin-top:${adminish ? '8px' : '0'};font-size:12px;padding:7px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:var(--parchment2);color:var(--ink-light)">調整心動封面顯示（裁切框）</button>`;
+      + `<button data-onclick="openCoverCrop('${escapeHtml(it.image_url)}')" style="width:100%;margin-top:${adminish ? '8px' : '0'};font-size:0.75rem;padding:7px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:var(--parchment2);color:var(--ink-light)">調整心動封面顯示（裁切框）</button>`;
   } else { adminBox.style.display = 'none'; }
   document.getElementById('gallery-detail').style.display = 'flex';
 }
@@ -5222,7 +5222,7 @@ const _coverIntent = new Set();
 function coverSlotRowHtml(id, cur) {
   const on = ['am', 'pm', 'night'].includes(cur) || _coverIntent.has(id);
   // handler 寫成字面量（安全測試靜態掃 data-onclick，抽成參數會掃不到函式名），只抽共用樣式
-  const st = lit => `flex:1;font-size:12px;padding:6px 4px;border-radius:4px;cursor:pointer;white-space:nowrap;background:${lit ? 'var(--scarlet)' : 'var(--parchment2)'};color:${lit ? 'var(--on-dark)' : 'var(--ink-light)'}`;
+  const st = lit => `flex:1;font-size:0.75rem;padding:6px 4px;border-radius:4px;cursor:pointer;white-space:nowrap;background:${lit ? 'var(--scarlet)' : 'var(--parchment2)'};color:${lit ? 'var(--on-dark)' : 'var(--ink-light)'}`;
   return `<button data-onclick="toggleCoverPool('${id}')" style="border:1px solid var(--accent);${st(on)}">心動封面</button>`
     + [['am', '早晨'], ['pm', '下午'], ['night', '夜晚']].map(([v, n]) =>
       `<button data-onclick="setImageSlot('${id}','${v}')" style="border:1px solid var(--gold);${st(cur === v)}">${n}</button>`).join('');
@@ -5418,20 +5418,20 @@ async function loadReviewList() {
       <details class="review-sec"${open || err ? ' open' : ''}>
         <summary>${arrow}${ic(icon, 14)} ${title}<span class="rv-count${count && !err ? '' : ' zero'}">${err ? '—' : count}</span></summary>
         <div class="rv-body">${err
-          ? `<p style="color:var(--accent);font-size:13px;padding:8px 0 10px">讀取失敗：${escapeHtml(err)}</p>`
-            + `<button data-onclick="loadReviewList()" style="font-size:12px;padding:5px 14px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;cursor:pointer;margin-bottom:12px">重新載入</button>`
-          : (count ? bodyHtml : '<p style="color:var(--ink-light);font-size:13px;padding:8px 0 14px">目前沒有待審核的項目</p>')}</div>
+          ? `<p style="color:var(--accent);font-size:0.8125rem;padding:8px 0 10px">讀取失敗：${escapeHtml(err)}</p>`
+            + `<button data-onclick="loadReviewList()" style="font-size:0.75rem;padding:5px 14px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;cursor:pointer;margin-bottom:12px">重新載入</button>`
+          : (count ? bodyHtml : '<p style="color:var(--ink-light);font-size:0.8125rem;padding:8px 0 14px">目前沒有待審核的項目</p>')}</div>
       </details>`;
 
     const mqjBody = mqjReqs.map(u => `
         <div style="padding:12px 0;border-bottom:1px solid rgba(26,10,0,.1)">
-          <div style="font-size:14px;font-weight:bold">${escapeHtml(u.nickname || u.username)} <span style="font-size:12px;color:var(--ink-light);font-weight:normal">@${escapeHtml(u.username)}</span></div>
-          <div style="font-size:12px;color:var(--ink-light);margin-top:3px">申請閱讀「迷情劑」分類${(u.mqj_request_count || 0) > 1 ? `・第 ${u.mqj_request_count} 次申請` : ''}${u.mqj_rejected_at ? `・上次未通過：${fmtUpdated(u.mqj_rejected_at)}` : ''}</div>
-          <div style="font-size:12px;margin-top:3px;color:${u.mqj_proof_at ? 'var(--series)' : 'var(--accent)'}">${u.mqj_proof_at ? ic('ic-check', 11) + ' 已附成年證明・' + fmtUpdated(u.mqj_proof_at) : ic('ic-clock', 11) + ' 尚未上傳成年證明'}</div>
+          <div style="font-size:0.875rem;font-weight:bold">${escapeHtml(u.nickname || u.username)} <span style="font-size:0.75rem;color:var(--ink-light);font-weight:normal">@${escapeHtml(u.username)}</span></div>
+          <div style="font-size:0.75rem;color:var(--ink-light);margin-top:3px">申請閱讀「迷情劑」分類${(u.mqj_request_count || 0) > 1 ? `・第 ${u.mqj_request_count} 次申請` : ''}${u.mqj_rejected_at ? `・上次未通過：${fmtUpdated(u.mqj_rejected_at)}` : ''}</div>
+          <div style="font-size:0.75rem;margin-top:3px;color:${u.mqj_proof_at ? 'var(--series)' : 'var(--accent)'}">${u.mqj_proof_at ? ic('ic-check', 11) + ' 已附成年證明・' + fmtUpdated(u.mqj_proof_at) : ic('ic-clock', 11) + ' 尚未上傳成年證明'}</div>
           <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-            ${u.mqj_proof_at ? `<button data-onclick="viewMqjProof('${u.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-eye',12)} 查看證明</button>` : ''}
-            <button data-onclick="reviewMqj('${u.id}', true)" style="font-size:12px;padding:4px 12px;background:#2d4a1e;border:none;color:#fff;border-radius:3px;cursor:pointer">${ic('ic-check',12)} 通過</button>
-            <button data-onclick="reviewMqj('${u.id}', false)" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-x',12)} 不通過</button>
+            ${u.mqj_proof_at ? `<button data-onclick="viewMqjProof('${u.id}')" style="font-size:0.75rem;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-eye',12)} 查看證明</button>` : ''}
+            <button data-onclick="reviewMqj('${u.id}', true)" style="font-size:0.75rem;padding:4px 12px;background:#2d4a1e;border:none;color:#fff;border-radius:3px;cursor:pointer">${ic('ic-check',12)} 通過</button>
+            <button data-onclick="reviewMqj('${u.id}', false)" style="font-size:0.75rem;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-x',12)} 不通過</button>
           </div>
         </div>`).join('');
 
@@ -5443,18 +5443,18 @@ async function loadReviewList() {
       + coverSlotRowHtml(n.id, effectiveImageSlot(n)) + '</div>';
     // 通過但不上牆：畫面內容不適合陳列在角色牆（例如只有 OC、沒有站內角色）時，
     // 圖仍可當文首圖用，只是不進留影走廊與心動池。勾選狀態存在 _noWall，通過時一起送。
-    const _wallToggle = n => `<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-light);margin:8px 0 2px;cursor:pointer">
+    const _wallToggle = n => `<label style="display:flex;align-items:center;gap:8px;font-size:0.78125rem;color:var(--ink-light);margin:8px 0 2px;cursor:pointer">
         <input type="checkbox" ${_noWall.has(n.id) ? 'checked' : ''} data-onchange="toggleReviewWall('${n.id}', this.checked)" style="width:auto;margin:0" />
         <span>通過後${n.kind === 'image' ? '' : '文首圖'}不上留影走廊（畫面沒有站內角色時用）</span>
       </label>`;
     const novelBody = novelsPending.map(n => `
         <div style="padding:12px 0;border-bottom:1px solid rgba(26,10,0,.1)">
-          <div style="font-size:14px;font-weight:bold">${escapeHtml(n.title)}</div>
-          <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${_kindTag(n)}・${escapeHtml(n.author || '匿名')}・${fmtUpdated(n.created_at)}</div>
+          <div style="font-size:0.875rem;font-weight:bold">${escapeHtml(n.title)}</div>
+          <div style="font-size:0.75rem;color:var(--ink-light);margin-top:3px">${_kindTag(n)}・${escapeHtml(n.author || '匿名')}・${fmtUpdated(n.created_at)}</div>
           ${n.kind === 'image' && n.image_url ? `<div style="margin-top:8px"><img src="${escapeHtml(n.image_url)}" alt="" data-onclick="openReviewImage('${n.id}')" style="max-width:160px;max-height:180px;border-radius:6px;cursor:zoom-in" title="點擊看完整畫作詳情" /></div>` : ''}
-          ${n.header_art && n.header_art.image_url ? `<div style="margin-top:8px"><div style="font-size:12px;color:var(--ink-light);margin-bottom:4px">文首圖</div><img src="${escapeHtml(n.header_art.image_url_thumb || n.header_art.image_url)}" alt="" data-onclick="openReviewImage('${n.header_art.id}')" style="max-width:160px;max-height:180px;border-radius:6px;cursor:zoom-in" title="點擊看完整畫作詳情" /></div>` : ''}
+          ${n.header_art && n.header_art.image_url ? `<div style="margin-top:8px"><div style="font-size:0.75rem;color:var(--ink-light);margin-bottom:4px">文首圖</div><img src="${escapeHtml(n.header_art.image_url_thumb || n.header_art.image_url)}" alt="" data-onclick="openReviewImage('${n.header_art.id}')" style="max-width:160px;max-height:180px;border-radius:6px;cursor:zoom-in" title="點擊看完整畫作詳情" /></div>` : ''}
           ${(n.kind === 'image' && n.image_caption) || (n.header_art && n.header_art.image_caption)
-            ? `<div style="font-size:12.5px;color:var(--ink-light);line-height:1.7;margin-top:6px;white-space:pre-wrap">${escapeHtml(n.kind === 'image' ? n.image_caption : n.header_art.image_caption)}</div>` : ''}
+            ? `<div style="font-size:0.78125rem;color:var(--ink-light);line-height:1.7;margin-top:6px;white-space:pre-wrap">${escapeHtml(n.kind === 'image' ? n.image_caption : n.header_art.image_caption)}</div>` : ''}
           <div class="row-tags" style="margin-top:6px">
             ${n.category ? `<span class="t-cat${catCls(n.category)}">${escapeHtml(n.category)}</span>` : ''}
             ${(n.characters || []).map(c => charPill(c)).join('')}
@@ -5462,10 +5462,10 @@ async function loadReviewList() {
           ${n.kind === 'image' ? _slotBtns(n) : ''}
           ${(n.kind === 'image' || (n.header_art && n.header_art.image_url)) ? _wallToggle(n) : ''}
           <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-            ${n.kind === 'image' ? '' : `<button data-onclick="openNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer;white-space:nowrap">預覽</button>`}
-            <button data-onclick="approveNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:#2d4a1e;border:none;color:#fff;border-radius:3px;cursor:pointer;white-space:nowrap">${ic('ic-check',12)} 通過</button>
-            <button data-onclick="rejectNovel('${n.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer;white-space:nowrap">${ic('ic-x',12)} 退回修改</button>
-            <button data-onclick="deleteNovel('${n.id}', true)" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer;white-space:nowrap">${ic('ic-trash',12)} 刪除</button>
+            ${n.kind === 'image' ? '' : `<button data-onclick="openNovel('${n.id}')" style="font-size:0.75rem;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer;white-space:nowrap">預覽</button>`}
+            <button data-onclick="approveNovel('${n.id}')" style="font-size:0.75rem;padding:4px 12px;background:#2d4a1e;border:none;color:#fff;border-radius:3px;cursor:pointer;white-space:nowrap">${ic('ic-check',12)} 通過</button>
+            <button data-onclick="rejectNovel('${n.id}')" style="font-size:0.75rem;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer;white-space:nowrap">${ic('ic-x',12)} 退回修改</button>
+            <button data-onclick="deleteNovel('${n.id}', true)" style="font-size:0.75rem;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer;white-space:nowrap">${ic('ic-trash',12)} 刪除</button>
           </div>
         </div>`).join('');
 
@@ -5476,8 +5476,8 @@ async function loadReviewList() {
                  + section('ic-book', '作品審核', novelsPending.length, novelBody, novelOpen, novelErr);
   } catch (e) {
     if (seq !== _reviewSeq) return;
-    el.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${escapeHtml(e.message || '')}</p>`
-      + `<button data-onclick="loadReviewList()" style="font-size:12px;padding:5px 14px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;cursor:pointer;margin-top:8px">重新載入</button>`;
+    el.innerHTML = `<p style="color:var(--accent);font-size:0.8125rem">載入失敗：${escapeHtml(e.message || '')}</p>`
+      + `<button data-onclick="loadReviewList()" style="font-size:0.75rem;padding:5px 14px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:6px;cursor:pointer;margin-top:8px">重新載入</button>`;
   }
 }
 
@@ -5533,7 +5533,7 @@ function rejectNovel(id) {
   { const row = document.getElementById('reject-quick-row');
     if (row && !row.dataset.init) {
       row.innerHTML = REJECT_PHRASES.map(([label, p], i) =>
-        `<button type="button" data-onclick="insertRejectPhrase(${i})" title="${escapeHtml(p)}" style="font-size:12px;padding:4px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:10px;cursor:pointer">${escapeHtml(label)}</button>`).join('');
+        `<button type="button" data-onclick="insertRejectPhrase(${i})" title="${escapeHtml(p)}" style="font-size:0.75rem;padding:4px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:10px;cursor:pointer">${escapeHtml(label)}</button>`).join('');
       row.dataset.init = '1';
     } }
   const ta = document.getElementById('reject-note-text'); ta.value = '';
@@ -5627,12 +5627,12 @@ async function loadAdminNovelList() {
       ns = await api(`/novels/?owner=${encodeURIComponent(adminNovelScope.id)}`) || [];
       const sc = adminNovelScope;
       let head = `${ic('ic-books', 16)} <b>${escapeHtml(sc.name)}</b> 的作品　<a data-onclick="resetAdminNovelScope('users')" style="color:var(--accent);cursor:pointer">← 返回成員名單</a>`;
-      if (sc.joined) head += `<div style="font-size:12px;color:var(--ink-light);margin-top:4px">${ic('ic-calendar',12)} 加入日期 ${fmtUpdated(sc.joined)}</div>`;
+      if (sc.joined) head += `<div style="font-size:0.75rem;color:var(--ink-light);margin-top:4px">${ic('ic-calendar',12)} 加入日期 ${fmtUpdated(sc.joined)}</div>`;
       if (sc.role === 'reader' || sc.role === 'writer') {
         const approved = sc.mqj === 'approved';
         const statusLabel = sc.mqj === 'pending' ? '（' + ic('ic-clock',11) + ' 申請中）' : sc.mqj === 'rejected' ? '（' + ic('ic-ban',11) + ' 未通過）' : '';
         head += `<div style="display:flex;align-items:center;gap:10px;margin-top:8px;padding:8px 0;border-top:1px solid rgba(26,10,0,.08)">
-          <span style="font-size:13px;color:var(--ink-light)">${ic('ic-wine',13)} 迷情劑閱讀權${statusLabel}</span>
+          <span style="font-size:0.8125rem;color:var(--ink-light)">${ic('ic-wine',13)} 迷情劑閱讀權${statusLabel}</span>
           <label class="toggle green" style="flex-shrink:0">
             <input type="checkbox" ${approved ? 'checked' : ''} data-onchange="setMqjAccess('${sc.id}',this.checked)" />
             <span class="slider"></span>
@@ -5641,14 +5641,14 @@ async function loadAdminNovelList() {
       }
       if (sc.role === 'writer') {
         head += `<div style="display:flex;align-items:center;gap:10px;margin-top:8px;padding:8px 0;border-top:1px solid rgba(26,10,0,.08)">
-          <span style="font-size:13px;color:var(--ink-light)">${ic('ic-check',13)} 自動審核<span style="opacity:.7">（開啟後此作家發文免審核、直接公開）</span></span>
+          <span style="font-size:0.8125rem;color:var(--ink-light)">${ic('ic-check',13)} 自動審核<span style="opacity:.7">（開啟後此作家發文免審核、直接公開）</span></span>
           <label class="toggle green" style="flex-shrink:0">
             <input type="checkbox" ${sc.auto ? 'checked' : ''} data-onchange="setAutoPublish('${sc.id}',this.checked)" />
             <span class="slider"></span>
           </label>
         </div>
         <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(26,10,0,.08)">
-          <span style="font-size:13px;color:var(--ink-light)">${ic('ic-megaphone',13)} 許願池回覆權<span style="opacity:.7">（開啟後此作家可回覆許願、標記「考慮中」或「已實現」；不能婉拒）</span></span>
+          <span style="font-size:0.8125rem;color:var(--ink-light)">${ic('ic-megaphone',13)} 許願池回覆權<span style="opacity:.7">（開啟後此作家可回覆許願、標記「考慮中」或「已實現」；不能婉拒）</span></span>
           <label class="toggle green" style="flex-shrink:0">
             <input type="checkbox" ${sc.wish ? 'checked' : ''} data-onchange="setWishReply('${sc.id}',this.checked)" />
             <span class="slider"></span>
@@ -5662,14 +5662,14 @@ async function loadAdminNovelList() {
       if (canAct) {
         const tempActive = sc.banned && sc.ban_until && new Date(sc.ban_until) > new Date();
         const permActive = sc.banned && !sc.ban_until;
-        const sTemp = 'font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink);border-radius:3px;cursor:pointer';
-        const sBan = 'font-size:12px;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer';
+        const sTemp = 'font-size:0.75rem;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink);border-radius:3px;cursor:pointer';
+        const sBan = 'font-size:0.75rem;padding:4px 12px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer';
         let banBtns;
         if (permActive) {
           // Permanent ban: only the owner can release it.
           banBtns = isSuper
             ? `<button data-onclick="banUser('${sc.id}',1)" style="${sBan}">${ic('ic-check',12)} 解除永久封禁</button>`
-            : `<span style="font-size:12px;color:var(--accent);align-self:center">${ic('ic-ban',12)} 已永久封禁（需擁有者解除）</span>`;
+            : `<span style="font-size:0.75rem;color:var(--accent);align-self:center">${ic('ic-ban',12)} 已永久封禁（需擁有者解除）</span>`;
         } else if (tempActive) {
           banBtns = `<button data-onclick="tempBan('${sc.id}',0)" style="${sBan}">${ic('ic-check',12)} 解除臨時封禁</button>`
             + (isSuper ? `<button data-onclick="banUser('${sc.id}',0)" style="${sBan}">${ic('ic-ban',12)} 改為永久封禁</button>` : '');
@@ -5685,14 +5685,14 @@ async function loadAdminNovelList() {
              : `<button data-onclick="archiveUser('${sc.id}',1)" style="${sTemp}">${ic('ic-moon',12)} 封存帳號</button>`)
           : '';
         head += `<div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(26,10,0,.08);flex-wrap:wrap">`
-          + (isSuper ? `<button data-onclick="resetPassword('${sc.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-key',12)} 重設密碼</button>` : '')
+          + (isSuper ? `<button data-onclick="resetPassword('${sc.id}')" style="font-size:0.75rem;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-key',12)} 重設密碼</button>` : '')
           + banBtns
           + archiveBtn
-          + (isSuper ? `<button data-onclick="deleteUser('${sc.id}')" style="font-size:12px;padding:4px 12px;background:var(--scarlet);border:none;color:var(--on-dark);border-radius:3px;cursor:pointer">${ic('ic-trash',12)} 刪除帳號</button>` : '')
+          + (isSuper ? `<button data-onclick="deleteUser('${sc.id}')" style="font-size:0.75rem;padding:4px 12px;background:var(--scarlet);border:none;color:var(--on-dark);border-radius:3px;cursor:pointer">${ic('ic-trash',12)} 刪除帳號</button>` : '')
           + `</div>`;
-        if (tempActive) head += `<div style="font-size:12px;color:var(--accent);margin-top:8px">${ic('ic-clock',12)} 臨時封禁中，${new Date(sc.ban_until).toLocaleString('zh-TW')} 自動解除</div>`;
-        if (sc.archived) head += `<div style="font-size:12px;color:var(--ink-light);margin-top:8px">${ic('ic-moon',12)} 此帳號已封存——無法登入，作品與資料保留中，可隨時取消封存恢復。</div>`;
-        if (isSuper) head += `<div style="font-size:12px;color:var(--ink-light);margin-top:8px">${ic('ic-shield',12)} 水印碼 <code style="font-size:12px;color:var(--ink)">${wmCode(sc.id)}</code><span style="opacity:.7"> — 迷情劑外流截圖上的代碼對得上此人</span></div>`;
+        if (tempActive) head += `<div style="font-size:0.75rem;color:var(--accent);margin-top:8px">${ic('ic-clock',12)} 臨時封禁中，${new Date(sc.ban_until).toLocaleString('zh-TW')} 自動解除</div>`;
+        if (sc.archived) head += `<div style="font-size:0.75rem;color:var(--ink-light);margin-top:8px">${ic('ic-moon',12)} 此帳號已封存——無法登入，作品與資料保留中，可隨時取消封存恢復。</div>`;
+        if (isSuper) head += `<div style="font-size:0.75rem;color:var(--ink-light);margin-top:8px">${ic('ic-shield',12)} 水印碼 <code style="font-size:0.75rem;color:var(--ink)">${wmCode(sc.id)}</code><span style="opacity:.7"> — 迷情劑外流截圖上的代碼對得上此人</span></div>`;
       }
       note.innerHTML = head;
     } else {
@@ -5807,28 +5807,28 @@ function _adminGroupBySeries(list) {
     // 作品管理專屬：收合時也要看得出「這個系列有事待辦」，否則得逐一點開才知道哪篇待審
     const pend = members.filter(m => m.status === 'pending').length;
     const rej = members.filter(m => m.status === 'rejected').length;
-    const flags = (pend ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">${ic('ic-clock', 11)} 待審 ${pend}</span>` : '')
-      + (rej ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.28);color:var(--ink-light)">${ic('ic-x', 11)} 已退回 ${rej}</span>` : '');
+    const flags = (pend ? `<span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">${ic('ic-clock', 11)} 待審 ${pend}</span>` : '')
+      + (rej ? `<span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.28);color:var(--ink-light)">${ic('ic-x', 11)} 已退回 ${rej}</span>` : '');
     const newest = members.reduce((x, m) => (!x || new Date(m.created_at || 0) > new Date(x.created_at || 0)) ? m : x, null);
     // 版式與單一作品卡同款（徽章列→標題→標籤列→作者日期列），只有標題列右側多了
     // 「共 X 篇/幅」與 chevron；縮排歸零，成員就是一張張普通卡片。
     const sub = isImg ? `${n.series_shared ? '共創畫作系列' : '畫作系列'} · 共 ${members.length} 幅`
       : `${n.series_shared ? '共創系列' : '系列合集'} · 共 ${members.length} 篇`;
     const kindBadge = isImg
-      ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${ic('ic-gallery', 12)} 畫作</span>`
+      ? `<span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${ic('ic-gallery', 12)} 畫作</span>`
       : n.kind === 'forum'
-        ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">${ic('ic-scroll', 12)} 論壇體</span>`
-        : `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">${ic('ic-book', 12)} 小說</span>`;
+        ? `<span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">${ic('ic-scroll', 12)} 論壇體</span>`
+        : `<span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">${ic('ic-book', 12)} 小說</span>`;
     out.push(`
       <div class="series-block${expanded ? ' expanded' : ''}" data-series="${escapeHtml(key)}">
         <div class="series-head" data-onclick="toggleSeries(this)" role="button" aria-expanded="${expanded}" style="padding:10px 0">
           <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:3px">${kindBadge}${flags}</div>
           <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
-            <div style="font-size:14px;font-weight:bold;min-width:0">《${escapeHtml(stripOuterBookQuotes(n.series))}》</div>
+            <div style="font-size:0.875rem;font-weight:bold;min-width:0">《${escapeHtml(stripOuterBookQuotes(n.series))}》</div>
             <span class="series-sub">${sub} <span class="series-chev" aria-hidden="true"></span></span>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">${cats.map(c => `<span class="t-cat${catCls(c)}">${escapeHtml(c)}</span>`).join('')}${chars.map(c => charPill(c)).join('')}</div>
-          <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${escapeHtml((newest && newest.author) || '佚名')}${newest && newest.created_at ? ' · ' + ic('ic-calendar', 11) + ' ' + fmtUpdated(newest.created_at) : ''}</div>
+          <div style="font-size:0.75rem;color:var(--ink-light);margin-top:3px">${escapeHtml((newest && newest.author) || '佚名')}${newest && newest.created_at ? ' · ' + ic('ic-calendar', 11) + ' ' + fmtUpdated(newest.created_at) : ''}</div>
         </div>
         <div class="series-members">${members.map(m => _adminNovelCard(m)).join('')}</div>
       </div>`);
@@ -5841,45 +5841,45 @@ function _adminGroupBySeries(list) {
 function _adminNovelCard(n) {
   const isAdmin = ['admin', 'super_admin'].includes(currentUser.role);
       const statusTag = (n.status === 'pending'
-        ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-clock',11) + ' 待審核</span>'
+        ? '<span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-clock',11) + ' 待審核</span>'
         : n.status === 'rejected'
-        ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.28);color:var(--ink-light)">' + ic('ic-x',11) + ' 已退回·可修改重送</span>' : '')
-        + (isFutureIso(n.created_at) ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">' + ic('ic-clock',11) + ' 排程·' + fmtUpdated(n.created_at) + '公開</span>' : '');
+        ? '<span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.28);color:var(--ink-light)">' + ic('ic-x',11) + ' 已退回·可修改重送</span>' : '')
+        + (isFutureIso(n.created_at) ? '<span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">' + ic('ic-clock',11) + ' 排程·' + fmtUpdated(n.created_at) + '公開</span>' : '');
       // 退件說明：管理員退回時留給作者的修改建議（只在已退回且有留言時顯示）。
       const rejectNoteRow = (n.status === 'rejected' && n.reject_note)
-        ? `<div style="margin-top:6px;font-size:12.5px;color:var(--ink-light);background:rgba(201,168,76,.14);border-left:3px solid var(--gold);border-radius:4px;padding:7px 10px;line-height:1.7"><b style="color:var(--accent)">${ic('ic-edit',11)} 退件說明</b>　${escapeHtml(n.reject_note)}</div>`
+        ? `<div style="margin-top:6px;font-size:0.78125rem;color:var(--ink-light);background:rgba(201,168,76,.14);border-left:3px solid var(--gold);border-radius:4px;padding:7px 10px;line-height:1.7"><b style="color:var(--accent)">${ic('ic-edit',11)} 退件說明</b>　${escapeHtml(n.reject_note)}</div>`
         : '';
       // 編輯 is for everyone here (the list only shows works the viewer owns, or an admin's scoped view).
-      const editBtn = `<button data-onclick="openEditWork('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-edit',12)} 編輯</button>`;
+      const editBtn = `<button data-onclick="openEditWork('${n.id}')" style="font-size:0.75rem;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-edit',12)} 編輯</button>`;
       // Owners manage their own works (mine view) — admins also in the scoped member view.
       const canManage = isAdmin || !adminNovelScope;
       const manageBtns = canManage ? `
-          <button data-onclick="openEditClass('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-tag',12)} 分類</button>
-          <button data-onclick="openSeries('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--series);color:var(--series);border-radius:3px;cursor:pointer">${ic('ic-link',12)} 系列</button>` : '';
+          <button data-onclick="openEditClass('${n.id}')" style="font-size:0.75rem;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-tag',12)} 分類</button>
+          <button data-onclick="openSeries('${n.id}')" style="font-size:0.75rem;padding:3px 10px;background:none;border:1px solid var(--series);color:var(--series);border-radius:3px;cursor:pointer">${ic('ic-link',12)} 系列</button>` : '';
       const ownerAssignBtn = isAdmin ? `
-          <button data-onclick="openOwners('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-users',12)} 作者</button>` : '';
+          <button data-onclick="openOwners('${n.id}')" style="font-size:0.75rem;padding:3px 10px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:3px;cursor:pointer">${ic('ic-users',12)} 作者</button>` : '';
       const delBtn = canManage ? `
-          <button data-onclick="deleteNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-trash',12)} 刪除</button>` : '';
+          <button data-onclick="deleteNovel('${n.id}')" style="font-size:0.75rem;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-trash',12)} 刪除</button>` : '';
       // 鎖上：作者本人(owner)或超管才有；鎖住後其他人完全看不到這篇存在。
       const canLock = !adminNovelScope || currentUser.role === 'super_admin';
-      const lockBtn = canLock ? `<button data-onclick="toggleLock('${n.id}', ${!n.locked})" style="font-size:12px;padding:3px 10px;background:none;border:1px solid ${n.locked ? 'var(--series)' : 'var(--accent)'};color:${n.locked ? 'var(--series)' : 'var(--accent)'};border-radius:3px;cursor:pointer">${ic('ic-key',12)} ${n.locked ? '解鎖' : '鎖上'}</button>` : '';
+      const lockBtn = canLock ? `<button data-onclick="toggleLock('${n.id}', ${!n.locked})" style="font-size:0.75rem;padding:3px 10px;background:none;border:1px solid ${n.locked ? 'var(--series)' : 'var(--accent)'};color:${n.locked ? 'var(--series)' : 'var(--accent)'};border-radius:3px;cursor:pointer">${ic('ic-key',12)} ${n.locked ? '解鎖' : '鎖上'}</button>` : '';
       // 退件：僅超管、且作品已通過（覆核其他管理員放行的作品，退回待審而非刪除）。
       const canRetract = currentUser.role === 'super_admin' && n.status === 'approved';
-      const retractBtn = canRetract ? `<button data-onclick="retractNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-clock',12)} 退件</button>` : '';
+      const retractBtn = canRetract ? `<button data-onclick="retractNovel('${n.id}')" style="font-size:0.75rem;padding:3px 10px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:3px;cursor:pointer">${ic('ic-clock',12)} 退件</button>` : '';
       // 重新送審：已退回的稿，作者（owner）或管理員可送回審核佇列（rejected→pending）。
       const canResubmit = n.status === 'rejected' && canManage;
-      const resubmitBtn = canResubmit ? `<button data-onclick="resubmitNovel('${n.id}')" style="font-size:12px;padding:3px 10px;background:#2d4a1e;border:none;color:#fff;border-radius:3px;cursor:pointer">${ic('ic-check',12)} 重新送審</button>` : '';
+      const resubmitBtn = canResubmit ? `<button data-onclick="resubmitNovel('${n.id}')" style="font-size:0.75rem;padding:3px 10px;background:#2d4a1e;border:none;color:#fff;border-radius:3px;cursor:pointer">${ic('ic-check',12)} 重新送審</button>` : '';
       // 種類徽章配色：小說=紅、羊皮紙(論壇體)=黃、畫作=綠
       const badges = (n.kind === 'forum'
-          ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-scroll', 12) + ' 論壇體</span>'
+          ? '<span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-scroll', 12) + ' 論壇體</span>'
           : n.kind === 'image'
-          ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">' + ic('ic-gallery', 12) + ' 畫作</span>'
-          : '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-book', 12) + ' 小說</span>')
+          ? '<span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">' + ic('ic-gallery', 12) + ' 畫作</span>'
+          : '<span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.15);color:var(--accent)">' + ic('ic-book', 12) + ' 小說</span>')
         + statusTag
-        + (n.is_guide ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-book', 12) + ' 範例·可刪除</span>' : '')
-        + (n.off_wall ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(26,10,0,.12);color:var(--ink-light)">' + ic('ic-eye', 11) + ' 不上走廊·僅作文首圖</span>' : '')
-        + (n.locked ? '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.2);color:var(--accent)">' + ic('ic-key',11) + ' 已鎖 · 唯你可見</span>' : '');
-      const tags = (n.series ? `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : '')
+        + (n.is_guide ? '<span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:rgba(201,168,76,.25);color:var(--ink-light)">' + ic('ic-book', 12) + ' 範例·可刪除</span>' : '')
+        + (n.off_wall ? '<span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:rgba(26,10,0,.12);color:var(--ink-light)">' + ic('ic-eye', 11) + ' 不上走廊·僅作文首圖</span>' : '')
+        + (n.locked ? '<span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:rgba(138,45,45,.2);color:var(--accent)">' + ic('ic-key',11) + ' 已鎖 · 唯你可見</span>' : '');
+      const tags = (n.series ? `<span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:rgba(45,74,30,.15);color:var(--series)">${escapeHtml(n.series)}${n.series_order ? ' #' + n.series_order : ''}</span>` : '')
         + (n.category ? `<span class="t-cat${catCls(n.category)}">${escapeHtml(n.category)}</span>` : '')
         + (n.characters || []).map(c => charPill(c)).join('');
       // 畫作：緊湊橫排卡 — 大縮圖靠左，資訊集中右側，動作列一排圖示圓鈕（省一半以上高度）
@@ -5900,9 +5900,9 @@ function _adminNovelCard(n) {
         <div style="display:flex;gap:10px;align-items:flex-start">
           <div style="flex:1;min-width:0">
             <div style="display:flex;gap:5px;flex-wrap:wrap">${badges}</div>
-            <div data-onclick="openGalleryItem('${n.id}', true)" style="font-size:14px;font-weight:bold;cursor:pointer;margin-top:3px">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>
+            <div data-onclick="openGalleryItem('${n.id}', true)" style="font-size:0.875rem;font-weight:bold;cursor:pointer;margin-top:3px">${escapeHtml(n.title)} <span style="font-size:0.6875rem;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>
             <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">${tags}</div>
-            <div style="font-size:12px;color:var(--ink-light);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(n.author || '佚名')}${ownerTag(n)}${n.created_at ? ' · ' + ic('ic-calendar',11) + ' ' + fmtUpdated(n.created_at) : ''}</div>
+            <div style="font-size:0.75rem;color:var(--ink-light);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(n.author || '佚名')}${ownerTag(n)}${n.created_at ? ' · ' + ic('ic-calendar',11) + ' ' + fmtUpdated(n.created_at) : ''}</div>
           </div>
           <img src="${escapeHtml(n.image_url || '')}" alt="" data-onclick="openGalleryItem('${n.id}', true)" style="width:84px;height:84px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:pointer" />
         </div>
@@ -5913,10 +5913,10 @@ function _adminNovelCard(n) {
       return `
       <div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08)">
         <div style="margin-bottom:3px;display:flex;gap:5px;flex-wrap:wrap">${badges}</div>
-        <div data-onclick="openNovel('${n.id}')" style="font-size:14px;font-weight:bold;cursor:pointer">${escapeHtml(n.title)} <span style="font-size:11px;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>
+        <div data-onclick="openNovel('${n.id}')" style="font-size:0.875rem;font-weight:bold;cursor:pointer">${escapeHtml(n.title)} <span style="font-size:0.6875rem;font-weight:normal;color:var(--accent)">${ic('ic-eye',11)} 預覽</span></div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">${tags}</div>
-        <div style="font-size:12px;color:var(--ink-light);margin-top:3px">${escapeHtml(n.author || '佚名')}${ownerTag(n)}</div>
-        ${n.created_at ? `<div style="font-size:12px;color:var(--ink-light);margin-top:2px">${ic('ic-calendar',11)} 發佈日期 ${fmtUpdated(n.created_at)}</div>` : ''}
+        <div style="font-size:0.75rem;color:var(--ink-light);margin-top:3px">${escapeHtml(n.author || '佚名')}${ownerTag(n)}</div>
+        ${n.created_at ? `<div style="font-size:0.75rem;color:var(--ink-light);margin-top:2px">${ic('ic-calendar',11)} 發佈日期 ${fmtUpdated(n.created_at)}</div>` : ''}
         ${rejectNoteRow}
         <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${resubmitBtn}${editBtn}${manageBtns}${ownerAssignBtn}${lockBtn}${retractBtn}${delBtn}</div>
       </div>`;
@@ -6393,11 +6393,11 @@ function renderUserStats() {
   const chip = (v, label, n) => `<button class="uf-chip${userActivityFilter === v ? ' on' : ''}" data-onclick="setUserFilter('${v}')">${label}${n != null ? `（${n}）` : ''}</button>`;
   const roleLink = (key, label, n) => `<span data-onclick="setUserRole('${key}')" style="cursor:pointer;${userRoleFilter === key ? 'color:var(--accent);font-weight:bold' : 'border-bottom:1px dashed var(--gold-lt)'}">${label} ${n}</span>`;
   box.innerHTML =
-    `<div style="font-size:13px;color:var(--ink-light);line-height:1.8">共 <b style="color:var(--ink);font-size:15px">${total}</b> 位用戶`
+    `<div style="font-size:0.8125rem;color:var(--ink-light);line-height:1.8">共 <b style="color:var(--ink);font-size:0.9375rem">${total}</b> 位用戶`
     + ` · ${roleLink('reader', '讀者', rc.reader)} · ${roleLink('writer', '作家', rc.writer)} · ${roleLink('manage', '管理', rc.admin + rc.super_admin)}</div>`
     + `<div style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;margin-top:7px">`
     + chip('', '全部', total) + chip('15', '≥15天未上線', in15cum) + chip('30', '≥30天未上線', in30) + `</div>`
-    + (noRec ? `<div style="font-size:11px;color:var(--ink-light);opacity:.7;margin-top:6px">※ ${noRec} 位尚無上線紀錄，暫以註冊日估算（之後自動精準）</div>` : '');
+    + (noRec ? `<div style="font-size:0.6875rem;color:var(--ink-light);opacity:.7;margin-top:6px">※ ${noRec} 位尚無上線紀錄，暫以註冊日估算（之後自動精準）</div>` : '');
 }
 async function clearUserFlag(userId) {
   try {
@@ -6427,19 +6427,19 @@ function renderUserRows(q) {
       const display = u.nickname || u.username;
       const isSelf = u.id === currentUser.id;
       const picker = (isSuper && !isSelf)
-        ? `<select data-onchange="changeUserRole('${u.id}',this.value)" style="font-size:12px;padding:4px 6px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink)">
+        ? `<select data-onchange="changeUserRole('${u.id}',this.value)" style="font-size:0.75rem;padding:4px 6px;border:1px solid var(--gold-lt);border-radius:3px;background:var(--parchment2);color:var(--ink)">
              ${ROLES.map(([v,l]) => `<option value="${v}" ${u.role===v?'selected':''}>${l}</option>`).join('')}
            </select>`
         : `<div class="u-role">${u.role}${isSelf ? '（你）' : ''}</div>`;
       // Tap the name to drill into this member's detail (their works + 迷情劑 toggle for readers).
       const open = `viewUserNovels('${u.id}')`;
       const isTempBan = u.banned && u.ban_until && new Date(u.ban_until) > new Date();
-      const banTag = u.banned ? '<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(138,45,45,.18);color:var(--accent);margin-left:6px">' + ic(isTempBan ? 'ic-clock' : 'ic-ban',10) + (isTempBan ? ' 臨時封禁' : ' 已封禁') + '</span>' : '';
-      const archTag = u.archived ? '<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(61,31,13,.12);color:var(--ink-light);margin-left:6px">' + ic('ic-moon',10) + ' 已封存</span>' : '';
-      const flagBadge = (u.flag_note && isSuper) ? '<span style="font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(201,168,76,.3);color:var(--ink);margin-left:6px">' + ic('ic-shield',10) + ' 疑似回鍋</span>' : '';
-      const flagRow = (u.flag_note && isSuper) ? `<div style="margin-top:5px;font-size:12px;color:var(--accent);background:rgba(138,45,45,.10);padding:6px 8px;border-radius:6px;display:flex;align-items:center;gap:8px;justify-content:space-between"><span>${escapeHtml(u.flag_note)}</span><button data-onclick="clearUserFlag('${u.id}')" style="flex-shrink:0;font-size:11px;padding:3px 9px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:4px;cursor:pointer;white-space:nowrap">已審</button></div>` : '';
+      const banTag = u.banned ? '<span style="font-size:0.6875rem;padding:1px 7px;border-radius:9px;background:rgba(138,45,45,.18);color:var(--accent);margin-left:6px">' + ic(isTempBan ? 'ic-clock' : 'ic-ban',10) + (isTempBan ? ' 臨時封禁' : ' 已封禁') + '</span>' : '';
+      const archTag = u.archived ? '<span style="font-size:0.6875rem;padding:1px 7px;border-radius:9px;background:rgba(61,31,13,.12);color:var(--ink-light);margin-left:6px">' + ic('ic-moon',10) + ' 已封存</span>' : '';
+      const flagBadge = (u.flag_note && isSuper) ? '<span style="font-size:0.6875rem;padding:1px 7px;border-radius:9px;background:rgba(201,168,76,.3);color:var(--ink);margin-left:6px">' + ic('ic-shield',10) + ' 疑似回鍋</span>' : '';
+      const flagRow = (u.flag_note && isSuper) ? `<div style="margin-top:5px;font-size:0.75rem;color:var(--accent);background:rgba(138,45,45,.10);padding:6px 8px;border-radius:6px;display:flex;align-items:center;gap:8px;justify-content:space-between"><span>${escapeHtml(u.flag_note)}</span><button data-onclick="clearUserFlag('${u.id}')" style="flex-shrink:0;font-size:0.6875rem;padding:3px 9px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:4px;cursor:pointer;white-space:nowrap">已審</button></div>` : '';
       const _joined = u.created_at ? `加入 ${fmtUpdated(u.created_at)}・` : '';
-      const seen = `<div style="font-size:11px;color:var(--ink-light);font-weight:normal;opacity:.8">${_joined}${lastSeenLabel(u)}</div>`;
+      const seen = `<div style="font-size:0.6875rem;color:var(--ink-light);font-weight:normal;opacity:.8">${_joined}${lastSeenLabel(u)}</div>`;
       // In an inactivity view, super_admin gets an inline 刪除 for quick manual cleanup (never automatic).
       const delBtn = (isSuper && !isSelf && userActivityFilter)
         ? `<button class="uf-del" data-onclick="deleteUser('${u.id}')">${ic('ic-trash', 11)} 刪除</button>`
@@ -6450,7 +6450,7 @@ function renderUserRows(q) {
       <div style="padding:8px 0;border-bottom:1px solid rgba(26,10,0,.07)">
         <div class="user-row" style="border:none;padding:0">
           <span data-onclick="${open}" style="cursor:pointer;flex-shrink:0">${avatarHTML(u, 32)}</span>
-          <div class="u-name" data-onclick="${open}" style="cursor:pointer;line-height:1.3">${escapeHtml(display)}${banTag}${archTag}${flagBadge}<span style="color:var(--gold);font-weight:bold;margin-left:6px">›</span><div style="font-size:12px;color:var(--ink-light);font-weight:normal">@${escapeHtml(u.username)}</div>${seen}</div>
+          <div class="u-name" data-onclick="${open}" style="cursor:pointer;line-height:1.3">${escapeHtml(display)}${banTag}${archTag}${flagBadge}<span style="color:var(--gold);font-weight:bold;margin-left:6px">›</span><div style="font-size:0.75rem;color:var(--ink-light);font-weight:normal">@${escapeHtml(u.username)}</div>${seen}</div>
           ${delBtn || picker}
         </div>
         ${flagRow}
@@ -6680,15 +6680,15 @@ async function generateGroupInvite(role) {
     const box = document.getElementById('grab-result');
     box.style.display = '';
     box.innerHTML = `
-      <div style="font-size:12px;color:var(--accent);margin-bottom:6px">已開出 ${res.count} 份${ROLE_NAME_INV[role] || ''}邀請函（開放後 3 天有效，領完即止）</div>
-      <div style="font-size:12.5px;color:var(--ink);background:var(--parchment);border:1px solid var(--gold-lt);border-radius:6px;padding:8px 10px;line-height:1.7">${
+      <div style="font-size:0.75rem;color:var(--accent);margin-bottom:6px">已開出 ${res.count} 份${ROLE_NAME_INV[role] || ''}邀請函（開放後 3 天有效，領完即止）</div>
+      <div style="font-size:0.78125rem;color:var(--ink);background:var(--parchment);border:1px solid var(--gold-lt);border-radius:6px;padding:8px 10px;line-height:1.7">${
         res.opens_at
           ? `${ic('ic-clock',12)} 已排定 <b>${new Date(res.opens_at).toLocaleString('zh-TW')}</b> 開放——時間一到，守則頁自動亮起領取入口，你不必再做任何事。`
           : `${ic('ic-check',12)} 閱報須知頁已自動亮起領取入口——先前貼出去的閱報須知連結<b>即刻生效，不需再發新連結</b>。`
       }</div>
       <div style="display:flex;gap:6px;margin-top:8px">
-        <button class="btn-primary" style="flex:1;padding:8px 4px;font-size:13px;white-space:nowrap" data-onclick="copyText('https://surf0912.github.io/prophet-daily/rules','已複製 守則頁連結（GitHub）')">${ic('ic-link',13)} GitHub 守則頁</button>
-        <button class="btn-primary" style="flex:1;padding:8px 4px;font-size:13px;white-space:nowrap;background:var(--chrome)" data-onclick="copyText('https://the-prophet-daily.onrender.com/rules','已複製 守則頁連結（鏡像）')">${ic('ic-link',13)} 鏡像 守則頁</button>
+        <button class="btn-primary" style="flex:1;padding:8px 4px;font-size:0.8125rem;white-space:nowrap" data-onclick="copyText('https://surf0912.github.io/prophet-daily/rules','已複製 守則頁連結（GitHub）')">${ic('ic-link',13)} GitHub 守則頁</button>
+        <button class="btn-primary" style="flex:1;padding:8px 4px;font-size:0.8125rem;white-space:nowrap;background:var(--chrome)" data-onclick="copyText('https://the-prophet-daily.onrender.com/rules','已複製 守則頁連結（鏡像）')">${ic('ic-link',13)} 鏡像 守則頁</button>
       </div>`;
     loadInviteList();
   } catch (e) { toast('' + e.message); }
@@ -6714,11 +6714,11 @@ async function generateInvite(role) {
     box.style.display = '';
     const rows = tokens.map(t => `
       <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
-        <code style="flex:1;font-size:13px;color:var(--ink);background:var(--parchment);border:1px solid var(--gold-lt);border-radius:4px;padding:6px 8px;word-break:break-all">${t}</code>
-        <button data-onclick="copyText('${inviteLink(t)}', '已複製（${t}）')" style="padding:6px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;white-space:nowrap">複製</button>
+        <code style="flex:1;font-size:0.8125rem;color:var(--ink);background:var(--parchment);border:1px solid var(--gold-lt);border-radius:4px;padding:6px 8px;word-break:break-all">${t}</code>
+        <button data-onclick="copyText('${inviteLink(t)}', '已複製（${t}）')" style="padding:6px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:0.75rem;white-space:nowrap">複製</button>
       </div>`).join('');
-    const all = tokens.length > 1 ? `<button data-onclick="copyAllInvites()" style="margin-top:10px;width:100%;padding:9px;background:var(--scarlet);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px">複製全部 ${tokens.length} 條</button>` : '';
-    box.innerHTML = `<div style="font-size:12px;color:var(--accent);margin-bottom:2px">已產生 ${tokens.length} 個${ROLE_NAME_INV[role] || ''}邀請（3 天有效、各用一次）</div>${rows}${all}`;
+    const all = tokens.length > 1 ? `<button data-onclick="copyAllInvites()" style="margin-top:10px;width:100%;padding:9px;background:var(--scarlet);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.8125rem">複製全部 ${tokens.length} 條</button>` : '';
+    box.innerHTML = `<div style="font-size:0.75rem;color:var(--accent);margin-bottom:2px">已產生 ${tokens.length} 個${ROLE_NAME_INV[role] || ''}邀請（3 天有效、各用一次）</div>${rows}${all}`;
     loadInviteList();
   } catch (e) { toast('' + e.message); }
 }
@@ -6754,7 +6754,7 @@ function setWriterAppBadge(n) {
   const pill = document.getElementById('review-pill-writers');
   if (!pill) return;
   pill.innerHTML = '作者申請' + (n > 0
-    ? ` <span style="display:inline-block;min-width:16px;padding:0 4px;margin-left:3px;border-radius:8px;background:var(--scarlet);color:var(--on-dark);font-size:11px;line-height:16px;text-align:center">${n}</span>`
+    ? ` <span style="display:inline-block;min-width:16px;padding:0 4px;margin-left:3px;border-radius:8px;background:var(--scarlet);color:var(--on-dark);font-size:0.6875rem;line-height:16px;text-align:center">${n}</span>`
     : '');
 }
 
@@ -6777,40 +6777,40 @@ async function loadWriterApps() {
   try {
     list = await api('/applications/writer') || [];
   } catch (e) {
-    el.innerHTML = `<p style="font-size:12.5px;color:var(--accent);padding:2px 0 6px">讀取失敗：${escapeHtml(e.message)}</p>`;
+    el.innerHTML = `<p style="font-size:0.78125rem;color:var(--accent);padding:2px 0 6px">讀取失敗：${escapeHtml(e.message)}</p>`;
     return;
   }
   _writerApps = list;
   setWriterAppBadge(list.filter(r => r.status === 'new').length);
-  if (!list.length) { el.innerHTML = '<p style="font-size:12.5px;color:var(--ink-light);padding:2px 0 6px">尚無申請</p>'; return; }
+  if (!list.length) { el.innerHTML = '<p style="font-size:0.78125rem;color:var(--ink-light);padding:2px 0 6px">尚無申請</p>'; return; }
   // 封存的收在清單底部的一行小字後面，預設不展開——聯絡方式留檔但不佔版面
   const archived = list.filter(r => r.status === 'archived');
   const active = list.filter(r => r.status !== 'archived');
   const row = r => {
     const done = r.status === 'handled';
     const arch = r.status === 'archived';
-    return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08);font-size:13px;${done ? 'opacity:.55' : ''}">
+    return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08);font-size:0.8125rem;${done ? 'opacity:.55' : ''}">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
         <span style="font-weight:bold;color:var(--ink);word-break:break-all;min-width:0">${escapeHtml(r.contact || '')}</span>
-        ${r.source === 'in_app' ? `<span style="background:rgba(45,74,30,.15);color:var(--series);padding:2px 8px;border-radius:10px;font-size:11px;flex-shrink:0">站內${r.applicant ? '·' + escapeHtml(r.applicant) : ''}</span>` : ''}
-        ${arch ? '<span style="background:rgba(26,10,0,.12);color:var(--ink-light);padding:2px 8px;border-radius:10px;font-size:11px;flex-shrink:0;margin-left:auto">已封存</span>'
-          : done ? '<span style="background:rgba(201,168,76,.28);color:var(--ink-light);padding:2px 8px;border-radius:10px;font-size:11px;flex-shrink:0;margin-left:auto">已處理</span>' : ''}
+        ${r.source === 'in_app' ? `<span style="background:rgba(45,74,30,.15);color:var(--series);padding:2px 8px;border-radius:10px;font-size:0.6875rem;flex-shrink:0">站內${r.applicant ? '·' + escapeHtml(r.applicant) : ''}</span>` : ''}
+        ${arch ? '<span style="background:rgba(26,10,0,.12);color:var(--ink-light);padding:2px 8px;border-radius:10px;font-size:0.6875rem;flex-shrink:0;margin-left:auto">已封存</span>'
+          : done ? '<span style="background:rgba(201,168,76,.28);color:var(--ink-light);padding:2px 8px;border-radius:10px;font-size:0.6875rem;flex-shrink:0;margin-left:auto">已處理</span>' : ''}
       </div>
-      <div style="color:var(--ink-light);font-size:12px;margin-bottom:6px">${new Date(r.created_at).toLocaleString('zh-TW')}</div>
+      <div style="color:var(--ink-light);font-size:0.75rem;margin-bottom:6px">${new Date(r.created_at).toLocaleString('zh-TW')}</div>
       ${r.note ? `<div style="color:var(--ink-light);line-height:1.7;margin-bottom:6px;white-space:pre-wrap">${escapeHtml(r.note)}</div>` : ''}
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button data-onclick="copyWriterApp('${r.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:5px;cursor:pointer">複製</button>
-        ${arch ? `<button data-onclick="archiveWriterApp('${r.id}', false)" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:5px;cursor:pointer">取消封存</button>`
-          : `<button data-onclick="setWriterAppHandled('${r.id}',${done ? 'false' : 'true'})" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:5px;cursor:pointer">${done ? '標記未處理' : '標記已處理'}</button>
-        <button data-onclick="archiveWriterApp('${r.id}', true)" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:5px;cursor:pointer">封存</button>`}
-        <button data-onclick="deleteWriterApp('${r.id}')" style="font-size:12px;padding:4px 12px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:5px;cursor:pointer">刪除</button>
+        <button data-onclick="copyWriterApp('${r.id}')" style="font-size:0.75rem;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:5px;cursor:pointer">複製</button>
+        ${arch ? `<button data-onclick="archiveWriterApp('${r.id}', false)" style="font-size:0.75rem;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:5px;cursor:pointer">取消封存</button>`
+          : `<button data-onclick="setWriterAppHandled('${r.id}',${done ? 'false' : 'true'})" style="font-size:0.75rem;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:5px;cursor:pointer">${done ? '標記未處理' : '標記已處理'}</button>
+        <button data-onclick="archiveWriterApp('${r.id}', true)" style="font-size:0.75rem;padding:4px 12px;background:none;border:1px solid var(--gold);color:var(--ink-light);border-radius:5px;cursor:pointer">封存</button>`}
+        <button data-onclick="deleteWriterApp('${r.id}')" style="font-size:0.75rem;padding:4px 12px;background:none;border:1px solid var(--scarlet);color:var(--scarlet);border-radius:5px;cursor:pointer">刪除</button>
       </div>
     </div>`;
   };
-  el.innerHTML = (active.map(row).join('') || '<p style="font-size:12.5px;color:var(--ink-light);padding:2px 0 6px">沒有進行中的申請</p>')
+  el.innerHTML = (active.map(row).join('') || '<p style="font-size:0.78125rem;color:var(--ink-light);padding:2px 0 6px">沒有進行中的申請</p>')
     + (archived.length ? `
       <button data-onclick="toggleWriterAppArchived(this)"
-        style="font-size:12px;background:none;border:none;color:var(--ink-light);cursor:pointer;padding:8px 0;text-decoration:underline">已封存 ${archived.length} 筆</button>
+        style="font-size:0.75rem;background:none;border:none;color:var(--ink-light);cursor:pointer;padding:8px 0;text-decoration:underline">已封存 ${archived.length} 筆</button>
       <div id="writer-app-archived" style="display:none">${archived.map(row).join('')}</div>` : '');
 }
 
@@ -6845,7 +6845,7 @@ async function loadInviteList() {
   el.innerHTML = '<div class="spinner"></div>';
   try {
     const list = await api('/invites/list') || [];
-    if (!list.length) { el.innerHTML = '<p style="color:#888;font-size:13px">尚無邀請連結</p>'; return; }
+    if (!list.length) { el.innerHTML = '<p style="color:#888;font-size:0.8125rem">尚無邀請連結</p>'; return; }
     // 搶名額輪次：同 group_code 的 token 聚合成一張卡（在該組第一次出現的位置渲染一次）
     const groups = {};
     list.forEach(inv => { if (inv.group_code) (groups[inv.group_code] = groups[inv.group_code] || []).push(inv); });
@@ -6859,20 +6859,20 @@ async function loadInviteList() {
       const pending = !!(opensAt && opensAt > new Date());
       const dim = !pending && remaining <= 0;
       const names = used.map(x => escapeHtml(x.profiles?.username || '?')).join('、');
-      return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08);font-size:13px">
+      return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08);font-size:0.8125rem">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
-          <span style="background:${dim ? '#ccc' : 'var(--scarlet)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;flex-shrink:0;white-space:nowrap">${roleBadge(g[0].role, 12)}</span>
-          <span style="background:rgba(201,168,76,.28);color:var(--ink-light);padding:2px 8px;border-radius:10px;font-size:11px;flex-shrink:0">${pending ? `${ic('ic-clock',10)} 排定開放` : `${ic('ic-star-shine',10)} 開放領取`}</span>
+          <span style="background:${dim ? '#ccc' : 'var(--scarlet)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:0.75rem;flex-shrink:0;white-space:nowrap">${roleBadge(g[0].role, 12)}</span>
+          <span style="background:rgba(201,168,76,.28);color:var(--ink-light);padding:2px 8px;border-radius:10px;font-size:0.6875rem;flex-shrink:0">${pending ? `${ic('ic-clock',10)} 排定開放` : `${ic('ic-star-shine',10)} 開放領取`}</span>
           <span style="color:${dim ? '#aaa' : 'var(--ink-light)'}">${
             pending
               ? `${opensAt.toLocaleString('zh-TW')} 放出 ${g.length} 份`
               : `${dim ? (used.length >= g.length ? '已領完' : '已過期/撤銷') : `尚餘 ${remaining} / 共 ${g.length} 份`}・到期：${new Date(g[0].expires_at).toLocaleDateString('zh-TW')}`
           }</span>
         </div>
-        ${names ? `<div style="font-size:12px;color:var(--ink-light);margin-bottom:4px">${ic('ic-check',11)} 已領取：${names}</div>` : ''}
+        ${names ? `<div style="font-size:0.75rem;color:var(--ink-light);margin-bottom:4px">${ic('ic-check',11)} 已領取：${names}</div>` : ''}
         <div style="display:flex;align-items:center;gap:6px">
-          <code style="font-size:13px;color:${dim ? '#aaa' : 'var(--ink)'};word-break:break-all;flex:1">${code}</code>
-          ${!dim ? `<button data-onclick="revokeGroupInvite('${code}')" style="font-size:12px;padding:3px 8px;background:none;border:1px solid #ccc;border-radius:3px;cursor:pointer;white-space:nowrap">撤銷</button>` : ''}
+          <code style="font-size:0.8125rem;color:${dim ? '#aaa' : 'var(--ink)'};word-break:break-all;flex:1">${code}</code>
+          ${!dim ? `<button data-onclick="revokeGroupInvite('${code}')" style="font-size:0.75rem;padding:3px 8px;background:none;border:1px solid #ccc;border-radius:3px;cursor:pointer;white-space:nowrap">撤銷</button>` : ''}
         </div>
       </div>`;
     };
@@ -6888,16 +6888,16 @@ async function loadInviteList() {
       const expired = !used && new Date(inv.expires_at) < new Date();
       const expires = new Date(inv.expires_at).toLocaleDateString('zh-TW');
       const dim = used || expired;
-      return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08);font-size:13px">
+      return `<div style="padding:10px 0;border-bottom:1px solid rgba(26,10,0,.08);font-size:0.8125rem">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <span style="background:${dim ? '#ccc' : 'var(--scarlet)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;flex-shrink:0;white-space:nowrap">${roleBadge(inv.role, 12)}</span>
+          <span style="background:${dim ? '#ccc' : 'var(--scarlet)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:0.75rem;flex-shrink:0;white-space:nowrap">${roleBadge(inv.role, 12)}</span>
           <span style="color:${dim ? '#aaa' : 'var(--ink-light)'}">到期：${expires}</span>
           ${used ? `<span style="color:#aaa">${ic('ic-check',11)} 已使用（${usedBy}）</span>` : (expired ? `<span style="color:#aaa">已過期</span>` : '')}
         </div>
         <div style="display:flex;align-items:center;gap:6px">
-          <code style="font-size:13px;color:${dim ? '#aaa' : 'var(--ink)'};word-break:break-all;flex:1">${inv.token}</code>
-          ${!used && !expired ? `<button data-onclick="copyText('${inviteLink(inv.token)}', '已複製（${inv.token}）')" style="font-size:12px;padding:3px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap">複製</button>` : ''}
-          ${!used ? `<button data-onclick="revokeInvite('${inv.id}')" style="font-size:12px;padding:3px 8px;background:none;border:1px solid #ccc;border-radius:3px;cursor:pointer;white-space:nowrap">撤銷</button>` : ''}
+          <code style="font-size:0.8125rem;color:${dim ? '#aaa' : 'var(--ink)'};word-break:break-all;flex:1">${inv.token}</code>
+          ${!used && !expired ? `<button data-onclick="copyText('${inviteLink(inv.token)}', '已複製（${inv.token}）')" style="font-size:0.75rem;padding:3px 10px;background:var(--scarlet);color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap">複製</button>` : ''}
+          ${!used ? `<button data-onclick="revokeInvite('${inv.id}')" style="font-size:0.75rem;padding:3px 8px;background:none;border:1px solid #ccc;border-radius:3px;cursor:pointer;white-space:nowrap">撤銷</button>` : ''}
         </div>
       </div>`;
     }).join('');
